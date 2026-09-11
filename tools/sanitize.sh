@@ -3,11 +3,11 @@
 #
 # `BEANS_SANITIZE` instruments the Beans half, and that is the half a
 # sanitizer usually finds nothing in — the compiler's own gate covers it. The
-# half worth checking here is `src/cortado_*.m`: fifteen hundred lines of
-# Objective-C with manual retain and release, a handle table indexed by
-# arithmetic, and a string boundary that copies bytes both ways. `csrc` does
-# not pass sanitizer flags to a manifest's C sources, so this script compiles
-# the host itself with them and links by hand.
+# half worth checking here is `src/mac/`: two thousand lines of Objective-C
+# with manual retain and release, a handle table indexed by arithmetic, and a
+# string boundary that copies bytes both ways. `csrc` does not pass sanitizer
+# flags to a manifest's C sources, so this script compiles the host itself with
+# them and links by hand.
 #
 # Leak detection is off. LeakSanitizer is not supported on Apple silicon, and
 # AppKit interns a great deal that it never frees by design; the leak that
@@ -64,6 +64,28 @@ if [[ ${#host_objects[@]} -eq 0 ]]; then
     exit 1
 fi
 
+# The frameworks the host needs, read from the manifest rather than copied.
+#
+# A second list drifts. This script linked AppKit, Foundation and CoreVideo by
+# hand, and the day the host started animating — QuartzCore — the whole
+# sanitizer leg failed on undefined symbols, long after every other leg had
+# gone green. `beans.pot` is where a host says what it links, so that is where
+# this reads it from.
+frameworks=()
+named=0
+while read -r name; do
+    [[ -n "$name" ]] || continue
+    frameworks+=(-framework "$name")
+    named=$((named + 1))
+done < <(grep -E '^link[[:space:]]+macos[[:space:]]+framework' "$root/beans.pot" \
+         | sed -E 's/.*"([^"]+)".*/\1/')
+if [[ $named -eq 0 ]]; then
+    echo "sanitize: beans.pot names no macOS frameworks — the manifest moved" >&2
+    exit 1
+fi
+# Counted separately, because each one is two words in the array.
+echo "sanitize: linking $named frameworks from beans.pot"
+
 failures=0
 for name in ${cases[@]}; do
     source="$root/tests/$name.b"
@@ -88,7 +110,7 @@ for name in ${cases[@]}; do
     clang -O1 -g -pthread -fsanitize=address,undefined \
           -fno-sanitize-recover=undefined -Wno-override-module \
           "$ir" "$BEANS_RUNTIME" "${host_objects[@]}" "${ffi[@]}" \
-          -framework AppKit -framework Foundation -framework CoreVideo \
+          "${frameworks[@]}" \
           -lm -o "$out/$name"
 
     set +e

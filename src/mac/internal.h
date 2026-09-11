@@ -75,6 +75,7 @@ extern CortadoCommand *g_commands;      // app.m — the one menu-item target
 ctd_handle  ctd_track(id object, int32_t kind);
 id          ctd_resolve(ctd_handle handle);
 void        ctd_give_back(uint32_t slot);
+void        ctd_untrack(ctd_handle handle);
 int32_t     ctd_slot_kind(ctd_handle handle);
 void        ctd_tag(id object);
 NSArray    *ctd_children(NSView *container);

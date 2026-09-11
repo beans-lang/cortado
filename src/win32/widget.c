@@ -120,7 +120,10 @@ int32_t ctd_widget_alive(ctd_handle widget) { return ctd_slot(widget) ? 1 : 0; }
 ctd_status ctd_widget_release(ctd_handle widget) {
     uint32_t slot = ctd_slot(widget);
     if (!slot) return CTD_ERR_STALE;
-    if (g_type[slot] == CTD_T_MENU) {
+    if (g_type[slot] == CTD_T_ANIM) {
+        // Nothing to destroy: an animation is a description in a table, and
+        // handing the slot back is what ends it.
+    } else if (g_type[slot] == CTD_T_MENU) {
         CtdMenu *menu = (CtdMenu *)g_object[slot];
         for (int32_t i = 0; i < menu->count; i++) {
             free(menu->commands[i].title);
@@ -133,11 +136,6 @@ ctd_status ctd_widget_release(ctd_handle widget) {
     } else {
         DestroyWindow((HWND)g_object[slot]);
     }
-    g_object[slot] = NULL;
-    g_type[slot] = CTD_T_FREE;
-    g_kind[slot] = -1;
-    g_generation[slot] = g_generation[slot] + 1;
-    if (g_generation[slot] == 0) g_generation[slot] = 1;
-    ctd_give_back(slot);
+    ctd_untrack(widget);
     return CTD_OK;
 }

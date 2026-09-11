@@ -53,9 +53,32 @@ static uint32_t ctd_take_slot(void) {
 
 void ctd_give_back(uint32_t slot) {
     // Whatever the slot was doing stops being done. A frame clock left running
-    // on a recycled slot would tick for whichever widget lands there next.
+    // on a recycled slot would tick for whichever widget lands there next, and
+    // an animation of a control that has gone would report, four seconds
+    // later, that it finished.
     ctd_clock_forget(slot);
+    ctd_anim_forget(slot);
     if (g_recycled_count < CTD_SLOTS) g_recycled[g_recycled_count++] = slot;
+}
+
+// Takes a handle out of the table.
+//
+// The slot is cleared, its generation is bumped so that every copy of the
+// handle answers CTD_ERR_STALE from here on rather than reaching whatever
+// lands in the slot next, and the slot goes back on the pile. Every release
+// path in this host ends here, so there is one description of what releasing
+// means and not one per kind of thing. What the slot *held* is freed by the
+// caller, which is the only code that knows what sort of thing it was.
+void ctd_untrack(ctd_handle handle) {
+    uint32_t slot = (uint32_t)(handle & 0xffffffffu);
+    if (slot == 0 || slot > g_used) return;
+    if (g_generation[slot] != (uint32_t)(handle >> 32)) return;
+    g_object[slot] = NULL;
+    g_type[slot] = CTD_T_FREE;
+    g_kind[slot] = -1;
+    g_generation[slot] = g_generation[slot] + 1;
+    if (g_generation[slot] == 0) g_generation[slot] = 1;
+    ctd_give_back(slot);
 }
 
 ctd_handle ctd_track(void *object, int32_t type, int32_t kind) {

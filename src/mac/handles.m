@@ -49,6 +49,26 @@ void ctd_give_back(uint32_t slot) {
     if (g_recycled_count < CTD_SLOTS) g_recycled[g_recycled_count++] = slot;
 }
 
+// Takes a handle out of the table.
+//
+// The slot is cleared, its generation is bumped so that every copy of the
+// handle answers CTD_ERR_STALE from here on rather than reaching whatever
+// lands in the slot next, and the table gives up its own reference. Every
+// release path in this host ends here, so there is one description of what
+// releasing means and not one per kind of thing.
+void ctd_untrack(ctd_handle handle) {
+    uint32_t slot = (uint32_t)(handle & 0xffffffffu);
+    if (slot == 0 || slot > g_used) return;
+    if (g_generation[slot] != (uint32_t)(handle >> 32)) return;
+    id object = g_object[slot];
+    g_object[slot] = nil;
+    g_kind[slot] = -1;
+    g_generation[slot]++;
+    if (g_generation[slot] == 0) g_generation[slot] = 1;
+    ctd_give_back(slot);
+    [object release];
+}
+
 ctd_handle ctd_track(id object, int32_t kind) {
     uint32_t slot = ctd_take_slot();
     if (slot == 0) return 0;

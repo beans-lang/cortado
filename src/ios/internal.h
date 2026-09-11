@@ -63,6 +63,7 @@ NSArray *ctd_children(UIView *container);
 NSString *ctd_string(const char *utf8, int32_t len);
 UIView *ctd_surface_view(id object);
 ctd_handle ctd_track(id object, int32_t kind);
+void ctd_untrack(ctd_handle handle);
 id ctd_resolve(ctd_handle handle);
 int ctd_has_nul(const char *utf8, int32_t len);
 int32_t ctd_copy_out(NSString *text, char *out, int32_t cap);

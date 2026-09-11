@@ -312,7 +312,98 @@ First working macOS host.
   independent tallies of the same frames, so a delivery path that lost one is a
   failing test rather than an animation that finishes slightly early.
 
+- **Animation, described here and run by the platform.**
+  `Animation.on(widget, Animatable.opacity)` builds one, `to` / `from` /
+  `duration` / `delay` / `curve` fill it in, and `start(token)` hands it over.
+  On macOS and iOS it becomes a `CABasicAnimation` and the render server runs
+  it on a thread of its own, at the display's rate, with no Beans code involved
+  in any frame of it — which is the reason the ABI is a builder rather than a
+  "set this value every frame" call. GTK4 and Win32 have nothing to hand a
+  description to, so they walk the same curve on a timer.
+
+  The curves are defined once, in `src/cortado_rules.h`, as the cubic beziers
+  `CAMediaTimingFunction` uses — solved, not approximated. The two Apple hosts
+  hand the *name* to Core Animation and never run the arithmetic; the other two
+  run it and land in the same places. What is deliberately not promised is that
+  two hosts sample the same value at the same instant. They cannot: a Core
+  Animation runs against the render server's own frame times.
+
+- **A property reads as its destination while it animates.** `start` writes the
+  value to where it is going and `Widget.opacity()` answers that from then on.
+  This is Core Animation's model and presentation layers, and the two hosts
+  that have no presentation layer of their own keep the destination beside the
+  animation and answer `ctd_get_real` from there — so all four agree. The
+  alternative is a number that means "somewhere between two others, and by the
+  time you have acted on it, somewhere else".
+
+  Cancelling is what makes the distinction earn its keep: it stops where it is
+  and the property keeps the value it was *showing*, because watching a control
+  jump to its destination is not what anybody means by cancel.
+
+- **An animation ends exactly once, and says how.** `CTD_EV_ANIM_DONE` carries
+  the widget, the token, whether it finished or was cancelled, and the value it
+  ended on. Three things end one: reaching the end, being cancelled, and
+  starting a second animation of the same property — which replaces it, the
+  way every animation system does. Releasing the widget under it counts as
+  cancelled too: macOS does that on its own when the layer goes, and the other
+  hosts had to be told.
+
+- **`Animatable` is a list of one.** Opacity is all that animates today, and
+  the list is in `cortado_rules.h` rather than four times in four hosts,
+  because a property one host animated and another refused would be the
+  `CTD_P_ENABLED` mistake made a second time. The layer properties — corner
+  radius, rotation, scale, translation, colour — are each a key and four
+  `switch` cases when they land, never a new entry point.
+
+- **A surface is not a widget, and cannot be animated.** Worth writing down
+  because three hosts out of four would have accepted one on their own: a
+  `UIWindow` is a `UIView` and a `GtkWindow` is a `GtkWidget`, so only AppKit
+  would have refused. Taking the check out of the GTK host makes
+  `tests/anim.out` fail, which is how it is known to be doing something.
+
 ### Found while building this
+
+- **`tools/sanitize.sh` kept its own list of frameworks, and lost a leg to it.**
+  The host started using QuartzCore, `beans.pot` was told, and the sanitizer
+  script — which links by hand, because `csrc` passes no sanitizer flags — was
+  not. Every other leg went green and then the last one failed on eight
+  undefined Core Animation symbols. It now reads the `link macos framework`
+  rows out of the manifest, and fails loudly if it finds none, because a second
+  copy of a list is a copy that will be wrong.
+
+- **An iOS animation needs the window on screen; a macOS one does not.** The
+  iOS leg was the only one that disagreed with `tests/anim.out`, reporting the
+  first animation cancelled rather than finished. A probe in a bare simulator
+  process settled it both ways in one run: with `makeKeyAndVisible` the
+  animation runs, the presentation layer reads three quarters of the way
+  through a fade at 50 ms, and the delegate is told it finished; without a
+  visible window the animation is removed within a frame. A layer with no
+  render context cannot be animated, and cortado's gate is headless
+  everywhere — so `anim` is built for the phone and not run there, which
+  `test.sh` names and explains rather than leaving as a hole. AppKit animates a
+  layer in a window that was never ordered front, which is the only reason the
+  rest of this suite can be headless at all.
+
+- **The suite went red because the screen went to sleep.** A gate that had
+  been green all afternoon failed on `clock` and `frames` with
+  `platform_refused`, and nothing had changed in either — macOS answers
+  `kCVReturnInvalidArgument` from `CVDisplayLinkCreateWithActiveCGDisplays`
+  when there is no active display, and the machine had blanked part-way
+  through a long run. A standalone probe with no cortado in it failed the same
+  way, which is how it was told apart from a real regression in a minute
+  rather than an hour. `test.sh` now holds `caffeinate -du -w $$` for the
+  length of the run: a suite that passes or fails depending on how long
+  somebody was away from the keyboard is not a suite.
+
+- **The plan said one shared `cortado_anim_fallback.c` for the two hosts
+  without a render server. It did not survive contact.** The handle table, the
+  timer and the event sink are all per-platform, so a shared file would have
+  been three hooks and a table of its own — and an animation handle minted
+  outside the host's table could collide with a widget's. What is actually
+  shared is the easing function, and that went into `cortado_rules.h` beside
+  the other decisions that are cortado's rather than a platform's. The two
+  interpolating hosts are near-identical files, which is the same duplication
+  their clocks already have and for the same reason.
 
 - **A real display link hands over a batch, not a frame.** The first thing
   `tests/frames.b` printed was 37 frames when it had asked for 5. Nothing was

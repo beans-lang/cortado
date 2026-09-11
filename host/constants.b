@@ -50,6 +50,7 @@ pub const EV_APP_WILL_QUIT: int = 20
 pub const EV_LOW_MEMORY: int = 21
 pub const EV_COMMAND: int = 22
 pub const EV_FRAME: int = 23
+pub const EV_ANIM_DONE: int = 24
 
 // ---- modifier bits ----
 
@@ -104,6 +105,13 @@ pub const P_STEP: int = 10
 pub const P_SELECTED: int = 11
 pub const P_INDETERMINATE: int = 12
 pub const P_OPACITY: int = 13
+
+// ---- animation curves ----
+
+pub const CURVE_LINEAR: int = 0
+pub const CURVE_EASE_IN: int = 1
+pub const CURVE_EASE_OUT: int = 2
+pub const CURVE_EASE_IN_OUT: int = 3
 
 // Menu command roles. The platform places, names and keys a command that has
 // one; a command with no role goes where the application puts it.

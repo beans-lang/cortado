@@ -1,16 +1,25 @@
-// Motion: a bar that fills in three seconds, on the display's own beat.
+// Motion, both kinds: one you drive, and one the platform drives.
 //
 //     beansc build examples/clock.b -o build/clock && ./build/clock
 //
-// The bar is not on a timer. A frame clock delivers one event per frame the
+// The bar is driven here. A frame clock delivers one event per frame the
 // display is about to show, carrying how long since the last one, and that
 // number — `frame.delta` — is what the bar advances by. The difference shows
 // up the moment the screen is not 60 Hz: a fixed step per tick finishes in
 // half the time on a 120 Hz display, and this finishes in three seconds on
-// both.
+// both. The measured rate is printed as it goes, which is the other half of
+// the point: nothing here had to be told what the refresh rate is.
 //
-// The measured rate is printed as it goes, which is the other half of the
-// point: nothing here had to be told what the refresh rate is.
+// The fade is not driven here. It is described — from, to, how long, what
+// shape — and handed to the platform, which runs it on the render server at
+// the display's rate with no Beans code involved in any frame of it. Clicking
+// Fade twice before it finishes is the interesting case: the second animation
+// replaces the first, which reports itself cancelled.
+//
+// Which to use is the whole lesson of this file. A frame clock is for
+// something whose next value you have to work out — a simulation, a plot, a
+// game. An animation is for a value you already know the end of, which is
+// almost everything an interface does.
 package main
 
 import cortado.platform
@@ -30,6 +39,7 @@ class Progress {
     pub filled: f64 = 0.0
     pub frames: int = 0
     pub done: bool = false
+    pub faded_to: f64 = 1.0
 
     pub fn init() {}
 }
@@ -45,11 +55,13 @@ fn run() -> Result<bool> {
     var heading: widgets.Label = widgets.Label.of("Three seconds, one frame at a time")?
     var bar: widgets.ProgressBar = new widgets.ProgressBar()
     var status: widgets.Label = widgets.Label.of("waiting for the first frame")?
+    var fade_button: widgets.Button = widgets.Button.of("Fade")?
     var quit_button: widgets.Button = widgets.Button.of("Quit")?
 
     root.add(heading)?
     root.add(bar)?
     root.add(status)?
+    root.add(fade_button)?
     root.add(quit_button)?
 
     var sheet: widgets.WidgetLayout = new widgets.WidgetLayout()
@@ -64,6 +76,7 @@ fn run() -> Result<bool> {
     var row: layout.StackLayout = layout.StackLayout.row(12.0)
     row.set_justify(layout.Justify.end)
     var buttons: layout.LayoutNode = sheet.spacer("buttons", row)
+    buttons.add(sheet.leaf("fade", fade_button))
     buttons.add(sheet.leaf("quit", quit_button))
     page.add(buttons)
 
@@ -101,6 +114,36 @@ fn run() -> Result<bool> {
             }
         }
     })?
+
+    // The platform's own animation: described, handed over, and then nothing
+    // here runs until it reports back.
+    app.router.on(fade_button.handle(), events.EventKind.activate,
+        fn(event: events.UiEvent) {
+            progress.faded_to = if progress.faded_to > 0.5 { 0.2 } else { 1.0 }
+            match motion.Animation.on(heading.handle(), motion.Animatable.opacity) {
+                ok(fade) => {
+                    fade.to(progress.faded_to)
+                    fade.duration(0.4)
+                    fade.curve(motion.Curve.ease_in_out)
+                    fade.start(2)
+                    io.println("fading to {progress.faded_to}")
+                }
+                err(problem) => { io.println("no fade: {problem.msg}") }
+            }
+        })
+
+    // Where an animation reports back: an ordinary event on the widget it
+    // moved, so it is registered like any other handler and carries the token
+    // that says which animation it was.
+    app.router.on(heading.handle(), events.EventKind.anim_done,
+        fn(event: events.UiEvent) {
+            let end: motion.AnimationEnd = motion.AnimationEnd.of(event)
+            if end.finished {
+                io.println("faded to {end.value}")
+            } else {
+                io.println("that fade was cut short at {end.value}")
+            }
+        })
 
     app.router.on(quit_button.handle(), events.EventKind.activate,
         fn(event: events.UiEvent) {

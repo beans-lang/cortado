@@ -38,6 +38,7 @@ pub enum EventKind {
     low_memory
     command
     frame
+    anim_done
     unknown
 
     pub fn name() -> string {
@@ -65,6 +66,7 @@ pub enum EventKind {
             low_memory => "low_memory",
             command => "command",
             frame => "frame",
+            anim_done => "anim_done",
             unknown => "unknown",
         }
     }
@@ -96,6 +98,7 @@ pub enum EventKind {
             low_memory => host.EV_LOW_MEMORY,
             command => host.EV_COMMAND,
             frame => host.EV_FRAME,
+            anim_done => host.EV_ANIM_DONE,
             unknown => 0,
         }
     }
@@ -127,6 +130,7 @@ pub enum EventKind {
         if code == host.EV_LOW_MEMORY { return EventKind.low_memory }
         if code == host.EV_COMMAND { return EventKind.command }
         if code == host.EV_FRAME { return EventKind.frame }
+        if code == host.EV_ANIM_DONE { return EventKind.anim_done }
         return EventKind.unknown
     }
 }

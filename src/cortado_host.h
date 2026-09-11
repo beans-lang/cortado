@@ -364,6 +364,110 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out);
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value);
 ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out);
 
+/* ---- animation --------------------------------------------------------- */
+
+/* An animation is described here and run by the platform.
+ *
+ * That split is the whole reason this is a builder and not a "set this value
+ * every frame" call. On macOS and iOS a Core Animation runs on the render
+ * server: it keeps going at the display's rate while the main thread is busy,
+ * and no Beans code runs for any frame of it. A toolkit that interpolated in
+ * its own language would stutter exactly when an application is doing
+ * something worth animating about.
+ *
+ * The builder is the shape ctd_menu_* already uses, for the reason rule 1 at
+ * the top of this file gives: no descriptor struct can cross by value, so an
+ * animation is a handle and a series of calls that fill it in.
+ *
+ * **What the property reads while it animates.** The value is set to the
+ * destination the moment ctd_anim_start is called, and ctd_get_real answers
+ * that from then on: the property says where the control is *going*, and the
+ * animation is how it is seen to get there. This is Core Animation's model and
+ * presentation layers, and it is the only answer that survives a caller
+ * reading the property mid-flight — the alternative is a number that means
+ * "somewhere between two others, and by the time you act on it, somewhere
+ * else". A host without a presentation layer of its own keeps the destination
+ * beside the animation and answers from there, so the four agree.
+ *
+ * **What can be animated** is deliberately narrow to start with: CTD_P_OPACITY
+ * and nothing else. ctd_anim_new answers 0 for any other key rather than
+ * accepting a description nothing will honour. The keys that describe a
+ * layer — corner radius, rotation, scale, translation, colour — are the ones
+ * that come next, and each is a key rather than an entry point, so none of
+ * this changes when they do.
+ */
+
+#define CTD_EV_ANIM_DONE 24  /* an animation ended; `token` says which       */
+
+/* The curves, by name. Every platform has these four and means the same thing
+ * by them. A cubic bezier by control points is the general form and can be
+ * added later without disturbing these. The default is ease-in-ease-out, which
+ * is what an interface almost always wants and what Core Animation does when
+ * nothing is said. */
+#define CTD_CURVE_LINEAR       0
+#define CTD_CURVE_EASE_IN      1
+#define CTD_CURVE_EASE_OUT     2
+#define CTD_CURVE_EASE_IN_OUT  3
+
+/* A new animation for one scalar property of one widget, or 0.
+ *
+ * 0 rather than a status, which is what every handle-returning call in this
+ * header does. It can be 0 for four reasons: the widget is gone, the handle
+ * names something that is not a widget, the property is not one this platform
+ * animates, and the handle table is full.
+ *
+ * A *surface* is one of the things that is not a widget, and it is worth
+ * saying because three of the four platforms would otherwise have accepted
+ * one: a UIWindow is a UIView and a GtkWindow is a GtkWidget, so only AppKit
+ * would have refused on its own. Fading a whole window is a real thing to want
+ * and it is not this — a surface has no place in a widget tree, no frame in
+ * anybody's coordinate space, and its own answer to what opacity means. */
+ctd_handle ctd_anim_new(ctd_handle widget, int32_t property);
+
+/* Where it starts. Optional — with no from, it starts from wherever the
+ * property is when ctd_anim_start is called. */
+ctd_status ctd_anim_from_real(ctd_handle anim, double value);
+/* Where it ends. Required: ctd_anim_start answers CTD_ERR_STATE without one,
+ * because an animation to nowhere is a description somebody left half
+ * written, and running it would hide that. */
+ctd_status ctd_anim_to_real(ctd_handle anim, double value);
+/* How long, in seconds. Must be positive — an animation of no duration is a
+ * write, and a caller who computed zero should hear about it. Left unsaid it
+ * is a quarter of a second, which is what Core Animation uses when nothing is
+ * said and what the other hosts therefore use too. */
+ctd_status ctd_anim_duration(ctd_handle anim, double seconds);
+/* How long to wait before it starts, in seconds. Zero or more. */
+ctd_status ctd_anim_delay(ctd_handle anim, double seconds);
+ctd_status ctd_anim_curve(ctd_handle anim, int32_t curve);
+
+/* Hands it to the platform.
+ *
+ * CTD_EV_ANIM_DONE arrives when it ends, carrying the widget in `target`, the
+ * `token` given here, 1 in `index` if it ran to the end and 0 if it was
+ * cancelled, and the property's value in `x`.
+ *
+ * The animation's handle is released as it ends, so it is already stale by the
+ * time a handler runs. That is deliberate: the event carries everything a
+ * handler needs, and a handle that outlived its animation would be a thing to
+ * remember to release on a path that runs thousands of times.
+ *
+ * Starting an animation on a property that is already animating **replaces**
+ * the one there, which ends as cancelled. That is what every animation system
+ * does and what a pointer moving on and off a control asks for; refusing would
+ * make the caller write the cancel every time. */
+ctd_status ctd_anim_start(ctd_handle anim, int64_t token);
+
+/* Stops it where it is.
+ *
+ * The property keeps the value it was *showing*, not the one it was going to.
+ * Cancelling an animation half way and watching the control jump to its
+ * destination is not what anybody means by cancel. CTD_EV_ANIM_DONE follows,
+ * with 0 in `index`.
+ *
+ * Cancelling an animation that was built and never started is allowed, and is
+ * how one is thrown away: it releases the handle and raises nothing. */
+ctd_status ctd_anim_cancel(ctd_handle anim);
+
 /* ---- menus ------------------------------------------------------------- */
 
 /* A command's **role**, and this is the part that makes menus portable.

@@ -69,7 +69,7 @@ cortado.bx          the .bx markup compiler — build-time only, never linked
 cortado.component   components, the differ, and the applier
 cortado.surface     windows, and the application that owns them
 cortado.widgets     the controls
-cortado.motion      the frame clock — the beat everything that moves runs on
+cortado.motion      the frame clock, and animation
 cortado.layout      where everything goes — arithmetic, no controls
 cortado.events      what the user did
 cortado.platform    what this platform can and cannot do
@@ -81,10 +81,11 @@ src/cortado_host.h  ── src/mac/ · src/ios/ · src/gtk4/ · src/win32/
                        (+ android)
 ```
 
-**A host is a platform, not a file.** Each of the four is twelve translation
+**A host is a platform, not a file.** Each of the four is thirteen translation
 units with the same names — `handles`, `app`, `surface`, `widget`, `view`,
-`property`, `menu`, `items`, `dialog`, `system`, `introspect`, `clock` — so the
-same concern is in the same place whichever platform you are reading. What they
+`property`, `menu`, `items`, `dialog`, `system`, `introspect`, `clock`, `anim`
+— so the same concern is in the same place whichever platform you are
+reading. What they
 share is that platform's own `internal.h`: it names AppKit or GObject or Win32
 types freely, no other host includes it, and no Beans file ever sees it.
 
@@ -469,6 +470,40 @@ The host counts the frames it hands over, and `clock.state()` reads that count
 back. `tests/frames.b` compares it with the number Beans received: two
 independent tallies of the same frames, so a delivery path that lost one is a
 failing test rather than an animation that ends slightly early.
+
+**An animation is described, not driven.** The frame clock is for something
+whose next value you have to work out; an animation is for a value you already
+know the end of, which is almost everything an interface does.
+
+```beans
+var fade: motion.Animation = motion.Animation.on(badge.handle(), motion.Animatable.opacity)?
+fade.to(0.0)?
+fade.duration(0.3)?
+fade.curve(motion.Curve.ease_out)?
+fade.start(7)?
+```
+
+On macOS and iOS that becomes a `CABasicAnimation` and the render server runs
+it, at the display's rate, on a thread of its own — it keeps its timing while
+the main thread is busy, and no Beans code runs for any frame of it. GTK4 and
+Win32 have no render-server animation to hand it to, so they walk the same
+curve themselves on a timer. The curve is defined once, in
+`src/cortado_rules.h`, and the two Apple hosts hand its name to
+`CAMediaTimingFunction` instead of computing it.
+
+**The property reads as the destination while it moves.** `start` writes the
+value to where it is going, and `badge.opacity()` answers that from then on:
+the property is what is *meant*, the movement is what is *shown*. That is Core
+Animation's model and presentation layers, and the hosts that have no
+presentation layer keep the destination beside the animation so the four
+agree. Cancelling is the exception, and the reason the distinction earns its
+keep — it stops where it is, and the property keeps the value it was showing
+rather than jumping to the end.
+
+The end arrives as an ordinary event on the widget, registered like any other
+handler, carrying the token `start` was given and whether it finished or was
+cancelled. Starting a second animation of the same property replaces the
+first, which reports itself cancelled; so does releasing the widget under it.
 
 `Application.run_for(seconds)` is the other half. `run()` does not come back
 until the program is done, which is right for a program and impossible for a

@@ -251,6 +251,14 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     int32_t kind = ctd_slot_kind(widget);
     double value = 0.0;
+    // A property that is being animated answers where it is *going*. The
+    // control holds what is on screen this instant, which on this host is the
+    // same field; the destination lives beside the animation. The reasoning is
+    // beside ctd_anim_start in cortado_host.h.
+    if (ctd_anim_destination(widget, key, &value)) {
+        if (out) *out = value;
+        return CTD_OK;
+    }
     switch (key) {
         case CTD_P_OPACITY: {
             // A window with no layered style is fully opaque and has no

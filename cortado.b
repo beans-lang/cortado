@@ -14,7 +14,7 @@
 //   cortado.events     what the user did
 //   cortado.layout     where everything goes; pure arithmetic, no controls
 //   cortado.widgets    the controls themselves
-//   cortado.motion     the frame clock — the beat everything that moves runs on
+//   cortado.motion     the frame clock, and animation
 //   cortado.surface    windows, menus and dialogs
 //   cortado.component  the retained tree that .bx markup renders into
 //

@@ -48,6 +48,22 @@ for argument in "$@"; do
     esac
 done
 
+# ------------------------------------------------------------- keep the screen
+#
+# The frame clock is the display's, and a display that has gone to sleep is not
+# one: CVDisplayLinkCreateWithActiveCGDisplays answers kCVReturnInvalidArgument
+# when there is no active display, so `clock` and `frames` go red on any desk
+# machine whose screen blanks part-way through a run. That is not a flake to
+# live with — it is a suite that passes or fails depending on how long somebody
+# was away from the keyboard.
+#
+# `-u` asserts user activity, which wakes a screen that has already gone; `-d`
+# keeps it from going again; `-w $$` ends the assertion when this script does,
+# so nothing is left holding the machine awake afterwards.
+if command -v caffeinate >/dev/null 2>&1; then
+    caffeinate -du -w $$ &
+fi
+
 # Which host `beansc` will pick for this machine. Three are written — AppKit,
 # UIKit and GTK4 — but the manifest chooses by target OS, so only the AppKit
 # one is reachable by a plain build here. The GTK4 leg below links its host by
@@ -74,7 +90,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -89,6 +105,13 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # `roles` reads the state with a match that treats a refusal and "enabled" the
 # same, so a host that refused printed identical bytes to one that accepted.
 #
+# `anim` is here because an animation is mostly a set of decisions — which
+# refusals, what the property reads while it moves, what cancelling keeps, what
+# happens to the one it replaces — and a decision is not allowed to differ
+# between platforms. That two hosts print the same bytes while one hands the
+# description to Core Animation and the other walks the curve itself is the
+# strongest thing this suite says.
+#
 # `clock` is here for the same kind of reason as `enabled`: a frame clock is
 # arithmetic — a number, a token, an elapsed time, and a set of refusals — and
 # arithmetic is not allowed to differ between platforms. It can be in this list
@@ -101,7 +124,25 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # back as pixels, which only macOS can do, so its golden is the macOS answer
 # and every other host correctly prints that it cannot. `frames` runs a real
 # display link, which a window that is never shown only has on macOS.
-cross_host=(roles events text applied leaks enabled opacity clock)
+cross_host=(roles events text applied leaks enabled opacity clock anim)
+
+# Cases the iOS leg builds but does not run, and why.
+#
+# `anim` is here because of something only a probe could have told us: on iOS a
+# layer that is not in a visible window has no render context, and Core
+# Animation removes an animation on one within a frame and reports that it did
+# not finish. Proven both ways in a bare simulator process — with
+# `makeKeyAndVisible` the same animation runs, the presentation layer reads
+# three quarters of the way through a fade at 50 ms, and the delegate is told
+# it finished; without, it is gone at once. macOS has no such rule: an AppKit
+# layer animates in a window that was never ordered front, which is why the
+# rest of this suite can be headless at all.
+#
+# cortado's gate is headless everywhere, so it cannot watch an iOS animation
+# run. The case is still built for the phone, which is what catches a Beans
+# half that does not compile there, and a real application — which shows its
+# window — animates exactly as macOS does.
+ios_builds_only=(anim)
 
 # Cases that need nothing but the language. These are the layout engine and the
 # reconciler, both pure Beans with no foreign call in them at all, so they run
@@ -278,12 +319,16 @@ if [[ "$host_os" == "Darwin" ]]; then
             skip ios_run "no booted simulator — 'xcrun simctl boot <device>' to run the iOS leg"
             echo "ok ios: ${#cross_host[@]} cases build for the simulator"
         else
+            ran=0
             for name in "${cross_host[@]}"; do
+                if [[ " ${ios_builds_only[*]} " == *" $name "* ]]; then continue; fi
                 xcrun simctl spawn "$booted" "$tmp/$name-ios" >"$tmp/$name-ios.out" 2>&1
                 diff -u "$root/tests/$name.out" "$tmp/$name-ios.out"
+                ran=$((ran + 1))
                 pass
             done
-            echo "ok ios: ${#cross_host[@]} portable goldens are the same bytes on macOS and iOS"
+            echo "ok ios: $ran portable goldens are the same bytes on macOS and iOS"
+            echo "   (${ios_builds_only[*]} built for the phone but not run there — see ios_builds_only)"
         fi
     fi
 fi

@@ -213,6 +213,14 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     if (!object) return CTD_ERR_STALE;
     uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     double value = 0.0;
+    // A property that is being animated answers where it is *going*. The
+    // widget holds what is on screen this instant, which on this host is the
+    // same field; the destination lives beside the animation. The reasoning is
+    // beside ctd_anim_start in cortado_host.h.
+    if (ctd_anim_destination(widget, key, &value)) {
+        if (out) *out = value;
+        return CTD_OK;
+    }
     switch (key) {
         case CTD_P_OPACITY:
             value = gtk_widget_get_opacity(GTK_WIDGET(object));

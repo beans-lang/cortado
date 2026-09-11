@@ -144,15 +144,7 @@ int32_t ctd_widget_alive(ctd_handle widget) { return ctd_resolve(widget) ? 1 : 0
 ctd_status ctd_widget_release(ctd_handle widget) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
-    uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     if ([object isKindOfClass:[NSView class]]) [(NSView *)object removeFromSuperview];
-    [object release];
-    g_object[slot] = nil;
-    g_kind[slot] = -1;
-    // The bump is what makes every copy of this handle answer CTD_ERR_STALE
-    // from here on, rather than one of them reaching a recycled widget.
-    g_generation[slot]++;
-    if (g_generation[slot] == 0) g_generation[slot] = 1;
-    ctd_give_back(slot);
+    ctd_untrack(widget);
     return CTD_OK;
 }

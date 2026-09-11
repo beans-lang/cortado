@@ -54,7 +54,7 @@ enum { CTD_SLOTS = 8192 };
 // What a slot holds. A handle names a widget, a surface or a menu, and the
 // three are not interchangeable: asking a menu for its frame has to be
 // CTD_ERR_KIND and not a cast.
-enum { CTD_T_FREE = 0, CTD_T_WIDGET, CTD_T_SURFACE, CTD_T_MENU };
+enum { CTD_T_FREE = 0, CTD_T_WIDGET, CTD_T_SURFACE, CTD_T_MENU, CTD_T_ANIM };
 // Win32 overloads a combo box's window height: the number passed to
 // `CreateWindow` or `MoveWindow` is how tall the control is *with its list
 // dropped down*, not how tall it looks closed. Every other platform means the
@@ -69,6 +69,9 @@ enum { CTD_FONT_CACHE = 32 };
 // The frame clock's timer on a surface window, and how often it fires. Named
 // here because the clock sets it and the window procedure receives it.
 enum { CTD_CLOCK_TIMER = 0x0C10, CTD_CLOCK_PERIOD = 16 };
+// How often an animation is stepped, in milliseconds — about sixty times a
+// second, the same beat as the frame clock and for the same reason.
+enum { CTD_ANIM_PERIOD = 16 };
 
 typedef struct CtdMenu CtdMenu;
 
@@ -145,6 +148,14 @@ void ctd_give_back(uint32_t slot);
 void ctd_clock_ticked(HWND window);
 // Forgets the clock a slot may have had, before the slot is handed out again.
 void ctd_clock_forget(uint32_t slot);
+// Ends whatever a slot had to do with an animation, before it is handed out
+// again: the animation it *was*, and any animation of the control it held.
+void ctd_anim_forget(uint32_t slot);
+// Where a property is going while an animation moves it. A control keeps one
+// value per property and Core Animation keeps two, so this is the second one —
+// see the model and presentation paragraph beside ctd_anim_start in the header.
+int ctd_anim_destination(ctd_handle widget, int32_t property, double *out);
+void ctd_untrack(ctd_handle handle);
 void ctd_run_dialog(void *data);
 
 #endif

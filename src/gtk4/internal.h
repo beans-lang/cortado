@@ -44,7 +44,9 @@ extern GObject *g_object[CTD_SLOTS];
 extern ctd_event_fn g_sink;
 extern int g_started;
 extern int32_t g_role;
+extern int32_t g_kind[CTD_SLOTS];
 extern uint32_t g_generation[CTD_SLOTS];
+extern uint32_t g_used;
 extern void *g_sink_context;
 
 GtkTextView *ctd_text_view(gpointer object);
@@ -60,6 +62,14 @@ void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 void ctd_give_back(uint32_t slot);
 // Forgets the clock a slot may have had, before the slot is handed out again.
 void ctd_clock_forget(uint32_t slot);
+// Ends whatever a slot had to do with an animation, before it is handed out
+// again: the animation it *was*, and any animation of the widget it held.
+void ctd_anim_forget(uint32_t slot);
+// Where a property is going while an animation moves it. GTK keeps one value
+// per property and Core Animation keeps two, so this is the second one — see
+// the model and presentation paragraph beside ctd_anim_start in the header.
+int ctd_anim_destination(ctd_handle widget, int32_t property, double *out);
+void ctd_untrack(ctd_handle handle);
 void ctd_on_signal(GtkWidget *widget, gpointer user);
 void ctd_tag(GtkWidget *widget);
 

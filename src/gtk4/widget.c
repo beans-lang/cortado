@@ -110,7 +110,6 @@ int32_t ctd_widget_kind(ctd_handle widget) { return ctd_slot_kind(widget); }
 int32_t ctd_widget_alive(ctd_handle widget) { return ctd_resolve(widget) ? 1 : 0; }
 
 ctd_status ctd_widget_release(ctd_handle widget) {
-    uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     GtkWidget *parent = gtk_widget_get_parent(GTK_WIDGET(object));
@@ -119,10 +118,6 @@ ctd_status ctd_widget_release(ctd_handle widget) {
     } else if (parent) {
         gtk_widget_unparent(GTK_WIDGET(object));
     }
-    g_object_unref(g_object[slot]);
-    g_object[slot] = NULL;
-    g_generation[slot] = g_generation[slot] + 1;
-    if (g_generation[slot] == 0) g_generation[slot] = 1;
-    ctd_give_back(slot);
+    ctd_untrack(widget);
     return CTD_OK;
 }

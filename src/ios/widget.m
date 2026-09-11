@@ -116,19 +116,14 @@ int32_t ctd_widget_kind(ctd_handle widget) { return ctd_slot_kind(widget); }
 int32_t ctd_widget_alive(ctd_handle widget) { return ctd_resolve(widget) ? 1 : 0; }
 
 ctd_status ctd_widget_release(ctd_handle widget) {
-    uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     if ([object isKindOfClass:[UIView class]]) {
         [(UIView *)object removeFromSuperview];
     }
-    [object release];
-    g_object[slot] = nil;
-    // Bumping the generation is what turns a stale handle into a checked
-    // error rather than a jump into a slot somebody else now owns — and what
-    // makes handing the slot back safe.
-    g_generation[slot] = g_generation[slot] + 1;
-    if (g_generation[slot] == 0) g_generation[slot] = 1;
-    ctd_give_back(slot);
+    // Bumping the generation, which ctd_untrack does, is what turns a stale
+    // handle into a checked error rather than a jump into a slot somebody
+    // else now owns — and what makes handing the slot back safe.
+    ctd_untrack(widget);
     return CTD_OK;
 }

@@ -1,0 +1,24 @@
+an animation of no time at all refused: out_of_range
+an animation of negative time refused: out_of_range
+a delay before the start of time refused: out_of_range
+starting one that was never told where to go refused: wrong_moment
+cancelling it a second time refused: stale_handle
+nothing ended yet: 0
+an animation of a surface refused: not_animatable
+opacity the instant it starts: 0.00
+moving the start of one that is running refused: wrong_moment
+moving the end of one that is running refused: wrong_moment
+changing how long one that is running takes refused: wrong_moment
+delaying one that is already running refused: wrong_moment
+changing the curve of one that is running refused: wrong_moment
+starting one that is already running refused: wrong_moment
+after it finished: ended token=7 finished=true opacity=0.00
+cancelling one that already ended refused: stale_handle
+after cancelling: ended token=11 finished=false
+it kept where it was showing: true
+the one replaced: ended token=21 finished=false
+the one that replaced it: ended token=22 finished=true
+opacity at the end: 0.50
+when the widget went: ended token=31 finished=false
+animations that ended: 5
+drove=true

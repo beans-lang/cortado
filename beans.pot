@@ -23,6 +23,7 @@ csrc macos "src/mac/menu.m"
 csrc macos "src/mac/items.m"
 csrc macos "src/mac/introspect.m"
 csrc macos "src/mac/clock.m"
+csrc macos "src/mac/anim.m"
 
 link macos framework "AppKit"
 link macos framework "Foundation"
@@ -30,6 +31,9 @@ link macos framework "Foundation"
 # will actually show something; a timer at 1/60 of a second is a guess that is
 # wrong on every 120 Hz screen and drifts on all of them.
 link macos framework "CoreVideo"
+# Animation. CABasicAnimation and CALayer live in QuartzCore, which AppKit
+# pulls in on its own — but not when frameworks are named explicitly.
+link macos framework "QuartzCore"
 
 # The iOS host. Same header, same Beans above it — `tests/roles.out` is the
 # same bytes on both, which is the claim this file exists to make testable.
@@ -48,6 +52,7 @@ csrc ios "src/ios/dialog.m"
 csrc ios "src/ios/system.m"
 csrc ios "src/ios/introspect.m"
 csrc ios "src/ios/clock.m"
+csrc ios "src/ios/anim.m"
 
 link ios framework "UIKit"
 link ios framework "Foundation"
@@ -86,6 +91,7 @@ csrc linux "src/gtk4/dialog.c"
 csrc linux "src/gtk4/system.c"
 csrc linux "src/gtk4/introspect.c"
 csrc linux "src/gtk4/clock.c"
+csrc linux "src/gtk4/anim.c"
 
 # The Windows host, over Win32 and common controls v6. A fourth object system,
 # or rather the absence of one: a control is an HWND, its state is set by
@@ -108,6 +114,7 @@ csrc windows "src/win32/dialog.c"
 csrc windows "src/win32/system.c"
 csrc windows "src/win32/introspect.c"
 csrc windows "src/win32/clock.c"
+csrc windows "src/win32/anim.c"
 
 # Common controls carries the trackbar and the progress bar; comdlg32 the file
 # choosers; gdi32 the device contexts every measurement goes through. user32

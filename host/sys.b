@@ -58,6 +58,14 @@ pub extern "C" fn ctd_set_int(widget: u64, key: i32, value: i64) -> i32
 pub extern "C" fn ctd_get_int(widget: u64, key: i32, out: RawPtr<i64>) -> i32
 pub extern "C" fn ctd_set_real(widget: u64, key: i32, value: f64) -> i32
 pub extern "C" fn ctd_get_real(widget: u64, key: i32, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_anim_new(widget: u64, property: i32) -> u64
+pub extern "C" fn ctd_anim_from_real(anim: u64, value: f64) -> i32
+pub extern "C" fn ctd_anim_to_real(anim: u64, value: f64) -> i32
+pub extern "C" fn ctd_anim_duration(anim: u64, seconds: f64) -> i32
+pub extern "C" fn ctd_anim_delay(anim: u64, seconds: f64) -> i32
+pub extern "C" fn ctd_anim_curve(anim: u64, curve: i32) -> i32
+pub extern "C" fn ctd_anim_start(anim: u64, token: i64) -> i32
+pub extern "C" fn ctd_anim_cancel(anim: u64) -> i32
 pub extern "C" fn ctd_menu_new(title: RawPtr<i8>, len: i32) -> u64
 pub extern "C" fn ctd_menu_add_item(menu: u64, title: RawPtr<i8>, title_len: i32, key: RawPtr<i8>, key_len: i32, role: i32, token: i64) -> i32
 pub extern "C" fn ctd_menu_add_separator(menu: u64) -> i32
