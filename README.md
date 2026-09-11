@@ -53,10 +53,11 @@ run).
 
 | | |
 |---|---|
-| macOS | AppKit. Twelve controls, events, measurement, layout, components, markup |
+| macOS | AppKit. Twelve controls, events, measurement, layout, components, markup, menus, dialogs, bundling |
+| iOS | UIKit. Builds and runs in the Simulator; prints the same `tests/roles.out` as macOS |
 | Windows | host not written. Everything above the host runs and is tested here |
 | Linux | host not written. Everything above the host runs and is tested here |
-| iOS, Android | host not written, and Beans has no target triple for either yet |
+| Android | host not written, and Beans has no target triple for it yet |
 
 ## How it is put together
 
@@ -468,12 +469,29 @@ is the real enforcement — add an entry point, forget a host, and that
 platform's build fails — but a link only happens where a toolchain does, so
 this does the same check on text and runs anywhere.
 
-**What is actually written today is one host, AppKit.** A Windows or GTK4 host
-is a known, bounded piece of work against a header that has now been exercised
-by twelve controls, menus, dialogs, events, measurement and a component
-layer — but neither exists, and neither is claimed. This machine has no mingw
-and no GTK4, so one written here could not be compiled, let alone run, and a
-host nobody has run is not a port.
+**There are two hosts, and the second one is the proof.** `src/cortado_uikit.m`
+is UIKit — a different file, a different framework, the same header — and
+`./test.sh --native` builds `tests/roles.b` for `arm64-apple-ios-sim`, runs it
+in a booted simulator and diffs its output against the macOS run. Identical.
+Nothing above the host changed to make that true.
+
+The port earned its keep immediately by contradicting the design twice:
+
+- **A platform control may refuse the frame it is given.** A `UISwitch` is 51
+  by 31 and nothing else; a `UIProgressView` is 4 points tall whatever you ask.
+  `roles.out` used to carry frames, on the theory that a layout with no
+  measurement in it must be identical everywhere. It is — and the controls
+  clamped anyway. Frames are not a portable fact, so they left the portable
+  golden; `tests/layout.out` checks the solver's arithmetic on every runner and
+  `tests/shelf.out` records what each platform did with it.
+- **A `UISwitch` has no title.** On iOS the label beside a switch is a separate
+  view, so a check box's text has nowhere to go — except the accessibility
+  label, which is exactly where that string belongs on that platform and is
+  what VoiceOver reads.
+
+**No Windows or GTK4 host exists**, and neither is claimed. This machine has no
+mingw and no GTK4, so one written here could not be compiled, let alone run,
+and a host nobody has run is not a port.
 
 ## Building
 

@@ -8,3 +8,16 @@ csrc macos "src/cortado_macos.m"
 
 link macos framework "AppKit"
 link macos framework "Foundation"
+
+# The iOS host. Same header, same Beans above it — `tests/roles.out` is the
+# same bytes on both, which is the claim this file exists to make testable.
+# What differs is what the platform does not have: there is no menu bar on a
+# phone, so `ctd_capability(CTD_CAP_MENU_BAR)` answers no and every menu call
+# is a typed refusal rather than a silent no-op.
+csrc ios "src/cortado_uikit.m"
+
+link ios framework "UIKit"
+link ios framework "Foundation"
+# CGRectZero and CGRectIsEmpty come from CoreGraphics, and UIKit does not pull
+# it in transitively when frameworks are named explicitly.
+link ios framework "CoreGraphics"

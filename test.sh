@@ -137,6 +137,45 @@ fi
 pass
 echo "ok roles: the portable golden names no platform"
 
+# ----------------------------------------------------------------- the iOS leg
+#
+# The same program, built for a phone and run on one. This is the leg that
+# turns "write once, run anywhere" from a design claim into a diff: the iOS
+# host is a different file implementing the same header, and `tests/roles.out`
+# is the bytes both print.
+#
+# It needs Xcode (not just the Command Line Tools) and a booted simulator, and
+# it says which is missing rather than passing quietly.
+if [[ "$host_os" == "Darwin" ]]; then
+    if ! xcrun --sdk iphonesimulator --show-sdk-path >/dev/null 2>&1; then
+        skip ios "no iPhoneSimulator SDK — install Xcode, not just the Command Line Tools"
+    # `beansc --help` exits 2, and `set -o pipefail` makes that fail the whole
+    # pipeline — so the output is captured first and matched after. A check
+    # that mistook a help screen's exit code for "no iOS target" would skip
+    # this leg forever and read green.
+    elif ! { "$BEANSC" --help 2>&1 || true; } | grep -q "arm64-apple-ios-sim"; then
+        skip ios "this beansc has no iOS target; build one from a tree that has it"
+    else
+        "$BEANSC" build "$root/tests/roles.b" --target arm64-apple-ios-sim \
+            -o "$tmp/roles-ios" >"$tmp/ios.build" 2>&1 || {
+            echo "FAIL ios: cortado does not build for the simulator" >&2
+            tail -20 "$tmp/ios.build" >&2
+            exit 1
+        }
+        pass
+        booted="$(xcrun simctl list devices booted 2>/dev/null | grep -oE '[0-9A-F-]{36}' | head -1 || true)"
+        if [[ -z "$booted" ]]; then
+            skip ios_run "no booted simulator — 'xcrun simctl boot <device>' to run the iOS leg"
+            echo "ok ios: cortado builds for the simulator"
+        else
+            xcrun simctl spawn "$booted" "$tmp/roles-ios" >"$tmp/roles-ios.out" 2>&1
+            diff -u "$root/tests/roles.out" "$tmp/roles-ios.out"
+            pass
+            echo "ok ios: the portable golden is the same bytes on macOS and iOS"
+        fi
+    fi
+fi
+
 # ------------------------------------------------------------- negative control
 #
 # The headless leg claims a widget tree can be built with nothing on screen. A

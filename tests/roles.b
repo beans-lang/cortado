@@ -9,18 +9,29 @@
 //   * the kind of control, which is cortado's word;
 //   * its accessibility role, which is one shared vocabulary;
 //   * its text, its enabled and hidden state;
-//   * the order of children;
-//   * frames, from a layout where **every size is a constant**.
+//   * the order of children.
 //
 // And what it deliberately leaves out:
 //
-//   * the platform's own class name — `NSButton` here, `Button` on Win32,
+//   * the platform's own class name — `NSButton` here, `UISwitch` on iOS,
 //     `GtkButton` on Linux. That is in `tests/shelf.out`, which is per-platform
 //     on purpose: it is the answer that proves a real native control was built,
 //     and it cannot be the same everywhere.
-//   * measured sizes. How wide "Order a coffee" renders depends on the system
-//     font, so a golden carrying it would differ between two machines running
-//     the same operating system, let alone two platforms.
+//
+//   * **frames.** This one was learned rather than designed, and it is worth
+//     the paragraph. The first version of this file pinned every size to a
+//     constant, on the theory that a layout with no measurement in it must
+//     produce identical frames everywhere. It does — and then two controls
+//     came back a different size anyway, because **a platform control is
+//     allowed to refuse the frame it is given**. A `UISwitch` is 51 by 31 and
+//     nothing else; a `UIProgressView` is 4 points tall whatever you ask for.
+//     Both clamp, silently and correctly.
+//
+//     So a frame is not a portable fact, and the file that claims to be the
+//     portable contract must not hold one. Frames are covered better
+//     elsewhere: `tests/layout.out` checks 69 cases of the solver's own
+//     arithmetic on every runner with no platform at all, and
+//     `tests/shelf.out` records what each platform actually did with them.
 package main
 
 import cortado.platform
@@ -38,8 +49,7 @@ fn line(depth: int, widget: widgets.Widget) -> Result<string> {
     }
     let role: string = widget.a11y_role()?
     let text: string = widget.display_text()?
-    let frame: geometry.Rect = widget.frame()?
-    var out: string = "{indent}{widget.kind().name()} role={role} \"{text}\" frame={frame.show()}"
+    var out: string = "{indent}{widget.kind().name()} role={role} \"{text}\""
     match widget.is_enabled() {
         ok(on) => { if !on { out = "{out} disabled" } }
         err(absent) => {}

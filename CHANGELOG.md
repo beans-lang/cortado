@@ -160,6 +160,15 @@ First working macOS host.
   linker is the real enforcement, but a link only happens where a toolchain
   does; this does the same check on text and runs anywhere.
 
+- **An iOS host.** `src/cortado_uikit.m` implements the same 61 entry points
+  over UIKit, and `test.sh` builds `tests/roles.b` for `arm64-apple-ios-sim`,
+  runs it in a booted simulator and diffs it against the macOS run. Identical
+  bytes. Nothing above the host changed.
+- iOS has no menu bar, and that is what `CTD_CAP_MENU_BAR` answering no looks
+  like: every menu call is a typed `CTD_ERR_UNSUPPORTED` rather than a silent
+  no-op. This is the first host to exercise the capability API, which is the
+  reason it exists.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump
@@ -181,6 +190,21 @@ First working macOS host.
   and a text area has an answer to the second (none) and not the first. They
   are two questions now, and a tree walk no longer has to know which kinds to
   skip.
+- **A platform control may refuse the frame it is given.** `tests/roles.out`
+  used to carry frames, on the theory that a layout built entirely from
+  constants must produce identical frames everywhere. It does — and a
+  `UISwitch` came back 51 by 31 and a `UIProgressView` 4 points tall anyway,
+  because both clamp to their intrinsic size. A frame is therefore not a
+  portable fact and has left the portable golden; the solver's arithmetic is
+  checked by `tests/layout.out` on every runner, and what each platform did
+  with it by `tests/shelf.out`.
+- A check box's text had nowhere to go on iOS: a `UISwitch` shows none, because
+  the label beside one is a separate view. It becomes the switch's
+  accessibility label, which is where that string belongs on that platform and
+  what VoiceOver reads.
+- The iOS leg skipped silently at first because `beansc --help` exits 2 and
+  `set -o pipefail` turned that into "this compiler has no iOS target". The
+  skip ledger is what caught it — an undeclared skip fails the run.
 - Three container tags — `Grid`, `HFlex`, `VFlex` — compiled in markup and
   were refused by the run-time Builder, so a `<Grid>` would have produced a
   fault at mount rather than a grid. `tools/check_vocabulary.sh` caught it the
@@ -206,17 +230,18 @@ First working macOS host.
 
 ### Not done yet, on purpose
 
-- **There is one host, AppKit.** A Windows or GTK4 host is a bounded piece of
-  work against a header that twelve controls, menus, dialogs, events,
-  measurement and a component layer have now exercised — and `tests/roles.out`
-  is waiting to be the proof. Neither is written. This machine has no mingw and
-  no GTK4, so one written here could not be compiled, let alone run, and a host
-  nobody has run is not a port.
-- **iOS and Android need a Beans target first.** `beansc --help` lists 31
-  triples and not one of them is either. Adding one is tractable — 20 sites
-  branch on `"macos"` across six compiler files, and the runtime has nine
-  `__APPLE__` branches — but it is compiler work, not framework work, and it
-  comes before any UIKit or JNI host.
+- **No Windows or GTK4 host.** Both are bounded work against a header that two
+  platforms have now exercised, and `tests/roles.out` is waiting to be the
+  proof — the iOS port needed no change above the host at all. But this machine
+  has no mingw and no GTK4, so one written here could not be compiled, let
+  alone run, and a host nobody has run is not a port.
+- **The iOS file dialog answers a cancel.** A document picker reports through a
+  delegate rather than a completion block, and wiring one is a piece of work
+  that has not been done. It answers rather than hanging, which is the contract
+  that matters, and the answer is a refusal the caller can see.
+- **Android needs a Beans target first.** There is no `aarch64-linux-android`
+  triple. The NDK is on this machine and the work is tractable, but it is
+  compiler work and comes before any JNI host.
 
 - `Application.shutdown` unregisters the platform callback but does not
   `close()` it. Closing wants a named local, and Beans refuses `move self.sink`
