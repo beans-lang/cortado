@@ -22,15 +22,14 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             ShowWindow(view, value ? SW_HIDE : SW_SHOW);
             return CTD_OK;
         case CTD_P_CHECKED: {
-            if (kind != CTD_W_CHECK_BOX && kind != CTD_W_RADIO_BUTTON)
-                return CTD_ERR_KIND;
+            if (!ctd_kind_has_checked(kind)) return CTD_ERR_KIND;
+            if (!ctd_checked_in_range(kind, value)) return CTD_ERR_RANGE;
             if (value == 2) {
                 // Windows will only hold the third state on a button that has
                 // been told it has three, and turning that on also changes what
                 // clicking cycles through — the same trade AppKit makes with
                 // `allowsMixedState`. So it is switched on when a program asks
                 // for mixed and not before.
-                if (kind != CTD_W_CHECK_BOX) return CTD_ERR_UNSUPPORTED;
                 LONG_PTR style = GetWindowLongPtrW(view, GWL_STYLE);
                 style = (style & ~(LONG_PTR)BS_AUTOCHECKBOX) | BS_AUTO3STATE;
                 SetWindowLongPtrW(view, GWL_STYLE, style);
@@ -42,7 +41,8 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_OK;
         }
         case CTD_P_EDITABLE:
-            if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_TEXT_AREA)
+            if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_SECURE_FIELD &&
+                kind != CTD_W_TEXT_AREA)
                 return CTD_ERR_KIND;
             SendMessageW(view, EM_SETREADONLY, value ? FALSE : TRUE, 0);
             return CTD_OK;
@@ -52,7 +52,8 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             if (kind == CTD_W_LABEL) {
                 style &= ~(LONG_PTR)(SS_LEFT | SS_CENTER | SS_RIGHT);
                 style |= value == 1 ? SS_CENTER : value == 2 ? SS_RIGHT : SS_LEFT;
-            } else if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_TEXT_AREA) {
+            } else if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_SECURE_FIELD ||
+                       kind == CTD_W_TEXT_AREA) {
                 style &= ~(LONG_PTR)(ES_LEFT | ES_CENTER | ES_RIGHT);
                 style |= value == 1 ? ES_CENTER : value == 2 ? ES_RIGHT : ES_LEFT;
             } else {
@@ -102,14 +103,14 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = (GetWindowLongPtrW(view, GWL_STYLE) & WS_VISIBLE) ? 0 : 1;
             break;
         case CTD_P_CHECKED: {
-            if (kind != CTD_W_CHECK_BOX && kind != CTD_W_RADIO_BUTTON)
-                return CTD_ERR_KIND;
+            if (!ctd_kind_has_checked(kind)) return CTD_ERR_KIND;
             LRESULT state = SendMessageW(view, BM_GETCHECK, 0, 0);
             value = state == BST_CHECKED ? 1 : state == BST_INDETERMINATE ? 2 : 0;
             break;
         }
         case CTD_P_EDITABLE:
-            if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_TEXT_AREA)
+            if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_SECURE_FIELD &&
+                kind != CTD_W_TEXT_AREA)
                 return CTD_ERR_KIND;
             value = (GetWindowLongPtrW(view, GWL_STYLE) & ES_READONLY) ? 0 : 1;
             break;
@@ -117,7 +118,8 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             LONG_PTR style = GetWindowLongPtrW(view, GWL_STYLE);
             if (kind == CTD_W_LABEL) {
                 value = (style & SS_RIGHT) ? 2 : (style & SS_CENTER) ? 1 : 0;
-            } else if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_TEXT_AREA) {
+            } else if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_SECURE_FIELD ||
+                       kind == CTD_W_TEXT_AREA) {
                 value = (style & ES_RIGHT) ? 2 : (style & ES_CENTER) ? 1 : 0;
             } else {
                 return CTD_ERR_KIND;

@@ -28,6 +28,15 @@ pub enum WidgetKind {
     /// accessibility role — and on the hosts with no GPU it is simply an empty
     /// area rather than a missing one. `gpu.Device` is what fills it.
     canvas
+    /// On or off — and **the first kind that is not on every platform**.
+    ///
+    /// `NSSwitch`, `UISwitch`, `GtkSwitch`; the Win32 common controls have
+    /// none, and `available()` says so rather than cortado drawing one or
+    /// quietly handing back a check box.
+    switch
+    /// A line of text the platform shows as dots, and keeps out of the
+    /// pasteboard, out of dictation and off a screen recording.
+    secure_field
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -46,6 +55,8 @@ pub enum WidgetKind {
             scroll_view => host.W_SCROLL_VIEW,
             radio_button => host.W_RADIO_BUTTON,
             canvas => host.W_CANVAS,
+            switch => host.W_SWITCH,
+            secure_field => host.W_SECURE_FIELD,
         }
     }
 
@@ -66,7 +77,74 @@ pub enum WidgetKind {
             scroll_view => "ScrollView",
             radio_button => "RadioButton",
             canvas => "Canvas",
+            switch => "Switch",
+            secure_field => "SecureField",
         }
+    }
+
+    /// Whether the platform running this program can build one.
+    ///
+    /// Most kinds answer yes everywhere and this is a question nobody needs to
+    /// ask. `switch` is the one that does not: the Win32 common controls have
+    /// no toggle switch, and cortado will not draw an imitation or quietly
+    /// hand back a check box. The note beside `ctd_widget_supports` in
+    /// `src/cortado_host.h` is the argument in full.
+    pub fn available() -> bool {
+        unsafe {
+            return host.ctd_widget_supports(self.code() as i32) == 1
+        }
+    }
+
+    /// Whether being checked is what this control *is*.
+    ///
+    /// cortado's rule rather than any platform's, and the reason it is here in
+    /// Beans as well as in `src/cortado_rules.h` is that a test which asked
+    /// the host which kinds carry the property and then checked those kinds
+    /// would agree with any answer at all. Stated twice, compared once.
+    pub fn has_state() -> bool {
+        match self {
+            check_box => { return true }
+            radio_button => { return true }
+            switch => { return true }
+            container => { return false }
+            label => { return false }
+            button => { return false }
+            text_field => { return false }
+            image_view => { return false }
+            slider => { return false }
+            progress_bar => { return false }
+            separator => { return false }
+            text_area => { return false }
+            combo_box => { return false }
+            scroll_view => { return false }
+            canvas => { return false }
+            secure_field => { return false }
+        }
+    }
+
+    /// Whether the host recognises a raw kind number at all.
+    ///
+    /// `available()` asks about a kind cortado has a name for, so it can only
+    /// ever be answered yes or no. This asks about a *number*, and it is here
+    /// because a host has a third answer and something has to check that it
+    /// gives it: a code that is not a kind must be refused as out of range,
+    /// not reported as a control this platform happens not to have. A caller
+    /// that cannot tell those apart reads a typo as a platform difference.
+    pub static fn is_a_kind(code: int) -> bool {
+        unsafe {
+            return host.ctd_widget_supports(code as i32) >= 0
+        }
+    }
+
+    /// The same question as a refusal, for a constructor to lead with.
+    ///
+    /// Without it the first property write on a control that was never built
+    /// fails with `stale_handle` — a message about a handle, for a problem
+    /// about a platform, arriving one call after the one that could have
+    /// explained it.
+    pub fn demand() -> Result<bool> {
+        if self.available() { return ok(true) }
+        return err("this platform has no {self.name()} control", "no_such_control")
     }
 
     /// Every kind, in the order they are declared above.
@@ -94,6 +172,8 @@ pub enum WidgetKind {
         every.push(WidgetKind.scroll_view)
         every.push(WidgetKind.radio_button)
         every.push(WidgetKind.canvas)
+        every.push(WidgetKind.switch)
+        every.push(WidgetKind.secure_field)
         return move every
     }
 
@@ -112,6 +192,8 @@ pub enum WidgetKind {
         if code == host.W_SCROLL_VIEW { return some(WidgetKind.scroll_view) }
         if code == host.W_RADIO_BUTTON { return some(WidgetKind.radio_button) }
         if code == host.W_CANVAS { return some(WidgetKind.canvas) }
+        if code == host.W_SWITCH { return some(WidgetKind.switch) }
+        if code == host.W_SECURE_FIELD { return some(WidgetKind.secure_field) }
         return none
     }
 }

@@ -32,26 +32,6 @@ import cortado.widgets
 import cortado.component
 import std.io
 
-/// One empty control of every kind, in the order `WidgetKind` declares them.
-///
-/// Walked rather than listed. The first version of this file spelled the
-/// thirteen kinds out by hand, and the comment above it claimed that a kind
-/// added without a decision about this property would "show up as a missing
-/// line". It would not have — and it did not: `canvas` landed with the GPU
-/// work, never reached this list, and the golden simply stayed thirteen lines
-/// long. A list that is one short looks exactly like a list.
-///
-/// So the walk goes through `WidgetMaker.of_kind`, whose `match` the compiler
-/// checks for exhaustiveness. A new kind now stops the build here until
-/// somebody decides what it answers.
-fn every_kind() -> Result<List<widgets.Widget>> {
-    var built: List<widgets.Widget> = []
-    for kind: widgets.WidgetKind in widgets.WidgetKind.all() {
-        built.push(component.WidgetMaker.of_kind(kind)?)
-    }
-    return ok(move built)
-}
-
 /// What one kind answers: whether it takes the property, and whether what it
 /// reads back is what was written. Writing `false` and reading `true` is the
 /// failure this catches that a write-only check would not.
@@ -82,8 +62,28 @@ fn report(widget: widgets.Widget) -> string {
 fn run() -> Result<bool> {
     var app: surface.Application = new surface.Application(platform.AppRole.headless)
     app.check_abi()?
-    for widget: widgets.Widget in every_kind()? {
-        io.println(report(widget))
+    // Walked rather than listed. The first version of this file spelled the
+    // thirteen kinds out by hand, under a comment claiming that a kind added
+    // without a decision about this property would "show up as a missing
+    // line". It would not have, and it did not: `canvas` landed with the GPU
+    // work, never reached the list, and the golden simply stayed thirteen
+    // lines long. A list that is one short looks exactly like a list.
+    //
+    // `WidgetMaker.of_kind` is what the walk goes through, and its `match` the
+    // compiler checks for exhaustiveness, so a new kind stops the build here
+    // until somebody decides what it answers.
+    for kind: widgets.WidgetKind in widgets.WidgetKind.all() {
+        // A control this platform has not got has no enabled state to have an
+        // opinion about. This is the one line in this golden that can differ
+        // between hosts, and it can differ for exactly one kind today:
+        // `Switch`, which the Win32 common controls do not have. The inventory
+        // itself is pinned by `tools/check_vocabulary.sh`, which fails the
+        // build if a host leaves a kind out of its table.
+        if !kind.available() {
+            io.println("{kind.name()} is not a control on this platform")
+            continue
+        }
+        io.println(report(component.WidgetMaker.of_kind(kind)?))
     }
     app.shutdown()
     return ok(true)

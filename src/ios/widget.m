@@ -8,7 +8,39 @@
 // cortado: a UIButton with a menu *is* the platform's control for choosing one
 // of several on this system.
 
+// Everything in the header. Two of them are the same UIKit control: a phone
+// has no check box, so CTD_W_CHECK_BOX is a UISwitch here, and CTD_W_SWITCH is
+// the same control asked for by its own name. That is not a substitution of
+// the kind ctd_widget_supports exists to refuse — a UISwitch *is* what iOS
+// offers for a boolean, and both kinds get the real one.
+int32_t ctd_widget_supports(int32_t kind) {
+    switch (kind) {
+        case CTD_W_CONTAINER:
+        case CTD_W_LABEL:
+        case CTD_W_BUTTON:
+        case CTD_W_TEXT_FIELD:
+        case CTD_W_CHECK_BOX:
+        case CTD_W_IMAGE_VIEW:
+        case CTD_W_SLIDER:
+        case CTD_W_PROGRESS_BAR:
+        case CTD_W_SEPARATOR:
+        case CTD_W_TEXT_AREA:
+        case CTD_W_COMBO_BOX:
+        case CTD_W_SCROLL_VIEW:
+        case CTD_W_RADIO_BUTTON:
+        case CTD_W_CANVAS:
+        case CTD_W_SWITCH:
+        case CTD_W_SECURE_FIELD:
+            return 1;
+        default:
+            return CTD_ERR_RANGE;
+    }
+}
+
 ctd_handle ctd_widget_new(int32_t kind) {
+    // Asked rather than re-decided, so the factory and the question cannot
+    // answer differently about the same kind.
+    if (ctd_widget_supports(kind) != 1) return 0;
     UIView *view = nil;
     switch (kind) {
         case CTD_W_CONTAINER:
@@ -39,12 +71,25 @@ ctd_handle ctd_widget_new(int32_t kind) {
             view = field;
             break;
         }
-        case CTD_W_CHECK_BOX: {
-            // A switch is what iOS uses where a desktop uses a check box. It
-            // has no mixed state, which `ctd_set_int` reports rather than
-            // rounding to on or off.
+        case CTD_W_CHECK_BOX:
+        case CTD_W_SWITCH: {
+            // A switch is what iOS uses where a desktop uses a check box, and
+            // it is also, on its own account, a switch. Both kinds build one.
+            // The difference the two kinds keep is the mixed state: a check
+            // box has one everywhere and this platform cannot show it, which
+            // `ctd_set_int` reports rather than rounding to on or off.
             UISwitch *toggle = [[UISwitch alloc] initWithFrame:CGRectZero];
             view = toggle;
+            break;
+        }
+        case CTD_W_SECURE_FIELD: {
+            UITextField *field = [[UITextField alloc] initWithFrame:CGRectZero];
+            [field setBorderStyle:UITextBorderStyleRoundedRect];
+            // The real thing, not a font trick: UIKit keeps a secure field out
+            // of the pasteboard, out of autocorrect's dictionary and off a
+            // screen recording, and none of that follows from drawing dots.
+            [field setSecureTextEntry:YES];
+            view = field;
             break;
         }
         case CTD_W_IMAGE_VIEW:

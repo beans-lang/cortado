@@ -12,3 +12,5 @@ ComboBox enabled round-trips
 ScrollView refused wrong_widget
 RadioButton enabled round-trips
 Canvas refused wrong_widget
+Switch enabled round-trips
+SecureField enabled round-trips

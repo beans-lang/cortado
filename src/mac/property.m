@@ -69,7 +69,17 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             [(NSView *)object setHidden:value ? YES : NO];
             return CTD_OK;
         case CTD_P_CHECKED: {
-            if (![object isKindOfClass:[NSButton class]]) return CTD_ERR_KIND;
+            // By kind, not by class. AppKit makes a push button, a check box
+            // and a radio out of one class, so asking the object said yes to
+            // all three — see the rule beside CTD_P_CHECKED in the header.
+            int32_t kind = ctd_slot_kind(widget);
+            if (!ctd_kind_has_checked(kind)) return CTD_ERR_KIND;
+            if (!ctd_checked_in_range(kind, value)) return CTD_ERR_RANGE;
+            if ([object isKindOfClass:[NSSwitch class]]) {
+                [(NSSwitch *)object setState:value == 1 ? NSControlStateValueOn
+                                                        : NSControlStateValueOff];
+                return CTD_OK;
+            }
             NSControlStateValue state = value == 2 ? NSControlStateValueMixed
                                       : value == 1 ? NSControlStateValueOn
                                                    : NSControlStateValueOff;
@@ -125,8 +135,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = [(NSView *)object isHidden] ? 1 : 0;
             break;
         case CTD_P_CHECKED: {
-            if (![object isKindOfClass:[NSButton class]]) return CTD_ERR_KIND;
-            NSControlStateValue state = [(NSButton *)object state];
+            if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            // NSSwitch and NSButton both answer -state, and neither inherits
+            // it: NSControl's own -state has been deprecated since 10.10.
+            NSControlStateValue state = [object isKindOfClass:[NSSwitch class]]
+                                      ? [(NSSwitch *)object state]
+                                      : [(NSButton *)object state];
             value = state == NSControlStateValueMixed ? 2
                   : state == NSControlStateValueOn    ? 1 : 0;
             break;

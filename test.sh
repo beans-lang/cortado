@@ -90,7 +90,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim gpu triangle canvas shader)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls opacity clock frames anim gpu triangle canvas shader)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -104,6 +104,21 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # contract, and nothing else in the suite could see a disagreement about it:
 # `roles` reads the state with a match that treats a refusal and "enabled" the
 # same, so a host that refused printed identical bytes to one that accepted.
+#
+# `checked` and `controls` are here for the reason `enabled` is, and they were
+# written because the same mistake had been made a second time without anybody
+# noticing. `CTD_P_CHECKED` was still being answered by each host asking its own
+# object system, so a push button could be ticked on macOS and nowhere else,
+# and a radio button asked for the mixed state got four different answers. No
+# case in this suite wrote that property to a control that was not a check box,
+# so nothing could see it.
+#
+# `controls` is the file that can name a control one platform has not got. It
+# is portable because it prints agreement rather than inventory: a host with a
+# switch builds one, a host without refuses by name, and the same bytes come
+# out of both. The alternative — a per-platform golden of what exists — leaves
+# the refusing host unchecked, which is exactly where a silent substitution
+# would hide.
 #
 # `anim` is here because an animation is mostly a set of decisions — which
 # refusals, what the property reads while it moves, what cancelling keeps, what
@@ -132,7 +147,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled opacity clock anim gpu canvas shader)
+cross_host=(roles events text applied leaks enabled checked controls opacity clock anim gpu canvas shader)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -446,7 +461,7 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # display, and a gate must not need one. An example that is not built is an
     # example that goes stale, and the first person to find out is whoever
     # copied it.
-    for example in hello clock shader canvas; do
+    for example in hello clock shader canvas signin; do
         "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
         pass
     done

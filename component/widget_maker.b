@@ -58,6 +58,10 @@ pub class WidgetMaker {
     /// `WidgetKind.all()` through this, so the suite grows a row for a new
     /// kind whether or not anybody remembered to add one.
     pub static fn of_kind(kind: widgets.WidgetKind) -> Result<widgets.Widget> {
+        // Asked before anything is built, so `<Switch />` in markup on a
+        // platform with no switch is a refusal naming the control rather than
+        // a dead widget whose first attribute write complains about a handle.
+        kind.demand()?
         match kind {
             container => { return ok(new widgets.Container()) }
             label => { return ok(new widgets.Label()) }
@@ -73,6 +77,8 @@ pub class WidgetMaker {
             scroll_view => { return ok(new widgets.ScrollView()) }
             radio_button => { return ok(new widgets.RadioButton()) }
             canvas => { return ok(new widgets.Canvas()) }
+            switch => { return ok(new widgets.Switch()) }
+            secure_field => { return ok(new widgets.SecureField()) }
         }
     }
 

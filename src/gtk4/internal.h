@@ -48,6 +48,17 @@ extern int32_t g_kind[CTD_SLOTS];
 extern uint32_t g_generation[CTD_SLOTS];
 extern uint32_t g_used;
 extern void *g_sink_context;
+// How many writes cortado is making on the program's behalf right now.
+//
+// GTK notifies on a property change whoever made it, and the header is
+// explicit that ctd_set_* must not raise anything: a render that heard about
+// its own writes would feed itself for as long as the program ran. The other
+// three hosts are quiet by construction — BM_SETCHECK sends no BN_CLICKED,
+// -setState: sends no action, -setOn: fires no value-changed — so this counter
+// is what makes the fourth agree with them. A counter rather than a flag
+// because a setter can reach another setter: ctd_widget_synth_value asks
+// ctd_set_int to do the work, and the wrong nesting would leave events off.
+extern int g_writing;
 
 GtkTextView *ctd_text_view(gpointer object);
 char *ctd_dup(const char *utf8, int32_t len);
@@ -70,7 +81,15 @@ void ctd_anim_forget(uint32_t slot);
 // the model and presentation paragraph beside ctd_anim_start in the header.
 int ctd_anim_destination(ctd_handle widget, int32_t property, double *out);
 void ctd_untrack(ctd_handle handle);
+// The half of ctd_set_int that is allowed to raise an event, for the one
+// caller that wants one: ctd_widget_synth_value moves a control the way a user
+// would, and the event is the whole point of it.
+ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value);
 void ctd_on_signal(GtkWidget *widget, gpointer user);
+// A property notification, which hands a callback three arguments rather than
+// two: the object, the pspec that changed, and the user data. Connecting
+// ctd_on_signal to one of these reads the pspec as the widget's handle.
+void ctd_on_notify(GObject *object, GParamSpec *pspec, gpointer user);
 void ctd_tag(GtkWidget *widget);
 
 #endif

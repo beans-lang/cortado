@@ -265,6 +265,25 @@ pub abstract class Widget {
         }
     }
 
+    /// Reads one integer property back by its `host.P_*` id.
+    ///
+    /// The counterpart of `set_property`, and public for the same reason: the
+    /// applier writes attributes by id, and a test that asks what a *kind*
+    /// answers has no named accessor to reach for — a `Label` has no
+    /// `is_checked()` and should not grow one just to be refused.
+    ///
+    /// Application code wants the named accessor. `check_box.state()` says
+    /// what it reads and returns a `CheckState`; this returns an integer whose
+    /// meaning is in a C header.
+    pub fn read_property(property: int) -> Result<int> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        unsafe {
+            host.check(host.ctd_get_int(self.slot.raw, property as i32, scratch.ints) as int,
+                       "read property {property} of a {self.kind_value.name()}")?
+        }
+        return ok(scratch.integer() as int)
+    }
+
     /// Writes one real-valued property by its `host.P_*` id.
     pub fn set_property_real(property: int, value: f64) -> Result<bool> {
         unsafe {

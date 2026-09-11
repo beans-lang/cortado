@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 7
+#define CTD_ABI_VERSION 8
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -265,6 +265,53 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 #define CTD_W_RADIO_BUTTON 12
 /* Somewhere a program draws for itself, with a shader. See "the GPU". */
 #define CTD_W_CANVAS       13
+/* On or off, and the first kind that is not on every platform. Read the note
+ * on ctd_widget_supports before adding another like it. */
+#define CTD_W_SWITCH       14
+/* One line of text the platform shows as dots and keeps out of the
+ * pasteboard, out of dictation and off a screen recording. */
+#define CTD_W_SECURE_FIELD 15
+
+/* Whether this host can build a control of this kind.
+ *
+ * 1 yes, 0 no, CTD_ERR_RANGE when `kind` is not a kind at all — and that third
+ * answer is why this is not a boolean. "This platform has no such control" and
+ * "there is no such control" are different facts, and a caller that cannot
+ * tell them apart reads a typo as a platform difference.
+ *
+ * **Why cortado needs this at all.** The first fourteen kinds are on every
+ * platform, and the shape of this header says so: ask for a button, get a
+ * button. That stops being true at CTD_W_SWITCH. A toggle switch is a real
+ * control on macOS, iOS and GTK — NSSwitch, UISwitch, GtkSwitch — and the
+ * Win32 common controls do not have one. Windows has toggle switches; they
+ * live in WinUI, which is a different toolkit and not something an HWND can
+ * be.
+ *
+ * There were three ways out and two of them are worse:
+ *
+ *   * Draw one. The separator in the Win32 host argues against this in its own
+ *     comment: every control here is the platform's own, and an owner-drawn
+ *     imitation is a control that is wrong in ways the user can see and the
+ *     program cannot.
+ *   * Substitute a check box. It behaves the same and looks nothing like it,
+ *     so a design reviewed on a Mac ships to Windows as something else. A
+ *     silent substitution is a silent no-op one layer up.
+ *   * Say so, before the program builds anything.
+ *
+ * That is the shape cortado already uses for menus, file dialogs and the GPU,
+ * through CTD_CAP_*. A capability per control would be a #define per control
+ * and a second table to keep in step with the first; a question about a kind
+ * needs neither.
+ *
+ * **Every host answers for every kind, exhaustively.** Not "returns 0 for
+ * anything it does not know" — a kind added to this header and forgotten in a
+ * host would then read as a platform difference rather than as the omission it
+ * is. `tools/check_vocabulary.sh` holds each host's answer to the CTD_W_*
+ * list above, the same way it does for accessibility roles.
+ *
+ * ctd_widget_new answers 0 for a kind this refuses, and asks this first, so
+ * the two cannot disagree about the direction that matters. */
+int32_t ctd_widget_supports(int32_t kind);
 
 ctd_handle ctd_widget_new(int32_t kind);
 int32_t    ctd_widget_kind(ctd_handle widget);   /* -1 when stale */
@@ -356,9 +403,10 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  *
  *   **A widget has an enabled state exactly when it accepts input.**
  *
- * That is CTD_W_BUTTON, CTD_W_TEXT_FIELD, CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON,
- * CTD_W_SLIDER and CTD_W_COMBO_BOX. Every other kind answers CTD_ERR_KIND from
- * both `ctd_set_int` and `ctd_get_int`, on every host.
+ * That is CTD_W_BUTTON, CTD_W_TEXT_FIELD, CTD_W_SECURE_FIELD,
+ * CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON, CTD_W_SWITCH, CTD_W_SLIDER and
+ * CTD_W_COMBO_BOX. Every other kind answers CTD_ERR_KIND from both
+ * `ctd_set_int` and `ctd_get_int`, on every host.
  *
  * A label, an image, a separator and a progress bar take no input, so there is
  * nothing for "disabled" to turn off; what a caller actually wants for one of
@@ -370,6 +418,37 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  * `tests/enabled.out` is this paragraph as a golden, one line per kind, and it
  * is a cross-host file — so a host that guesses again prints different bytes.
  */
+
+/* **Which widgets carry CTD_P_CHECKED, and which of those have a third
+ * state.** The same sort of rule as CTD_P_ENABLED above, written down for the
+ * same reason: four hosts had four answers and nothing in the suite could see
+ * it.
+ *
+ * A widget has a checked state exactly when being checked is what it is:
+ * CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON and CTD_W_SWITCH. A push button is not
+ * one of those, and AppKit used to accept it — all three are an NSButton and
+ * -setState: is on NSButton — while GTK and Win32 refused. So ticking a button
+ * worked on one platform in four, which is worse than it working on none.
+ *
+ * Of the three, only a check box has the mixed value. "Some of the things this
+ * box stands for" is a real answer; a radio is one of a set, and a switch is
+ * one thing, and neither has a third position to be in. Writing 2 to either is
+ * CTD_ERR_RANGE, on every platform. Before this was written down, AppKit
+ * turned mixed into on, UIKit turned it into off, GTK4 held it as a real third
+ * state and Win32 refused it: four answers, and a golden that never asked the
+ * question.
+ *
+ * CTD_ERR_RANGE for any other value too. A caller that computed 7 has a bug,
+ * and quietly showing them "off" hides it.
+ *
+ * CTD_ERR_RANGE is deliberately not CTD_ERR_UNSUPPORTED. Unsupported means
+ * this platform cannot, which invites a caller to try elsewhere; out of range
+ * means nobody can, because the control has no such state anywhere. The
+ * distinction earns its keep here: there *is* an unsupported case, and it is
+ * a different one. iOS builds a check box out of a UISwitch, because a phone
+ * has no check box, so mixed on a check box is honoured on three hosts and
+ * refused with CTD_ERR_UNSUPPORTED on the fourth. `tests/checked.out` is these
+ * paragraphs as a golden, and it is a cross-host file. */
 
 /* CTD_ERR_RANGE when the bytes contain a zero: see rule 3 at the top. */
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len);

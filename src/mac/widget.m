@@ -4,7 +4,38 @@
 
 // -------------------------------------------------------------------- widgets
 
+// Everything in the header, because AppKit has a control for all of it. The
+// switch is written out one case per kind rather than as a range, so a kind
+// added to the header and forgotten here is a build-time refusal — see the
+// note beside ctd_widget_supports in ../cortado_host.h.
+int32_t ctd_widget_supports(int32_t kind) {
+    switch (kind) {
+        case CTD_W_CONTAINER:
+        case CTD_W_LABEL:
+        case CTD_W_BUTTON:
+        case CTD_W_TEXT_FIELD:
+        case CTD_W_CHECK_BOX:
+        case CTD_W_IMAGE_VIEW:
+        case CTD_W_SLIDER:
+        case CTD_W_PROGRESS_BAR:
+        case CTD_W_SEPARATOR:
+        case CTD_W_TEXT_AREA:
+        case CTD_W_COMBO_BOX:
+        case CTD_W_SCROLL_VIEW:
+        case CTD_W_RADIO_BUTTON:
+        case CTD_W_CANVAS:
+        case CTD_W_SWITCH:
+        case CTD_W_SECURE_FIELD:
+            return 1;
+        default:
+            return CTD_ERR_RANGE;
+    }
+}
+
 ctd_handle ctd_widget_new(int32_t kind) {
+    // Asked rather than re-decided, so the factory and the question cannot
+    // answer differently about the same kind.
+    if (ctd_widget_supports(kind) != 1) return 0;
     NSView *view = nil;
     switch (kind) {
         case CTD_W_CONTAINER:
@@ -125,6 +156,18 @@ ctd_handle ctd_widget_new(int32_t kind) {
             view = radio;
             break;
         }
+        case CTD_W_SWITCH:
+            // NSSwitch, not an NSButton with a switch button type. The two are
+            // different controls: the button type draws a check box, and what
+            // a Mac user calls a switch has been its own class since 10.15.
+            view = [[NSSwitch alloc] initWithFrame:NSZeroRect];
+            break;
+        case CTD_W_SECURE_FIELD:
+            // A subclass of NSTextField, so every text and property path in
+            // this host already reaches it — and a real one, so the window
+            // server keeps what is typed out of screen recordings.
+            view = [[NSSecureTextField alloc] initWithFrame:NSZeroRect];
+            break;
         default:
             return 0;
     }

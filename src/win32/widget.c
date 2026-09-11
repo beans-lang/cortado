@@ -2,7 +2,43 @@
 
 #include "internal.h"
 
+// Everything in the header except one, and the exception is the reason
+// ctd_widget_supports exists at all.
+//
+// The Win32 common controls have no toggle switch. Windows has them — every
+// Settings page is full of them — and they are WinUI, a different toolkit,
+// drawn by a XAML compositor into a surface an HWND cannot be. The three ways
+// to answer that are argued in the header; this is the third, which is to say
+// so before the program builds anything.
+int32_t ctd_widget_supports(int32_t kind) {
+    switch (kind) {
+        case CTD_W_CONTAINER:
+        case CTD_W_LABEL:
+        case CTD_W_BUTTON:
+        case CTD_W_TEXT_FIELD:
+        case CTD_W_CHECK_BOX:
+        case CTD_W_IMAGE_VIEW:
+        case CTD_W_SLIDER:
+        case CTD_W_PROGRESS_BAR:
+        case CTD_W_SEPARATOR:
+        case CTD_W_TEXT_AREA:
+        case CTD_W_COMBO_BOX:
+        case CTD_W_SCROLL_VIEW:
+        case CTD_W_RADIO_BUTTON:
+        case CTD_W_CANVAS:
+        case CTD_W_SECURE_FIELD:
+            return 1;
+        case CTD_W_SWITCH:
+            return 0;
+        default:
+            return CTD_ERR_RANGE;
+    }
+}
+
 ctd_handle ctd_widget_new(int32_t kind) {
+    // Asked rather than re-decided, so the factory and the question cannot
+    // answer differently about the same kind.
+    if (ctd_widget_supports(kind) != 1) return 0;
     const WCHAR *class_name = NULL;
     DWORD style = WS_CHILD | WS_VISIBLE;
     DWORD extended = 0;
@@ -31,6 +67,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_TEXT_FIELD:
             class_name = WC_EDITW;
             style |= ES_LEFT | ES_AUTOHSCROLL | WS_TABSTOP;
+            extended = WS_EX_CLIENTEDGE;
+            break;
+        case CTD_W_SECURE_FIELD:
+            // The real thing: an edit control with ES_PASSWORD does not let
+            // its text be copied out, and the shell will not read it back.
+            class_name = WC_EDITW;
+            style |= ES_LEFT | ES_PASSWORD | ES_AUTOHSCROLL | WS_TABSTOP;
             extended = WS_EX_CLIENTEDGE;
             break;
         case CTD_W_TEXT_AREA:
@@ -100,7 +143,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
             SetPropW(content, CTD_INNER, (HANDLE)1);
         }
     }
-    if (kind == CTD_W_TEXT_FIELD) {
+    if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_SECURE_FIELD) {
         SetWindowSubclass(window, ctd_edit_proc, 1, 0);
     }
     if (kind == CTD_W_PROGRESS_BAR) {

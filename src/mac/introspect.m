@@ -37,6 +37,14 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // reader knows. A group is what it is: an area with content, and
         // a canvas that matters to a user gets a label beside it.
         case CTD_W_CANVAS:       role = @"group";       break;
+        // ARIA's own word, and every platform's: a control with two
+        // positions that is not a check box.
+        case CTD_W_SWITCH:       role = @"switch";      break;
+        // There is no ARIA role for a password field — HTML's input type has
+        // none either. Every assistive layer under this one does distinguish
+        // it (AXSecureTextField, ATSPI "password text", UIA IsPassword), so
+        // reporting "textbox" would throw away a fact all four platforms have.
+        case CTD_W_SECURE_FIELD: role = @"password";    break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);
@@ -51,7 +59,14 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
         NSPopUpButton *menu = (NSPopUpButton *)object;
         if (index < 0 || index >= (int64_t)[menu numberOfItems]) return CTD_ERR_RANGE;
         [menu selectItemAtIndex:(NSInteger)index];
+    } else if ([object isKindOfClass:[NSSwitch class]]) {
+        if (!ctd_checked_in_range(ctd_slot_kind(widget), index)) return CTD_ERR_RANGE;
+        [(NSSwitch *)object setState:index == 1 ? NSControlStateValueOn
+                                                : NSControlStateValueOff];
     } else if ([object isKindOfClass:[NSButton class]]) {
+        // Through the rule, not around it: this call stands in for a user, and
+        // a user cannot put a radio button into the mixed state either.
+        if (!ctd_checked_in_range(ctd_slot_kind(widget), index)) return CTD_ERR_RANGE;
         NSControlStateValue state = index == 2 ? NSControlStateValueMixed
                                   : index == 1 ? NSControlStateValueOn
                                                : NSControlStateValueOff;

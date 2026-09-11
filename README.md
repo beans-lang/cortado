@@ -334,8 +334,9 @@ mistake.
 
 **The tags are controls, not HTML.** Containers are `VStack`, `HStack`,
 `VFlex`, `HFlex`, `Grid`, `Box`, `Container` and `ScrollView`; controls are
-`Label`, `Button`, `TextField`, `TextArea`, `CheckBox`, `RadioButton`,
-`Slider`, `ProgressBar`, `ComboBox`, `Separator` and `Image`. A closed set, and
+`Label`, `Button`, `TextField`, `SecureField`, `TextArea`, `CheckBox`,
+`RadioButton`, `Switch`, `Slider`, `ProgressBar`, `ComboBox`, `Separator`,
+`Image` and `Canvas`. A closed set, and
 any other capitalised tag is a component. There is no `<div>`, no entity table,
 no escaping and no `$html`: the output is a tree of native objects, and there
 is nothing to inject into.
@@ -377,9 +378,11 @@ ran.
 | `Label` | `NSTextField` | static text |
 | `Button` | `NSButton` | a command |
 | `TextField` | `NSTextField` | one line of editable text |
+| `SecureField` | `NSSecureTextField` | one line the platform shows as dots |
 | `TextArea` | `NSScrollView` + `NSTextView` | many lines, scrolling |
 | `CheckBox` | `NSButton` | on, off or mixed |
 | `RadioButton` | `NSButton` | one choice of several; grouped by parent |
+| `Switch` | `NSSwitch` | on or off — **not on every platform**, see below |
 | `Slider` | `NSSlider` | a number in a range, optionally stepped |
 | `ProgressBar` | `NSProgressIndicator` | progress, or that work is happening |
 | `ComboBox` | `NSPopUpButton` | one of a list |
@@ -390,8 +393,45 @@ ran.
 
 `examples/gallery` is all of them in one window, written in markup.
 
+**Not every control is on every platform, and cortado says which.**
+`WidgetKind.switch.available()` answers before anything is built, because a
+toggle switch is a real control on macOS, iOS and GTK and **is not in the Win32
+common controls**. Windows has toggle switches; they live in WinUI, which is a
+different toolkit and not something an `HWND` can be.
+
+The other two ways out are worse. Drawing one breaks the rule that every
+control here is the platform's own — an owner-drawn imitation is wrong in ways
+the user can see and the program cannot. Substituting a check box ships a
+design reviewed on a Mac to Windows as something else, which is a silent no-op
+one layer up. So cortado refuses, by name:
+
+```beans
+if widgets.WidgetKind.switch.available() {
+    remember = widgets.Switch.of(false)?
+} else {
+    remember = widgets.CheckBox.of("Remember me")?
+}
+```
+
+`examples/signin.b` is that, in a window you can run. A `<Switch />` in markup
+refuses the same way, with `no_such_control`, because a component author never
+sees a `WidgetKind` at all. `tests/controls.out` is the same bytes on a
+platform that has one and a platform that has not: every line asks whether what
+happened agrees with what the platform promised, so a host that quietly
+substituted something would print different bytes even though it built a
+control.
+
+**A secure field is the real one.** `NSSecureTextField`, a `GtkEntry` with
+visibility off, an `EDIT` with `ES_PASSWORD`. A text field with a bullet glyph
+drawn into it looks the same and does none of the work: the real one keeps what
+is typed out of the pasteboard, out of autocorrect's dictionary and off a
+screen recording. It also answers `""` to `display_text`, so a control tree
+printed to a log carries the field and not what was typed into it —
+`secret.value()` is a call somebody had to write on purpose.
+
 **A control reports the event it actually is.** A `Button` raises `activate`; a
-`CheckBox`, `RadioButton`, `Slider` and `ComboBox` raise `value_changed`; a
+`CheckBox`, `RadioButton`, `Switch`, `Slider` and `ComboBox` raise
+`value_changed`; a
 `TextField` raises `commit`. AppKit sends all of them down one selector, so the
 host decides — a framework that called every action "activate" would leave each
 application working the difference out again from the control's class.

@@ -168,6 +168,23 @@ for directory in "$root"/src/*/; do
         fail "src/$name/ has no ctd_a11y_role to read, so this check covered nothing:" \
              "Look for the function this script greps for, not for a drifted table."
     fi
+    # And whether it can build one. This is the answer that must not default:
+    # a kind added to the header and forgotten in a host would fall through to
+    # "not a kind" or, worse, to 0 — and 0 reads as "this platform hasn't got
+    # one", which is a fact about Windows rather than about an omission.
+    sed -n '/ctd_widget_supports(int32_t kind)/,/^}/p' "${present[@]}" \
+        | { grep -oE 'CTD_W_[A-Z_]+' || true; } | sort -u >"$root/build/.builds.$name"
+    if [[ ! -s "$root/build/.builds.$name" ]]; then
+        fail "src/$name/ has no ctd_widget_supports to read, so this check covered nothing:" \
+             "Look for the function this script greps for, not for a drifted table."
+    fi
+    if ! diff -u "$root/build/.roles.header" "$root/build/.builds.$name" \
+            >"$root/build/.builds.$name.diff"; then
+        cat "$root/build/.builds.$name.diff" >&2
+        echo "  < declared in cortado_host.h      > answered by src/$name/" >&2
+        fail "the $name host does not say yes or no for every widget kind:" \
+             "Add the case to ctd_widget_supports in src/$name/, beside the others."
+    fi
     if ! diff -u "$root/build/.roles.header" "$root/build/.roles.$name" \
             >"$root/build/.roles.$name.diff"; then
         cat "$root/build/.roles.$name.diff" >&2
@@ -182,4 +199,4 @@ if [[ $hosts_read -eq 0 ]]; then
          "src/ has no platform directories, so this check covered nothing."
 fi
 
-echo "ok vocabulary: $(wc -l <"$root/build/.kinds.declared" | tr -d ' ') kinds, $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes, $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles in $hosts_read hosts, in both tables"
+echo "ok vocabulary: $(wc -l <"$root/build/.kinds.declared" | tr -d ' ') kinds, $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes, $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles and as many yes-or-no answers in $hosts_read hosts, in both tables"

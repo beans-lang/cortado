@@ -6,7 +6,36 @@
 // group another check button joins. Grouping is by parent here, the same rule
 // the macOS and iOS hosts follow, and it is applied when the child is added.
 
+// Everything in the header. GTK has a real control for all of it, the switch
+// included — GtkSwitch is the control GNOME's own settings use.
+int32_t ctd_widget_supports(int32_t kind) {
+    switch (kind) {
+        case CTD_W_CONTAINER:
+        case CTD_W_LABEL:
+        case CTD_W_BUTTON:
+        case CTD_W_TEXT_FIELD:
+        case CTD_W_CHECK_BOX:
+        case CTD_W_IMAGE_VIEW:
+        case CTD_W_SLIDER:
+        case CTD_W_PROGRESS_BAR:
+        case CTD_W_SEPARATOR:
+        case CTD_W_TEXT_AREA:
+        case CTD_W_COMBO_BOX:
+        case CTD_W_SCROLL_VIEW:
+        case CTD_W_RADIO_BUTTON:
+        case CTD_W_CANVAS:
+        case CTD_W_SWITCH:
+        case CTD_W_SECURE_FIELD:
+            return 1;
+        default:
+            return CTD_ERR_RANGE;
+    }
+}
+
 ctd_handle ctd_widget_new(int32_t kind) {
+    // Asked rather than re-decided, so the factory and the question cannot
+    // answer differently about the same kind.
+    if (ctd_widget_supports(kind) != 1) return 0;
     GtkWidget *widget = NULL;
     switch (kind) {
         case CTD_W_CONTAINER:
@@ -32,6 +61,19 @@ ctd_handle ctd_widget_new(int32_t kind) {
             break;
         case CTD_W_TEXT_FIELD:
             widget = gtk_entry_new();
+            break;
+        case CTD_W_SWITCH:
+            widget = gtk_switch_new();
+            break;
+        case CTD_W_SECURE_FIELD:
+            widget = gtk_entry_new();
+            // Both, and they are not the same thing. Visibility is what draws
+            // the invisible character; the input purpose is what tells the
+            // input method and the on-screen keyboard that this is a
+            // password, so neither offers to complete it or remembers it.
+            gtk_entry_set_visibility(GTK_ENTRY(widget), FALSE);
+            gtk_entry_set_input_purpose(GTK_ENTRY(widget),
+                                        GTK_INPUT_PURPOSE_PASSWORD);
             break;
         case CTD_W_CHECK_BOX:
             widget = gtk_check_button_new();
@@ -97,14 +139,23 @@ ctd_handle ctd_widget_new(int32_t kind) {
                              (gpointer)(uintptr_t)handle);
             break;
         case CTD_W_TEXT_FIELD:
+        case CTD_W_SECURE_FIELD:
             g_signal_connect(widget, "activate", G_CALLBACK(ctd_on_signal),
+                             (gpointer)(uintptr_t)handle);
+            break;
+        case CTD_W_SWITCH:
+            // Not "state-set": that runs before the switch has moved, so the
+            // event would carry the position it is leaving. The property
+            // notification is after.
+            g_signal_connect(widget, "notify::active",
+                             G_CALLBACK(ctd_on_notify),
                              (gpointer)(uintptr_t)handle);
             break;
         case CTD_W_COMBO_BOX:
             // A GtkDropDown has no "changed": the selection is a property, and
             // a property notification is how GObject spells this.
             g_signal_connect(widget, "notify::selected",
-                             G_CALLBACK(ctd_on_signal),
+                             G_CALLBACK(ctd_on_notify),
                              (gpointer)(uintptr_t)handle);
             break;
         default: break;

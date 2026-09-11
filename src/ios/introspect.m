@@ -36,6 +36,14 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // reader knows. A group is what it is: an area with content, and
         // a canvas that matters to a user gets a label beside it.
         case CTD_W_CANVAS:       role = @"group";       break;
+        // ARIA's own word, and every platform's: a control with two
+        // positions that is not a check box.
+        case CTD_W_SWITCH:       role = @"switch";      break;
+        // There is no ARIA role for a password field — HTML's input type has
+        // none either. Every assistive layer under this one does distinguish
+        // it (AXSecureTextField, ATSPI "password text", UIA IsPassword), so
+        // reporting "textbox" would throw away a fact all four platforms have.
+        case CTD_W_SECURE_FIELD: role = @"password";    break;
         default:                 role = @"group";       break;
     }
     return ctd_copy_out(role, out, cap);

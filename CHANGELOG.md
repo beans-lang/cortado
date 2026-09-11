@@ -847,6 +847,108 @@ First working macOS host.
   one-job pin prints `sanitize: beansc emitted no IR for triangle` instead of
   nothing.
 
+- **`ctd_widget_supports` — a control that is not on every platform, said out
+  loud.** The first thirteen kinds are everywhere and the shape of the header
+  said so: ask for a button, get a button. `CTD_W_SWITCH` ends that. A toggle
+  switch is `NSSwitch`, `UISwitch`, `GtkSwitch` — and the Win32 common controls
+  have none. Windows has toggle switches; they live in WinUI, a XAML compositor
+  drawing into a surface an `HWND` cannot be.
+
+  Three ways out, two of them worse. Drawing one breaks the rule the Win32
+  separator already states in its own comment: every control here is the
+  platform's own, and an imitation is wrong in ways the user can see and the
+  program cannot. Substituting a check box ships a design reviewed on a Mac to
+  Windows as something else — a silent no-op one layer up. So: one entry point
+  answering 1, 0, or `CTD_ERR_RANGE` for a number that is not a kind at all.
+  The third answer is why it is not a boolean: a caller that cannot tell "this
+  platform has not got one" from "there is no such thing" reads a typo as a
+  platform difference.
+
+  A capability per control would have been a `#define` per control and a second
+  table to keep in step with the first. A question about a kind needs neither.
+
+- **`CTD_W_SECURE_FIELD` — and the real one, not a font trick.**
+  `NSSecureTextField`, a `UITextField` with secure entry, a `GtkEntry` with
+  visibility off *and* `GTK_INPUT_PURPOSE_PASSWORD`, an `EDIT` with
+  `ES_PASSWORD`. A field with a bullet glyph drawn into it looks identical and
+  does none of the work: the real one keeps the text out of the pasteboard, out
+  of the input method's dictionary and off a screen recording. Its
+  accessibility role is `password` rather than `textbox`, because there is no
+  ARIA role for one but every assistive layer underneath distinguishes it —
+  `AXSecureTextField`, ATSPI `password text`, UIA `IsPassword`.
+
+  It answers `""` to `display_text`, so a control tree printed to a log or a
+  golden carries the field and not what was typed into it. `value()` is the
+  call somebody has to write on purpose.
+
+- **`CTD_P_CHECKED` was the `CTD_P_ENABLED` mistake, made a second time.** Each
+  host was answering "does this control have a checked state" by asking its own
+  object system, and the object systems disagree:
+
+  * AppKit asked `isKindOfClass:[NSButton class]`, and a *push button* is one —
+    so ticking a button worked on macOS and was refused on the other three.
+  * A radio button has no mixed state anywhere, and all four hosts did
+    something different when asked for one: AppKit turned it into on, UIKit
+    turned it into off, GTK4 held it as a real third state, Win32 refused it.
+
+  Nothing in the suite could see either, because no case wrote the property to
+  a control that was not a check box. The rule is cortado's now, in
+  `src/cortado_rules.h`: a widget has a checked state exactly when being
+  checked is what it *is* — check box, radio button, switch. Only a check box
+  has the third value; 2 on the other two is `CTD_ERR_RANGE`, and so is 7, and
+  so is −1.
+
+  `CTD_ERR_RANGE` rather than `CTD_ERR_UNSUPPORTED` deliberately. Unsupported
+  means this platform cannot, which invites a caller to try elsewhere; out of
+  range means nobody can. There *is* an unsupported case and it is a different
+  one: iOS builds a check box out of a `UISwitch`, so mixed on a check box is
+  held on three hosts and refused on the fourth.
+
+- **A GTK4 drop-down's event was reaching the wrong widget, and had been all
+  along.** GTK4 has no "changed" signal on a `GtkDropDown` — the selection is a
+  property — so the host connected `notify::selected`. A `notify` closure is
+  marshalled as `callback(object, pspec, user_data)`, and the callback it was
+  connected to took two arguments, so it read the `GParamSpec` where cortado
+  passes the widget's handle. Every drop-down change on Linux went to a handle
+  that resolved to nothing.
+
+  Invisible, because the only case that drove a control through a property
+  notification was `tests/shelf.b`, whose golden is macOS-only. `tests/events.b`
+  drives one now, and removing the fix deletes a line from a cross-host golden.
+
+- **And on GTK4 a program's own write raised an event.** The header is explicit
+  that `ctd_set_*` changes a control silently — a render that heard about its
+  own writes would feed itself for as long as the program ran. Three hosts are
+  quiet by construction: `BM_SETCHECK` sends no `BN_CLICKED`, `-setState:` sends
+  no action, `-setOn:` fires no value-changed. GTK notifies on a property change
+  whoever made it. `g_writing` is a counter rather than a flag, because
+  `ctd_widget_synth_value` reaches `ctd_set_int` to do its work and the wrong
+  nesting would leave events off for good.
+
+- **`tests/enabled.b` walked a hand-written list, and the list was one short.**
+  Its own comment promised that a kind added without a decision about the
+  property would "show up as a missing line". It did not: `canvas` reached the
+  enum, never reached the list, and the golden stayed thirteen lines long and
+  perfectly green. A list that is one short looks exactly like a list. The walk
+  goes through `WidgetMaker.of_kind` now, whose `match` the compiler checks, and
+  `tools/check_vocabulary.sh` holds `WidgetKind.all()` to the enum's own cases.
+
+- **How a golden says "this platform has no switch" and still prints the same
+  bytes everywhere.** `tests/controls.out` asks, per kind, whether what happened
+  *agrees with what the platform promised* — the shape `tests/gpu.out` uses. A
+  host with a switch builds one and reads its role; a host without refuses by
+  name; identical output, and the claim being made is the stronger one. Proven
+  by making this Mac answer "no" for `CTD_W_SWITCH`: the file came back byte for
+  byte, and `tests/enabled.out` changed exactly the one line that is inventory
+  rather than rule.
+
+  Its weak spot is written into it: on the three hosts that run goldens every
+  kind exists, so "refused exactly where it is not offered" compares nothing to
+  nothing. What holds Win32's "no" is `tools/check_vocabulary.sh`, which fails
+  the build if any host leaves a kind out of its table, plus the cross-target
+  compile. The part that is not vacuous anywhere — a number that is not a kind
+  must be refused rather than reported as a missing control — runs on all four.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

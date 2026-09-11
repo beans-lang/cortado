@@ -14,7 +14,7 @@ GtkTextView *ctd_text_view(gpointer object) {
     return (inner && GTK_IS_TEXT_VIEW(inner)) ? GTK_TEXT_VIEW(inner) : NULL;
 }
 
-ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
+ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     switch (key) {
@@ -28,14 +28,25 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             gtk_widget_set_visible(GTK_WIDGET(object), value ? FALSE : TRUE);
             return CTD_OK;
-        case CTD_P_CHECKED:
-            if (!GTK_IS_CHECK_BUTTON(object)) return CTD_ERR_KIND;
+        case CTD_P_CHECKED: {
+            // By kind, not by class. A radio is a GtkCheckButton here, and a
+            // GtkCheckButton has a real third state — so asking the object
+            // would have let a radio be mixed on this platform and nowhere
+            // else. The rule is beside CTD_P_CHECKED in the header.
+            int32_t made_as = ctd_slot_kind(widget);
+            if (!ctd_kind_has_checked(made_as)) return CTD_ERR_KIND;
+            if (!ctd_checked_in_range(made_as, value)) return CTD_ERR_RANGE;
+            if (GTK_IS_SWITCH(object)) {
+                gtk_switch_set_active(GTK_SWITCH(object), value == 1);
+                return CTD_OK;
+            }
             // GTK4's check button has a real third state, which is why cortado
             // can promise one: `inconsistent` is exactly AppKit's mixed.
             gtk_check_button_set_inconsistent(GTK_CHECK_BUTTON(object), value == 2);
             if (value != 2)
                 gtk_check_button_set_active(GTK_CHECK_BUTTON(object), value == 1);
             return CTD_OK;
+        }
         case CTD_P_EDITABLE: {
             GtkTextView *text = ctd_text_view(object);
             if (text) {
@@ -81,6 +92,16 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
     }
 }
 
+// The public form. Every write cortado makes on the program's behalf is
+// silent, which on this platform takes saying so — see g_writing in
+// internal.h.
+ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
+    g_writing++;
+    ctd_status status = ctd_set_int_raising(widget, key, value);
+    g_writing--;
+    return status;
+}
+
 ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
@@ -94,8 +115,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = gtk_widget_get_visible(GTK_WIDGET(object)) ? 0 : 1;
             break;
         case CTD_P_CHECKED:
-            if (!GTK_IS_CHECK_BUTTON(object)) return CTD_ERR_KIND;
-            if (gtk_check_button_get_inconsistent(GTK_CHECK_BUTTON(object))) {
+            if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (GTK_IS_SWITCH(object)) {
+                value = gtk_switch_get_active(GTK_SWITCH(object)) ? 1 : 0;
+            } else if (gtk_check_button_get_inconsistent(GTK_CHECK_BUTTON(object))) {
                 value = 2;
             } else {
                 value = gtk_check_button_get_active(GTK_CHECK_BUTTON(object)) ? 1 : 0;
@@ -134,7 +157,7 @@ static double g_progress_max[CTD_SLOTS];
 // asking for the same size installs nothing.
 static GHashTable *g_font_classes;
 
-ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
+static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double value) {
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     uint32_t slot = (uint32_t)(widget & 0xffffffffu);
@@ -206,6 +229,16 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             return CTD_OK;
         default: return CTD_ERR_UNSUPPORTED;
     }
+}
+
+// The public form. Every write cortado makes on the program's behalf is
+// silent, which on this platform takes saying so — see g_writing in
+// internal.h.
+ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
+    g_writing++;
+    ctd_status status = ctd_set_real_raising(widget, key, value);
+    g_writing--;
+    return status;
 }
 
 ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {

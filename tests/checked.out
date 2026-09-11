@@ -1,0 +1,13 @@
+-- which controls are a state --
+  cortado has this many kinds: 16
+  every kind this platform builds was asked: true
+  exactly the kinds that are a state carry the property: true
+  this many of them are a state: 3
+  off and on round-trip on every one: true
+-- the third state --
+  mixed is held where the kind has one, out of range where it
+  has not, and never rounded to something else: true
+-- values that are not states --
+  7 is out of range: true
+  -1 is out of range: true
+drove=true

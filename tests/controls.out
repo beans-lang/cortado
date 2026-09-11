@@ -1,0 +1,20 @@
+-- what this platform can build --
+  cortado has this many kinds: 16
+  every one of them answers yes or no: true
+  a control is alive exactly where the kind is offered: true
+  and refused before it is built exactly where it is not: true
+  every refusal names the control rather than a handle: true
+-- what a control that exists can say about itself --
+  each has an accessibility role, and none is empty: true
+  each has the platform's own class name, and none is empty: true
+-- the same question through markup --
+  this many kinds are reachable by their own name as a tag: 15
+  and each builds exactly where its kind is offered: true
+-- moving a control, and writing to one --
+  this many kinds are a state: 3
+  each one this platform has raises value_changed when it is moved: true
+  and none raises anything when the program writes to it: true
+-- a number that is not a kind --
+  the host refuses it rather than calling it a missing control: true
+  and cortado has no name for it: true
+drove=true

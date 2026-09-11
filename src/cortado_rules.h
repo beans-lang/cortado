@@ -30,10 +30,47 @@
 static inline int ctd_kind_has_enabled(int32_t kind) {
     return kind == CTD_W_BUTTON
         || kind == CTD_W_TEXT_FIELD
+        || kind == CTD_W_SECURE_FIELD
         || kind == CTD_W_CHECK_BOX
         || kind == CTD_W_RADIO_BUTTON
+        || kind == CTD_W_SWITCH
         || kind == CTD_W_SLIDER
         || kind == CTD_W_COMBO_BOX;
+}
+
+/* Whether a kind carries CTD_P_CHECKED — the rule stated in full beside
+ * CTD_P_CHECKED in cortado_host.h.
+ *
+ * Being checked has to be what the control *is*, not something its class
+ * happens to support. AppKit makes a push button, a check box, a radio and a
+ * switch out of the same two classes, so asking the object answered yes for
+ * all four; GTK and Win32 asked a different question and answered differently.
+ * This is the question. */
+static inline int ctd_kind_has_checked(int32_t kind) {
+    return kind == CTD_W_CHECK_BOX
+        || kind == CTD_W_RADIO_BUTTON
+        || kind == CTD_W_SWITCH;
+}
+
+/* Whether a kind has the third, mixed state.
+ *
+ * Only a check box. A radio is one of a set and a switch is one thing; neither
+ * has a third position, so 2 is out of range for them rather than unsupported.
+ * Whether the platform can *show* mixed is a separate question with a separate
+ * answer — see the CTD_ERR_UNSUPPORTED paragraph in the header. */
+static inline int ctd_kind_has_mixed(int32_t kind) {
+    return kind == CTD_W_CHECK_BOX;
+}
+
+/* Whether `value` is a state CTD_P_CHECKED can hold on this kind.
+ *
+ * One place, because the three questions it folds together — is it a state at
+ * all, is it the third one, does this kind have a third one — are the three
+ * each host used to answer for itself. */
+static inline int ctd_checked_in_range(int32_t kind, int64_t value) {
+    if (value < 0 || value > 2) return 0;
+    if (value == 2) return ctd_kind_has_mixed(kind);
+    return 1;
 }
 
 /* What cortado means by each curve, as a function from 0..1 onto 0..1.

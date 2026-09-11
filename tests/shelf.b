@@ -45,6 +45,17 @@ fn build() -> Result<bool> {
     tick.set_state(widgets.CheckState.on)?
     root.add(tick)?
 
+    // The two controls that are not on every platform in the same way. A
+    // secure field is everywhere; a switch is not, and the golden below is
+    // this Mac's — `tests/controls.out` is where the portable claim lives.
+    // What this file proves is the native class column: NSSwitch and
+    // NSSecureTextField, not an NSButton wearing a different title.
+    var remember: widgets.Switch = widgets.Switch.of(true)?
+    root.add(remember)?
+
+    var secret: widgets.SecureField = widgets.SecureField.of("hunter2")?
+    root.add(secret)?
+
     var pick: widgets.RadioButton = widgets.RadioButton.of("Decaf")?
     pick.set_chosen(true)?
     root.add(pick)?
@@ -90,6 +101,10 @@ fn build() -> Result<bool> {
     io.println("combo items={drink.count().or(-1)} selected={drink.selected().or(-9)} text=\"{drink.display_text().or("?")}\"")
     io.println("combo item 0=\"{drink.item_at(0).or("?")}\" item 2=\"{drink.item_at(2).or("?")}\"")
     io.println("radio chosen={pick.is_chosen().or(false)}")
+    io.println("switch on={remember.is_on().or(false)}")
+    // Read back on purpose: a secure field keeps its text from the screen, not
+    // from the program that owns it.
+    io.println("secure value=\"{secret.value().or("?")}\" shown=\"{secret.display_text().or("?")}\"")
     io.println("text area text=\"{note.text().or("?").replace("\n", "\\n")}\"")
     io.println("scroller children={scroller.count()}")
 
@@ -98,6 +113,13 @@ fn build() -> Result<bool> {
     // and it is what lets `describe` print a flag only where it means
     // something.
     io.println("-- refusals --")
+    // A switch is on or off. Mixed is a state it does not have anywhere, which
+    // is `out_of_range` rather than `unsupported` — see the rule beside
+    // CTD_P_CHECKED in the header, and `tests/checked.out` for all of it.
+    match remember.set_property(host.P_CHECKED, 2) {
+        ok(done) => { io.println("a switch took the mixed state") }
+        err(problem) => { io.println("switch mixed: {problem.kind}") }
+    }
     match rule.is_enabled() {
         ok(on) => { io.println("a separator answered enabled={on}") }
         err(problem) => { io.println("separator enabled: {problem.kind}") }

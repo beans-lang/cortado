@@ -19,8 +19,13 @@ void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token) {
 
 // The same rule the other two hosts follow: a control that carries a value
 // says the value changed; a control that is a command says it was activated.
+int g_writing = 0;
+
 static void ctd_emit_control(ctd_handle target) {
     if (!g_sink) return;
+    // A write cortado is making on the program's behalf is not news. See
+    // g_writing in internal.h.
+    if (g_writing) return;
     gpointer object = ctd_resolve(target);
     if (!object) return;
 
@@ -47,7 +52,12 @@ static void ctd_emit_control(ctd_handle target) {
                 text = gtk_string_list_get_string(items, (guint)index);
             break;
         }
+        case CTD_W_SWITCH:
+            kind = CTD_EV_VALUE_CHANGED;
+            index = gtk_switch_get_active(GTK_SWITCH(object)) ? 1 : 0;
+            break;
         case CTD_W_TEXT_FIELD:
+        case CTD_W_SECURE_FIELD:
             kind = CTD_EV_TEXT_COMMIT;
             text = gtk_editable_get_text(GTK_EDITABLE(object));
             break;
@@ -68,6 +78,21 @@ static void ctd_emit_control(ctd_handle target) {
 
 void ctd_on_signal(GtkWidget *widget, gpointer user) {
     (void)widget;
+    ctd_emit_control((ctd_handle)(uintptr_t)user);
+}
+
+// The same, for the signals that carry a parameter.
+//
+// This is not a convenience. A "notify" closure is marshalled as
+// callback(object, pspec, user_data), so a two-argument function connected to
+// one receives the pspec where it expects its user data — and cortado passes
+// the widget's handle as user data. The drop-down was connected that way and
+// nothing noticed, because the only case in the suite that drives a control
+// through a property notification is the one added to tests/events.b beside
+// this change.
+void ctd_on_notify(GObject *object, GParamSpec *pspec, gpointer user) {
+    (void)object;
+    (void)pspec;
     ctd_emit_control((ctd_handle)(uintptr_t)user);
 }
 

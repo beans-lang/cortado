@@ -39,6 +39,8 @@ pub class Vocabulary {
         if tag == "ScrollView" { return some(widgets.WidgetKind.scroll_view) }
         if tag == "RadioButton" { return some(widgets.WidgetKind.radio_button) }
         if tag == "Canvas" { return some(widgets.WidgetKind.canvas) }
+        if tag == "Switch" { return some(widgets.WidgetKind.switch) }
+        if tag == "SecureField" { return some(widgets.WidgetKind.secure_field) }
         return none
     }
 

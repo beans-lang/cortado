@@ -1,8 +1,9 @@
-registered=3
+registered=4
 order activate #1
 order activate #2
 extra value_changed state=1
+choice value_changed index=1 text="espresso"
 clicks=2
-after forgetting order: clicks=2 registered=2
+after forgetting order: clicks=2 registered=3
 registered at teardown=0
 drove=true

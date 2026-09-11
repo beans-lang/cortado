@@ -62,7 +62,12 @@ void ctd_emit_control(ctd_handle target, id sender) {
     int64_t index = 0;
     NSString *text = nil;
 
-    if ([sender isKindOfClass:[NSSlider class]]) {
+    if ([sender isKindOfClass:[NSSwitch class]]) {
+        // Its own class, so it is asked before NSControl's other subclasses
+        // and never falls through to the push-button branch below.
+        kind = CTD_EV_VALUE_CHANGED;
+        index = [(NSSwitch *)sender state] == NSControlStateValueOn ? 1 : 0;
+    } else if ([sender isKindOfClass:[NSSlider class]]) {
         kind = CTD_EV_VALUE_CHANGED;
         index = (int64_t)[(NSSlider *)sender doubleValue];
     } else if ([sender isKindOfClass:[NSPopUpButton class]]) {

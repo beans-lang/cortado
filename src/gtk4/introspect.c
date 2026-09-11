@@ -29,6 +29,14 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // pixels here", and inventing one would be a word no screen
         // reader knows. A group is what it is: an area with content.
         case CTD_W_CANVAS:       role = "group";       break;
+        // ARIA's own word, and every platform's: a control with two
+        // positions that is not a check box.
+        case CTD_W_SWITCH:       role = "switch";      break;
+        // There is no ARIA role for a password field — HTML's input type has
+        // none either. Every assistive layer under this one does distinguish
+        // it (AXSecureTextField, ATSPI "password text", UIA IsPassword), so
+        // reporting "textbox" would throw away a fact all four platforms have.
+        case CTD_W_SECURE_FIELD: role = "password";    break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -74,7 +82,14 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
             gtk_check_button_set_active(GTK_CHECK_BUTTON(object), index == 1);
         return CTD_OK;
     }
-    if (GTK_IS_DROP_DOWN(object)) return ctd_set_int(widget, CTD_P_SELECTED, index);
+    if (GTK_IS_SWITCH(object)) {
+        gtk_switch_set_active(GTK_SWITCH(object), index == 1);
+        return CTD_OK;
+    }
+    // The raising form: cortado's own writes are silent, and this call is the
+    // one that is standing in for a user.
+    if (GTK_IS_DROP_DOWN(object))
+        return ctd_set_int_raising(widget, CTD_P_SELECTED, index);
     return CTD_ERR_KIND;
 }
 

@@ -18,16 +18,26 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             [(UIView *)object setHidden:value ? YES : NO];
             return CTD_OK;
-        case CTD_P_CHECKED:
+        case CTD_P_CHECKED: {
+            // Which kinds have this property, and which of them have a third
+            // state, is cortado's rule rather than UIKit's — the paragraph
+            // beside CTD_P_CHECKED in the header says why. The order matters:
+            // "that control has no such state anywhere" is answered before
+            // "this platform cannot show it", because the first is true of
+            // every platform and the second of one.
+            int32_t made_as = ctd_slot_kind(widget);
+            if (!ctd_kind_has_checked(made_as)) return CTD_ERR_KIND;
+            if (!ctd_checked_in_range(made_as, value)) return CTD_ERR_RANGE;
             if ([object isKindOfClass:[UISwitch class]]) {
-                // A switch has two states. A mixed one is not something iOS
-                // can show, and quietly rounding it to on or off would make a
-                // tri-state check box lie about itself on this platform only.
+                // A UISwitch has two positions. A check box has three, and
+                // this is the platform that cannot show the third — quietly
+                // rounding it to on or off would make a tri-state check box
+                // lie about itself here and nowhere else.
                 if (value == 2) return CTD_ERR_UNSUPPORTED;
                 [(UISwitch *)object setOn:value ? YES : NO];
                 return CTD_OK;
             }
-            if (ctd_slot_kind(widget) == CTD_W_RADIO_BUTTON) {
+            if (made_as == CTD_W_RADIO_BUTTON) {
                 UIButton *radio = (UIButton *)object;
                 [radio setSelected:value == 1];
                 // iOS has no radio control, so the state has to be visible
@@ -39,6 +49,7 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
                 return CTD_OK;
             }
             return CTD_ERR_KIND;
+        }
         case CTD_P_EDITABLE:
             if ([object isKindOfClass:[UITextField class]]) {
                 [(UITextField *)object setEnabled:value ? YES : NO];
@@ -107,12 +118,11 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = [(UIView *)object isHidden] ? 1 : 0;
             break;
         case CTD_P_CHECKED:
+            if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if ([object isKindOfClass:[UISwitch class]]) {
                 value = [(UISwitch *)object isOn] ? 1 : 0;
-            } else if (ctd_slot_kind(widget) == CTD_W_RADIO_BUTTON) {
-                value = [(UIButton *)object isSelected] ? 1 : 0;
             } else {
-                return CTD_ERR_KIND;
+                value = [(UIButton *)object isSelected] ? 1 : 0;
             }
             break;
         case CTD_P_EDITABLE:

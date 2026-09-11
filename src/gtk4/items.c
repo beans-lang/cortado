@@ -8,7 +8,7 @@ static GtkStringList *ctd_item_list(gpointer object) {
     return model && GTK_IS_STRING_LIST(model) ? GTK_STRING_LIST(model) : NULL;
 }
 
-ctd_status ctd_items_clear(ctd_handle widget) {
+static ctd_status ctd_items_clear_raising(ctd_handle widget) {
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     GtkStringList *items = ctd_item_list(object);
@@ -18,7 +18,16 @@ ctd_status ctd_items_clear(ctd_handle widget) {
     return CTD_OK;
 }
 
-ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
+// Silent, like every other write cortado makes: changing the model of a
+// GtkDropDown moves its selection, and a moved selection notifies.
+ctd_status ctd_items_clear(ctd_handle widget) {
+    g_writing++;
+    ctd_status status = ctd_items_clear_raising(widget);
+    g_writing--;
+    return status;
+}
+
+static ctd_status ctd_items_add_raising(ctd_handle widget, const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
@@ -29,6 +38,15 @@ ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
     gtk_string_list_append(items, text);
     g_free(text);
     return CTD_OK;
+}
+
+// Silent, like every other write cortado makes: changing the model of a
+// GtkDropDown moves its selection, and a moved selection notifies.
+ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
+    g_writing++;
+    ctd_status status = ctd_items_add_raising(widget, utf8, len);
+    g_writing--;
+    return status;
 }
 
 ctd_status ctd_items_count(ctd_handle widget, int32_t *out) {
