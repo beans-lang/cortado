@@ -54,7 +54,7 @@ run).
 | | |
 |---|---|
 | macOS | AppKit. Twelve controls, events, measurement, layout, components, markup, menus, dialogs, bundling |
-| iOS | UIKit. Builds and runs in the Simulator and prints the same `tests/roles.out` as macOS. Not yet visible on screen — see below |
+| iOS | UIKit. Twelve controls on screen in the Simulator, and the same `tests/roles.out` as macOS |
 | Windows | host not written. Everything above the host runs and is tested here |
 | Linux | host not written. Everything above the host runs and is tested here |
 | Android | host not written, and Beans has no target triple for it yet |
@@ -489,20 +489,23 @@ The port earned its keep immediately by contradicting the design twice:
   label, which is exactly where that string belongs on that platform and is
   what VoiceOver reads.
 
-**What the iOS host does not do yet: put pixels on a screen.** Launched as a
-bundle, the application starts, the window is key, visible, unhidden, attached
-to a window scene and correctly sized; its root view controller's view is
-composited — its background is what the screen shows — and cortado's container
-sits inside it at the right frame with its children at theirs, none hidden. And
-nothing below that background draws.
+**`examples/gallery` runs on a phone.** The same `.bx` markup, the same
+component tree, the same layout solver, twelve real UIKit controls — built with
+`tools/bundle_ios.sh` and installed with `xcrun simctl install`.
 
-It is worth being exact about what that does and does not cast doubt on. The
-ABI, the layout solver, the widgets, the events and the component layer are all
-exercised by the headless run, which produces the correct tree and the same
-bytes as macOS. What is unfinished is the last step of `cortado_uikit.m`: how a
-view hierarchy built *before* `UIApplicationMain` gets composited by UIKit
-afterwards. A phone is the one platform where the application does not own its
-own startup, and that is the part still to solve.
+The one structural thing this host does that the macOS one does not is worth
+knowing, because it cost the longest to find. **A `UIWindow` belongs to a
+`UIWindowScene`, and one built before the application launched belongs to
+none.** Such a window can be key, visible, unhidden, correctly sized and fully
+populated — every property reads right — and it renders *nothing*, not even its
+own background colour. Assigning `windowScene` afterwards does not fix it. So
+`ctd_attach_scene` builds a real scene window when a scene connects and moves
+the view controller, with cortado's whole tree under it, across.
+
+cortado builds its window before starting the loop because that is the order
+every other platform uses and the order an application's own code reads in. A
+phone is the one platform where the application does not own its startup, which
+is why `ctd_app_run` was allowed not to return from the first commit.
 
 **No Windows or GTK4 host exists**, and neither is claimed. This machine has no
 mingw and no GTK4, so one written here could not be compiled, let alone run,

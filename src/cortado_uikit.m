@@ -13,26 +13,21 @@
 // Coordinates are already top-left with y downward on iOS, so unlike the macOS
 // host there is no flip: a UIView's frame is what cortado means by a frame.
 //
-// ## What works, and what does not
+// ## The one thing about iOS that has no counterpart anywhere else
 //
-// Everything that does not involve putting pixels on a screen. cortado builds
-// for `arm64-apple-ios-sim`, runs under `xcrun simctl spawn`, builds every one
-// of the twelve controls as a real UIKit object, lays them out with the same
-// solver, and prints `tests/roles.out` byte for byte identically to the macOS
-// host. The gate runs that diff on every `./test.sh --native`.
+// A `UIWindow` belongs to a `UIWindowScene`, and one built before the
+// application launched belongs to none. Such a window can be key, visible,
+// unhidden, correctly sized, fully populated — every property reads right, and
+// it renders **nothing**, not even its own background colour. Assigning
+// `windowScene` afterwards does not fix it.
 //
-// **Presenting that tree on screen does not work yet.** Launched as a bundle,
-// the application starts, the window is key, visible, unhidden, attached to a
-// window scene and correctly sized; its root view controller's view is
-// composited — its background colour is what the screen shows — and cortado's
-// container sits inside it at the right frame with its children at theirs,
-// none hidden. And nothing below the background draws.
-//
-// It is not the ABI, the layout, the widgets or the component layer: those are
-// all verified by the headless run, which produces the correct tree. It is the
-// last step of this file — how a view hierarchy built before
-// `UIApplicationMain` gets composited by UIKit afterwards — and it is written
-// down here rather than left as a surprise.
+// cortado builds its window before starting the loop, because that is the
+// order every other platform uses and the order an application's own code
+// reads in. So `ctd_attach_scene` builds a real scene window once a scene
+// connects and moves the view controller — with cortado's whole tree under
+// it — across. It is the one place this host does something structural that
+// the macOS host does not, and it is why `ctd_app_run` was always allowed not
+// to return.
 
 #import <UIKit/UIKit.h>
 #include <string.h>
@@ -231,16 +226,67 @@ static ctd_handle g_shown;
 // cortado builds its window before starting the loop, because that is the
 // order every other platform uses and the order an application's code reads
 // in. So the window is adopted by the first scene that connects, here.
-static void ctd_attach_scene(UIWindow *window) {
-    if (!window || [window windowScene]) return;
-    for (UIScene *scene in [[UIApplication sharedApplication] connectedScenes]) {
-        if ([scene isKindOfClass:[UIWindowScene class]]) {
-            [window setWindowScene:(UIWindowScene *)scene];
-            [window setFrame:[(UIWindowScene *)scene coordinateSpace].bounds];
-            [window makeKeyAndVisible];
-            return;
+static UIWindow *ctd_attach_scene(UIWindow *window) {
+    if (!window) return nil;
+    UIWindowScene *scene = nil;
+    for (UIScene *candidate in [[UIApplication sharedApplication] connectedScenes]) {
+        if ([candidate isKindOfClass:[UIWindowScene class]]) {
+            scene = (UIWindowScene *)candidate;
+            break;
         }
     }
+    if (!scene) return window;
+    if ([window windowScene] == scene) return window;
+
+    // A window is *built from* its scene, not assigned one afterwards.
+    // Assigning `windowScene` to a window made with `initWithFrame:` leaves
+    // something that reads correct in every respect — key, visible, unhidden,
+    // right frame, right scene — and renders nothing, not even its own
+    // background colour. So a real scene window is made here and the view
+    // controller, with cortado's whole tree under it, moves across.
+    UIWindow *attached = [[UIWindow alloc] initWithWindowScene:scene];
+    [attached setFrame:[[scene coordinateSpace] bounds]];
+    [attached setBackgroundColor:[window backgroundColor]];
+    UIViewController *controller = [window rootViewController];
+    [[controller retain] autorelease];
+    [window setRootViewController:nil];
+    [window setHidden:YES];
+    [attached setRootViewController:controller];
+    [attached makeKeyAndVisible];
+
+    // The safe area is only known once the window is on a scene, and a phone's
+    // is not a detail: content under the notch or the home indicator is
+    // content nobody can read or tap. The tree was laid out before any of this
+    // existed, so the root is moved into the safe area and the surface reports
+    // its new size — an application that listens for `surface_resized` lays
+    // out again and fits exactly.
+    UIView *content = [controller view];
+    [content layoutIfNeeded];
+    CGRect safe = [[content safeAreaLayoutGuide] layoutFrame];
+    if (!CGRectIsEmpty(safe)) {
+        for (UIView *child in ctd_children(content)) {
+            [child setFrame:safe];
+        }
+        ctd_event resized;
+        memset(&resized, 0, sizeof resized);
+        resized.kind = CTD_EV_SURFACE_RESIZED;
+        resized.width = safe.size.width;
+        resized.height = safe.size.height;
+        if (g_sink) g_sink(g_sink_context, &resized);
+    }
+
+    // The handle the caller holds must keep naming the surface it named
+    // before, so the table's object is replaced rather than a second handle
+    // minted. Everything above this file goes on using the same `Window`.
+    for (uint32_t slot = 1; slot <= g_used; slot++) {
+        if (g_object[slot] == window) {
+            [g_object[slot] release];
+            g_object[slot] = [attached retain];
+            break;
+        }
+    }
+    [attached release];
+    return attached;
 }
 
 @implementation CortadoAppDelegate
@@ -260,9 +306,8 @@ didFinishLaunchingWithOptions:(NSDictionary *)options {
         // to them collapses the whole tree to nothing. The frames the solver
         // computed are already right, because `Surface.content_size` asked the
         // window, which has had the screen's bounds since it was made.
-        self.window = (UIWindow *)surface;
-        [(UIWindow *)surface makeKeyAndVisible];
-        ctd_attach_scene(self.window);
+        self.window = ctd_attach_scene((UIWindow *)surface);
+        [self.window makeKeyAndVisible];
     }
     ctd_emit(CTD_EV_APP_LAUNCHED, 0, 0, 0);
     return YES;
@@ -272,7 +317,10 @@ didFinishLaunchingWithOptions:(NSDictionary *)options {
     // A scene has certainly connected by now; at didFinishLaunching it may not
     // have, so the attach is attempted at both and is a no-op once it has
     // taken.
-    ctd_attach_scene(self.window);
+    // A scene has certainly connected by now; at didFinishLaunching it may not
+    // have, so the attach is attempted at both and is a no-op once it has
+    // taken.
+    self.window = ctd_attach_scene(self.window);
     ctd_emit(CTD_EV_APP_FOREGROUND, 0, 0, 0);
 }
 - (void)applicationDidEnterBackground:(UIApplication *)application {
@@ -449,7 +497,12 @@ ctd_status ctd_surface_content_size(ctd_handle surface, double *out_size) {
     if (!object) return CTD_ERR_STALE;
     UIView *content = ctd_surface_view(object);
     if (!content) return CTD_ERR_KIND;
-    CGRect bounds = [content bounds];
+    // The safe area when there is one — the part of the screen a person can
+    // actually see and reach. Before the window is on a scene there is none,
+    // and the full bounds are the honest answer until `surface_resized` says
+    // otherwise.
+    CGRect safe = [[content safeAreaLayoutGuide] layoutFrame];
+    CGRect bounds = CGRectIsEmpty(safe) ? [content bounds] : safe;
     if (out_size) {
         out_size[0] = bounds.size.width;
         out_size[1] = bounds.size.height;
@@ -759,9 +812,17 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
     CGSize offer = CGSizeMake(avail_width < 0 ? CGFLOAT_MAX : avail_width,
                               avail_height < 0 ? CGFLOAT_MAX : avail_height);
     CGSize wanted = [view sizeThatFits:offer];
-    // A view with no intrinsic size answers zero, which would collapse it. Its
-    // own frame is the honest fallback: it is what the caller last set.
-    if (wanted.width <= 0.0 && wanted.height <= 0.0) wanted = [view frame].size;
+    if (ctd_slot_kind(widget) == CTD_W_SEPARATOR) {
+        // A hairline. iOS has no separator control, so cortado's is a plain
+        // view, and a plain view measures zero — which collapses it to
+        // nothing. One point is what a table's own separators are, and is the
+        // same answer an NSBox gives on macOS, so the two platforms agree.
+        wanted = CGSizeMake(avail_width < 0 ? 0.0 : avail_width, 1.0);
+    } else if (wanted.width <= 0.0 && wanted.height <= 0.0) {
+        // A view with no intrinsic size answers zero. Its own frame is the
+        // honest fallback: it is what the caller last set.
+        wanted = [view frame].size;
+    }
     if (out_size) {
         out_size[0] = wanted.width;
         out_size[1] = wanted.height;

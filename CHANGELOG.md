@@ -177,6 +177,12 @@ First working macOS host.
   was checked by putting a one-past-the-end read into the handle table and
   watching UBSan name the line.
 
+- **`examples/gallery` runs on a phone.** Same markup, same components, same
+  solver, twelve real UIKit controls. `tools/bundle_ios.sh` makes an
+  installable `.app`.
+- Content lands in the **safe area**, and the surface reports its size when the
+  scene connects, so a phone's notch and home indicator do not cover anything.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump
@@ -198,6 +204,13 @@ First working macOS host.
   and a text area has an answer to the second (none) and not the first. They
   are two questions now, and a tree walk no longer has to know which kinds to
   skip.
+- **A `UIWindow` built before the application launched belongs to no
+  `UIWindowScene`, and renders nothing at all.** Not a wrong colour or a
+  clipped view: nothing, not even its own background. It reads correct in every
+  respect — key, visible, unhidden, right frame, right scene once assigned —
+  and assigning `windowScene` afterwards does not fix it. The window has to be
+  *built from* the scene. Found by colouring the window, the view controller's
+  view and the container three different colours and seeing none of them.
 - **A platform control may refuse the frame it is given.** `tests/roles.out`
   used to carry frames, on the theory that a layout built entirely from
   constants must produce identical frames everywhere. It does — and a
@@ -243,15 +256,6 @@ First working macOS host.
   proof — the iOS port needed no change above the host at all. But this machine
   has no mingw and no GTK4, so one written here could not be compiled, let
   alone run, and a host nobody has run is not a port.
-- **The iOS host does not draw yet.** Everything up to compositing works: the
-  application launches, the window is key, visible, scene-attached and
-  correctly sized, its root view controller's view is composited, and cortado's
-  container is inside it at the right frame with its children at theirs, none
-  hidden. Nothing below the background draws. The headless run produces the
-  correct tree and the same `roles.out` bytes as macOS, so the ABI, the layout,
-  the widgets and the component layer are not in question — what is unfinished
-  is how a hierarchy built before `UIApplicationMain` gets composited after it.
-  A phone is the one platform where the application does not own its startup.
 - **The iOS file dialog answers a cancel.** A document picker reports through a
   delegate rather than a completion block, and wiring one is a piece of work
   that has not been done. It answers rather than hanging, which is the contract
