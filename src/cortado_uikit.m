@@ -30,9 +30,11 @@
 // to return.
 
 #import <UIKit/UIKit.h>
+#import <objc/message.h>
 #include <string.h>
 #include <float.h>
 #include "cortado_host.h"
+#include "cortado_rules.h"
 
 // ---------------------------------------------------------------- the table
 //
@@ -881,7 +883,7 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
     if (!object) return CTD_ERR_STALE;
     switch (key) {
         case CTD_P_ENABLED:
-            if (![object isKindOfClass:[UIControl class]]) return CTD_ERR_KIND;
+            if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             [(UIControl *)object setEnabled:value ? YES : NO];
             return CTD_OK;
         case CTD_P_HIDDEN:
@@ -969,7 +971,7 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
     int64_t value = 0;
     switch (key) {
         case CTD_P_ENABLED:
-            if (![object isKindOfClass:[UIControl class]]) return CTD_ERR_KIND;
+            if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = [(UIControl *)object isEnabled] ? 1 : 0;
             break;
         case CTD_P_HIDDEN:
@@ -1480,7 +1482,40 @@ ctd_status ctd_widget_activate(ctd_handle widget) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     if (![object isKindOfClass:[UIControl class]]) return CTD_ERR_KIND;
-    [(UIControl *)object sendActionsForControlEvents:UIControlEventTouchUpInside];
+    UIControl *control = (UIControl *)object;
+    [control sendActionsForControlEvents:UIControlEventTouchUpInside];
+
+    // `sendActionsForControlEvents:` does not call the target itself: it hands
+    // the action to `[UIApplication sharedApplication]`, which delivers it. A
+    // program that has not called `UIApplicationMain` has no shared
+    // application — and that is every headless run, which on iOS means every
+    // test, because `ctd_app_run` is `UIApplicationMain` and never returns.
+    //
+    // So the call above silently did nothing, and a button driven from a test
+    // raised no event at all while a switch driven through
+    // `ctd_widget_synth_value` raised one, because that path emits directly.
+    // `tests/events.out` says `clicks=2` on macOS and on GTK4, and iOS printed
+    // `clicks=0` from the day this host landed — invisible until the portable
+    // goldens were more than `roles.out`, which has no events in it.
+    //
+    // The actions are read back out of UIKit's own target table rather than
+    // from any bookkeeping of cortado's, so a handler that was never
+    // registered is still not called, and a control whose registration was
+    // removed stops responding. That is the same guarantee the AppKit host
+    // gets from `-performClick:`.
+    if (![UIApplication sharedApplication]) {
+        for (id target in [control allTargets]) {
+            NSArray<NSString *> *actions =
+                [control actionsForTarget:target
+                           forControlEvent:UIControlEventTouchUpInside];
+            for (NSString *name in actions) {
+                SEL action = NSSelectorFromString(name);
+                if ([target respondsToSelector:action]) {
+                    ((void (*)(id, SEL, id))objc_msgSend)(target, action, control);
+                }
+            }
+        }
+    }
     return CTD_OK;
 }
 
