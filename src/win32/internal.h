@@ -66,6 +66,10 @@ enum { CTD_COMBO_DROP = 160 };
 // on Windows in a way they are not elsewhere.
 enum { CTD_FONT_CACHE = 32 };
 
+// The frame clock's timer on a surface window, and how often it fires. Named
+// here because the clock sets it and the window procedure receives it.
+enum { CTD_CLOCK_TIMER = 0x0C10, CTD_CLOCK_PERIOD = 16 };
+
 typedef struct CtdMenu CtdMenu;
 
 // A menu item's token and its portable shortcut, kept beside the HMENU. Win32
@@ -136,6 +140,11 @@ uint32_t ctd_slot(ctd_handle handle);
 void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 void ctd_emit_control(ctd_handle target);
 void ctd_give_back(uint32_t slot);
+// WM_TIMER on a surface, handed to the frame clock. Declared here because the
+// window procedure is what receives it and the clock is what knows what it is.
+void ctd_clock_ticked(HWND window);
+// Forgets the clock a slot may have had, before the slot is handed out again.
+void ctd_clock_forget(uint32_t slot);
 void ctd_run_dialog(void *data);
 
 #endif

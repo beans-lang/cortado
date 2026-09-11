@@ -23,6 +23,7 @@ pub extern "C" fn ctd_set_event_sink(sink: fn(RawPtr<u8>, RawPtr<CtdEvent>), con
 pub extern "C" fn ctd_shutdown()
 pub extern "C" fn ctd_app_run()
 pub extern "C" fn ctd_app_stop()
+pub extern "C" fn ctd_app_run_for(seconds: f64) -> i32
 pub extern "C" fn ctd_post(token: i64)
 pub extern "C" fn ctd_capability(capability: i32) -> i32
 pub extern "C" fn ctd_surface_new(width: f64, height: f64) -> u64
@@ -34,6 +35,10 @@ pub extern "C" fn ctd_surface_content_size(surface: u64, out_size: RawPtr<f64>) 
 pub extern "C" fn ctd_surface_show(surface: u64) -> i32
 pub extern "C" fn ctd_surface_close(surface: u64) -> i32
 pub extern "C" fn ctd_surface_visible(surface: u64) -> i32
+pub extern "C" fn ctd_clock_start(surface: u64, token: i64) -> i32
+pub extern "C" fn ctd_clock_stop(surface: u64) -> i32
+pub extern "C" fn ctd_clock_state(surface: u64, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_clock_step(surface: u64, seconds: f64) -> i32
 pub extern "C" fn ctd_widget_new(kind: i32) -> u64
 pub extern "C" fn ctd_widget_kind(widget: u64) -> i32
 pub extern "C" fn ctd_widget_alive(widget: u64) -> i32

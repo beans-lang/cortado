@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 2
+pub const ABI_VERSION: int = 3
 
 // ---- statuses ----
 
@@ -23,6 +23,7 @@ pub const ERR_THREAD: int = -4
 pub const ERR_UNSUPPORTED: int = -5
 pub const ERR_RANGE: int = -6
 pub const ERR_ABI: int = -7
+pub const ERR_STATE: int = -8
 
 // ---- event kinds ----
 
@@ -48,6 +49,7 @@ pub const EV_APP_BACKGROUND: int = 19
 pub const EV_APP_WILL_QUIT: int = 20
 pub const EV_LOW_MEMORY: int = 21
 pub const EV_COMMAND: int = 22
+pub const EV_FRAME: int = 23
 
 // ---- modifier bits ----
 

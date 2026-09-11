@@ -52,8 +52,8 @@ enum { CTD_SLOTS = 8192 };
 
 // ------------------------------------------------------------------- the table
 //
-// Defined in handles.m, except the two the event plumbing owns, which are in
-// app.m.
+// Defined in handles.m, except the ones the application's own lifecycle owns,
+// which are in app.m.
 
 extern id           g_object[CTD_SLOTS];
 extern uint32_t     g_generation[CTD_SLOTS];
@@ -63,6 +63,9 @@ extern ctd_event_fn g_sink;
 extern void        *g_sink_context;
 extern int32_t      g_role;
 extern int          g_started;
+// Set by ctd_app_stop and read by ctd_app_run_for. -[NSApplication stop:] is
+// only understood by -[NSApplication run], and a bounded run is not that loop.
+extern int          g_stop_requested;
 
 extern NSMutableArray *g_targets;       // app.m — keeps every CortadoTarget alive
 extern CortadoCommand *g_commands;      // app.m — the one menu-item target
@@ -87,6 +90,13 @@ int         ctd_has_nul(const char *utf8, int32_t len);
 
 void        ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 void        ctd_emit_control(ctd_handle target, id sender);
+
+// ---------------------------------------------------------------------- clock.m
+
+// Forgets the clock a slot may have had, before the slot is handed out again.
+// Declared here rather than in the clock's own file because the handle table
+// is what calls it, and the table must not have to include CoreVideo to do so.
+void        ctd_clock_forget(uint32_t slot);
 
 // ------------------------------------------------------------------ property.m
 

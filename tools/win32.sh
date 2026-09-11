@@ -90,8 +90,15 @@ fi
 # warning long before it shows up as a wrong answer.
 # One file per concern under src/win32/, compiled from a glob so a file added
 # to the host and forgotten here is not silently left out of the link.
+#
+# Into a directory of their own, because a host file and a test case can share
+# a name: `tests/clock.b` and `src/win32/clock.c` both wanted to be `clock.o`,
+# the host overwrote the program, and the link failed for `main` and every
+# symbol the program defines — a long way from anything that mentioned either
+# file.
+mkdir -p "$out/host"
 for source in "$root"/src/win32/*.c; do
-    object="$out/$(basename "${source%.c}").o"
+    object="$out/host/$(basename "${source%.c}").o"
     "$CC" -O1 -g -Wall -Wextra -I "$root/src" -I "$root/src/win32" \
           -c "$source" -o "$object"
     objects+=("$object")

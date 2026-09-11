@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 2
+#define CTD_ABI_VERSION 3
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -59,6 +59,7 @@ typedef int32_t ctd_status;
 #define CTD_ERR_UNSUPPORTED   -5  /* this platform has no such thing          */
 #define CTD_ERR_RANGE         -6  /* index or size out of range               */
 #define CTD_ERR_ABI           -7  /* host and binding disagree on the version */
+#define CTD_ERR_STATE         -8  /* the right call at the wrong moment        */
 
 /* ---- events ------------------------------------------------------------ */
 
@@ -110,6 +111,7 @@ typedef struct ctd_event {
 #define CTD_EV_APP_WILL_QUIT   20
 #define CTD_EV_LOW_MEMORY      21
 #define CTD_EV_COMMAND         22  /* a menu command; token identifies which  */
+#define CTD_EV_FRAME           23  /* the display is about to show a frame    */
 
 #define CTD_MOD_SHIFT    1u
 #define CTD_MOD_CONTROL  2u
@@ -139,6 +141,14 @@ void       ctd_shutdown(void);
  * puts its work in event handlers rather than after this call. */
 void       ctd_app_run(void);
 void       ctd_app_stop(void);
+
+/* Runs the loop for at most `seconds` and then returns; ctd_app_stop cuts it
+ * short. A program whose work lives in handlers calls ctd_app_run and never
+ * this one. What needs it is anything that has to *wait* for the platform with
+ * a deadline — a frame clock, an animation that finishes, a permission somebody
+ * has to answer — because a gate that waited without one would not fail on a
+ * machine with no display. It would hang there for ever. */
+ctd_status ctd_app_run_for(double seconds);
 
 /* Wakes the UI thread and delivers CTD_EV_POST carrying `token`. The only
  * entry point in this header that is safe to call from another thread, and it
@@ -173,6 +183,69 @@ ctd_status ctd_surface_content_size(ctd_handle surface, double *out_size);
 ctd_status ctd_surface_show(ctd_handle surface);
 ctd_status ctd_surface_close(ctd_handle surface);
 int32_t    ctd_surface_visible(ctd_handle surface);
+
+/* ---- the frame clock --------------------------------------------------- */
+
+/* A surface can ask to be told before every frame its display shows.
+ *
+ * This is the beat everything that moves runs on, and it is a *clock* rather
+ * than a timer: the platform's own display link drives it — CVDisplayLink on
+ * macOS, CADisplayLink on iOS, the GdkFrameClock on GTK4 — so the ticks are
+ * the display's refresh and not an interval somebody guessed. A program
+ * written against it is already right on a 120 Hz screen.
+ *
+ * Every tick raises CTD_EV_FRAME on the UI thread, carrying
+ *
+ *     target   the surface
+ *     token    the word ctd_clock_start was given
+ *     index    the frame number, 1 for the first frame after a start
+ *     x        seconds since this clock started
+ *     y        seconds since the previous frame — since the start, for frame 1
+ *
+ * Elapsed seconds and not a machine timestamp, because every platform's clock
+ * counts from a different moment and none of them means anything to a caller.
+ * How far along it is, is what a caller wanted.
+ *
+ * **No tick is dropped or merged.** A handler that takes longer than a frame
+ * gets its frames late and in order, and `y` still sums to `x`, so an
+ * animation stepped by `y` lands in the same place whether the machine kept up
+ * or not. Skipping to the newest frame is a policy a caller can write from
+ * `x`; a host that did it quietly would make a slow handler look fast and lose
+ * the one count that proves nothing went missing. */
+ctd_status ctd_clock_start(ctd_handle surface, int64_t token);
+
+/* Stops it. Stopping a clock that is not running succeeds, because a teardown
+ * path should not have to ask first. Starting one that is already running does
+ * not: it answers CTD_ERR_STATE, because a second start would renumber the
+ * frames something else is already counting. */
+ctd_status ctd_clock_stop(ctd_handle surface);
+
+/* out[0] is 1 while the clock runs, out[1] the frames delivered since it last
+ * started, and out[2] where the clock has got to — the `x` the last frame
+ * carried, and 0 before the first. Where it has got to rather than what the
+ * time is now, so that reading the state twice without a frame in between
+ * answers the same thing twice.
+ *
+ * The count is of frames *handed to the sink*, which is what makes it worth
+ * reading at all: a caller that counted the events it received can compare the
+ * two, and a delivery path that lost one becomes a failing test instead of a
+ * slightly short animation. */
+ctd_status ctd_clock_state(ctd_handle surface, double *out);
+
+/* Raises one frame, `seconds` after the previous one, without waiting for a
+ * display.
+ *
+ * The same family as ctd_widget_activate, and there for the same reason: it
+ * drives the host down the exact path the display link uses rather than around
+ * it. It is how a clock is checked where there is nothing on screen — a
+ * headless GTK window is never mapped, so its frame clock never runs, and a
+ * suite that insisted on a real display could only ever check the numbering on
+ * one host out of four.
+ *
+ * CTD_ERR_STATE when the clock is not running. CTD_ERR_RANGE when `seconds` is
+ * not positive: a frame that took no time is not a frame, and a negative one
+ * would run the clock backwards. */
+ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 
 /* ---- widgets ----------------------------------------------------------- */
 

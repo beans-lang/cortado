@@ -1,0 +1,19 @@
+before start: running=false frames=0
+a step before the clock started refused: wrong_moment
+stopping a clock that never started: allowed
+frame #1 token=77 elapsed=0.25 delta=0.25
+frame #2 token=77 elapsed=0.5 delta=0.25
+frame #3 token=77 elapsed=0.75 delta=0.25
+a second start while running refused: wrong_moment
+while running: running=true frames=3 elapsed=0.75
+beans counted 3, the host counted 3
+a step of no time at all refused: out_of_range
+a step backwards refused: out_of_range
+after stop: running=false frames=3
+a step after the clock stopped refused: wrong_moment
+handlers left registered: 0
+frame #1 token=88 elapsed=0.5 delta=0.5
+after restarting: running=true frames=1 elapsed=0.5
+a clock on a button refused: wrong_widget
+a clock on a released widget refused: stale_handle
+drove=true

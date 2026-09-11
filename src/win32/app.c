@@ -247,6 +247,14 @@ static LRESULT CALLBACK ctd_surface_proc(HWND window, UINT message,
             }
             return 0;
         }
+        case WM_TIMER:
+            // The frame clock's own timer, and nothing else uses one on a
+            // surface. Any other id is somebody else's and goes to DefWindowProc.
+            if (wparam == CTD_CLOCK_TIMER) {
+                ctd_clock_ticked(window);
+                return 0;
+            }
+            break;
         case WM_CLOSE:
             ctd_emit(CTD_EV_SURFACE_CLOSE, ctd_handle_of(window), 0, 0);
             // The application decides whether a close request closes anything.
@@ -374,8 +382,17 @@ void ctd_shutdown(void) {
     g_sink_context = NULL;
 }
 
+// Whether the unbounded loop is the one that is running.
+//
+// PostQuitMessage does not stop a loop, it leaves a WM_QUIT on the queue — and
+// a WM_QUIT nobody consumed would end the *next* GetMessage loop the instant it
+// started. So it is posted only when there is a GetMessage loop to end, and a
+// bounded run ends on its own flag instead.
+static int g_in_run;
+
 void ctd_app_run(void) {
     if (g_role == CTD_ROLE_HEADLESS) return;
+    g_in_run = 1;
     g_running = 1;
     ctd_emit(CTD_EV_APP_LAUNCHED, 0, 0, 0);
     MSG message;
@@ -392,11 +409,50 @@ void ctd_app_run(void) {
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
+    g_in_run = 0;
+}
+
+// The same loop, with a deadline.
+//
+// PeekMessage rather than GetMessage, because GetMessage does not return until
+// there is a message and this call has to give up when the time is out.
+// MsgWaitForMultipleObjects is what keeps that from being a spin: it sleeps
+// until either a message arrives or the slice ends.
+ctd_status ctd_app_run_for(double seconds) {
+    if (!g_started) return CTD_ERR_STATE;
+    if (!(seconds >= 0.0)) return CTD_ERR_RANGE;
+    g_running = 1;
+    ULONGLONG deadline = GetTickCount64() + (ULONGLONG)(seconds * 1000.0);
+    MSG message;
+    while (g_running) {
+        ULONGLONG now = GetTickCount64();
+        if (now >= deadline) break;
+        DWORD remaining = (DWORD)(deadline - now);
+        MsgWaitForMultipleObjects(0, NULL, FALSE, remaining < 10 ? remaining : 10,
+                                  QS_ALLINPUT);
+        while (PeekMessageW(&message, NULL, 0, 0, PM_REMOVE)) {
+            if (message.message == WM_QUIT) { g_running = 0; break; }
+            // The same two steps the unbounded loop does before dispatching.
+            // A bounded run is a real run: a program that waits for a frame
+            // must not have its accelerators and its Tab key stop working for
+            // as long as it waits.
+            if (g_accelerators && g_accel_window &&
+                TranslateAcceleratorW(g_accel_window, g_accelerators, &message)) {
+                continue;
+            }
+            HWND root = GetAncestor(message.hwnd, GA_ROOT);
+            if (root && IsDialogMessageW(root, &message)) continue;
+            TranslateMessage(&message);
+            DispatchMessageW(&message);
+        }
+    }
+    g_running = 0;
+    return CTD_OK;
 }
 
 void ctd_app_stop(void) {
     g_running = 0;
-    PostQuitMessage(0);
+    if (g_in_run) PostQuitMessage(0);
 }
 
 void ctd_post(int64_t token) {

@@ -44,6 +44,9 @@ static uint32_t ctd_take_slot(void) {
 }
 
 void ctd_give_back(uint32_t slot) {
+    // Whatever the slot was doing stops being done. A frame clock left running
+    // on a recycled slot would tick for whichever widget lands there next.
+    ctd_clock_forget(slot);
     if (g_recycled_count < CTD_SLOTS) g_recycled[g_recycled_count++] = slot;
 }
 

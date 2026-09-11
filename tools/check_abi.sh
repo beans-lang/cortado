@@ -10,6 +10,12 @@
 #    comment cannot fail.
 # 3. Every bound symbol is either reached by the test suite or listed in
 #    SKIPPED.md with a reason.
+#
+# The wrapper packages in rule 3 are named one by one rather than globbed, and
+# that is on purpose: a new package nobody added to the list fails closed. Its
+# symbols read as unwrapped and the build stops, which is the right way round —
+# the other way, a whole package could stop being checked and nothing would say
+# so.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -54,7 +60,7 @@ fi
 : >"$root/build/.abi.unused"
 while read -r symbol; do
     if grep -rq "$symbol" --include='*.b' "$root/host" "$root/widgets" "$root/surface" \
-        "$root/events" "$root/platform" 2>/dev/null \
+        "$root/events" "$root/platform" "$root/motion" 2>/dev/null \
         && [[ $(grep -rl "$symbol" --include='*.b' "$root" | grep -vc "sys\.b$") -gt 0 ]]; then
         continue
     fi

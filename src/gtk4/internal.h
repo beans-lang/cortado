@@ -58,6 +58,8 @@ int32_t ctd_copy_out(const char *text, char *out, int32_t cap);
 int32_t ctd_slot_kind(ctd_handle handle);
 void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 void ctd_give_back(uint32_t slot);
+// Forgets the clock a slot may have had, before the slot is handed out again.
+void ctd_clock_forget(uint32_t slot);
 void ctd_on_signal(GtkWidget *widget, gpointer user);
 void ctd_tag(GtkWidget *widget);
 

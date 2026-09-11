@@ -74,7 +74,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -89,12 +89,19 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # `roles` reads the state with a match that treats a refusal and "enabled" the
 # same, so a host that refused printed identical bytes to one that accepted.
 #
-# The three that are not here are not here for a reason. `mount` and `bridge`
+# `clock` is here for the same kind of reason as `enabled`: a frame clock is
+# arithmetic — a number, a token, an elapsed time, and a set of refusals — and
+# arithmetic is not allowed to differ between platforms. It can be in this list
+# at all because the host can raise a frame on demand; a case that waited for a
+# display could only ever run on one host, and on none of the build machines.
+#
+# The four that are not here are not here for a reason. `mount` and `bridge`
 # measure real controls, and a control is allowed to refuse the size it is
 # given — iOS established that and GTK confirmed it. `pixels` reads a widget
 # back as pixels, which only macOS can do, so its golden is the macOS answer
-# and every other host correctly prints that it cannot.
-cross_host=(roles events text applied leaks enabled opacity)
+# and every other host correctly prints that it cannot. `frames` runs a real
+# display link, which a window that is never shown only has on macOS.
+cross_host=(roles events text applied leaks enabled opacity clock)
 
 # Cases that need nothing but the language. These are the layout engine and the
 # reconciler, both pure Beans with no foreign call in them at all, so they run
@@ -333,9 +340,13 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         pass
     done
     # The windowed examples are built and linked but never run: they want a
-    # display, and a gate must not need one.
-    "$BEANSC" build "$root/examples/hello.b" -o "$tmp/hello.bin" >/dev/null
-    pass
+    # display, and a gate must not need one. An example that is not built is an
+    # example that goes stale, and the first person to find out is whoever
+    # copied it.
+    for example in hello clock; do
+        "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
+        pass
+    done
     # The component example is a separate module, because it names barista as
     # well as cortado. It is built only when barista is checked out beside us —
     # cortado's own core does not depend on it, and a gate that hard-required a
@@ -343,10 +354,10 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     if [[ -f "$root/../barista/beans.pot" ]]; then
         "$BEANSC" build "$root/examples/counter/main.b" -o "$tmp/counter.bin" >/dev/null
         pass
-        echo "ok native: ${#cases[@]} cases, and both examples link"
+        echo "ok native: ${#cases[@]} cases, and every example links"
     else
         skip counter_example "barista is not checked out at ../barista, so the dependency-injection example cannot be built"
-        echo "ok native: ${#cases[@]} cases, and examples/hello links"
+        echo "ok native: ${#cases[@]} cases, and every example but the barista one links"
     fi
 fi
 

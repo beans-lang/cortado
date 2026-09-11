@@ -21,6 +21,7 @@ pub enum HostStatus {
     unsupported
     range
     abi
+    state
     unknown
 
     /// The `err` kind slug this status becomes, so a caller can match on the
@@ -35,6 +36,7 @@ pub enum HostStatus {
             unsupported => "unsupported",
             range => "out_of_range",
             abi => "abi_mismatch",
+            state => "wrong_moment",
             unknown => "host_failed",
         }
     }
@@ -50,6 +52,7 @@ pub enum HostStatus {
             unsupported => "this platform has no such thing",
             range => "the index or size is out of range",
             abi => "the host and this build disagree on the ABI version",
+            state => "it is the right call at the wrong moment",
             unknown => "the host reported an unrecognized failure",
         }
     }
@@ -65,6 +68,7 @@ pub enum HostStatus {
         if code == ERR_UNSUPPORTED { return HostStatus.unsupported }
         if code == ERR_RANGE { return HostStatus.range }
         if code == ERR_ABI { return HostStatus.abi }
+        if code == ERR_STATE { return HostStatus.state }
         return HostStatus.unknown
     }
 }

@@ -54,6 +54,10 @@ extern int32_t g_role;
 extern uint32_t g_generation[CTD_SLOTS];
 extern uint32_t g_used;
 extern void *g_sink_context;
+// Set by ctd_app_stop and read by ctd_app_run_for. A phone's application is
+// never stopped by itself, but a *bounded* run is not the application — it is
+// a wait with a deadline, and a wait can be cut short.
+extern int g_stop_requested;
 
 NSArray *ctd_children(UIView *container);
 NSString *ctd_string(const char *utf8, int32_t len);
@@ -65,6 +69,10 @@ int32_t ctd_copy_out(NSString *text, char *out, int32_t cap);
 int32_t ctd_slot_kind(ctd_handle handle);
 void ctd_emit_control(ctd_handle target, id sender);
 void ctd_give_back(uint32_t slot);
+// Forgets the clock a slot may have had, before the slot is handed out again.
+// Declared here rather than in the clock's own file because the handle table
+// is what calls it, and the table must not have to include QuartzCore to.
+void ctd_clock_forget(uint32_t slot);
 void ctd_tag(id object);
 
 #endif

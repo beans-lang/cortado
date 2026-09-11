@@ -98,6 +98,22 @@ pub class Application {
         self.running = false
     }
 
+    /// Runs the loop for at most `seconds`, then returns. `stop` cuts it short.
+    ///
+    /// A program whose work lives in handlers calls `run` and never this. What
+    /// needs it is anything that has to *wait* for the platform with a
+    /// deadline — a frame clock, an animation that finishes, a permission
+    /// somebody has to answer — because waiting without one does not fail on a
+    /// machine that never answers. It hangs there for ever.
+    pub fn run_for(seconds: f64) -> Result<bool> {
+        self.running = true
+        unsafe {
+            let code: int = host.ctd_app_run_for(seconds) as int
+            self.running = false
+            return host.check(code, "run the event loop for a while")
+        }
+    }
+
     pub fn stop() {
         unsafe {
             host.ctd_app_stop()

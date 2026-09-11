@@ -120,6 +120,38 @@ void ctd_app_run(void) {
     }
 }
 
+// Fires once, when the time is up.
+static gboolean ctd_deadline_reached(gpointer data) {
+    *(int *)data = 1;
+    return G_SOURCE_REMOVE;
+}
+
+// The same loop, with a deadline.
+//
+// A one-shot source for the deadline and an otherwise ordinary iteration.
+// Blocking properly rather than polling is the whole of it: this call exists
+// to wait, and a wait that spins keeps the thing it is waiting for from
+// getting any work done.
+//
+// Unlike ctd_app_run there is no headless check. Running the loop with nothing
+// on screen is exactly what this is for — waiting for the platform is not the
+// same as showing something to somebody.
+ctd_status ctd_app_run_for(double seconds) {
+    if (!g_started) return CTD_ERR_STATE;
+    if (!(seconds >= 0.0)) return CTD_ERR_RANGE;
+    GMainContext *context = g_main_context_default();
+    int expired = 0;
+    guint deadline = g_timeout_add((guint)(seconds * 1000.0),
+                                   ctd_deadline_reached, &expired);
+    g_running = TRUE;
+    while (g_running && !expired) {
+        g_main_context_iteration(context, TRUE);
+    }
+    g_running = FALSE;
+    if (!expired) g_source_remove(deadline);
+    return CTD_OK;
+}
+
 void ctd_app_stop(void) {
     g_running = FALSE;
     // Wake the loop, which is otherwise blocked waiting for an event that may

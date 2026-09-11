@@ -69,6 +69,7 @@ cortado.bx          the .bx markup compiler — build-time only, never linked
 cortado.component   components, the differ, and the applier
 cortado.surface     windows, and the application that owns them
 cortado.widgets     the controls
+cortado.motion      the frame clock — the beat everything that moves runs on
 cortado.layout      where everything goes — arithmetic, no controls
 cortado.events      what the user did
 cortado.platform    what this platform can and cannot do
@@ -80,10 +81,10 @@ src/cortado_host.h  ── src/mac/ · src/ios/ · src/gtk4/ · src/win32/
                        (+ android)
 ```
 
-**A host is a platform, not a file.** Each of the four is eleven translation
+**A host is a platform, not a file.** Each of the four is twelve translation
 units with the same names — `handles`, `app`, `surface`, `widget`, `view`,
-`property`, `menu`, `items`, `dialog`, `system`, `introspect` — so the same
-concern is in the same place whichever platform you are reading. What they
+`property`, `menu`, `items`, `dialog`, `system`, `introspect`, `clock` — so the
+same concern is in the same place whichever platform you are reading. What they
 share is that platform's own `internal.h`: it names AppKit or GObject or Win32
 types freely, no other host includes it, and no Beans file ever sees it.
 
@@ -440,6 +441,40 @@ runs no completion handler and the caller would wait forever.
 `platform.Appearance.current()` is light or dark, `window.scale()` is 1 or 2 to
 hand to the layout solver, and `platform.SystemFont.body.family()` is San
 Francisco here and Segoe UI there.
+
+## Motion
+
+**A frame clock is not a timer.** A surface can ask the platform to tell it
+before every frame the display is about to show, and on three hosts out of four
+that is the display's own link — CVDisplayLink on macOS, CADisplayLink on iOS,
+the GdkFrameClock on GTK4. Windows has no such thing behind a plain window, so
+it is a timer at about 60 Hz there, and the host says so rather than pretending.
+
+```beans
+var clock: motion.FrameClock = new motion.FrameClock(window.handle(), app.router)
+clock.start(1, fn(frame: motion.Frame) {
+    filled = filled + frame.delta / 3.0      // three seconds, on any display
+    bar.set_value(filled)
+})?
+```
+
+`frame.delta` is the point. Advance by the time that passed and the bar takes
+three seconds on a 60 Hz screen and on a 120 Hz one; advance by a fixed step
+per tick and it finishes in half the time on the faster machine. **No tick is
+dropped or merged**, so the deltas always add up to `frame.elapsed` — a handler
+that ran long gets its frames late and in order, and nothing that was supposed
+to move ends up somewhere else.
+
+The host counts the frames it hands over, and `clock.state()` reads that count
+back. `tests/frames.b` compares it with the number Beans received: two
+independent tallies of the same frames, so a delivery path that lost one is a
+failing test rather than an animation that ends slightly early.
+
+`Application.run_for(seconds)` is the other half. `run()` does not come back
+until the program is done, which is right for a program and impossible for a
+test — so there is a bounded run that waits with a deadline. It is what lets
+`tests/frames.b` wait for a real display without being able to hang on a
+machine that has none.
 
 ## Shipping
 

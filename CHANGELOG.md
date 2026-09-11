@@ -268,7 +268,69 @@ First working macOS host.
   Out of range is `CTD_ERR_RANGE`, not a clamp. A caller who computed 1.5 has a
   bug, and quietly showing them 1.0 hides it.
 
+- **`cortado.motion` — the frame clock, which is what everything that moves
+  runs on.** `FrameClock.start(token, handler)` asks a surface to be told
+  before every frame its display shows, and the handler is given a `Frame`
+  carrying the number, the seconds since the clock started and the seconds
+  since the last frame.
+
+  It is a clock and not a timer on three hosts out of four: CVDisplayLink on
+  macOS, CADisplayLink on iOS, `gtk_widget_add_tick_callback` on GTK4. Windows
+  has no display link behind a plain window — the composition timing is behind
+  DWM and DXGI, a swap chain cortado does not have yet — so it is a 16 ms timer
+  there, and the host file says so in its first paragraph rather than leaving
+  somebody to find out.
+
+  **No tick is dropped or merged.** A handler that takes longer than a frame
+  gets its frames late and in order, and the deltas still add up to the elapsed
+  time, so something stepped by `delta` lands where it was going whether the
+  machine kept up or not. Skipping to the newest frame is a policy a caller can
+  write; a host that did it quietly would make a slow handler look fast.
+
+- **`ctd_app_run_for(seconds)` — the loop with a deadline.** `run()` does not
+  return until the program is finished, which is right for a program and
+  impossible for a test. Everything that has to *wait* for the platform needs
+  this: a frame, an animation that ends, a permission somebody has to answer.
+  A gate that waited without a deadline would not fail on a machine with no
+  display — it would hang there for ever.
+
+- **`ctd_clock_step` — a frame on demand, the same family as
+  `ctd_widget_activate`.** It raises a frame down the exact path the display
+  link uses rather than around it. Without it the numbering, the token and the
+  elapsed arithmetic could only be checked on macOS: a window that is never
+  shown is on no screen, a GTK tick callback only runs while its widget is
+  mapped, and no build machine has a display. With it, `tests/clock.out` is the
+  same bytes on macOS, iOS and GTK4.
+
+- **`CTD_ERR_STATE` — the right call at the wrong moment.** Starting a clock
+  that is already running is not a bad handle, a wrong widget kind or an
+  unsupported platform, and answering one of those would have been a lie. It
+  reaches Beans as `wrong_moment`.
+
+- **The host counts the frames it delivers, and `clock.state()` reads the count
+  back.** `tests/frames.b` compares it with the number Beans received — two
+  independent tallies of the same frames, so a delivery path that lost one is a
+  failing test rather than an animation that finishes slightly early.
+
 ### Found while building this
+
+- **A real display link hands over a batch, not a frame.** The first thing
+  `tests/frames.b` printed was 37 frames when it had asked for 5. Nothing was
+  wrong with the clock: the very first turn of the event loop takes about half
+  a second to come up, the link had been ticking on its own thread throughout,
+  and the whole batch of queued frames then ran back to back before the loop
+  got another look in. Stopping the clock from inside the fifth frame is what
+  makes the count 5 — which is also what any real animation does when it
+  finishes, and what proves the epoch guard refuses frames that were already in
+  flight. A test that had waited for a fixed time instead would have pinned a
+  number that is different on every machine.
+
+- **-[NSApplication stop:] does not vanish when nothing is running.** It is
+  remembered, and the next `-run` returns immediately. So the macOS host sends
+  it only while the unbounded loop is the one running; a bounded run ends on
+  its own flag. Win32 has the same trap with `PostQuitMessage`, whose `WM_QUIT`
+  would end the next `GetMessage` loop the instant it started, and it is
+  guarded the same way.
 
 - **A string with an embedded NUL went out whole and came back cut in half**,
   on every host, and the ABI's own rule said it could not. `NSString`'s

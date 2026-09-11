@@ -139,16 +139,75 @@ void ctd_shutdown(void) {
     g_sink_context = NULL;
 }
 
+int g_stop_requested;
+
+// Whether the unbounded loop is the one that is running.
+//
+// -[NSApplication stop:] is understood by -[NSApplication run] and by nothing
+// else, and a stop sent while that loop is not running does not vanish: it is
+// remembered, and the next -run returns straight away. So it is sent only when
+// there is a -run to stop, and a bounded run is ended by its own flag instead.
+static int g_in_run;
+
 void ctd_app_run(void) {
     if (!g_started) return;
+    g_stop_requested = 0;
+    g_in_run = 1;
     [NSApp run];
+    g_in_run = 0;
+}
+
+// The same loop, with a deadline.
+//
+// -[NSApplication run] is the loop, and it does two things: it pulls the next
+// event and it sends it. Doing both here is what makes a bounded run a real
+// run rather than a bare CFRunLoopRunInMode — an event pulled off the queue
+// and never sent reaches no window, so a control would stop responding for
+// exactly as long as a program waited.
+//
+// Waiting is also what services the main dispatch queue, which is how a frame
+// reaches Beans: the display link's thread posts the frame there and this is
+// the code that runs it.
+ctd_status ctd_app_run_for(double seconds) {
+    if (!g_started) return CTD_ERR_STATE;
+    if (!(seconds >= 0.0)) return CTD_ERR_RANGE;
+    g_stop_requested = 0;
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:seconds];
+    while (!g_stop_requested) {
+        @autoreleasepool {
+            NSDate *now = [NSDate date];
+            if ([now compare:deadline] != NSOrderedAscending) break;
+            // Waited in slices rather than in one go, because ctd_app_stop
+            // sets a flag and this loop is the only thing that reads it.
+            // -[NSApplication stop:] wakes -run and not this; and an event
+            // posted to wake it cannot be relied on either, because an
+            // application that never finished launching has no event queue
+            // worth the name. So the slice is how late a stop can be: ten
+            // milliseconds, well under a frame, for a hundred wake-ups a
+            // second in a call whose entire job is to wait.
+            NSDate *slice = [now dateByAddingTimeInterval:0.01];
+            if ([slice compare:deadline] == NSOrderedDescending) slice = deadline;
+            NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                                untilDate:slice
+                                                   inMode:NSDefaultRunLoopMode
+                                                  dequeue:YES];
+            // Waiting is what runs the main dispatch queue, which is how a
+            // frame reaches Beans; an event is the other thing that can
+            // happen, and it still has to be sent or no window would see it.
+            if (event) [NSApp sendEvent:event];
+        }
+    }
+    return CTD_OK;
 }
 
 void ctd_app_stop(void) {
-    [NSApp stop:nil];
+    g_stop_requested = 1;
+    if (g_in_run) [NSApp stop:nil];
     // -stop: only takes effect when the loop next finishes an event, so a stop
     // requested from outside one would otherwise sit until the user moved the
-    // mouse. Posting an empty event is what makes it immediate.
+    // mouse. Posting an empty event is what makes it immediate — and it is
+    // what lets a bounded run end early too, since that loop is asleep inside
+    // -nextEventMatchingMask until something arrives.
     NSEvent *nudge = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
                                         location:NSZeroPoint
                                    modifierFlags:0

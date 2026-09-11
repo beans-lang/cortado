@@ -1,0 +1,9 @@
+asked for 5 frames, beans saw 5, the host counted 5
+stopped from inside a frame: true
+numbered 1.. in order: true
+token echoed on every frame: true
+every delta positive: true
+elapsed rose every frame: true
+the deltas add up to the elapsed: true
+frames delivered after the clock stopped: 0
+drove=true

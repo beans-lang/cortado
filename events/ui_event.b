@@ -68,6 +68,11 @@ pub class UiEvent {
     pub fn show() -> string {
         match self.kind {
             post => { return "post token={self.token}" }
+            // The number and nothing else. A frame also carries when it
+            // happened and how long since the last one, and neither is the
+            // same twice — a golden that printed them would be a report on
+            // how busy the machine was.
+            frame => { return "frame #{self.index}" }
             surface_resized => { return "surface_resized {self.size.show()}" }
             pointer_down => { return "pointer_down {self.target.show()} {self.position.show()}" }
             pointer_up => { return "pointer_up {self.target.show()} {self.position.show()}" }

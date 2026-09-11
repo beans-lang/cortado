@@ -268,10 +268,37 @@ void ctd_app_run(void) {
     }
 }
 
-// There is no such thing. An iOS application is stopped by the system, never
-// by itself — Apple's guidance is explicit that a program which exits on its
-// own looks like a crash to the person holding the phone.
-void ctd_app_stop(void) {}
+// The loop, with a deadline.
+//
+// ctd_app_run never returns on a phone, and this is the call that lets a
+// program wait for the platform anyway: for a frame, for an animation to
+// finish, for an answer to a permission. Running the run loop in slices rather
+// than once is what makes ctd_app_stop able to cut it short — the flag it sets
+// is only read here, between slices.
+int g_stop_requested;
+
+ctd_status ctd_app_run_for(double seconds) {
+    if (!g_started) return CTD_ERR_STATE;
+    if (!(seconds >= 0.0)) return CTD_ERR_RANGE;
+    g_stop_requested = 0;
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:seconds];
+    while (!g_stop_requested) {
+        @autoreleasepool {
+            NSDate *now = [NSDate date];
+            if ([now compare:deadline] != NSOrderedAscending) break;
+            NSDate *slice = [now dateByAddingTimeInterval:0.01];
+            if ([slice compare:deadline] == NSOrderedDescending) slice = deadline;
+            [[NSRunLoop mainRunLoop] runMode:NSDefaultRunLoopMode beforeDate:slice];
+        }
+    }
+    return CTD_OK;
+}
+
+// There is no such thing as stopping an iOS application. Apple's guidance is
+// explicit that a program which exits on its own looks like a crash to the
+// person holding the phone, so this ends a bounded run and nothing else — and
+// a bounded run is a wait, not the application.
+void ctd_app_stop(void) { g_stop_requested = 1; }
 
 void ctd_post(int64_t token) {
     ctd_emit(CTD_EV_POST, 0, 0, token);

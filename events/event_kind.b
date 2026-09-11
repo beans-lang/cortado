@@ -37,6 +37,7 @@ pub enum EventKind {
     app_will_quit
     low_memory
     command
+    frame
     unknown
 
     pub fn name() -> string {
@@ -63,6 +64,7 @@ pub enum EventKind {
             app_will_quit => "app_will_quit",
             low_memory => "low_memory",
             command => "command",
+            frame => "frame",
             unknown => "unknown",
         }
     }
@@ -93,6 +95,7 @@ pub enum EventKind {
             app_will_quit => host.EV_APP_WILL_QUIT,
             low_memory => host.EV_LOW_MEMORY,
             command => host.EV_COMMAND,
+            frame => host.EV_FRAME,
             unknown => 0,
         }
     }
@@ -123,6 +126,7 @@ pub enum EventKind {
         if code == host.EV_APP_WILL_QUIT { return EventKind.app_will_quit }
         if code == host.EV_LOW_MEMORY { return EventKind.low_memory }
         if code == host.EV_COMMAND { return EventKind.command }
+        if code == host.EV_FRAME { return EventKind.frame }
         return EventKind.unknown
     }
 }

@@ -88,7 +88,7 @@ for name in ${cases[@]}; do
     clang -O1 -g -pthread -fsanitize=address,undefined \
           -fno-sanitize-recover=undefined -Wno-override-module \
           "$ir" "$BEANS_RUNTIME" "${host_objects[@]}" "${ffi[@]}" \
-          -framework AppKit -framework Foundation \
+          -framework AppKit -framework Foundation -framework CoreVideo \
           -lm -o "$out/$name"
 
     set +e
