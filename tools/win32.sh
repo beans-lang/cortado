@@ -88,9 +88,14 @@ fi
 
 # The host itself, with the warnings on. A Win32 header mismatch shows up as a
 # warning long before it shows up as a wrong answer.
-"$CC" -O1 -g -Wall -Wextra -I "$root/src" -c "$root/src/cortado_win32.c" \
-      -o "$out/cortado_win32.o"
-objects+=("$out/cortado_win32.o")
+# One file per concern under src/win32/, compiled from a glob so a file added
+# to the host and forgotten here is not silently left out of the link.
+for source in "$root"/src/win32/*.c; do
+    object="$out/$(basename "${source%.c}").o"
+    "$CC" -O1 -g -Wall -Wextra -I "$root/src" -I "$root/src/win32" \
+          -c "$source" -o "$object"
+    objects+=("$object")
+done
 
 # Statically, because mingw's own libwinpthread is a DLL that only exists
 # beside a mingw installation. A binary that needs it is not a Windows program

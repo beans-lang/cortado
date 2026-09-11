@@ -31,7 +31,17 @@ link macos framework "Foundation"
 # What differs is what the platform does not have: there is no menu bar on a
 # phone, so `ctd_capability(CTD_CAP_MENU_BAR)` answers no and every menu call
 # is a typed refusal rather than a silent no-op.
-csrc ios "src/cortado_uikit.m"
+csrc ios "src/ios/handles.m"
+csrc ios "src/ios/app.m"
+csrc ios "src/ios/surface.m"
+csrc ios "src/ios/widget.m"
+csrc ios "src/ios/view.m"
+csrc ios "src/ios/property.m"
+csrc ios "src/ios/menu.m"
+csrc ios "src/ios/items.m"
+csrc ios "src/ios/dialog.m"
+csrc ios "src/ios/system.m"
+csrc ios "src/ios/introspect.m"
 
 link ios framework "UIKit"
 link ios framework "Foundation"
@@ -55,7 +65,17 @@ link ios framework "CoreGraphics"
 # That writes a `cflags linux` row and the `link linux` rows between markers
 # this file does not yet carry, and re-running it updates them in place. A
 # manifest that listed them by hand would name one computer.
-csrc linux "src/cortado_gtk4.c"
+csrc linux "src/gtk4/handles.c"
+csrc linux "src/gtk4/app.c"
+csrc linux "src/gtk4/surface.c"
+csrc linux "src/gtk4/widget.c"
+csrc linux "src/gtk4/view.c"
+csrc linux "src/gtk4/property.c"
+csrc linux "src/gtk4/menu.c"
+csrc linux "src/gtk4/items.c"
+csrc linux "src/gtk4/dialog.c"
+csrc linux "src/gtk4/system.c"
+csrc linux "src/gtk4/introspect.c"
 
 # The Windows host, over Win32 and common controls v6. A fourth object system,
 # or rather the absence of one: a control is an HWND, its state is set by
@@ -66,7 +86,17 @@ csrc linux "src/cortado_gtk4.c"
 # half and llc for the Beans half, because beansc's bundled clang has no
 # Windows sysroot to compile against. On a Windows machine this manifest is
 # all that is needed and the rows below are what beansc links.
-csrc windows "src/cortado_win32.c"
+csrc windows "src/win32/handles.c"
+csrc windows "src/win32/app.c"
+csrc windows "src/win32/surface.c"
+csrc windows "src/win32/widget.c"
+csrc windows "src/win32/view.c"
+csrc windows "src/win32/property.c"
+csrc windows "src/win32/menu.c"
+csrc windows "src/win32/items.c"
+csrc windows "src/win32/dialog.c"
+csrc windows "src/win32/system.c"
+csrc windows "src/win32/introspect.c"
 
 # Common controls carries the trackbar and the progress bar; comdlg32 the file
 # choosers; gdi32 the device contexts every measurement goes through. user32

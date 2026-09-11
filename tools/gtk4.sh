@@ -4,7 +4,7 @@
 # GTK4 has a macOS backend, so the Linux host can be compiled and run on this
 # machine — which is the only reason a third implementation of the ABI could be
 # checked at all before anyone puts cortado on a Linux box. What it proves is
-# what it can prove: that `src/cortado_gtk4.c` implements the contract, and
+# what it can prove: that the host in `src/gtk4/` implements the contract, and
 # that `tests/roles.out` is the same bytes through it. What it cannot prove is
 # anything about X11 or Wayland, which are not here.
 #
@@ -41,9 +41,20 @@ name="${1:-roles}"
 source="$root/tests/$name.b"
 [[ -f "$source" ]] || { echo "gtk4: no tests/$name.b" >&2; exit 1; }
 
-host="$out/cortado_gtk4.o"
-clang -c -O1 -g -Wall -Wextra $(pkg-config --cflags gtk4) \
-      -I "$root/src" "$root/src/cortado_gtk4.c" -o "$host"
+# The host is one file per concern under src/gtk4/. A glob rather than a list:
+# a file added to the host and forgotten here would simply not be linked, and
+# the failure would be an undefined symbol a long way from its cause.
+host_objects=()
+for source in "$root"/src/gtk4/*.c; do
+    object="$out/$(basename "${source%.c}").o"
+    clang -c -O1 -g -Wall -Wextra $(pkg-config --cflags gtk4) \
+          -I "$root/src" -I "$root/src/gtk4" "$source" -o "$object"
+    host_objects+=("$object")
+done
+if [[ ${#host_objects[@]} -eq 0 ]]; then
+    echo "gtk4: no host sources in src/gtk4 — the layout moved" >&2
+    exit 1
+fi
 
 rm -f "$root/build/$name".*.ll "$root/build/$name".*_ffi.c
 ( cd "$root" && "$BEANSC" build "tests/$name.b" -o "$out/$name.unused" >/dev/null )
@@ -54,7 +65,7 @@ bridge="$(ls -t "$root/build/$name".*_ffi.c 2>/dev/null | head -1)"
 [[ -n "$bridge" ]] && ffi+=("$bridge")
 
 clang -O1 -g -pthread -Wno-override-module \
-      "$ir" "$BEANS_RUNTIME" "$host" "${ffi[@]}" \
+      "$ir" "$BEANS_RUNTIME" "${host_objects[@]}" "${ffi[@]}" \
       $(pkg-config --libs gtk4) -lm -o "$out/$name"
 
 "$out/$name" >"$out/$name.stdout" 2>"$out/$name.stderr" || {

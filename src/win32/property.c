@@ -1,0 +1,318 @@
+// Text, and the scalar property bag.
+//
+// Which widgets carry CTD_P_ENABLED is a rule of cortado's rather than of
+// Win32's — see `ctd_kind_has_enabled` in ../cortado_rules.h. `EnableWindow`
+// works on any HWND, a static label included, so here the rule is applied
+// rather than inherited from the platform.
+
+#include "internal.h"
+
+ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    int32_t kind = ctd_slot_kind(widget);
+    switch (key) {
+        case CTD_P_ENABLED:
+            // EnableWindow works on any HWND, a static label included, so the
+            // rule is applied here rather than inherited from the platform.
+            if (!ctd_kind_has_enabled(kind)) return CTD_ERR_KIND;
+            EnableWindow(view, value ? TRUE : FALSE);
+            return CTD_OK;
+        case CTD_P_HIDDEN:
+            ShowWindow(view, value ? SW_HIDE : SW_SHOW);
+            return CTD_OK;
+        case CTD_P_CHECKED: {
+            if (kind != CTD_W_CHECK_BOX && kind != CTD_W_RADIO_BUTTON)
+                return CTD_ERR_KIND;
+            if (value == 2) {
+                // Windows will only hold the third state on a button that has
+                // been told it has three, and turning that on also changes what
+                // clicking cycles through — the same trade AppKit makes with
+                // `allowsMixedState`. So it is switched on when a program asks
+                // for mixed and not before.
+                if (kind != CTD_W_CHECK_BOX) return CTD_ERR_UNSUPPORTED;
+                LONG_PTR style = GetWindowLongPtrW(view, GWL_STYLE);
+                style = (style & ~(LONG_PTR)BS_AUTOCHECKBOX) | BS_AUTO3STATE;
+                SetWindowLongPtrW(view, GWL_STYLE, style);
+                SendMessageW(view, BM_SETCHECK, BST_INDETERMINATE, 0);
+                return CTD_OK;
+            }
+            SendMessageW(view, BM_SETCHECK,
+                         value == 1 ? BST_CHECKED : BST_UNCHECKED, 0);
+            return CTD_OK;
+        }
+        case CTD_P_EDITABLE:
+            if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_TEXT_AREA)
+                return CTD_ERR_KIND;
+            SendMessageW(view, EM_SETREADONLY, value ? FALSE : TRUE, 0);
+            return CTD_OK;
+        case CTD_P_ALIGNMENT: {
+            if (value < 0 || value > 2) return CTD_ERR_RANGE;
+            LONG_PTR style = GetWindowLongPtrW(view, GWL_STYLE);
+            if (kind == CTD_W_LABEL) {
+                style &= ~(LONG_PTR)(SS_LEFT | SS_CENTER | SS_RIGHT);
+                style |= value == 1 ? SS_CENTER : value == 2 ? SS_RIGHT : SS_LEFT;
+            } else if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_TEXT_AREA) {
+                style &= ~(LONG_PTR)(ES_LEFT | ES_CENTER | ES_RIGHT);
+                style |= value == 1 ? ES_CENTER : value == 2 ? ES_RIGHT : ES_LEFT;
+            } else {
+                return CTD_ERR_KIND;
+            }
+            SetWindowLongPtrW(view, GWL_STYLE, style);
+            InvalidateRect(view, NULL, TRUE);
+            return CTD_OK;
+        }
+        case CTD_P_SELECTED: {
+            if (kind != CTD_W_COMBO_BOX) return CTD_ERR_KIND;
+            LRESULT count = SendMessageW(view, CB_GETCOUNT, 0, 0);
+            if (value < 0) {
+                SendMessageW(view, CB_SETCURSEL, (WPARAM)-1, 0);
+                return CTD_OK;
+            }
+            if (value >= count) return CTD_ERR_RANGE;
+            SendMessageW(view, CB_SETCURSEL, (WPARAM)value, 0);
+            return CTD_OK;
+        }
+        case CTD_P_INDETERMINATE: {
+            if (kind != CTD_W_PROGRESS_BAR) return CTD_ERR_KIND;
+            LONG_PTR style = GetWindowLongPtrW(view, GWL_STYLE);
+            if (value) style |= PBS_MARQUEE; else style &= ~(LONG_PTR)PBS_MARQUEE;
+            SetWindowLongPtrW(view, GWL_STYLE, style);
+            SendMessageW(view, PBM_SETMARQUEE, value ? TRUE : FALSE, 30);
+            return CTD_OK;
+        }
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
+
+ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    int32_t kind = ctd_slot_kind(widget);
+    int64_t value = 0;
+    switch (key) {
+        case CTD_P_ENABLED:
+            if (!ctd_kind_has_enabled(kind)) return CTD_ERR_KIND;
+            value = IsWindowEnabled(view) ? 1 : 0;
+            break;
+        case CTD_P_HIDDEN:
+            // The style bit, not `IsWindowVisible`, which also answers no for
+            // every child of a window that has not been shown — and in a
+            // headless run that is all of them.
+            value = (GetWindowLongPtrW(view, GWL_STYLE) & WS_VISIBLE) ? 0 : 1;
+            break;
+        case CTD_P_CHECKED: {
+            if (kind != CTD_W_CHECK_BOX && kind != CTD_W_RADIO_BUTTON)
+                return CTD_ERR_KIND;
+            LRESULT state = SendMessageW(view, BM_GETCHECK, 0, 0);
+            value = state == BST_CHECKED ? 1 : state == BST_INDETERMINATE ? 2 : 0;
+            break;
+        }
+        case CTD_P_EDITABLE:
+            if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_TEXT_AREA)
+                return CTD_ERR_KIND;
+            value = (GetWindowLongPtrW(view, GWL_STYLE) & ES_READONLY) ? 0 : 1;
+            break;
+        case CTD_P_ALIGNMENT: {
+            LONG_PTR style = GetWindowLongPtrW(view, GWL_STYLE);
+            if (kind == CTD_W_LABEL) {
+                value = (style & SS_RIGHT) ? 2 : (style & SS_CENTER) ? 1 : 0;
+            } else if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_TEXT_AREA) {
+                value = (style & ES_RIGHT) ? 2 : (style & ES_CENTER) ? 1 : 0;
+            } else {
+                return CTD_ERR_KIND;
+            }
+            break;
+        }
+        case CTD_P_SELECTED: {
+            if (kind != CTD_W_COMBO_BOX) return CTD_ERR_KIND;
+            LRESULT chosen = SendMessageW(view, CB_GETCURSEL, 0, 0);
+            value = chosen == CB_ERR ? -1 : (int64_t)chosen;
+            break;
+        }
+        case CTD_P_INDETERMINATE:
+            if (kind != CTD_W_PROGRESS_BAR) return CTD_ERR_KIND;
+            value = (GetWindowLongPtrW(view, GWL_STYLE) & PBS_MARQUEE) ? 1 : 0;
+            break;
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+    if (out) *out = value;
+    return CTD_OK;
+}
+
+static int   g_font_points[CTD_FONT_CACHE];
+static HFONT g_font_cache[CTD_FONT_CACHE];
+
+static HFONT ctd_font_at(int points) {
+    for (int i = 0; i < CTD_FONT_CACHE; i++) {
+        if (g_font_points[i] == points) return g_font_cache[i];
+    }
+    NONCLIENTMETRICSW metrics;
+    memset(&metrics, 0, sizeof metrics);
+    metrics.cbSize = sizeof metrics;
+    if (!SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof metrics, &metrics, 0))
+        return NULL;
+    HDC screen = GetDC(NULL);
+    int dpi = screen ? GetDeviceCaps(screen, LOGPIXELSY) : 96;
+    if (screen) ReleaseDC(NULL, screen);
+    // Windows measures a font in device units, and a point is a seventy-second
+    // of an inch; this is the conversion the platform's own documentation uses.
+    metrics.lfMessageFont.lfHeight = -MulDiv(points, dpi, 72);
+    HFONT font = CreateFontIndirectW(&metrics.lfMessageFont);
+    if (!font) return NULL;
+    for (int i = 0; i < CTD_FONT_CACHE; i++) {
+        if (g_font_points[i] == 0) {
+            g_font_points[i] = points;
+            g_font_cache[i] = font;
+            break;
+        }
+    }
+    return font;
+}
+
+ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    uint32_t slot = (uint32_t)(widget & 0xffffffffu);
+    int32_t kind = ctd_slot_kind(widget);
+    switch (key) {
+        case CTD_P_FONT_SIZE: {
+            int points = (int)value;
+            if (points <= 0) return CTD_ERR_RANGE;
+            HFONT font = ctd_font_at(points);
+            if (!font) return CTD_ERR_PLATFORM;
+            SendMessageW(view, WM_SETFONT, (WPARAM)font, TRUE);
+            return CTD_OK;
+        }
+        case CTD_P_MIN:
+            if (kind == CTD_W_SLIDER) {
+                SendMessageW(view, TBM_SETRANGEMIN, TRUE, (LPARAM)(LONG)value);
+                return CTD_OK;
+            }
+            if (kind == CTD_W_PROGRESS_BAR) { g_progress_min[slot] = value; return CTD_OK; }
+            return CTD_ERR_KIND;
+        case CTD_P_MAX:
+            if (kind == CTD_W_SLIDER) {
+                SendMessageW(view, TBM_SETRANGEMAX, TRUE, (LPARAM)(LONG)value);
+                return CTD_OK;
+            }
+            if (kind == CTD_W_PROGRESS_BAR) { g_progress_max[slot] = value; return CTD_OK; }
+            return CTD_ERR_KIND;
+        case CTD_P_VALUE:
+            if (kind == CTD_W_SLIDER) {
+                SendMessageW(view, TBM_SETPOS, TRUE, (LPARAM)(LONG)value);
+                return CTD_OK;
+            }
+            if (kind == CTD_W_PROGRESS_BAR) {
+                double span = g_progress_max[slot] - g_progress_min[slot];
+                double fraction = span > 0.0 ? (value - g_progress_min[slot]) / span : 0.0;
+                if (fraction < 0.0) fraction = 0.0;
+                if (fraction > 1.0) fraction = 1.0;
+                SendMessageW(view, PBM_SETPOS, (WPARAM)(int)(fraction * 10000.0), 0);
+                return CTD_OK;
+            }
+            return CTD_ERR_KIND;
+        case CTD_P_STEP:
+            if (kind != CTD_W_SLIDER) return CTD_ERR_KIND;
+            SendMessageW(view, TBM_SETLINESIZE, 0, (LPARAM)(LONG)value);
+            SendMessageW(view, TBM_SETPAGESIZE, 0, (LPARAM)(LONG)value);
+            return CTD_OK;
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
+
+ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    uint32_t slot = (uint32_t)(widget & 0xffffffffu);
+    int32_t kind = ctd_slot_kind(widget);
+    double value = 0.0;
+    switch (key) {
+        case CTD_P_FONT_SIZE: {
+            HFONT font = (HFONT)SendMessageW(view, WM_GETFONT, 0, 0);
+            if (!font) font = g_ui_font;
+            LOGFONTW description;
+            if (!GetObjectW(font, sizeof description, &description))
+                return CTD_ERR_PLATFORM;
+            HDC screen = GetDC(NULL);
+            int dpi = screen ? GetDeviceCaps(screen, LOGPIXELSY) : 96;
+            if (screen) ReleaseDC(NULL, screen);
+            LONG height = description.lfHeight < 0 ? -description.lfHeight
+                                                   : description.lfHeight;
+            value = (double)MulDiv(height, 72, dpi);
+            break;
+        }
+        case CTD_P_MIN:
+            if (kind == CTD_W_SLIDER) {
+                value = (double)(LONG)SendMessageW(view, TBM_GETRANGEMIN, 0, 0);
+            } else if (kind == CTD_W_PROGRESS_BAR) { value = g_progress_min[slot]; }
+            else return CTD_ERR_KIND;
+            break;
+        case CTD_P_MAX:
+            if (kind == CTD_W_SLIDER) {
+                value = (double)(LONG)SendMessageW(view, TBM_GETRANGEMAX, 0, 0);
+            } else if (kind == CTD_W_PROGRESS_BAR) { value = g_progress_max[slot]; }
+            else return CTD_ERR_KIND;
+            break;
+        case CTD_P_VALUE:
+            if (kind == CTD_W_SLIDER) {
+                value = (double)(LONG)SendMessageW(view, TBM_GETPOS, 0, 0);
+            } else if (kind == CTD_W_PROGRESS_BAR) {
+                double span = g_progress_max[slot] - g_progress_min[slot];
+                double position = (double)SendMessageW(view, PBM_GETPOS, 0, 0);
+                value = g_progress_min[slot] + span * (position / 10000.0);
+            } else return CTD_ERR_KIND;
+            break;
+        case CTD_P_STEP:
+            if (kind != CTD_W_SLIDER) return CTD_ERR_KIND;
+            value = (double)(LONG)SendMessageW(view, TBM_GETLINESIZE, 0, 0);
+            break;
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+    if (out) *out = value;
+    return CTD_OK;
+}
+
+
+ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    switch (ctd_slot_kind(widget)) {
+        case CTD_W_CONTAINER:
+        case CTD_W_SCROLL_VIEW:
+        case CTD_W_SLIDER:
+        case CTD_W_PROGRESS_BAR:
+        case CTD_W_SEPARATOR:
+        case CTD_W_COMBO_BOX:
+            // A combo box's text is whichever item is chosen, so writing it
+            // would be writing the selection through the wrong door.
+            return CTD_ERR_KIND;
+        default: break;
+    }
+    WCHAR *text = ctd_wide(utf8, len);
+    if (!text) return CTD_ERR_PLATFORM;
+    SetWindowTextW(view, text);
+    free(text);
+    return CTD_OK;
+}
+
+int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    if (ctd_slot_kind(widget) == CTD_W_COMBO_BOX) {
+        // A drop-down list keeps no window text of its own: the answer is the
+        // chosen item, and `GetWindowText` on one returns nothing at all.
+        LRESULT chosen = SendMessageW(view, CB_GETCURSEL, 0, 0);
+        if (chosen == CB_ERR) return ctd_copy_out("", out, cap);
+        LRESULT length = SendMessageW(view, CB_GETLBTEXTLEN, (WPARAM)chosen, 0);
+        if (length <= 0) return ctd_copy_out("", out, cap);
+        WCHAR *item = (WCHAR *)malloc(((size_t)length + 1) * sizeof(WCHAR));
+        if (!item) return ctd_copy_out("", out, cap);
+        SendMessageW(view, CB_GETLBTEXT, (WPARAM)chosen, (LPARAM)item);
+        int32_t needed = ctd_copy_wide_out(item, out, cap);
+        free(item);
+        return needed;
+    }
+    return ctd_window_text_out(view, out, cap);
+}

@@ -76,16 +76,21 @@ cortado.geometry    points, sizes, rectangles
 cortado.host        the flat C ABI, and the only package that names it
 cortado.annotations @view · @param · @inject · @window · @command · @platform
      │
-src/cortado_host.h  ── src/mac/ · cortado_uikit.m · cortado_gtk4.c
-                       · cortado_win32.c   (+ android)
+src/cortado_host.h  ── src/mac/ · src/ios/ · src/gtk4/ · src/win32/
+                       (+ android)
 ```
 
-A host is a platform, not a file. `src/mac/` is eleven translation units — one
-per concern, sharing a `src/mac/internal.h` that is private to that platform —
-because the AppKit host had grown to 1,600 lines and the work coming would have
-made it unreadable. The other three are still one file each and will follow.
-`tools/check_hosts.sh` checks the union of what a platform defines, so how a
-host is filed is its own business and the contract is unchanged.
+**A host is a platform, not a file.** Each of the four is eleven translation
+units with the same names — `handles`, `app`, `surface`, `widget`, `view`,
+`property`, `menu`, `items`, `dialog`, `system`, `introspect` — so the same
+concern is in the same place whichever platform you are reading. What they
+share is that platform's own `internal.h`: it names AppKit or GObject or Win32
+types freely, no other host includes it, and no Beans file ever sees it.
+
+They were one file each, of 1,600 to 2,350 lines. That was readable while a
+host was a handful of controls and stopped being readable well before it was
+finished. `tools/check_hosts.sh` checks the union of what a platform defines,
+so how a host is filed is its own business and the contract is unchanged.
 
 Five rules hold the boundary, and each one is enforced by something that can
 fail rather than by a comment:
@@ -457,7 +462,7 @@ which part it did not.
 
 ## Porting to a second platform
 
-A port is one file: `src/cortado_<platform>.c`, implementing every entry point
+A port is one directory: `src/<platform>/`, implementing every entry point
 in `src/cortado_host.h`. Nothing above it changes — the Beans half already
 type-checks for Windows and Android on every run, and `cortado.layout`,
 `cortado.component` and `cortado.bx` have no foreign call in them at all.
@@ -479,7 +484,7 @@ platform's build fails — but a link only happens where a toolchain does, so
 this does the same check on text and runs anywhere.
 
 **There are three hosts, and the second and third are the proof.**
-`src/cortado_uikit.m` is UIKit — a different file, a different framework, the
+`src/ios/` is UIKit — a different host, a different framework, the
 same header — and `./test.sh --native` builds `tests/roles.b` for
 `arm64-apple-ios-sim`, runs it in a booted simulator and diffs its output
 against the macOS run. Identical. Nothing above the host changed to make that
@@ -519,7 +524,7 @@ is why `ctd_app_run` was allowed not to return from the first commit.
 
 ### The GTK4 host
 
-`src/cortado_gtk4.c` is the third implementation, and the first that is not an
+`src/gtk4/` is the third implementation, and the first that is not an
 Apple object system: GObject instead of Objective-C, signals instead of
 target/action, floating references instead of retain/release. `tests/roles.out`
 is the same bytes through it.
