@@ -28,15 +28,6 @@ pub partial class Shelf extends component.Component {
     pub note: string = "no sugar"
     pub status: string = "Nothing ordered yet"
 
-    /// Three lines about colour. Everything a shader usually needs around it —
-    /// the vertex stage, the quad, the stage_in structs, the uniform — is
-    /// cortado's, not this file's.
-    pub ripple: string = r"
-    float rings = sin(length(uv - 0.5) * 26.0 - seconds * 3.0);
-    float shade = 0.5 + 0.5 * rings;
-    return float4(shade * 0.25, shade * 0.55, 0.75, 1.0);
-"
-
     pub fn init() { super.init() }
 
     pub fn pick(index: int) {
@@ -130,7 +121,10 @@ partial class Shelf {
         b.close()
         b.child<ShaderCanvas>("c4", fn(_cortado_c: ShaderCanvas) {  // shelf.bx:30
             _cortado_c.height = 44
-            _cortado_c.shader = self.ripple
+            _cortado_c.effect = "ripple"
+            _cortado_c.color = "#4088bf"
+            _cortado_c.color_to = "#0d1b2a"
+            _cortado_c.detail = 26
         })
         b.open("TextArea")  // shelf.bx:32
         b.number("height", (70) as f64)

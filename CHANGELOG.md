@@ -764,6 +764,36 @@ First working macOS host.
   size in the right place, and `problem()` says why nothing is in it. A markup
   screen does not fall apart on a platform cortado cannot draw on.
 
+- **Six named effects, so markup needs no shader code at all.**
+
+  ```xml
+  <ShaderCanvas height={44} effect="ripple" color="#4088bf" detail={26} />
+  ```
+
+  `solid`, `gradient`, `radial`, `ripple`, `noise`, `checker` — each taking the
+  same attributes and ignoring the ones it has no use for, so changing the
+  effect means renaming nothing around it. `solid` is worth having on its own:
+  it is the only way cortado has to fill a rectangle with a colour.
+
+  **Where it stops is part of the design, not a gap.** There is no honest way
+  to express an arbitrary shader in markup — a shading language spelled in
+  angle brackets would be harder to write than the shading language, and harder
+  to read. So the named set is real and declarative, `shader={...}` is the one
+  escape hatch, and giving both is refused rather than one quietly winning.
+  `ShaderCanvas.wrap` and `quad_corners` are public so a program that outgrows
+  the named set starts from what cortado was already running.
+
+- **`Rgba.of_hex` — colours the way every stylesheet writes them.** `#rgb`,
+  `#rrggbb`, `#rrggbbaa`. On `widgets.Rgba` rather than in whichever package
+  wanted it first, because a colour is a colour and two parsers would disagree
+  about `#abc` inside a month. Refused rather than defaulted: a typo that
+  quietly becomes black is invisible, and a shader drawing the wrong colour is
+  a long afternoon.
+
+  `tests/shader.out` follows one all the way down — `#4088bf` parsed, turned
+  into MSL, wrapped in the program cortado generates, compiled, drawn to an
+  off-screen target and read back as `rgba(64,136,191,255)`.
+
 - **`Component.on_mount(stage)` — a component can reach the controls it
   rendered.** `render` describes controls and does not have any; by `on_mount`
   they exist, and `stage.control(key)` is how a component finds one. The

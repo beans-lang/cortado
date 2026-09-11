@@ -6,6 +6,7 @@ import cortado.events
 import cortado.motion
 import cortado.component
 import cortado.platform
+import cortado.widgets
 import cortado.geometry
 import std.fmt
 
@@ -51,9 +52,39 @@ import std.fmt
 /// nothing is in it. A markup screen does not fall apart on a platform cortado
 /// cannot draw on; it has a blank rectangle where the effect would be.
 pub class ShaderCanvas extends component.Component {
-    /// The fragment body. Changing it after mount does nothing: a shader is
-    /// compiled once, and recompiling on every render would compile a shader
-    /// per keystroke in an editor.
+    /// A shader by name — `"solid"`, `"gradient"`, `"radial"`, `"ripple"`,
+    /// `"noise"` or `"checker"` — parameterised by the attributes below.
+    ///
+    /// This is the markup road, and it is the one to reach for first:
+    ///
+    /// ```
+    /// <ShaderCanvas height={44} effect="ripple" color="#4088bf" detail={26} />
+    /// ```
+    ///
+    /// There is no way to express an *arbitrary* shader in markup — a shading
+    /// language spelled in angle brackets would be harder to write than the
+    /// shading language — so cortado names the ones worth naming and is honest
+    /// that `shader` is the way out. See `Effect`.
+    pub effect: string = ""
+
+    /// The main colour, or where a two-colour effect starts. `#rgb`,
+    /// `#rrggbb` or `#rrggbbaa`.
+    pub color: string = "#3b6ea5"
+    /// Where a two-colour effect ends.
+    pub color_to: string = "#0d1b2a"
+    /// Rings, squares, or the scale of the noise. Zero takes the effect's own
+    /// default, so an effect named and nothing else still looks like something.
+    pub detail: f64 = 0.0
+    /// How fast it moves. Zero holds it still.
+    pub speed: f64 = 1.0
+    /// The direction of a gradient, in degrees.
+    pub angle: f64 = 90.0
+
+    /// A fragment body, written by hand, for anything `effect` cannot name.
+    ///
+    /// Changing it after mount does nothing: a shader is compiled once, and
+    /// recompiling on every render would compile one per keystroke in an
+    /// editor.
     pub shader: string = ""
     /// How tall the canvas is, in points. Zero lets the run it sits in decide.
     pub height: f64 = 0.0
@@ -70,6 +101,38 @@ pub class ShaderCanvas extends component.Component {
     priv drawn: int = 0
 
     pub fn init() { super.init() }
+
+    /// The fragment body this canvas will compile: the one that was written,
+    /// or the one the named effect generates.
+    ///
+    /// Both together is refused rather than one quietly winning. A canvas that
+    /// ignored half of what it was told is the kind of thing somebody debugs
+    /// for an afternoon before reading the source.
+    pub fn body() -> Result<string> {
+        if self.shader != "" && self.effect != "" {
+            return err("a ShaderCanvas was given both a shader and the effect {self.effect} — one or the other",
+                       "two_shaders")
+        }
+        if self.shader != "" {
+            return ok(self.shader)
+        }
+        if self.effect == "" {
+            return err("a ShaderCanvas was given neither a shader nor an effect — name one of {Effect.names().join(", ")}, or write a shader body",
+                       "no_shader")
+        }
+        match Effect.of(self.effect) {
+            some(named) => {
+                let size: f64 = if self.detail == 0.0 { named.default_detail() } else { self.detail }
+                let first: widgets.Rgba = widgets.Rgba.of_hex(self.color)?
+                let second: widgets.Rgba = widgets.Rgba.of_hex(self.color_to)?
+                return ok(named.body(first, second, size, self.speed, self.angle))
+            }
+            none => {
+                return err("there is no effect called {self.effect} — the ones there are: {Effect.names().join(", ")}",
+                           "no_such_effect")
+            }
+        }
+    }
 
     /// Why nothing is drawing, or "" when something is.
     pub fn problem() -> string {
@@ -104,9 +167,7 @@ pub class ShaderCanvas extends component.Component {
     /// Everything that can fail, in one place, so `on_mount` stays readable
     /// and every failure lands in `problem()` instead of being swallowed.
     priv fn begin(stage: component.Stage) -> Result<bool> {
-        if self.shader == "" {
-            return err("a ShaderCanvas was given no shader", "no_shader")
-        }
+        let body: string = self.body()?
         if !platform.Capability.gpu.available() {
             return err("this platform has no GPU host, so the canvas stays empty",
                        "unsupported")
@@ -119,7 +180,7 @@ pub class ShaderCanvas extends component.Component {
 
         var device: Device = Device.open()?
         var painter: Canvas = Canvas.on(control, device)?
-        var compiled: Shader = device.shader(ShaderLanguage.msl, ShaderCanvas.wrap(self.shader))?
+        var compiled: Shader = device.shader(ShaderLanguage.msl, ShaderCanvas.wrap(body))?
         var line: Pipeline = compiled.pipeline("cortado_vertex", "cortado_fragment")?
         line.attr(0, 2, 0)?
         line.attr(1, 2, 2)?
@@ -218,6 +279,10 @@ pub class ShaderCanvas extends component.Component {
 
     /// Wraps a fragment body in the program Metal actually needs.
     ///
+    /// Public because what cortado generates should be readable: a program
+    /// that has outgrown `effect=` can print this, paste it, and start from
+    /// the shader it was already running instead of from a blank file.
+    ///
     /// The author writes three lines about colour; this is the thirty they
     /// would otherwise copy, and copying it is how three canvases end up with
     /// three slightly different vertex shaders.
@@ -227,7 +292,7 @@ pub class ShaderCanvas extends component.Component {
     /// of `{`, and an ordinary Beans string reads that as the start of an
     /// interpolation. A raw string does not — but then it cannot interpolate
     /// the body either. Three pieces and a join is the way out.
-    static fn wrap(body: string) -> string {
+    pub static fn wrap(body: string) -> string {
         var out: fmt.StringBuilder = new fmt.StringBuilder()
         out.push(r"#include <metal_stdlib>
 using namespace metal;
@@ -257,7 +322,13 @@ fragment float4 cortado_fragment(CortadoOut v [[stage_in]],
         return out.to_string()
     }
 
-    static fn quad_corners() -> List<f64> {
+    /// The vertices `ShaderCanvas` draws with: two triangles covering the
+    /// area, carrying a 0-to-1 coordinate for the shader.
+    ///
+    /// Public for the same reason `wrap` is: a program that has outgrown
+    /// `effect=` should be able to start from what cortado was already doing
+    /// rather than from a blank file.
+    pub static fn quad_corners() -> List<f64> {
         var at: List<f64> = [
             -1.0, -1.0,  0.0, 1.0,
              1.0, -1.0,  1.0, 1.0,

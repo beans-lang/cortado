@@ -24,10 +24,10 @@
   <!-- A bare canvas: an ordinary control, which a program fills itself. -->
   <Canvas height={24} />
 
-  <!-- And the easy road. `shader` is a fragment body, not a Metal program:
-       cortado supplies the vertex shader, the quad, the pipeline, the device
-       and the frame clock. `uv`, `seconds` and `size` are what it hands in. -->
-  <ShaderCanvas height={44} shader={self.ripple} />
+  <!-- And the easy road: no shader code at all. The effect is named and the
+       attributes tune it — cortado writes the shader, and supplies the device,
+       the pipeline, the quad and the frame clock. -->
+  <ShaderCanvas height={44} effect="ripple" color="#4088bf" color_to="#0d1b2a" detail={26} />
 
   <TextArea height={70} bind:value={self.note} />
 
@@ -53,15 +53,6 @@ pub partial class Shelf extends component.Component {
     pub rush: bool = false
     pub note: string = "no sugar"
     pub status: string = "Nothing ordered yet"
-
-    /// Three lines about colour. Everything a shader usually needs around it —
-    /// the vertex stage, the quad, the stage_in structs, the uniform — is
-    /// cortado's, not this file's.
-    pub ripple: string = r"
-    float rings = sin(length(uv - 0.5) * 26.0 - seconds * 3.0);
-    float shade = 0.5 + 0.5 * rings;
-    return float4(shade * 0.25, shade * 0.55, 0.75, 1.0);
-"
 
     pub fn init() { super.init() }
 

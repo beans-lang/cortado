@@ -639,27 +639,64 @@ costs a little — the drawable gives up lossless compression to be readable —
 and if that ever shows, the way out is a flag on attach, not a silently
 unreadable canvas.
 
-### A shader in markup, in one line
+### A shader in markup, with no shader in it
 
 Everything above is the machinery. Most of the time what you want is *a
-rectangle with a shader in it*, and that is one tag:
+rectangle with an effect in it*, and that is one tag with no shader code at
+all:
 
 ```xml
 <VStack spacing={12} padding={20} align="stretch">
   <Label>Every pixel below is a fragment shader</Label>
-  <ShaderCanvas height={120} shader={self.ripple} />
+  <ShaderCanvas height={120} effect="ripple" color="#4088bf" detail={26} />
 </VStack>
 ```
 
 ```beans
 import {ShaderCanvas} from cortado.gpu
+```
 
-pub ripple: string = r"
+Six effects, each taking the same attributes and ignoring the ones it has no
+use for — so changing `effect="ripple"` to `effect="noise"` means renaming
+nothing around it:
+
+| effect | what it draws |
+|---|---|
+| `solid` | one colour; the only way cortado has to fill a rectangle with a colour at all |
+| `gradient` | `color` to `color_to` in a straight line, along `angle` |
+| `radial` | `color` at the middle to `color_to` at the corners |
+| `ripple` | rings running outward, `detail` of them, at `speed` |
+| `noise` | animated value noise between the two colours, at scale `detail` |
+| `checker` | `detail` squares across; `speed` scrolls it |
+
+Colours are written the way every stylesheet writes them — `#rgb`, `#rrggbb`
+or `#rrggbbaa` — and a typo is refused rather than quietly becoming black.
+
+**Where this stops, said plainly.** There is no honest way to express an
+*arbitrary* shader in markup: a shading language spelled in angle brackets
+would be harder to write than the shading language, and harder to read. So
+cortado names the effects worth naming and keeps one escape hatch, which is a
+fragment body:
+
+```xml
+<ShaderCanvas height={120} shader={self.plasma} />
+```
+
+```beans
+pub plasma: string = r"
     float rings = sin(length(uv - 0.5) * 26.0 - seconds * 3.0);
-    float shade = 0.5 + 0.5 * rings;
-    return float4(shade * 0.25, shade * 0.55, 0.75, 1.0);
+    return float4(0.25, 0.55, 0.75, 1.0) * (0.5 + 0.5 * rings);
 "
 ```
+
+The body gets three things — `uv` (0 to 1 across the canvas, 0,0 at the top
+left), `seconds`, and `size` in pixels — and returns a `float4`. Naming an
+effect *and* writing a shader is refused: a canvas that ignored half of what it
+was told is something people debug for an afternoon before reading the source.
+
+`ShaderCanvas.wrap` and `quad_corners` are public, so a program that has
+outgrown `effect=` can print what cortado was generating, paste it, and start
+from the shader it was already running rather than from a blank file.
 
 That is the whole program. `gpu.ShaderCanvas` opens the device, supplies the
 vertex shader and a quad covering the area, builds the pipeline, starts a frame

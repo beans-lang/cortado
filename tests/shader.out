@@ -1,12 +1,25 @@
 -- what the component made --
-  the screen mounted: true
   a canvas is in the tree: true
   it says why it is empty exactly when there is no GPU: true
--- drawing --
+-- a shader written by hand --
   a frame was drawn exactly where there is a GPU: true
   and it counted them: true
--- a canvas with no size --
-  says so by name rather than drawing nothing: true
+-- every effect cortado names --
+  cortado names this many effects: 6
+  every one compiles and draws, where there is a GPU: true
+-- the colour you name is the colour that lands --
+  #4088bf reads as rgba(64,136,191,255)
+  #48b means the same as #4488bb: true
+  eight digits carry alpha: true
+  a solid canvas of it comes back exactly that: true
+-- refusals --
+  naming an effect and writing a shader refused: two_shaders
+  naming neither refused: no_shader
+  an effect nobody wrote refused, saying so: true
+  a colour with no # refused, saying so: true
+  a colour of five digits refused, saying so: true
+  a colour with a digit that is not one refused, saying so: true
+  a canvas with no size says so rather than drawing nothing: true
 -- after it goes --
   drawing stops once the component is unmounted: true
 drove=true
