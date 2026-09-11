@@ -1,6 +1,8 @@
 // How one component shows another.
 package component
 
+import std.reflect
+
 /// Renders a child component on a parent's behalf.
 ///
 /// The `Builder` a parent renders into does not know what a mount is, and must
@@ -15,4 +17,19 @@ package component
 /// instead of rendering it again.
 pub interface Composer {
     fn compose(key: string, child: Component) -> Result<Element>
+
+    /// The child registered under `key`, building one of type `described` the
+    /// first time it is asked for.
+    ///
+    /// Markup names a component by its type, not by an instance — `<Price
+    /// drink={self.drink} />` — so the mount has to own the instance and hand
+    /// the same one back on every later render. That is what makes a child
+    /// keep its state.
+    ///
+    /// Not generic, and it cannot be: Beans refuses a generic method on an
+    /// interface. So it answers a boxed `reflect.Value` and `Builder.child<T>`
+    /// — a concrete class, where a generic method is allowed — does the
+    /// downcast. A `reflect.Value` is the one source `as?` may narrow to an
+    /// instantiation, which is what makes the whole shape possible.
+    fn obtain(key: string, described: reflect.Type) -> Result<reflect.Value>
 }

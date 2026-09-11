@@ -1,0 +1,68 @@
+{
+  "$generated": "Written by `cortado-bx vocabulary`, out of cortado's own tables. Do not edit by hand.",
+  "$source": "cortado bx/vocabulary.b, bx/events.b, bx/widgets.b, bx/parse.b",
+  "$language": "cortado markup — a whole-file document, not Beans with tags in it: outside <beans> every < opens a tag. Tags name native controls, never HTML elements",
+  "blocks": [
+    {"name": "$if", "detail": "$if <expr> { ... }", "note": "A branch, emitted as a Beans if. A branch that is not taken contributes no element, so the siblings after it shift — give them key={ } if that matters."},
+    {"name": "else", "detail": "$if <expr> { ... } else if <expr> { ... } else { ... }", "note": "Written without a $, because it continues the $if that opened the block."},
+    {"name": "$for", "detail": "$for <name> in <expr> { ... }", "note": "A loop, emitted as a Beans for. A child carrying key={ } keeps its control across reordering; without one, rows match by position."},
+    {"name": "$match", "detail": "$match <expr> { <pattern> => { ... } }", "note": "A branch with more than two arms. At least one arm is required."},
+    {"name": "$slot", "detail": "$slot | $slot(<expr>) | $slot:<name> | $slot:<name> as <expr> | $slot:<name> as <p>: <Type> { ... }", "note": "Places or defines a fragment. A body makes it a definition and only reads that way inside a component tag."}
+  ],
+  "interpolations": [
+    {"name": "$<chain>", "detail": "$self.count, $row.title, $self.rows[0]", "note": "An implicit chain. It ends where the chain ends, so $5.00 and US$ are ordinary text."},
+    {"name": "$( )", "detail": "$(a + b)", "note": "A parenthesised expression. One line: a newline inside it is refused."},
+    {"name": "${ }", "detail": "${self.name}", "note": "A braced expression. One line, and a } in running text closes an enclosing block, so write \\} for a literal one."},
+    {"name": "$$", "detail": "$$", "note": "A literal $ in front of a word. Everywhere else a $ that is not followed by an identifier, ( or { is already text."}
+  ],
+  "namespaces": [
+    {"name": "on:", "detail": "on:<event>={fn(e: <EventType>) { ... }}", "note": "An event handler. The event must be one cortado raises; see events. Every handler takes a UiEvent."},
+    {"name": "bind:", "detail": "bind:value={<place>} | bind:checked={<place>}", "note": "A two-way binding. It emits the value and the handler that writes it back, which is the pair you would otherwise write yourself."}
+  ],
+  "events": [
+    {"event": "activate", "family": "UiEvent"},
+    {"event": "blur", "family": "UiEvent"},
+    {"event": "change", "family": "UiEvent"},
+    {"event": "click", "family": "UiEvent"},
+    {"event": "commit", "family": "UiEvent"},
+    {"event": "focus", "family": "UiEvent"},
+    {"event": "key_down", "family": "UiEvent"},
+    {"event": "key_up", "family": "UiEvent"},
+    {"event": "pointer_down", "family": "UiEvent"},
+    {"event": "pointer_move", "family": "UiEvent"},
+    {"event": "pointer_up", "family": "UiEvent"},
+    {"event": "select", "family": "UiEvent"}
+  ],
+  "bindings": [
+    {"name": "bind:value", "detail": "<TextField>", "note": "The place is shown as the control's text and written back when the field commits, so the element may then have no children of its own."},
+    {"name": "bind:checked", "detail": "<CheckBox>", "note": "flag(checked) out, and the change handler back."}
+  ],
+  "conversions": [],
+  "reservedAttributes": [
+    {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position."}
+  ],
+  "controls": ["Box", "Button", "CheckBox", "Container", "Grid", "HFlex", "HStack", "Image", "Label", "TextField", "VFlex", "VStack"],
+  "attributes": [
+    {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
+    {"name": "alignment", "detail": "number", "note": "text alignment inside the control"},
+    {"name": "basis", "detail": "number", "note": "main-axis size to grow or shrink from"},
+    {"name": "checked", "detail": "flag", "note": "a check box's state"},
+    {"name": "editable", "detail": "flag", "note": "whether a field accepts typing"},
+    {"name": "enabled", "detail": "flag", "note": "whether the control responds"},
+    {"name": "font_size", "detail": "number", "note": "text size in points"},
+    {"name": "grow", "detail": "number", "note": "share of leftover space along the main axis"},
+    {"name": "height", "detail": "number", "note": "pins the height"},
+    {"name": "hidden", "detail": "flag", "note": "whether the control is drawn"},
+    {"name": "justify", "detail": "word", "note": "main-axis distribution: start, center, end, space_between, space_around, space_evenly"},
+    {"name": "margin", "detail": "number", "note": "space kept outside this control"},
+    {"name": "max", "detail": "number", "note": "the high end of a range"},
+    {"name": "min", "detail": "number", "note": "the low end of a range"},
+    {"name": "padding", "detail": "number", "note": "space kept inside a container"},
+    {"name": "shrink", "detail": "number", "note": "share of overflow this control gives up"},
+    {"name": "spacing", "detail": "number", "note": "the gap between a container's children"},
+    {"name": "text", "detail": "text", "note": "the text this control shows"},
+    {"name": "value", "detail": "number", "note": "a slider or progress value"},
+    {"name": "width", "detail": "number", "note": "pins the width"}
+  ],
+  "booleanAttributes": ["checked", "editable", "enabled", "hidden"]
+}

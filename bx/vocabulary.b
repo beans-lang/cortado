@@ -1,0 +1,244 @@
+// vocabulary.b — cortado's `.bx` surface, as data an editor can read.
+//
+// An editor cannot ask cortado-bx what a `.bx` file may contain: the extension
+// is a TypeScript bundle and cortado-bx is a Beans binary. So the vocabulary
+// is **printed** from here and checked in on the editor side.
+// `cortado-bx vocabulary` prints it for a person regenerating it by hand, and
+// the gate diffs the printed JSON against the committed copy.
+//
+// **Why the lists are written out and not derived.** The predicates in
+// `widgets.b` and `events.b` are chains of `==`, and a chain cannot be
+// enumerated. `tests/markup.b` asks each predicate about **every name listed
+// here** and about a control corpus of names that must *not* be in it, so a
+// row added to `widgets.b` and forgotten here fails the gate rather than
+// shipping an editor that has never heard of it — and the reverse fails too.
+//
+// Nothing under cortado's module root imports this file, and neither does the
+// emitter. It is data about the language, for a reader outside it.
+
+package bx
+
+/// One named thing in the surface, with the form to write and why.
+///
+/// Three strings rather than a shape per section: an editor renders `name` in
+/// the list, `detail` beside it and `note` in the hover, and every section
+/// answers those three.
+pub class VocabRow {
+    pub name: string = ""
+    pub detail: string = ""
+    pub note: string = ""
+    pub fn init(name: string, detail: string, note: string) {
+        self.name = name
+        self.detail = detail
+        self.note = note
+    }
+}
+
+/// The `$` blocks. `else` is in the list and carries no `$`, because that is
+/// how it is written: `$if c { } else { }` (`parse_if`).
+pub fn blocks() -> List<VocabRow> {
+    return [
+        new VocabRow("$if", r#"$if <expr> { ... }"#,
+                     r#"A branch, emitted as a Beans if. A branch that is not taken contributes no element, so the siblings after it shift — give them key={ } if that matters."#),
+        new VocabRow("else", r#"$if <expr> { ... } else if <expr> { ... } else { ... }"#,
+                     "Written without a $, because it continues the $if that opened the block."),
+        new VocabRow("$for", r#"$for <name> in <expr> { ... }"#,
+                     r#"A loop, emitted as a Beans for. A child carrying key={ } keeps its control across reordering; without one, rows match by position."#),
+        new VocabRow("$match", r#"$match <expr> { <pattern> => { ... } }"#,
+                     "A branch with more than two arms. At least one arm is required."),
+        new VocabRow("$slot", r#"$slot | $slot(<expr>) | $slot:<name> | $slot:<name> as <expr> | $slot:<name> as <p>: <Type> { ... }"#,
+                     "Places or defines a fragment. A body makes it a definition and only reads that way inside a component tag."),
+
+    ]
+}
+
+/// The three interpolation forms, and the escape.
+pub fn interpolations() -> List<VocabRow> {
+    return [
+        new VocabRow("$<chain>", "$self.count, $row.title, $self.rows[0]",
+                     "An implicit chain. It ends where the chain ends, so $5.00 and US$ are ordinary text."),
+        new VocabRow(r#"$( )"#, "$(a + b)",
+                     "A parenthesised expression. One line: a newline inside it is refused."),
+        new VocabRow(r#"${ }"#, r#"${self.name}"#,
+                     r#"A braced expression. One line, and a } in running text closes an enclosing block, so write \} for a literal one."#),
+        new VocabRow("$$", "$$",
+                     r#"A literal $ in front of a word. Everywhere else a $ that is not followed by an identifier, ( or { is already text."#),
+    ]
+}
+
+/// Every attribute-name prefix that means something.
+///
+/// An allowlist of two, not "any prefix that is not ours": a mistyped
+/// `bnd:value` stays an error instead of becoming an attribute literally called
+/// `bnd:value` (`widgets.b`, `is_xml_namespace`).
+pub fn namespaces() -> List<VocabRow> {
+    return [
+        new VocabRow("on:", r#"on:<event>={fn(e: <EventType>) { ... }}"#,
+                     "An event handler. The event must be one cortado raises; see events. Every handler takes a UiEvent."),
+        new VocabRow("bind:", r#"bind:value={<place>} | bind:checked={<place>}"#,
+                     "A two-way binding. It emits the value and the handler that writes it back, which is the pair you would otherwise write yourself."),
+    ]
+}
+
+/// `bind:` targets and the conversions `bind:value` accepts.
+pub fn bindings() -> List<VocabRow> {
+    return [
+        new VocabRow("bind:value", "<TextField>",
+                     "The place is shown as the control's text and written back when the field commits, so the element may then have no children of its own."),
+        new VocabRow("bind:checked", "<CheckBox>",
+                     "flag(checked) out, and the change handler back."),
+    ]
+}
+
+/// The `.suffix` conversions on `bind:value`.
+///
+/// None yet. A control's value arrives as text and is written back as text; a
+/// numeric field is a `TextField` the author parses, or — when there is one —
+/// a control whose value really is a number. Adding a conversion means
+/// deciding what an unparseable value does, and the only answer worth
+/// shipping is "leave the field alone", which is a behaviour to design rather
+/// than a suffix to list.
+pub fn conversions() -> List<string> {
+    return []
+}
+
+/// Attribute names the framework reads rather than the control.
+pub fn reserved_attributes() -> List<VocabRow> {
+    return [
+        new VocabRow("key", r#"key={<expr>}"#,
+                     "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position."),
+    ]
+}
+
+// ------------------------------------------------------------ control facts
+//
+// Each list below mirrors a predicate in `widgets.b`, and the gate asks the
+// predicate about every name here and about a corpus of names that must answer
+// no. Neither list may grow without the other.
+
+/// The controls markup can name. Everything else that is capitalised is taken
+/// to be a component.
+pub fn controls() -> List<string> {
+    return widget_tags()
+}
+
+/// Attributes that are true by being there: `<CheckBox checked />`.
+pub fn boolean_attributes() -> List<string> {
+    return ["checked", "editable", "enabled", "hidden"]
+}
+
+/// Every attribute, with the kind of value it takes.
+///
+/// The kind is what the emitter turns into a `Builder` call, so an editor
+/// showing `spacing — number` is showing the same fact the compiler acts on.
+pub fn attributes() -> List<VocabRow> {
+    let out: List<VocabRow> = []
+    for name: string in attribute_names() {
+        out.push(new VocabRow(name, attribute_call(name), attribute_note(name)))
+    }
+    return move out
+}
+
+fn attribute_note(name: string) -> string {
+    if name == "text" { return "the text this control shows" }
+    if name == "spacing" { return "the gap between a container's children" }
+    if name == "padding" { return "space kept inside a container" }
+    if name == "margin" { return "space kept outside this control" }
+    if name == "grow" { return "share of leftover space along the main axis" }
+    if name == "shrink" { return "share of overflow this control gives up" }
+    if name == "basis" { return "main-axis size to grow or shrink from" }
+    if name == "width" { return "pins the width" }
+    if name == "height" { return "pins the height" }
+    if name == "align" { return "cross-axis placement: start, center, end, stretch" }
+    if name == "justify" { return "main-axis distribution: start, center, end, space_between, space_around, space_evenly" }
+    if name == "enabled" { return "whether the control responds" }
+    if name == "hidden" { return "whether the control is drawn" }
+    if name == "checked" { return "a check box's state" }
+    if name == "editable" { return "whether a field accepts typing" }
+    if name == "font_size" { return "text size in points" }
+    if name == "value" { return "a slider or progress value" }
+    if name == "min" { return "the low end of a range" }
+    if name == "max" { return "the high end of a range" }
+    if name == "alignment" { return "text alignment inside the control" }
+    return ""
+}
+
+// ------------------------------------------------------------------ printing
+
+/// One JSON string, with the four escapes JSON requires and a `\u00XX` for
+/// every other control byte.
+pub fn json_string(value: string) -> string {
+    let parts: List<string> = []
+    parts.push("\"")
+    var i: int = 0
+    for i < value.len() {
+        let b: int = value.byte_at(i) as int
+        if b == 34 { parts.push("\\\"") }
+        else if b == 92 { parts.push("\\\\") }
+        else if b == 10 { parts.push("\\n") }
+        else if b == 13 { parts.push("\\r") }
+        else if b == 9 { parts.push("\\t") }
+        else if b < 32 { parts.push("\\u00{hex_byte(b)}") }
+        else { parts.push(value.slice(i, i + 1)) }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn json_strings(values: List<string>) -> string {
+    let parts: List<string> = []
+    for value: string in values { parts.push(json_string(value)) }
+    return "[{parts.join(", ")}]"
+}
+
+fn json_rows(rows: List<VocabRow>) -> List<string> {
+    let out: List<string> = []
+    for row: VocabRow in rows {
+        out.push("\{\"name\": {json_string(row.name)}, \"detail\": {json_string(row.detail)}, \"note\": {json_string(row.note)}\}")
+    }
+    return move out
+}
+
+/// Every event, with the class its handler takes and the Builder method it
+/// becomes — read out of `events.b`, not restated.
+fn json_events() -> List<string> {
+    let out: List<string> = []
+    for name: string in event_names() {
+        out.push("\{\"event\": {json_string(name)}, \"family\": {json_string(event_family(name))}\}")
+    }
+    return move out
+}
+
+fn block_of(name: string, rows: List<string>) -> string {
+    if rows.is_empty() { return "  {json_string(name)}: []" }
+    return "  {json_string(name)}: [\n    {rows.join(",\n    ")}\n  ]"
+}
+
+fn line_of(name: string, value: string) -> string {
+    return "  {json_string(name)}: {value}"
+}
+
+/// The whole vocabulary as JSON, ending in a newline.
+///
+/// Shaped by hand rather than by a generic writer: an array of names reads on
+/// one line and an array of objects reads one per line, which is what the file
+/// this replaces did and what a reviewer of a diff needs.
+pub fn vocabulary_json() -> string {
+    let lines: List<string> = []
+    lines.push(line_of("$generated",
+        json_string("Written by `cortado-bx vocabulary`, out of cortado's own tables. Do not edit by hand.")))
+    lines.push(line_of("$source", json_string("cortado bx/vocabulary.b, bx/events.b, bx/widgets.b, bx/parse.b")))
+    lines.push(line_of("$language", json_string("cortado markup — a whole-file document, not Beans with tags in it: outside <beans> every < opens a tag. Tags name native controls, never HTML elements")))
+    lines.push(block_of("blocks", json_rows(blocks())))
+    lines.push(block_of("interpolations", json_rows(interpolations())))
+    lines.push(block_of("namespaces", json_rows(namespaces())))
+    lines.push(block_of("events", json_events()))
+    lines.push(block_of("bindings", json_rows(bindings())))
+    lines.push(line_of("conversions", json_strings(conversions())))
+    lines.push(block_of("reservedAttributes", json_rows(reserved_attributes())))
+    lines.push(line_of("controls", json_strings(controls())))
+    lines.push(block_of("attributes", json_rows(attributes())))
+    lines.push(line_of("booleanAttributes", json_strings(boolean_attributes())))
+    return "\{\n{lines.join(",\n")}\n\}\n"
+}

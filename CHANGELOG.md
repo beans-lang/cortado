@@ -76,6 +76,36 @@ First working macOS host.
   access by host property id, for the applier. Application code keeps the named
   methods, which say what they do.
 
+- `cortado.bx` — the `.bx` markup compiler, and `cortado-bx`, its command line.
+  A screen is one file: markup on top, a `<beans>` block underneath, one
+  `partial class`. Tags name controls (`VStack`, `Button`, `Label`) and any
+  other capitalised tag is a component; there is no `<div>`, no entity table,
+  no escaping and no `$html`, because the output is a tree of native objects
+  and there is nothing to inject into.
+- Forked from latte's `bx/`, which was already target-parameterised, and the
+  HTML removed: the void-element, raw-text, RCDATA, entity, URL-scheme and
+  escaping tables, the inline-handler refusals, and the constant folder with
+  its second serializer. What is left — the lexer, the parser, the AST, the
+  `<beans>` passthrough and the `partial class` splice — is the part that was
+  never about HTML.
+- Attributes are **typed**. latte writes every attribute as a string because
+  HTML attributes are strings; a control's properties are a number, a flag or
+  one word out of a closed set, so the emitted call is typed and
+  `spacing={self.name}` is `expected f64, got string` at the author's own
+  expression.
+- `Builder.child<T>` and `Composer.obtain` — a component named in markup is a
+  type, not an object, so the mount builds and owns it. Generic on the concrete
+  `Builder` rather than on the `Composer` interface, because Beans refuses
+  generic interface methods; the interface answers a boxed `reflect.Value` and
+  the downcast happens in the generic method, which is legal precisely because
+  a `reflect.Value` is the one source `as?` may narrow to an instantiation.
+- `component.Activator` and `Mount.use_activator` — who builds a type named
+  only in markup. With a container, its initializer's parameters are resolved;
+  without one, the type's own zero-argument initializer is called.
+- `tools/check_vocabulary.sh` — holds `bx/widgets.b` against
+  `component/vocabulary.b`. Two tables exist because `cortado.bx` must build
+  where there is no platform host, and two tables drift.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump
@@ -87,6 +117,11 @@ First working macOS host.
   reads as *disabled* rather than as *has no such property*. It answers
   `wrong_widget` now, and `describe()` prints the flag only for widgets that
   actually carry one.
+- Three container tags — `Grid`, `HFlex`, `VFlex` — compiled in markup and
+  were refused by the run-time Builder, so a `<Grid>` would have produced a
+  fault at mount rather than a grid. `tools/check_vocabulary.sh` caught it the
+  first time it ran, which is the entire argument for writing that gate before
+  writing more tags.
 - A first render produced controls that looked right and did nothing. The
   differ emits one `create` carrying the whole tree, and no `bind` for anything
   inside it — there was no previous tree to compare against — so the applier

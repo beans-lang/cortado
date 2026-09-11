@@ -198,7 +198,12 @@ pub class Builder {
         }
     }
 
-    /// Shows another component here.
+    /// Shows a component the parent already holds.
+    ///
+    /// Beans has no overloading, so this and `child<T>` are two names for two
+    /// ownerships: here the parent owns the instance, usually in a field;
+    /// there the mount does, because markup names a type rather than an
+    /// object. Both keep their state across renders.
     ///
     /// `key` names this child among its siblings and must be unique within the
     /// component that wrote it. It is what lets the child keep its state
@@ -216,7 +221,7 @@ pub class Builder {
     ///     into.close()
     /// }
     /// ```
-    pub fn child(key: string, sub: Component) {
+    pub fn show(key: string, sub: Component) {
         match self.composer {
             none => {
                 self.faults.push("child \"{key}\" cannot be rendered: this builder is not attached to a mount")
@@ -225,6 +230,55 @@ pub class Builder {
                 match who.compose(key, sub) {
                     ok(subtree) => { self.embed(subtree) }
                     err(problem) => { self.faults.push("child \"{key}\": {problem.msg}") }
+                }
+            }
+        }
+    }
+
+    /// Shows a component of type `T` here, building it the first time.
+    ///
+    /// What markup emits. `<Price drink={self.drink} />` becomes
+    ///
+    /// ```beans
+    /// into.child<Price>("c4", fn(c: Price) { c.drink = self.drink })
+    /// ```
+    ///
+    /// The mount owns the instance and hands the same one back on every later
+    /// render, so the child keeps its state; `setup` runs each time, which is
+    /// what carries a changed parameter down.
+    ///
+    /// Generic, and on a concrete class rather than on the `Composer`
+    /// interface, because Beans refuses generic interface methods. The
+    /// interface answers a boxed value and the downcast happens here — legal
+    /// because a `reflect.Value` is the one source `as?` may narrow to an
+    /// instantiation.
+    pub fn child<T>(key: string, setup: fn(T)) {
+        match self.composer {
+            none => {
+                self.faults.push("<{type_of(T).name()}> cannot be rendered: this builder is not attached to a mount")
+                return
+            }
+            some(who) => {
+                match who.obtain(key, type_of(T)) {
+                    err(problem) => {
+                        self.faults.push("<{type_of(T).name()}>: {problem.msg}")
+                    }
+                    ok(boxed) => {
+                        match boxed as? T {
+                            none => {
+                                self.faults.push("<{type_of(T).name()}> came back as something else")
+                            }
+                            some(built) => {
+                                setup(built)
+                                match boxed as? Component {
+                                    none => {
+                                        self.faults.push("<{type_of(T).name()}> is not a Component")
+                                    }
+                                    some(shown) => { self.show(key, shown) }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

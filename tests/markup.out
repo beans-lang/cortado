@@ -1,0 +1,20 @@
+Container CortadoView role=group "" frame=0,0,380,300 children=1
+  Container CortadoView role=group "" frame=0,0,380,300 children=5
+    Label NSTextField role=text "Order a coffee" frame=24,24,332,20
+    Label NSTextField role=text "1 × flat white" frame=24,58,332,16
+    Label NSTextField role=text "380p" frame=24,88,332,26
+    CheckBox NSButton role=checkbox "Rush it" frame=24,128,332,16
+    Container CortadoView role=group "" frame=24,158,332,24 children=2
+      Button NSButton role=button "Another shot" frame=114,0,103,24
+      Button NSButton role=button "Change drink" frame=227,0,105,24
+-- after three shots --
+Container CortadoView role=group "" frame=0,0,380,300 children=1
+  Container CortadoView role=group "" frame=0,0,380,300 children=6
+    Label NSTextField role=text "Order a coffee" frame=24,24,332,20
+    Label NSTextField role=text "3 × flat white" frame=24,58,332,16
+    Label NSTextField role=text "380p" frame=24,88,332,26
+    CheckBox NSButton role=checkbox "Rush it" frame=24,128,332,16
+    Label NSTextField role=text "That is a lot of caffeine" frame=24,158,332,16
+    Container CortadoView role=group "" frame=24,188,332,24 children=2
+      Button NSButton role=button "Another shot" frame=114,0,103,24
+      Button NSButton role=button "Change drink" frame=227,0,105,24

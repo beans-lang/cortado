@@ -1,0 +1,77 @@
+<VStack spacing={14} padding={24} align="stretch">
+  <Label font_size={17} text="Order a coffee" />
+  <Label>$self.shots × $self.drink</Label>
+
+  <Price drink={self.drink} />
+
+  <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>
+    Rush it
+  </CheckBox>
+
+  $if self.shots > 2 {
+    <Label text="That is a lot of caffeine" />
+  }
+
+  <HStack spacing={10} justify="end">
+    <Button enabled={self.shots < 4} on:click={fn(e: UiEvent) { self.add_shot() }}>
+      Another shot
+    </Button>
+    <Button on:click={fn(e: UiEvent) { self.change_drink() }}>Change drink</Button>
+  </HStack>
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import {view, param, inject} from cortado.annotations
+
+/// What a drink costs.
+pub class Menu {
+    pub fn init() {}
+
+    pub fn price(drink: string) -> int {
+        if drink == "flat white" { return 380 }
+        if drink == "espresso" { return 260 }
+        return 300
+    }
+
+    pub fn next(drink: string) -> string {
+        if drink == "flat white" { return "espresso" }
+        if drink == "espresso" { return "cortado" }
+        return "flat white"
+    }
+}
+
+/// The order screen. (`Order` is a builtin interface name in Beans, so the
+/// class this file declares is `Checkout`, after the file.)
+///
+/// Everything above the `<beans>` line is the markup half of this same class.
+/// cortado-bx writes a `render` method into the other half of the `partial
+/// class`, so the two live in one file and there is one thing to regenerate.
+@view
+pub partial class Checkout extends component.Component {
+    @param pub heading: string = "Order a coffee"
+    @inject pub menu: Menu = new Menu()
+    pub drink: string = "flat white"
+    pub shots: int = 1
+    pub rush: bool = false
+
+    pub fn init() { super.init() }
+
+    pub fn add_shot() {
+        self.shots = self.shots + 1
+        self.request_render()
+    }
+
+    pub fn change_drink() {
+        self.drink = self.menu.next(self.drink)
+        self.shots = 1
+        self.request_render()
+    }
+
+    pub fn toggle_rush() {
+        self.rush = !self.rush
+        self.request_render()
+    }
+}
+</beans>

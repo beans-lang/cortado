@@ -63,6 +63,7 @@ run).
 ```
 your program
      │
+cortado.bx          the .bx markup compiler — build-time only, never linked
 cortado.component   components, the differ, and the applier
 cortado.surface     windows, and the application that owns them
 cortado.widgets     the controls
@@ -245,6 +246,110 @@ and the whole of the dependency is one class in a *separate module*,
 over `std.reflect` with two methods — so an application with its own idea of
 where services come from writes twenty lines instead of adopting a container,
 and cortado's own gate needs no dependency to run.
+
+## Markup
+
+A screen is a `.bx` file: markup on top, Beans underneath, one class.
+
+```
+<VStack spacing={14} padding={24} align="stretch">
+  <Label font_size={17} text="Order a coffee" />
+  <Label>$self.shots × $self.drink</Label>
+
+  <Price drink={self.drink} />
+
+  $if self.shots > 2 {
+    <Label text="That is a lot of caffeine" />
+  }
+
+  <HStack spacing={10} justify="end">
+    <Button enabled={self.shots < 4} on:click={fn(e: UiEvent) { self.add_shot() }}>
+      Another shot
+    </Button>
+  </HStack>
+</VStack>
+<beans>
+package site
+
+@view
+pub partial class Checkout extends component.Component {
+    @inject pub menu: Menu = new Menu()
+    pub drink: string = "flat white"
+    pub shots: int = 1
+
+    pub fn add_shot() {
+        self.shots = self.shots + 1
+        self.request_render()
+    }
+}
+</beans>
+```
+
+```
+beansc build examples/cortado_bx.b -o build/cortado-bx
+build/cortado-bx build site/checkout.bx
+```
+
+**Generated code goes under `generated/`, mirroring the source tree.**
+`site/checkout.bx` becomes `generated/site/checkout.b`, and the mirror hangs
+off the module root — the nearest directory with a `beans.pot` — so the output
+does not depend on where the compiler was run from.
+
+```
+examples/markup/
+├── beans.pot
+├── main.b
+├── site/                  markup only; not a Beans package
+│   ├── checkout.bx
+│   └── price.bx
+└── generated/
+    └── site/              package site → markup.generated.site
+        ├── checkout.b
+        └── price.b
+```
+
+Mirroring rather than flattening, because **a directory is a package in Beans**
+and its name is the folder's name, not what a file declares. A mirrored tree
+keeps every package name it had and gains one prefix at the root, so nothing
+has to be renamed as markup is added, moved or nested. It also means the two
+halves of a screen are never neighbours, so nobody edits the generated one by
+mistake.
+
+**The tags are controls, not HTML.** `VStack`, `HStack`, `VFlex`, `HFlex`,
+`Grid`, `Box`, `Container`, `Label`, `Button`, `TextField`, `CheckBox`,
+`Image` — a closed set, and any other capitalised tag is a component. There is
+no `<div>`, no entity table, no escaping and no `$html`: the output is a tree
+of native objects, and there is nothing to inject into.
+
+**The generated code is the code you would have written.** `.bx` is sugar over
+`Builder`'s methods, not a second way of saying the same thing:
+
+```beans
+b.open("VStack")
+b.number("spacing", (14) as f64)
+b.word("align", "stretch")
+b.open("Label")
+b.text("{self.shots} × {self.drink}")
+b.close()
+```
+
+**Attributes are typed, and that is where this differs most from an HTML
+markup language.** latte writes every attribute as a string because HTML
+attributes are strings. A control's properties are not: `spacing` is a number,
+`enabled` a flag, `align` one word out of four. So the emitted call is typed
+too, and `spacing={self.name}` is `expected f64, got string` at the author's
+own expression rather than a string that parses to something unintended.
+
+**The compiler is pure Beans over `std.fs`.** It links no platform host, so it
+builds and runs on every operating system — including the ones whose host has
+not been written.
+
+Generated files are checked in, and `test.sh` regenerates and diffs them, so a
+stale one fails the build instead of shipping. The same gate diffs
+`bx/vocabulary.json`, which an editor reads, and `tools/check_vocabulary.sh`
+holds the compile-time tag table against the run-time one — it caught three
+container tags that markup accepted and the Builder did not, the first time it
+ran.
 
 ## Building
 

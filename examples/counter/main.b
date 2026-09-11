@@ -96,7 +96,7 @@ pub class Counter extends component.Component {
             into.text("{self.shots} × {self.drink}")
             into.close()
 
-            into.child("price", self.price)
+            into.show("price", self.price)
 
             into.open("HStack")
             into.number("spacing", 10.0)

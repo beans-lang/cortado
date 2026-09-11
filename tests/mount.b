@@ -98,7 +98,7 @@ pub class OrderScreen extends component.Component {
             into.text(self.title)
             into.close()
 
-            into.child("total", self.total)
+            into.show("total", self.total)
 
             into.open("CheckBox")
             into.text("Extra shot")

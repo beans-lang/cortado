@@ -81,6 +81,8 @@ mkdir -p "$root/build"
 pass
 "$root/tools/check_constants.sh"
 pass
+"$root/tools/check_vocabulary.sh"
+pass
 
 # ----------------------------------------------------------- portable leg
 for name in "${portable[@]}"; do
@@ -178,6 +180,59 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     else
         skip counter_example "barista is not checked out at ../barista, so the dependency-injection example cannot be built"
         echo "ok native: ${#cases[@]} cases, and examples/hello links"
+    fi
+fi
+
+# ------------------------------------------------------------------- markup
+#
+# The `.bx` compiler is pure Beans over std.fs — it links no platform host, so
+# it builds and runs anywhere. Two things are checked, in this order:
+#
+#   1. **Drift.** Every generated `_gen.b` is regenerated and diffed against the
+#      committed copy. A stale one fails the build instead of shipping, which is
+#      what makes checking generated code in safe rather than a liability.
+#   2. **The result.** The generated render is mounted headless and its tree is
+#      diffed against a golden, so "the markup produced the controls it
+#      describes" is a test rather than a screenshot somebody looked at once.
+"$BEANSC" build "$root/examples/cortado_bx.b" -o "$tmp/cortado-bx" >/dev/null
+pass
+# Regenerated from the repository root with a relative path, because the path
+# is written into the generated file's header — so the diff has to be run the
+# way a person regenerates, or it fails on the absolute path alone.
+for source in examples/markup/site/*.bx; do
+    stem="$(basename "${source%.bx}")"
+    (cd "$root" && "$tmp/cortado-bx" build "$source" --stdout) >"$tmp/regen.b" 2>"$tmp/regen.err" || {
+        echo "FAIL markup: cortado-bx refused $(basename "$source")" >&2
+        cat "$tmp/regen.err" >&2
+        exit 1
+    }
+    if ! diff -u "$root/examples/markup/generated/site/$stem.b" "$tmp/regen.b"; then
+        echo "FAIL markup: generated/site/$stem.b is stale — regenerate it with" >&2
+        echo "    build/cortado-bx build examples/markup/site/*.bx" >&2
+        exit 1
+    fi
+done
+pass
+# The editor vocabulary is printed from cortado's own tables, so an editor
+# cannot describe a language cortado does not have. Committed, and diffed here.
+(cd "$root" && "$tmp/cortado-bx" vocabulary) >"$tmp/vocabulary.json" 2>&1
+if ! diff -u "$root/bx/vocabulary.json" "$tmp/vocabulary.json"; then
+    echo "FAIL markup: bx/vocabulary.json is stale — regenerate it with" >&2
+    echo "    build/cortado-bx vocabulary > bx/vocabulary.json" >&2
+    exit 1
+fi
+pass
+echo "ok markup: cortado-bx builds, every generated file matches its source, and the editor vocabulary is current"
+
+if [[ $native -eq 1 && $have_host -eq 1 ]]; then
+    if [[ -f "$root/../barista/beans.pot" ]]; then
+        "$BEANSC" build "$root/examples/markup/main.b" -o "$tmp/markup.bin" >/dev/null
+        "$tmp/markup.bin" --dump >"$tmp/markup.out" 2>&1
+        diff -u "$root/tests/markup.out" "$tmp/markup.out"
+        pass
+        echo "ok markup: a .bx screen mounts to real controls"
+    else
+        skip markup_mount "barista is not checked out at ../barista, so the markup example cannot be built"
     fi
 elif [[ $native -eq 1 ]]; then
     echo "-- native leg not run: no host for $host_os"

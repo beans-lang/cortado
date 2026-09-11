@@ -22,7 +22,8 @@ import cortado.geometry
 pub class Vocabulary {
     /// The widget behind a tag, or `none` for a tag cortado does not know.
     pub static fn kind_of(tag: string) -> Option<widgets.WidgetKind> {
-        if tag == "VStack" || tag == "HStack" || tag == "Box" || tag == "Container" {
+        if tag == "VStack" || tag == "HStack" || tag == "VFlex" || tag == "HFlex" ||
+           tag == "Grid" || tag == "Box" || tag == "Container" {
             return some(widgets.WidgetKind.container)
         }
         if tag == "Label" { return some(widgets.WidgetKind.label) }

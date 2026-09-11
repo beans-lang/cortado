@@ -1,0 +1,9 @@
+module markup
+kind application
+
+# A screen written in .bx markup. It needs cortado for the framework,
+# cortado_app for the composition root, and barista because this file names
+# ServiceCollection itself.
+require path "../.."
+require path "../../app"
+require path "../../../barista"

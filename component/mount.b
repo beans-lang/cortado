@@ -40,6 +40,7 @@ pub class Mount implements Composer {
     top: Option<Component> = none
     shown: Option<Element> = none
     services: Option<ServiceSource> = none
+    builder_of_types: Option<Activator> = none
 
     /// The plan per component type, worked out on that type's first mount and
     /// kept for the life of the application.
@@ -76,6 +77,17 @@ pub class Mount implements Composer {
     /// is refused at mount rather than mounted with them empty.
     pub fn use_services(source: ServiceSource) {
         self.services = some(source)
+    }
+
+    /// Who builds a component type named only in markup.
+    ///
+    /// Optional. Without one, such a type is built through its own
+    /// zero-argument initializer, which is every component that takes nothing
+    /// through its constructor. With one — `cortado_app.Container` — the
+    /// initializer's parameters are resolved from the container, so a
+    /// component with constructor dependencies works from markup too.
+    pub fn use_activator(who: Activator) {
+        self.builder_of_types = some(who)
     }
 
     /// The room the tree is laid out in. Set it from the surface's content
@@ -231,6 +243,60 @@ pub class Mount implements Composer {
         let subtree: Element = self.render_one(child)?
         self.cached[key] = subtree
         return ok(subtree)
+    }
+
+    /// `Composer`: the child under `key`, built the first time it is asked
+    /// for.
+    pub fn obtain(key: string, described: reflect.Type) -> Result<reflect.Value> {
+        match self.prepared.get(key) {
+            some(held) => { return ok(reflect.value(held)) }
+            none => {}
+        }
+        let boxed: reflect.Value = self.construct(described)?
+        match boxed as? Component {
+            none => {
+                return err("{described.qualified_name()} is not a Component, so it cannot be shown",
+                           "not_a_component")
+            }
+            some(built) => {
+                self.prepare(built)?
+                self.prepared[key] = built
+                return ok(reflect.value(built))
+            }
+        }
+    }
+
+    fn construct(described: reflect.Type) -> Result<reflect.Value> {
+        match self.builder_of_types {
+            some(who) => {
+                match who.build(described) {
+                    ok(value) => { return ok(value) }
+                    err(problem) => {
+                        return err("{described.qualified_name()}: {problem}", "cannot_build")
+                    }
+                }
+            }
+            none => {}
+        }
+        match described.initializer() {
+            none => {
+                return err("{described.qualified_name()} has no initializer reflection can call — an abstract class, a singleton and a closed generic have none. Give the mount a container, or hold the component in a field and show it with `show`",
+                           "no_initializer")
+            }
+            some(make) => {
+                if make.parameters().len() > 0 {
+                    return err("{described.qualified_name()} takes constructor arguments, and this mount has no container to resolve them from — call `use_activator`, or hold the component in a field and show it with `show`",
+                               "needs_container")
+                }
+                var empty: List<reflect.Value> = []
+                match make.call(move empty) {
+                    ok(value) => { return ok(value) }
+                    err(problem) => {
+                        return err("{described.qualified_name()}: {problem.message()}", "cannot_build")
+                    }
+                }
+            }
+        }
     }
 
     // ---- preparation ----

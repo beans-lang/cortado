@@ -1,0 +1,29 @@
+<Label font_size={22}>$self.menu.price(self.drink)p</Label>
+<beans>
+package site
+
+import cortado.component
+import {view, param, inject} from cortado.annotations
+
+/// What the order costs.
+///
+/// The menu arrives by injection — nothing above passes it down. `should_render`
+/// says no unless the drink actually moved, so the screen re-rendering for its
+/// own reasons does not re-run this.
+@view
+pub partial class Price extends component.Component {
+    @param pub drink: string = ""
+    @inject pub menu: Menu = new Menu()
+    last: string = ""
+
+    pub fn init() { super.init() }
+
+    pub override fn on_params_set() {}
+
+    pub override fn should_render() -> bool {
+        if self.last == self.drink { return false }
+        self.last = self.drink
+        return true
+    }
+}
+</beans>

@@ -18,7 +18,7 @@ import std.reflect
 /// test suite mounts components with a hand-written source, so a bug in the
 /// container cannot make the framework's gate red and a bug in the framework
 /// cannot hide behind the container.
-pub class Container implements component.ServiceSource {
+pub class Container implements component.ServiceSource, component.Activator {
     provider: barista.ServiceProvider
 
     pub fn init(provider: barista.ServiceProvider) {
@@ -44,10 +44,12 @@ pub class Container implements component.ServiceSource {
     }
 
     /// Builds a type the container was never told about, resolving its
-    /// initializer's parameters.
+    /// initializer's parameters. This is `component.Activator`.
     ///
-    /// This is how a component with constructor dependencies is created
-    /// without registering every screen in the application as a service.
+    /// It is how a component named in markup — `<Price drink={...} />` names a
+    /// type, not an object — is created, and how one with constructor
+    /// dependencies works there, without registering every screen in the
+    /// application as a service.
     pub fn build(described: reflect.Type) -> Result<reflect.Value, string> {
         match self.provider.activate(described) {
             ok(value) => { return ok(value) }
