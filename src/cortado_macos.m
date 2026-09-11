@@ -102,6 +102,21 @@ static int32_t ctd_copy_out(NSString *text, char *out, int32_t cap) {
     return (int32_t)length;
 }
 
+// A zero byte anywhere in the text. Every entry point that takes a string
+// checks, because no platform text control can hold one: NSString's
+// UTF8String ends at it, GTK's const char* ends at it, and Win32's
+// SetWindowTextW ends at it. Passing one through would cut a program's string
+// in half somewhere inside the platform, with nothing at the boundary able to
+// say where — so it is refused here, by name, while the caller's own string
+// is still in view.
+static int ctd_has_nul(const char *utf8, int32_t len) {
+    if (!utf8 || len <= 0) return 0;
+    for (int32_t i = 0; i < len; i++) {
+        if (utf8[i] == 0) return 1;
+    }
+    return 0;
+}
+
 // ------------------------------------------------------- the flipped container
 
 @interface CortadoView : NSView
@@ -312,6 +327,7 @@ ctd_handle ctd_surface_new(double width, double height) {
 }
 
 ctd_status ctd_surface_set_title(ctd_handle surface, const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     NSWindow *window = (NSWindow *)ctd_resolve(surface);
     if (!window) return CTD_ERR_STALE;
     if (![window isKindOfClass:[NSWindow class]]) return CTD_ERR_KIND;
@@ -746,6 +762,7 @@ static NSTextView *ctd_text_view(id object) {
 }
 
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     NSString *text = ctd_string(utf8, len);
@@ -1249,6 +1266,8 @@ ctd_handle ctd_menu_new(const char *title, int32_t len) {
 ctd_status ctd_menu_add_item(ctd_handle handle, const char *title, int32_t title_len,
                              const char *key, int32_t key_len,
                              int32_t role, int64_t token) {
+    if (ctd_has_nul(title, title_len) || ctd_has_nul(key, key_len))
+        return CTD_ERR_RANGE;
     NSMenu *menu = ctd_menu_of(handle);
     if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
     if (role < 0 || role > CTD_CMD_FULLSCREEN) return CTD_ERR_RANGE;
@@ -1383,6 +1402,7 @@ ctd_status ctd_items_clear(ctd_handle widget) {
 }
 
 ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     NSPopUpButton *menu = ctd_item_list(object);
@@ -1480,6 +1500,67 @@ ctd_status ctd_widget_synth_text(ctd_handle widget, const char *utf8, int32_t le
     else return CTD_ERR_KIND;
     ctd_emit_control(widget, object);
     return CTD_OK;
+}
+
+// Reads a view back as pixels.
+//
+// `bitmapImageRepForCachingDisplayInRect:` and `cacheDisplayInRect:` draw into
+// a bitmap rather than onto the screen, which is what makes this work in a
+// headless run: the window is never ordered front and the controls still
+// paint. That is the point of the call — it is what a program that had to
+// answer "did anything actually appear" needs, and nothing else in this header
+// can answer it.
+//
+// The bitmap is built explicitly rather than taken from the view, because the
+// view's own caching rep follows the display: 8 bits a channel, four channels,
+// alpha last, one row after another with no padding. A caller reading
+// (y * width + x) * 4 has to be right on every machine.
+int32_t ctd_snapshot(ctd_handle widget, double *out_size, char *out, int32_t cap) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if (![object isKindOfClass:[NSView class]]) return CTD_ERR_KIND;
+    NSView *view = (NSView *)object;
+    NSRect bounds = [view bounds];
+    int32_t width = (int32_t)bounds.size.width;
+    int32_t height = (int32_t)bounds.size.height;
+    if (width <= 0 || height <= 0) return CTD_ERR_RANGE;
+    if (out_size) {
+        out_size[0] = (double)width;
+        out_size[1] = (double)height;
+    }
+    int32_t needed = width * height * 4;
+    if (!out || cap <= 0) return needed;
+
+    NSBitmapImageRep *rep =
+        [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                                                 pixelsWide:width
+                                                 pixelsHigh:height
+                                              bitsPerSample:8
+                                            samplesPerPixel:4
+                                                   hasAlpha:YES
+                                                   isPlanar:NO
+                                             colorSpaceName:NSDeviceRGBColorSpace
+                                                bitmapFormat:0
+                                                bytesPerRow:width * 4
+                                               bitsPerPixel:32] autorelease];
+    if (!rep) return CTD_ERR_PLATFORM;
+    // Every byte, so an untouched pixel is a known value rather than whatever
+    // the allocator left behind — otherwise "nothing was drawn here" and
+    // "something was drawn and happened to be that" are the same answer.
+    memset([rep bitmapData], 0, (size_t)needed);
+
+    NSGraphicsContext *context =
+        [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
+    if (!context) return CTD_ERR_PLATFORM;
+    [NSGraphicsContext saveGraphicsState];
+    [NSGraphicsContext setCurrentContext:context];
+    [view displayRectIgnoringOpacity:bounds inContext:context];
+    [context flushGraphics];
+    [NSGraphicsContext restoreGraphicsState];
+
+    int32_t room = cap < needed ? cap : needed;
+    memcpy(out, [rep bitmapData], (size_t)room);
+    return needed;
 }
 
 ctd_status ctd_widget_activate(ctd_handle widget) {

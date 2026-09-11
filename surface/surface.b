@@ -32,7 +32,7 @@ pub abstract class Surface {
     }
 
     pub fn set_title(title: string) -> Result<bool> {
-        let buffer: Bytes = host.HostText.encode(title)
+        let buffer: Bytes = host.HostText.encode(title, "title a window")?
         unsafe {
             return host.check(
                 host.ctd_surface_set_title(self.slot.raw,

@@ -74,14 +74,20 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles)
+cases=(tree events bridge mount shelf menu system roles text pixels applied)
 
-# Cases that need nothing but the language. These are the layout engine, which
-# is pure Beans with no foreign call in it at all, so they run on every
-# operating system cortado will ever target — including the ones whose host has
-# not been written. A layout bug is therefore found by any runner, not only by
-# a Mac.
-portable=(layout diff)
+# Cases that need nothing but the language. These are the layout engine and the
+# reconciler, both pure Beans with no foreign call in them at all, so they run
+# on every operating system cortado will ever target — including the ones whose
+# host has not been written. A layout or differ bug is therefore found by any
+# runner, not only by a Mac.
+#
+# `sweep` is the randomized one: four hundred generated tree pairs, diffed and
+# then re-applied by a second implementation written inside the test, asserting
+# that applying a diff to the old tree reaches the new one. Its golden carries
+# the tally of edits it produced, so a sweep that stopped generating moves is
+# visible rather than quietly green.
+portable=(layout diff sweep)
 
 # ---------------------------------------------------------- the boundary gates
 #

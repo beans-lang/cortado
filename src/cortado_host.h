@@ -18,6 +18,13 @@
  *   3. Text is UTF-8 with an explicit length, never NUL-terminated, and is
  *      always copied at the boundary. Reading text uses the two-call shape:
  *      ask with cap 0 to learn the size, then ask again with a buffer.
+ *      The length is the contract: a host reads exactly that many bytes and
+ *      never scans for a terminator, so a length is never guessed and a
+ *      string is never cut short by one. What it does **not** buy is an
+ *      embedded NUL — no platform's text control can hold one, and every
+ *      entry point that takes text refuses a zero byte with CTD_ERR_RANGE
+ *      rather than passing a string that would be cut in half inside the
+ *      platform with nobody able to see where.
  *   4. The host never names a Beans symbol. Everything that calls back into
  *      Beans goes through a function pointer Beans registers at run time.
  *      (The interpreter links this file into a shared library without
@@ -233,6 +240,7 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
 #define CTD_P_SELECTED    11  /* index into an item list; -1 for none        */
 #define CTD_P_INDETERMINATE 12 /* a progress bar with no known total         */
 
+/* CTD_ERR_RANGE when the bytes contain a zero: see rule 3 at the top. */
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len);
 /* Answers the byte length the text needs, and writes at most `cap` bytes.
  * Call with cap 0 to size the buffer. A negative return is a ctd_status. */
@@ -375,6 +383,28 @@ int32_t    ctd_native_class(ctd_handle widget, char *out, int32_t cap);
 /* The accessibility role in one vocabulary shared by every platform:
  * "button", "checkbox", "text", "textbox", "image", "group". */
 int32_t    ctd_a11y_role(ctd_handle widget, char *out, int32_t cap);
+
+/* Reads a widget back as pixels: 8-bit RGBA, one row after another, the top
+ * row first, with no padding between rows — so the image is exactly
+ * width * height * 4 bytes and a pixel is at (y * width + x) * 4.
+ *
+ * Same two-call shape as the text readers: ask with `cap` 0 to learn the byte
+ * count, then ask again with a buffer that size. `out_size` is filled on both
+ * calls, so one call is enough to learn the dimensions. Answers the number of
+ * bytes the image needs, or a negative ctd_status.
+ *
+ * Pixels are in **points, not backing pixels**: a 100-point view answers a
+ * 100-pixel-wide image on a Retina display as well as on a plain one, because
+ * a test that asserted a pixel would otherwise answer differently depending on
+ * which monitor the machine happened to have.
+ *
+ * This is the only way to find out whether anything was actually *drawn*.
+ * Every other query in this header reads a property the program itself set;
+ * this one asks the platform what it painted. A widget that is hidden, or
+ * whose size is zero, paints nothing and says so with CTD_ERR_RANGE.
+ *
+ * CTD_ERR_UNSUPPORTED where ctd_capability(CTD_CAP_SNAPSHOT) answers no. */
+int32_t    ctd_snapshot(ctd_handle widget, double *out_size, char *out, int32_t cap);
 
 /* Sends the control's action the way a real click does — through the
  * platform's own dispatch, not by calling the handler directly. This is public

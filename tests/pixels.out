@@ -1,0 +1,7 @@
+size: 100x40, 16000 bytes
+four bytes a pixel: true
+empty box is one colour: true
+with a button, one colour: false
+the button changed pixels: true
+hiding it restores the image: true
+a zero-sized control: refused (out_of_range)

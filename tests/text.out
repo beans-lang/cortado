@@ -1,0 +1,12 @@
+label emoji: 9 bytes, same
+field emoji: 9 bytes, same
+area emoji: 9 bytes, same
+button emoji: 9 bytes, same
+label decomposed: 6 bytes, same
+label precomposed: 5 bytes, same
+field mixed: 17 bytes, same
+decomposed and precomposed differ: true
+decomposed bytes: 6
+precomposed bytes: 5
+nul string bytes: 12
+label nul: refused (text_has_nul)

@@ -406,7 +406,7 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_MULTI_SURFACE: return 0;
         case CTD_CAP_RESIZABLE:     return 0;
         case CTD_CAP_FILE_DIALOG:   return 1;
-        case CTD_CAP_SNAPSHOT:      return 1;
+        case CTD_CAP_SNAPSHOT:      return 0;
         default:                    return 0;
     }
 }
@@ -441,7 +441,23 @@ ctd_handle ctd_surface_new(double width, double height) {
 // there is one, is the place it belongs.
 static NSMutableDictionary *g_titles;
 
+// A zero byte anywhere in the text. Every entry point that takes a string
+// checks, because no platform text control can hold one: NSString's
+// UTF8String ends at it, GTK's const char* ends at it, and Win32's
+// SetWindowTextW ends at it. Passing one through would cut a program's string
+// in half somewhere inside the platform, with nothing at the boundary able to
+// say where — so it is refused here, by name, while the caller's own string
+// is still in view.
+static int ctd_has_nul(const char *utf8, int32_t len) {
+    if (!utf8 || len <= 0) return 0;
+    for (int32_t i = 0; i < len; i++) {
+        if (utf8[i] == 0) return 1;
+    }
+    return 0;
+}
+
 ctd_status ctd_surface_set_title(ctd_handle surface, const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(surface);
     if (!object) return CTD_ERR_STALE;
     if (![object isKindOfClass:[UIWindow class]]) return CTD_ERR_KIND;
@@ -1094,6 +1110,7 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
 // ----------------------------------------------------------------------- text
 
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     NSString *text = ctd_string(utf8, len);
@@ -1152,6 +1169,8 @@ ctd_handle ctd_menu_new(const char *title, int32_t len) {
 ctd_status ctd_menu_add_item(ctd_handle menu, const char *title, int32_t title_len,
                              const char *key, int32_t key_len,
                              int32_t role, int64_t token) {
+    if (ctd_has_nul(title, title_len) || ctd_has_nul(key, key_len))
+        return CTD_ERR_RANGE;
     (void)menu; (void)title; (void)title_len; (void)key; (void)key_len;
     (void)role; (void)token;
     return CTD_ERR_UNSUPPORTED;
@@ -1211,6 +1230,7 @@ ctd_status ctd_items_clear(ctd_handle widget) {
 }
 
 ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     if (ctd_slot_kind(widget) != CTD_W_COMBO_BOX) return CTD_ERR_KIND;
@@ -1416,6 +1436,16 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         default:                 role = @"group";       break;
     }
     return ctd_copy_out(role, out, cap);
+}
+
+// No snapshot here, and `ctd_capability(CTD_CAP_SNAPSHOT)` says so rather than
+// this being discovered at the call. Reading a widget back as pixels is real
+// work on this platform and it has not been done; a stub that answered a blank
+// image would be worse than a refusal, because a test asserting "something was
+// drawn" would then fail for a reason that has nothing to do with drawing.
+int32_t ctd_snapshot(ctd_handle widget, double *out_size, char *out, int32_t cap) {
+    (void)widget; (void)out_size; (void)out; (void)cap;
+    return CTD_ERR_UNSUPPORTED;
 }
 
 ctd_status ctd_widget_activate(ctd_handle widget) {

@@ -39,7 +39,7 @@ pub class ComboBox extends Widget {
     }
 
     pub fn add_item(text: string) -> Result<bool> {
-        let buffer: Bytes = host.HostText.encode(text)
+        let buffer: Bytes = host.HostText.encode(text, "add an item to a combo box")?
         unsafe {
             return host.check(
                 host.ctd_items_add(self.slot.raw, host.HostText.pointer(buffer),

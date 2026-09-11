@@ -34,7 +34,7 @@ pub class Menu {
     }
 
     pub static fn of(title: string) -> Result<Menu> {
-        let buffer: Bytes = host.HostText.encode(title)
+        let buffer: Bytes = host.HostText.encode(title, "name a menu")?
         unsafe {
             let made: u64 = host.ctd_menu_new(host.HostText.pointer(buffer),
                                               buffer.len() as i32)
@@ -58,8 +58,8 @@ pub class Menu {
     /// `key` is portable — `"mod+s"`, `"mod+shift+n"` — where `mod` is Command
     /// on macOS and Control elsewhere.
     pub fn add(title: string, key: string, role: CommandRole, token: int) -> Result<bool> {
-        let shown: Bytes = host.HostText.encode(title)
-        let shortcut: Bytes = host.HostText.encode(key)
+        let shown: Bytes = host.HostText.encode(title, "add a menu item")?
+        let shortcut: Bytes = host.HostText.encode(key, "set a menu item's shortcut")?
         unsafe {
             return host.check(
                 host.ctd_menu_add_item(self.slot.raw,

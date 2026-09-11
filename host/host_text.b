@@ -6,8 +6,18 @@ package host
 /// Two rules hold everywhere in cortado, and this class is where they live.
 ///
 /// Text is never NUL-terminated. Every host entry point that takes text takes
-/// a pointer and a byte count, so a string carrying an embedded NUL crosses
-/// whole instead of being silently truncated at it.
+/// a pointer and a byte count, so the host reads exactly that many bytes and
+/// never scans for a terminator — a length is never guessed, and a string is
+/// never one byte short.
+///
+/// What that does **not** buy is an embedded NUL, and the distinction is worth
+/// being exact about because the first version of this comment got it wrong.
+/// No platform text control can hold a zero byte: `NSString`'s `UTF8String`
+/// ends at it, GTK takes a `const char *`, and `SetWindowTextW` ends at it
+/// too. A string with one went out whole and came back cut in half, silently,
+/// on every host. So it is refused here instead — while the caller's own
+/// string is still in view and the message can name it — and refused again at
+/// the ABI, where `ctd_set_text` answers `CTD_ERR_RANGE`.
 ///
 /// Text is copied at the boundary, immediately. After a call returns, no Beans
 /// value points into memory the host owns — which means the host is free to
@@ -18,8 +28,16 @@ pub class HostText {
     /// The returned `Bytes` must stay alive for the duration of the call it
     /// feeds; hold it in a local, do not inline the `.as_ptr()` into a longer
     /// expression that might drop it first.
-    pub static fn encode(text: string) -> Bytes {
-        return Bytes.from(text)
+    ///
+    /// `attempt` names what the caller was doing, and lands in the message a
+    /// zero byte earns. It is a `Result` so that this one function is the only
+    /// way text reaches the boundary and the check cannot be walked past.
+    pub static fn encode(text: string, attempt: string) -> Result<Bytes> {
+        if text.contains("\u{0}") {
+            return err("could not {attempt}: the text has a NUL byte in it, and no platform's text control can hold one",
+                       "text_has_nul")
+        }
+        return ok(Bytes.from(text))
     }
 
     /// The same address seen as the `const char *` the host declares. Beans

@@ -56,6 +56,7 @@ every run).
 | macOS | AppKit. Twelve controls, events, measurement, layout, components, markup, menus, dialogs, bundling |
 | iOS | UIKit. Twelve controls on screen in the Simulator, and the same `tests/roles.out` as macOS |
 | Linux | GTK4. The same `tests/roles.out` again, through GObject rather than an Apple object system |
+| | *Reading a widget back as pixels is macOS only so far; the other hosts answer no to `Capability.snapshot` rather than pretending.* |
 | Windows | host not written. Everything above the host runs and is tested here |
 | Android | no host yet — but `cortado.layout` builds for it and runs on an emulator, printing the same 69 goldens |
 
@@ -649,6 +650,42 @@ so it fails if `apply` writes nothing, writes to the wrong control, or gets an
 offset wrong. It also asserts that three different kinds of control measured to
 three different heights — a "height greater than zero" check reads green
 through a hard-coded constant, and this one does not.
+
+**The reconciler is checked against a second implementation of itself.**
+`tests/diff.b` holds hand-written cases and says what the differ emits for
+each; that is the readable half and it is not the whole job, because
+hand-written cases cover the shapes somebody thought of. `tests/sweep.b` is the
+other half: four hundred generated tree pairs, diffed, and then re-applied by a
+reference applier written inside the test that shares no line of code with
+`component.Applier` and knows nothing about how the differ works. The contract
+is one sentence — *applying a diff to the old tree must produce the new tree* —
+and everything a reconciler can get wrong breaks it. Its golden carries the
+tally of edits the sweep produced, so a sweep that stopped generating moves is
+visible rather than quietly green. Deleting the differ's rule that a dropped
+property goes back to its default produces 38 faults; breaking the keyed move
+produces 63.
+
+**Text is tested at the edges, not in the middle.** `tests/text.b` sends an
+astral emoji, a combining mark beside its precomposed twin, and right-to-left
+and CJK text through four kinds of control and reads each back. The combining
+pair has to stay *different* — a host that normalised would hand back a string
+that is equal on screen and different in bytes, and a program comparing what it
+wrote with what it read would disagree with itself. Writing this found that a
+string with an embedded NUL went out whole and came back truncated on every
+host, which is fixed and which the file now pins down.
+
+**`tests/pixels.b` asks the one question cortado does not already know the
+answer to.** Every other check reads back a property the program itself set, so
+a host that stored each value in a dictionary and never spoke to the platform
+would pass all of them. This one reads the control back as pixels. It is
+deliberately not a golden of an image — goldening pixels means goldening a font
+rasterizer, which changes on an OS point release and teaches a team to
+re-record the file. What it asserts is what holds across releases and themes:
+an image is the size asked for and four bytes a pixel, an empty box is one
+colour all over, a box with a real control in it is not, and hiding that
+control puts the image back exactly. The last is the negative control — a
+snapshot that always answered the same blank bitmap would satisfy the first
+three.
 
 ## License
 

@@ -214,7 +214,51 @@ First working macOS host.
   `pkg-config` on the machine that builds, between markers it rewrites in
   place. A manifest that listed them by hand would name one computer.
 
+- **`ctd_snapshot` (ABI 62 entry points).** Reading a widget back as pixels:
+  8-bit RGBA, top row first, no padding, through the same two-call shape the
+  text readers use. It is the only query in the header that answers something
+  the program did not already set — everything else reads back a property the
+  program wrote, so a host that kept them all in a dictionary and never spoke
+  to the platform would satisfy every other test in the suite.
+- `widgets.Snapshot` and `widgets.Rgba`, and `tests/pixels.b`, which is
+  deliberately not a golden image: goldening pixels means goldening a font
+  rasterizer. It asserts what survives an OS point release — the size asked
+  for, four bytes a pixel, an empty box one colour all over, a box with a
+  control in it not, and hiding that control restoring the image exactly.
+  Removing the host's draw call turns the third and fourth red.
+- `tests/sweep.b` — the reconciler against a second implementation of itself.
+  Four hundred generated tree pairs, diffed, then re-applied by a reference
+  applier written inside the test that shares no code with `component.Applier`.
+  Its golden carries the tally of edits produced, so a sweep that stopped
+  generating moves is visible rather than quietly green.
+- `tests/applied.b` — the same idea pointed at the applier that really exists.
+  It drives `component.Applier` against live AppKit controls down two roads to
+  the same place — build the old tree and apply the diff, or build the new one
+  directly — and requires the two live widget trees to read back identical.
+  Nothing in the file says what the answer should be. Making `move` a no-op
+  produces 12 faults; dropping property writes produces 32.
+- `tests/text.b` — astral emoji, a combining mark beside its precomposed twin,
+  and right-to-left and CJK text through four kinds of control. The combining
+  pair must stay different: a host that normalised would return a string equal
+  on screen and different in bytes.
+
 ### Found while building this
+
+- **A string with an embedded NUL went out whole and came back cut in half**,
+  on every host, and the ABI's own rule said it could not. `NSString`'s
+  `UTF8String` ends at a zero byte, GTK takes a `const char *`, and
+  `SetWindowTextW` ends at one too — so the explicit length buys a host that
+  never scans for a terminator, and it does not buy an embedded NUL. It is
+  refused now, at the Beans boundary with a message naming the program's own
+  string and again at the ABI with `CTD_ERR_RANGE`, and `tests/text.b` pins
+  both: removing the Beans check leaves the host's refusal, and removing that
+  leaves the truncation the test was written against.
+- **`Capability.snapshot` answered yes on four platforms and there was nothing
+  to call.** The capability was declared, Beans exposed it, every host returned
+  1, and no entry point existed anywhere in the header. Now macOS implements it
+  and the other three answer no — which is what the capability API is for, and
+  the first time it has been used to say no about something that was not simply
+  absent from a platform.
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump
   compares cortado's child list against the platform's on every line, which

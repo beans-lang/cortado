@@ -86,8 +86,8 @@ pub class Dialog {
 
     static fn open(parent: host.Handle, kind: DialogKind, title: string,
                    body: string, token: int) -> Result<bool> {
-        let heading: Bytes = host.HostText.encode(title)
-        let detail: Bytes = host.HostText.encode(body)
+        let heading: Bytes = host.HostText.encode(title, "title a dialog")?
+        let detail: Bytes = host.HostText.encode(body, "write a dialog's message")?
         unsafe {
             return host.check(
                 host.ctd_dialog_open(parent.raw, kind.code() as i32,

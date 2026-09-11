@@ -74,6 +74,7 @@ pub extern "C" fn ctd_items_count(widget: u64, out: RawPtr<i32>) -> i32
 pub extern "C" fn ctd_items_at(widget: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_native_class(widget: u64, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_a11y_role(widget: u64, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_snapshot(widget: u64, out_size: RawPtr<f64>, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_widget_activate(widget: u64) -> i32
 pub extern "C" fn ctd_widget_synth_value(widget: u64, index: i64, value: f64) -> i32
 pub extern "C" fn ctd_widget_synth_text(widget: u64, utf8: RawPtr<i8>, len: i32) -> i32

@@ -83,6 +83,43 @@ pub abstract class Widget {
                                    scratch.real(2), scratch.real(3)))
     }
 
+    /// The pixels this control painted.
+    ///
+    /// Two calls, the same shape every reader in this ABI uses: the first
+    /// learns the size, the second fills a buffer that size. A control that is
+    /// hidden or has no size paints nothing and says so.
+    ///
+    /// `CTD_ERR_UNSUPPORTED` where the platform has no way to read a widget
+    /// back — ask `Application.can(Capability.snapshot)` first rather than
+    /// finding out here.
+    pub fn snapshot() -> Result<Snapshot> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        var needed: int = 0
+        unsafe {
+            needed = host.ctd_snapshot(self.slot.raw, scratch.reals,
+                                       RawPtr.null(), 0) as int
+        }
+        host.check(needed, "measure a snapshot of a {self.kind_value.name()}")?
+        let width: int = scratch.real(0) as int
+        let height: int = scratch.real(1) as int
+        var shot: Snapshot = new Snapshot(width, height, needed)
+        if needed == 0 { return ok(shot) }
+        var wrote: int = 0
+        unsafe {
+            wrote = host.ctd_snapshot(self.slot.raw, scratch.reals,
+                                      shot.buffer(), needed as i32) as int
+        }
+        host.check(wrote, "snapshot a {self.kind_value.name()}")?
+        // A host that answers a bigger image the second time has been resized
+        // between the two calls, and the buffer holds part of one picture and
+        // part of another.
+        if wrote != needed {
+            return err("could not snapshot a {self.kind_value.name()}: it changed size while it was being read",
+                       "host_raced")
+        }
+        return ok(shot)
+    }
+
     /// How big this control wants to be inside `available`.
     ///
     /// A negative component of `available` means unbounded in that direction.
@@ -152,7 +189,7 @@ pub abstract class Widget {
     // by widget, not by class. Subclasses expose it under the name their
     // control actually uses: a button has a title, a field has a value.
     fn set_text_raw(text: string) -> Result<bool> {
-        let buffer: Bytes = host.HostText.encode(text)
+        let buffer: Bytes = host.HostText.encode(text, "set the text of a {self.kind_value.name()}")?
         unsafe {
             return host.check(
                 host.ctd_set_text(self.slot.raw, host.HostText.pointer(buffer),
@@ -414,7 +451,7 @@ pub abstract class Widget {
     /// Types text into this control the way a user would, and raises the
     /// commit event that follows.
     pub fn set_text_as_user(text: string) -> Result<bool> {
-        let buffer: Bytes = host.HostText.encode(text)
+        let buffer: Bytes = host.HostText.encode(text, "type into a {self.kind_value.name()}")?
         unsafe {
             return host.check(
                 host.ctd_widget_synth_text(self.slot.raw, host.HostText.pointer(buffer),
