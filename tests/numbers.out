@@ -1,0 +1,16 @@
+-- which controls carry a number --
+  cortado has this many kinds: 18
+  every kind this platform builds was asked: true
+  exactly the kinds that carry one take a low end, a high end and a value: true
+  this many kinds carry one: 4
+  each reads its range back unchanged: true
+  each reads the value that was written: true
+-- moving one --
+  this many of them a user can move: 2
+  each raises value_changed exactly where a user can move it: true
+  and none raises anything when the program writes to it: true
+-- the increment --
+  exactly the kinds that have one take it, or say the platform cannot: true
+  zero means continuous to a slider and is out of range to a stepper: true
+  and only a stepper reads it back: true
+drove=true

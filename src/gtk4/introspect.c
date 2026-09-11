@@ -37,6 +37,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // it (AXSecureTextField, ATSPI "password text", UIA IsPassword), so
         // reporting "textbox" would throw away a fact all four platforms have.
         case CTD_W_SECURE_FIELD: role = "password";    break;
+        case CTD_W_STEPPER:      role = "spinbutton";  break;
+        case CTD_W_LEVEL_INDICATOR: role = "meter";    break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -72,6 +74,10 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     // The setters below are the ordinary ones, and the signal they raise is
     // the platform's own — GTK notifies on a property change whoever made it,
     // which is exactly what "as a user would" means here.
+    if (GTK_IS_SPIN_BUTTON(object)) {
+        gtk_spin_button_set_value(GTK_SPIN_BUTTON(object), value);
+        return CTD_OK;
+    }
     if (GTK_IS_RANGE(object)) {
         gtk_range_set_value(GTK_RANGE(object), value);
         return CTD_OK;

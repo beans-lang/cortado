@@ -35,6 +35,7 @@ static inline int ctd_kind_has_enabled(int32_t kind) {
         || kind == CTD_W_RADIO_BUTTON
         || kind == CTD_W_SWITCH
         || kind == CTD_W_SLIDER
+        || kind == CTD_W_STEPPER
         || kind == CTD_W_COMBO_BOX;
 }
 

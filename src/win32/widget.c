@@ -27,8 +27,14 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_RADIO_BUTTON:
         case CTD_W_CANVAS:
         case CTD_W_SECURE_FIELD:
+        case CTD_W_STEPPER:
             return 1;
         case CTD_W_SWITCH:
+            return 0;
+        case CTD_W_LEVEL_INDICATOR:
+            // The common controls have no meter. A marquee progress bar is a
+            // different idea — work happening with no known end — and drawing
+            // a filled rectangle would not be a control at all.
             return 0;
         default:
             return CTD_ERR_RANGE;
@@ -68,6 +74,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
             class_name = WC_EDITW;
             style |= ES_LEFT | ES_AUTOHSCROLL | WS_TABSTOP;
             extended = WS_EX_CLIENTEDGE;
+            break;
+        case CTD_W_STEPPER:
+            // An up-down control on its own: two arrows and nothing else. With
+            // UDS_SETBUDDYINT it would drive a neighbouring edit box, which is
+            // a spin *field* and a different control.
+            class_name = UPDOWN_CLASSW;
+            style |= UDS_ARROWKEYS | UDS_ALIGNRIGHT | WS_TABSTOP;
             break;
         case CTD_W_SECURE_FIELD:
             // The real thing: an edit control with ES_PASSWORD does not let
@@ -157,6 +170,10 @@ ctd_handle ctd_widget_new(int32_t kind) {
     uint32_t slot = (uint32_t)(handle & 0xffffffffu);
     g_progress_min[slot] = 0.0;
     g_progress_max[slot] = 1.0;
+    g_step_min[slot] = 0.0;
+    g_step_max[slot] = 1.0;
+    g_step_size[slot] = 1.0;
+    if (kind == CTD_W_STEPPER) ctd_stepper_range(window, slot);
     return handle;
 }
 

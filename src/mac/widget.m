@@ -26,6 +26,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_CANVAS:
         case CTD_W_SWITCH:
         case CTD_W_SECURE_FIELD:
+        case CTD_W_STEPPER:
+        case CTD_W_LEVEL_INDICATOR:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -168,6 +170,37 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // server keeps what is typed out of screen recordings.
             view = [[NSSecureTextField alloc] initWithFrame:NSZeroRect];
             break;
+        case CTD_W_STEPPER: {
+            NSStepper *stepper = [[NSStepper alloc] initWithFrame:NSZeroRect];
+            [stepper setMinValue:0.0];
+            [stepper setMaxValue:1.0];
+            [stepper setIncrement:1.0];
+            [stepper setDoubleValue:0.0];
+            // Off, because a stepper that wraps turns "one past the end" into
+            // "the beginning" silently, and a caller that wanted that can ask
+            // for it by clamping their own number.
+            [stepper setValueWraps:NO];
+            view = stepper;
+            break;
+        }
+        case CTD_W_LEVEL_INDICATOR: {
+            NSLevelIndicator *level =
+                [[NSLevelIndicator alloc] initWithFrame:NSZeroRect];
+            // Continuous capacity: a bar that fills. The other styles are a
+            // row of stars and a row of segments, which are the same number
+            // told a different way — and a caller who wants one of those wants
+            // it on purpose, which is a property this does not have yet.
+            [level setLevelIndicatorStyle:NSLevelIndicatorStyleContinuousCapacity];
+            [level setMinValue:0.0];
+            [level setMaxValue:1.0];
+            [level setDoubleValue:0.0];
+            // An output, not an input. NSLevelIndicator is editable by default
+            // in some styles, and a user dragging a battery gauge to full is
+            // not something any caller asked for.
+            [level setEditable:NO];
+            view = level;
+            break;
+        }
         default:
             return 0;
     }

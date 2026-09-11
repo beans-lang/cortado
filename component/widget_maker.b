@@ -79,6 +79,8 @@ pub class WidgetMaker {
             canvas => { return ok(new widgets.Canvas()) }
             switch => { return ok(new widgets.Switch()) }
             secure_field => { return ok(new widgets.SecureField()) }
+            stepper => { return ok(new widgets.Stepper()) }
+            level_indicator => { return ok(new widgets.LevelIndicator()) }
         }
     }
 

@@ -113,6 +113,20 @@ extern const WCHAR *CTD_CLASS_SURFACE;
 extern const WCHAR *CTD_CLASS_VIEW;
 extern ctd_event_fn g_sink;
 extern double g_progress_max[CTD_SLOTS];
+// And the value. A progress bar's position is an int in a fixed 0..10000 span,
+// so a value put in and taken out comes back rounded. The whole triple is
+// cortado's data here, as min and max already were.
+extern double g_progress_value[CTD_SLOTS];
+// A stepper's range, kept here because an up-down control counts in whole
+// numbers and cortado's range is real. The control holds a tick index and
+// these three turn it back into the number the caller asked about.
+extern double g_step_min[CTD_SLOTS];
+extern double g_step_max[CTD_SLOTS];
+extern double g_step_size[CTD_SLOTS];
+// The number a stepper is showing, and the tick range that produces it.
+double ctd_stepper_value(HWND view, uint32_t slot);
+void   ctd_stepper_range(HWND view, uint32_t slot);
+ctd_status ctd_stepper_set(HWND view, uint32_t slot, double value);
 extern double g_progress_min[CTD_SLOTS];
 extern int g_running;
 extern int g_started;

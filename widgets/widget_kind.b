@@ -37,6 +37,12 @@ pub enum WidgetKind {
     /// A line of text the platform shows as dots, and keeps out of the
     /// pasteboard, out of dictation and off a screen recording.
     secure_field
+    /// Two little arrows that step a number.
+    stepper
+    /// How full something is, drawn rather than typed into — and **not on
+    /// every platform**: `NSLevelIndicator` and `GtkLevelBar` exist, UIKit
+    /// and the Win32 common controls have nothing that means it.
+    level_indicator
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -57,6 +63,8 @@ pub enum WidgetKind {
             canvas => host.W_CANVAS,
             switch => host.W_SWITCH,
             secure_field => host.W_SECURE_FIELD,
+            stepper => host.W_STEPPER,
+            level_indicator => host.W_LEVEL_INDICATOR,
         }
     }
 
@@ -79,6 +87,8 @@ pub enum WidgetKind {
             canvas => "Canvas",
             switch => "Switch",
             secure_field => "SecureField",
+            stepper => "Stepper",
+            level_indicator => "LevelIndicator",
         }
     }
 
@@ -119,6 +129,8 @@ pub enum WidgetKind {
             scroll_view => { return false }
             canvas => { return false }
             secure_field => { return false }
+            stepper => { return false }
+            level_indicator => { return false }
         }
     }
 
@@ -174,6 +186,8 @@ pub enum WidgetKind {
         every.push(WidgetKind.canvas)
         every.push(WidgetKind.switch)
         every.push(WidgetKind.secure_field)
+        every.push(WidgetKind.stepper)
+        every.push(WidgetKind.level_indicator)
         return move every
     }
 
@@ -194,6 +208,8 @@ pub enum WidgetKind {
         if code == host.W_CANVAS { return some(WidgetKind.canvas) }
         if code == host.W_SWITCH { return some(WidgetKind.switch) }
         if code == host.W_SECURE_FIELD { return some(WidgetKind.secure_field) }
+        if code == host.W_STEPPER { return some(WidgetKind.stepper) }
+        if code == host.W_LEVEL_INDICATOR { return some(WidgetKind.level_indicator) }
         return none
     }
 }

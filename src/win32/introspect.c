@@ -43,6 +43,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // it (AXSecureTextField, ATSPI "password text", UIA IsPassword), so
         // reporting "textbox" would throw away a fact all four platforms have.
         case CTD_W_SECURE_FIELD: role = "password";    break;
+        case CTD_W_STEPPER:      role = "spinbutton";  break;
+        case CTD_W_LEVEL_INDICATOR: role = "meter";    break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -104,6 +106,15 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
             if (wrote != CTD_OK) return wrote;
             SendMessageW(GetParent(view), WM_COMMAND,
                          MAKEWPARAM(0, CBN_SELCHANGE), (LPARAM)view);
+            return CTD_OK;
+        }
+        case CTD_W_STEPPER: {
+            uint32_t slot = (uint32_t)(widget & 0xffffffffu);
+            ctd_status moved = ctd_stepper_set(view, slot, value);
+            if (moved != CTD_OK) return moved;
+            // An up-down reports through the scroll messages, like a trackbar.
+            SendMessageW(GetParent(view), WM_VSCROLL,
+                         MAKEWPARAM(SB_THUMBPOSITION, 0), (LPARAM)view);
             return CTD_OK;
         }
         default: return CTD_ERR_KIND;

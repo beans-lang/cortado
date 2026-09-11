@@ -26,6 +26,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_CANVAS:
         case CTD_W_SWITCH:
         case CTD_W_SECURE_FIELD:
+        case CTD_W_STEPPER:
+        case CTD_W_LEVEL_INDICATOR:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -64,6 +66,16 @@ ctd_handle ctd_widget_new(int32_t kind) {
             break;
         case CTD_W_SWITCH:
             widget = gtk_switch_new();
+            break;
+        case CTD_W_STEPPER:
+            // A spin button *is* GTK's stepper: two arrows and the number they
+            // step. The entry beside them is not hidden, because hiding it
+            // would leave a control that looks like nothing GTK has.
+            widget = gtk_spin_button_new_with_range(0.0, 1.0, 1.0);
+            gtk_spin_button_set_wrap(GTK_SPIN_BUTTON(widget), FALSE);
+            break;
+        case CTD_W_LEVEL_INDICATOR:
+            widget = gtk_level_bar_new_for_interval(0.0, 1.0);
             break;
         case CTD_W_SECURE_FIELD:
             widget = gtk_entry_new();
@@ -135,6 +147,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
                              (gpointer)(uintptr_t)handle);
             break;
         case CTD_W_SLIDER:
+        case CTD_W_STEPPER:
             g_signal_connect(widget, "value-changed", G_CALLBACK(ctd_on_signal),
                              (gpointer)(uintptr_t)handle);
             break;

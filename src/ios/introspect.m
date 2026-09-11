@@ -44,6 +44,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // it (AXSecureTextField, ATSPI "password text", UIA IsPassword), so
         // reporting "textbox" would throw away a fact all four platforms have.
         case CTD_W_SECURE_FIELD: role = @"password";    break;
+        case CTD_W_STEPPER:      role = @"spinbutton";  break;
+        case CTD_W_LEVEL_INDICATOR: role = @"meter";    break;
         default:                 role = @"group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -103,7 +105,9 @@ ctd_status ctd_widget_activate(ctd_handle widget) {
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
-    if ([object isKindOfClass:[UISlider class]]) {
+    if ([object isKindOfClass:[UIStepper class]]) {
+        [(UIStepper *)object setValue:value];
+    } else if ([object isKindOfClass:[UISlider class]]) {
         [(UISlider *)object setValue:(float)value];
     } else if ([object isKindOfClass:[UISwitch class]]) {
         [(UISwitch *)object setOn:index == 1];

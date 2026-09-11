@@ -45,6 +45,11 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // it (AXSecureTextField, ATSPI "password text", UIA IsPassword), so
         // reporting "textbox" would throw away a fact all four platforms have.
         case CTD_W_SECURE_FIELD: role = @"password";    break;
+        // ARIA's words. A spin button is a number you step; a meter is a
+        // number you read — the distinction assistive technology needs is
+        // "can I change this", and these two are on opposite sides of it.
+        case CTD_W_STEPPER:      role = @"spinbutton";  break;
+        case CTD_W_LEVEL_INDICATOR: role = @"meter";    break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);
@@ -53,7 +58,9 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
-    if ([object isKindOfClass:[NSSlider class]]) {
+    if ([object isKindOfClass:[NSStepper class]]) {
+        [(NSStepper *)object setDoubleValue:value];
+    } else if ([object isKindOfClass:[NSSlider class]]) {
         [(NSSlider *)object setDoubleValue:value];
     } else if ([object isKindOfClass:[NSPopUpButton class]]) {
         NSPopUpButton *menu = (NSPopUpButton *)object;

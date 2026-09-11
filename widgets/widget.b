@@ -284,6 +284,15 @@ pub abstract class Widget {
         return ok(scratch.integer() as int)
     }
 
+    /// Reads one real-valued property back by its `host.P_*` id.
+    ///
+    /// Public for the same reason `read_property` is: a test that asks what a
+    /// *kind* answers has no named accessor to reach for. Application code
+    /// wants `slider.value()`, which says what it reads.
+    pub fn read_property_real(property: int) -> Result<f64> {
+        return self.read_real(property, "read property {property} of a {self.kind_value.name()}")
+    }
+
     /// Writes one real-valued property by its `host.P_*` id.
     pub fn set_property_real(property: int, value: f64) -> Result<bool> {
         unsafe {

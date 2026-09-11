@@ -38,6 +38,12 @@ void ctd_emit_control(ctd_handle target) {
             kind = CTD_EV_VALUE_CHANGED;
             index = (int64_t)SendMessageW(window, TBM_GETPOS, 0, 0);
             break;
+        case CTD_W_STEPPER: {
+            kind = CTD_EV_VALUE_CHANGED;
+            uint32_t slot = (uint32_t)(target & 0xffffffffu);
+            index = (int64_t)ctd_stepper_value(window, slot);
+            break;
+        }
         case CTD_W_CHECK_BOX:
         case CTD_W_RADIO_BUTTON: {
             kind = CTD_EV_VALUE_CHANGED;
@@ -146,7 +152,8 @@ static LRESULT ctd_common_message(HWND window, UINT message,
             // rule uses a different message for the same idea.
             if (lparam != 0) {
                 ctd_handle target = ctd_handle_of((HWND)lparam);
-                if (target && ctd_slot_kind(target) == CTD_W_SLIDER) {
+                int32_t scrolled = target ? ctd_slot_kind(target) : -1;
+                if (scrolled == CTD_W_SLIDER || scrolled == CTD_W_STEPPER) {
                     ctd_emit_control(target);
                     return 0;
                 }

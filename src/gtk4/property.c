@@ -150,6 +150,13 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
 // A progress bar in GTK is a fraction from 0 to 1 with no range of its own, so
 // the range is kept here and the fraction computed — the same shape the iOS
 // host needs for the same reason.
+// And the value. A GtkProgressBar holds a 0..1 fraction, so a value put in and
+// taken out again comes back through a division and a multiplication: 1 in
+// 0..3 is 0.3333333333333333, and that times 3 is 0.9999999999999998. The
+// whole triple is cortado's data here for the same reason min and max already
+// were — GTK has no range on a progress bar — and nothing but the program
+// writes one, so there is no second writer to disagree with.
+static double g_progress_value[CTD_SLOTS];
 static double g_progress_min[CTD_SLOTS];
 static double g_progress_max[CTD_SLOTS];
 
@@ -198,6 +205,15 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
                 gtk_adjustment_set_lower(a, value);
                 return CTD_OK;
             }
+            if (GTK_IS_SPIN_BUTTON(object)) {
+                gtk_adjustment_set_lower(
+                    gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(object)), value);
+                return CTD_OK;
+            }
+            if (GTK_IS_LEVEL_BAR(object)) {
+                gtk_level_bar_set_min_value(GTK_LEVEL_BAR(object), value);
+                return CTD_OK;
+            }
             if (GTK_IS_PROGRESS_BAR(object)) { g_progress_min[slot] = value; return CTD_OK; }
             return CTD_ERR_KIND;
         case CTD_P_MAX:
@@ -206,9 +222,26 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
                 gtk_adjustment_set_upper(a, value);
                 return CTD_OK;
             }
+            if (GTK_IS_SPIN_BUTTON(object)) {
+                gtk_adjustment_set_upper(
+                    gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(object)), value);
+                return CTD_OK;
+            }
+            if (GTK_IS_LEVEL_BAR(object)) {
+                gtk_level_bar_set_max_value(GTK_LEVEL_BAR(object), value);
+                return CTD_OK;
+            }
             if (GTK_IS_PROGRESS_BAR(object)) { g_progress_max[slot] = value; return CTD_OK; }
             return CTD_ERR_KIND;
         case CTD_P_VALUE:
+            if (GTK_IS_SPIN_BUTTON(object)) {
+                gtk_spin_button_set_value(GTK_SPIN_BUTTON(object), value);
+                return CTD_OK;
+            }
+            if (GTK_IS_LEVEL_BAR(object)) {
+                gtk_level_bar_set_value(GTK_LEVEL_BAR(object), value);
+                return CTD_OK;
+            }
             if (GTK_IS_RANGE(object)) {
                 gtk_range_set_value(GTK_RANGE(object), value);
                 return CTD_OK;
@@ -219,10 +252,21 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
                 if (fraction < 0.0) fraction = 0.0;
                 if (fraction > 1.0) fraction = 1.0;
                 gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(object), fraction);
+                g_progress_value[slot] = value;
                 return CTD_OK;
             }
             return CTD_ERR_KIND;
         case CTD_P_STEP:
+            if (GTK_IS_SPIN_BUTTON(object)) {
+                if (value <= 0.0) return CTD_ERR_RANGE;
+                gtk_spin_button_set_increments(GTK_SPIN_BUTTON(object), value, value);
+                // A spin button shows the number it holds, so how many decimal
+                // places it shows has to follow the increment — a step of 0.25
+                // displayed with none reads as four identical clicks.
+                gtk_spin_button_set_digits(GTK_SPIN_BUTTON(object),
+                                           value >= 1.0 ? 0 : 2);
+                return CTD_OK;
+            }
             if (!GTK_IS_RANGE(object)) return CTD_ERR_KIND;
             gtk_range_set_increments(GTK_RANGE(object), value, value);
             gtk_range_set_round_digits(GTK_RANGE(object), value >= 1.0 ? 0 : 2);
@@ -267,24 +311,45 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
         case CTD_P_MIN:
             if (GTK_IS_RANGE(object)) {
                 value = gtk_adjustment_get_lower(gtk_range_get_adjustment(GTK_RANGE(object)));
+            } else if (GTK_IS_SPIN_BUTTON(object)) {
+                value = gtk_adjustment_get_lower(
+                    gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(object)));
+            } else if (GTK_IS_LEVEL_BAR(object)) {
+                value = gtk_level_bar_get_min_value(GTK_LEVEL_BAR(object));
             } else if (GTK_IS_PROGRESS_BAR(object)) { value = g_progress_min[slot]; }
             else return CTD_ERR_KIND;
             break;
         case CTD_P_MAX:
             if (GTK_IS_RANGE(object)) {
                 value = gtk_adjustment_get_upper(gtk_range_get_adjustment(GTK_RANGE(object)));
+            } else if (GTK_IS_SPIN_BUTTON(object)) {
+                value = gtk_adjustment_get_upper(
+                    gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(object)));
+            } else if (GTK_IS_LEVEL_BAR(object)) {
+                value = gtk_level_bar_get_max_value(GTK_LEVEL_BAR(object));
             } else if (GTK_IS_PROGRESS_BAR(object)) { value = g_progress_max[slot]; }
             else return CTD_ERR_KIND;
             break;
         case CTD_P_VALUE:
-            if (GTK_IS_RANGE(object)) {
+            if (GTK_IS_SPIN_BUTTON(object)) {
+                value = gtk_spin_button_get_value(GTK_SPIN_BUTTON(object));
+            } else if (GTK_IS_LEVEL_BAR(object)) {
+                value = gtk_level_bar_get_value(GTK_LEVEL_BAR(object));
+            } else if (GTK_IS_RANGE(object)) {
                 value = gtk_range_get_value(GTK_RANGE(object));
             } else if (GTK_IS_PROGRESS_BAR(object)) {
-                double span = g_progress_max[slot] - g_progress_min[slot];
-                value = g_progress_min[slot] +
-                        span * gtk_progress_bar_get_fraction(GTK_PROGRESS_BAR(object));
+                value = g_progress_value[slot];
             } else return CTD_ERR_KIND;
             break;
+        case CTD_P_STEP: {
+            // Only a stepper reads one back, and only the *step* half of the
+            // adjustment: a range's page increment is a different number for a
+            // different gesture.
+            if (!GTK_IS_SPIN_BUTTON(object)) return CTD_ERR_KIND;
+            double page = 0.0;
+            gtk_spin_button_get_increments(GTK_SPIN_BUTTON(object), &value, &page);
+            break;
+        }
         default: return CTD_ERR_UNSUPPORTED;
     }
     if (out) *out = value;

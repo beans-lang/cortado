@@ -335,8 +335,9 @@ mistake.
 **The tags are controls, not HTML.** Containers are `VStack`, `HStack`,
 `VFlex`, `HFlex`, `Grid`, `Box`, `Container` and `ScrollView`; controls are
 `Label`, `Button`, `TextField`, `SecureField`, `TextArea`, `CheckBox`,
-`RadioButton`, `Switch`, `Slider`, `ProgressBar`, `ComboBox`, `Separator`,
-`Image` and `Canvas`. A closed set, and
+`RadioButton`, `Switch`, `Slider`, `Stepper`, `ProgressBar`,
+`LevelIndicator`, `ComboBox`, `Separator`, `Image` and `Canvas`. A closed set,
+and
 any other capitalised tag is a component. There is no `<div>`, no entity table,
 no escaping and no `$html`: the output is a tree of native objects, and there
 is nothing to inject into.
@@ -384,6 +385,8 @@ ran.
 | `RadioButton` | `NSButton` | one choice of several; grouped by parent |
 | `Switch` | `NSSwitch` | on or off — **not on every platform**, see below |
 | `Slider` | `NSSlider` | a number in a range, optionally stepped |
+| `Stepper` | `NSStepper` | two arrows that nudge a number |
+| `LevelIndicator` | `NSLevelIndicator` | how full something is — **not everywhere** |
 | `ProgressBar` | `NSProgressIndicator` | progress, or that work is happening |
 | `ComboBox` | `NSPopUpButton` | one of a list |
 | `Separator` | `NSBox` | a rule between groups |
@@ -394,9 +397,12 @@ ran.
 `examples/gallery` is all of them in one window, written in markup.
 
 **Not every control is on every platform, and cortado says which.**
-`WidgetKind.switch.available()` answers before anything is built, because a
-toggle switch is a real control on macOS, iOS and GTK and **is not in the Win32
-common controls**. Windows has toggle switches; they live in WinUI, which is a
+`WidgetKind.switch.available()` answers before anything is built. Two controls
+need the question today. A toggle switch is real on macOS, iOS and GTK and
+**is not in the Win32 common controls**; a level indicator is real on macOS and
+GTK and has no counterpart in UIKit or the common controls — a `UIProgressView`
+is not one, because a progress bar is work with a beginning and an end and a
+level is a reading that goes up and down and never finishes. Windows has toggle switches; they live in WinUI, which is a
 different toolkit and not something an `HWND` can be.
 
 The other two ways out are worse. Drawing one breaks the rule that every
@@ -421,6 +427,16 @@ happened agrees with what the platform promised, so a host that quietly
 substituted something would print different bytes even though it built a
 control.
 
+**A slider's increment is write-only, and a stepper's is not.** AppKit has no
+increment on a slider: a stepped `NSSlider` is one with tick marks it has to
+land on, so what the host holds is a count of positions and not the number that
+was written. Reconstructing it is exact when the step divided the span evenly
+and quietly wrong otherwise — and Win32 *can* answer, which is the trap, since
+one platform answering a number the other three cannot is a divergence that
+reads as a feature. So `ctd_get_real(CTD_P_STEP)` is `wrong_widget` on anything
+but a `Stepper`, everywhere. `tests/numbers.out` is that, per kind, on every
+host.
+
 **A secure field is the real one.** `NSSecureTextField`, a `GtkEntry` with
 visibility off, an `EDIT` with `ES_PASSWORD`. A text field with a bullet glyph
 drawn into it looks the same and does none of the work: the real one keeps what
@@ -430,7 +446,7 @@ printed to a log carries the field and not what was typed into it —
 `secret.value()` is a call somebody had to write on purpose.
 
 **A control reports the event it actually is.** A `Button` raises `activate`; a
-`CheckBox`, `RadioButton`, `Switch`, `Slider` and `ComboBox` raise
+`CheckBox`, `RadioButton`, `Switch`, `Slider`, `Stepper` and `ComboBox` raise
 `value_changed`; a
 `TextField` raises `commit`. AppKit sends all of them down one selector, so the
 host decides — a framework that called every action "activate" would leave each

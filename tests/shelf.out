@@ -1,4 +1,4 @@
-Container CortadoView role=group "" frame=0,0,480,520 children=14
+Container CortadoView role=group "" frame=0,0,480,520 children=16
   Label NSTextField role=text "Every control" frame=20,20,300,28
   Button NSButton role=button "Press" frame=20,56,300,28
   TextField NSTextField role=textbox "one line" frame=20,92,300,28
@@ -9,10 +9,12 @@ Container CortadoView role=group "" frame=0,0,480,520 children=14
   RadioButton NSButton role=radio "Decaf" frame=20,272,300,28
   Slider NSSlider role=slider "" frame=20,308,300,28
   ProgressBar NSProgressIndicator role=progressbar "" frame=20,344,300,28
-  Separator NSBox role=separator "" frame=20,380,300,28
-  ComboBox NSPopUpButton role=combobox "cortado" frame=20,416,300,28
-  ImageView NSImageView role=image "" frame=20,452,300,28
-  ScrollView NSScrollView role=scrollarea "" frame=20,488,300,28 children=1
+  Stepper NSStepper role=spinbutton "" frame=20,380,300,28
+  LevelIndicator NSLevelIndicator role=meter "" frame=20,416,300,28
+  Separator NSBox role=separator "" frame=20,452,300,28
+  ComboBox NSPopUpButton role=combobox "cortado" frame=20,488,300,28
+  ImageView NSImageView role=image "" frame=20,524,300,28
+  ScrollView NSScrollView role=scrollarea "" frame=20,560,300,28 children=1
     Label NSTextField role=text "inside the scroller" frame=0,0,0,0
 -- state --
 slider value=4 low=0 high=10
@@ -21,10 +23,14 @@ combo items=3 selected=2 text="cortado"
 combo item 0="flat white" item 2="cortado"
 radio chosen=true
 switch on=true
+stepper value=4 step=2 low=0 high=8
+level 7 of 10
 secure value="hunter2" shown=""
 text area text="several\nlines\nof text"
 scroller children=1
 -- refusals --
+a slider took a step of 2
+slider read step: wrong_widget
 switch mixed: out_of_range
 separator enabled: wrong_widget
 combo item 9: out_of_range
@@ -33,6 +39,6 @@ text field step: unsupported
 -- events --
   button activate
   check value_changed index=1
-  slider value_changed index=7
+  slider value_changed index=6
   combo value_changed index=1 text="espresso"
   field text_commit text="typed by hand"

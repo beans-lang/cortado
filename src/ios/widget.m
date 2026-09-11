@@ -31,7 +31,15 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_CANVAS:
         case CTD_W_SWITCH:
         case CTD_W_SECURE_FIELD:
+        case CTD_W_STEPPER:
             return 1;
+        case CTD_W_LEVEL_INDICATOR:
+            // UIKit has no level indicator. A UIProgressView is a progress
+            // bar — work being done, with a beginning and an end — and a level
+            // is a reading that goes up and down and never finishes. Drawing a
+            // bar and calling it one would be the substitution
+            // ctd_widget_supports exists to refuse.
+            return 0;
         default:
             return CTD_ERR_RANGE;
     }
@@ -80,6 +88,16 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // `ctd_set_int` reports rather than rounding to on or off.
             UISwitch *toggle = [[UISwitch alloc] initWithFrame:CGRectZero];
             view = toggle;
+            break;
+        }
+        case CTD_W_STEPPER: {
+            UIStepper *stepper = [[UIStepper alloc] initWithFrame:CGRectZero];
+            [stepper setMinimumValue:0.0];
+            [stepper setMaximumValue:1.0];
+            [stepper setStepValue:1.0];
+            [stepper setValue:0.0];
+            [stepper setWraps:NO];
+            view = stepper;
             break;
         }
         case CTD_W_SECURE_FIELD: {

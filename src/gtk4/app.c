@@ -38,6 +38,10 @@ static void ctd_emit_control(ctd_handle target) {
             kind = CTD_EV_VALUE_CHANGED;
             index = (int64_t)gtk_range_get_value(GTK_RANGE(object));
             break;
+        case CTD_W_STEPPER:
+            kind = CTD_EV_VALUE_CHANGED;
+            index = (int64_t)gtk_spin_button_get_value(GTK_SPIN_BUTTON(object));
+            break;
         case CTD_W_CHECK_BOX:
         case CTD_W_RADIO_BUTTON:
             kind = CTD_EV_VALUE_CHANGED;

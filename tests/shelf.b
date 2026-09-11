@@ -68,6 +68,16 @@ fn build() -> Result<bool> {
     done.set_value(35.0)?
     root.add(done)?
 
+    var shots: widgets.Stepper = widgets.Stepper.of(0.0, 8.0, 2.0, 4.0)?
+    root.add(shots)?
+
+    // The gauge, where there is one. macOS has NSLevelIndicator and this file
+    // is the macOS golden, so it is built unconditionally — and would refuse
+    // by name on a host that has none, which `tests/controls.out` covers
+    // portably.
+    var battery: widgets.LevelIndicator = widgets.LevelIndicator.of(0.0, 10.0, 7.0)?
+    root.add(battery)?
+
     var rule: widgets.Separator = new widgets.Separator()
     root.add(rule)?
 
@@ -102,6 +112,8 @@ fn build() -> Result<bool> {
     io.println("combo item 0=\"{drink.item_at(0).or("?")}\" item 2=\"{drink.item_at(2).or("?")}\"")
     io.println("radio chosen={pick.is_chosen().or(false)}")
     io.println("switch on={remember.is_on().or(false)}")
+    io.println("stepper value={shots.value().or(-1.0)} step={shots.step().or(-1.0)} low={shots.low().or(-1.0)} high={shots.high().or(-1.0)}")
+    io.println("level {battery.level().or(-1.0)} of {battery.high().or(-1.0)}")
     // Read back on purpose: a secure field keeps its text from the screen, not
     // from the program that owns it.
     io.println("secure value=\"{secret.value().or("?")}\" shown=\"{secret.display_text().or("?")}\"")
@@ -113,6 +125,17 @@ fn build() -> Result<bool> {
     // and it is what lets `describe` print a flag only where it means
     // something.
     io.println("-- refusals --")
+    // A slider takes an increment and will not read one back: AppKit stores it
+    // as a count of tick marks, and a count is not the number that was
+    // written. The rule is beside CTD_P_STEP in the header.
+    match amount.set_step(2.0) {
+        ok(done) => { io.println("a slider took a step of 2") }
+        err(problem) => { io.println("slider set step: {problem.kind}") }
+    }
+    match amount.read_property_real(host.P_STEP) {
+        ok(size) => { io.println("a slider answered step={size}") }
+        err(problem) => { io.println("slider read step: {problem.kind}") }
+    }
     // A switch is on or off. Mixed is a state it does not have anywhere, which
     // is `out_of_range` rather than `unsupported` — see the rule beside
     // CTD_P_CHECKED in the header, and `tests/checked.out` for all of it.

@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 8
+#define CTD_ABI_VERSION 9
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -271,6 +271,21 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 /* One line of text the platform shows as dots and keeps out of the
  * pasteboard, out of dictation and off a screen recording. */
 #define CTD_W_SECURE_FIELD 15
+/* Two little arrows that step a number. CTD_P_MIN, CTD_P_MAX, CTD_P_VALUE and
+ * CTD_P_STEP, the same four a slider carries — the difference is that a slider
+ * is a position and this is an increment. */
+#define CTD_W_STEPPER      16
+/* How full something is, drawn rather than typed into: a battery, a signal, a
+ * rating. CTD_P_MIN, CTD_P_MAX and CTD_P_VALUE, and no input at all.
+ *
+ * Two platforms have one and two do not, which is the point of putting it
+ * here rather than leaving it out: it is the kind that makes
+ * ctd_widget_supports' "no" answer *reachable by the gate*. A switch is
+ * missing only on Win32, whose goldens nothing runs, so the refusal path was
+ * checked by a table and never executed. A level indicator is missing on iOS,
+ * which does run them — so `tests/controls.out` now has a host that takes the
+ * refusing branch and still prints the same bytes as one that does not. */
+#define CTD_W_LEVEL_INDICATOR 17
 
 /* Whether this host can build a control of this kind.
  *
@@ -375,7 +390,44 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
 #define CTD_P_EDITABLE     7
 #define CTD_P_ALIGNMENT    8  /* 0 leading, 1 center, 2 trailing             */
 #define CTD_P_FONT_SIZE    9
-#define CTD_P_STEP        10  /* a slider's increment; 0 for continuous      */
+#define CTD_P_STEP        10  /* a slider's or stepper's increment; 0 is      \
+                              * continuous, and a stepper refuses it         */
+/* **A slider's step is write-only, and a stepper's is not.** ctd_get_real
+ * answers CTD_ERR_KIND for CTD_P_STEP on anything but CTD_W_STEPPER, on every
+ * host, and that is a rule rather than an omission.
+ *
+ * AppKit has no increment on a slider: a stepped NSSlider is one with tick
+ * marks it must land on, so what the host holds is a *count of positions* and
+ * not the number the caller wrote. Reconstructing the increment from it is
+ * exact only when the step divided the span evenly, and wrong otherwise —
+ * quietly, by a fraction. Win32 answers TBM_GETLINESIZE, which is the right
+ * number; GTK4 and UIKit answer nothing. Four platforms, three answers, and
+ * the one that looks most helpful is the one that can lie.
+ *
+ * A stepper has a real increment everywhere, so it reads back.
+ *
+ * **And a slider's step is a capability, not a promise.** AppKit, GTK and
+ * Win32 can make a slider land on detents; a UISlider is continuous and has no
+ * way to be anything else. So ctd_set_real answers CTD_ERR_UNSUPPORTED there
+ * rather than snapping the value in the host — a thumb that jumps in cortado's
+ * arithmetic rather than the platform's is a control behaving in a way no
+ * other iOS control does, and a caller who asked for detents and silently got
+ * none has no way to find out. A stepper is what to reach for when the steps
+ * matter: every platform has one.
+ *
+ * **What CTD_P_VALUE promises: the number that went in comes back out.** Three
+ * of the four hosts draw a progress bar from a *fraction* — UIKit a 0..1
+ * float, GTK a 0..1 double, Win32 an int in a fixed span — so a value put in
+ * and read back out goes through a division and a multiplication and does not
+ * survive: 3 in 0..10 is 0.3f on a phone, and 0.3f scaled back is 3.0000001.
+ * Those hosts keep the value beside the range, which was already theirs to
+ * keep because none of those platforms has a range on a progress bar at all.
+ *
+ * This is the one place cortado answers from its own copy rather than from the
+ * platform, and it is safe for a reason worth naming: a progress bar takes no
+ * input, so the program is the only writer and there is no second value for
+ * the copy to disagree with. A slider is the opposite case and is read from
+ * the control, every time. */
 #define CTD_P_SELECTED    11  /* index into an item list; -1 for none        */
 #define CTD_P_INDETERMINATE 12 /* a progress bar with no known total         */
 /* How opaque the control is, 0.0 to 1.0. Every kind has one, containers
@@ -404,8 +456,8 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  *   **A widget has an enabled state exactly when it accepts input.**
  *
  * That is CTD_W_BUTTON, CTD_W_TEXT_FIELD, CTD_W_SECURE_FIELD,
- * CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON, CTD_W_SWITCH, CTD_W_SLIDER and
- * CTD_W_COMBO_BOX. Every other kind answers CTD_ERR_KIND from both
+ * CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON, CTD_W_SWITCH, CTD_W_SLIDER,
+ * CTD_W_STEPPER and CTD_W_COMBO_BOX. Every other kind answers CTD_ERR_KIND from both
  * `ctd_set_int` and `ctd_get_int`, on every host.
  *
  * A label, an image, a separator and a progress bar take no input, so there is

@@ -167,6 +167,33 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
  * puts them on unrelated classes — NSSlider is an NSControl, NSProgressIndicator
  * is not. The property bag hides that: a caller sets CTD_P_MIN on either and
  * the host knows which message to send. */
+// The AppKit controls that carry a number in a range.
+//
+// Four classes, no common ancestor below NSControl, and the same three
+// accessors on each — so a protocol is how Objective-C says "any of these
+// four" without casting one class to another and hoping. The membership test
+// stays an explicit class check rather than -respondsToSelector:, because
+// every NSControl answers -doubleValue, an NSImageView included, and "it
+// compiles" is not "it means anything".
+@protocol CortadoRanged
+- (void)setMinValue:(double)value;
+- (double)minValue;
+- (void)setMaxValue:(double)value;
+- (double)maxValue;
+- (void)setDoubleValue:(double)value;
+- (double)doubleValue;
+@end
+
+static id<CortadoRanged> ctd_ranged(id object) {
+    if ([object isKindOfClass:[NSSlider class]] ||
+        [object isKindOfClass:[NSProgressIndicator class]] ||
+        [object isKindOfClass:[NSStepper class]] ||
+        [object isKindOfClass:[NSLevelIndicator class]]) {
+        return (id<CortadoRanged>)object;
+    }
+    return nil;
+}
+
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
@@ -179,37 +206,32 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
             [(NSControl *)object setFont:[NSFont systemFontOfSize:value]];
             return CTD_OK;
-        case CTD_P_MIN:
-            if ([object isKindOfClass:[NSSlider class]]) {
-                [(NSSlider *)object setMinValue:value];
-                return CTD_OK;
-            }
-            if ([object isKindOfClass:[NSProgressIndicator class]]) {
-                [(NSProgressIndicator *)object setMinValue:value];
-                return CTD_OK;
-            }
-            return CTD_ERR_KIND;
-        case CTD_P_MAX:
-            if ([object isKindOfClass:[NSSlider class]]) {
-                [(NSSlider *)object setMaxValue:value];
-                return CTD_OK;
-            }
-            if ([object isKindOfClass:[NSProgressIndicator class]]) {
-                [(NSProgressIndicator *)object setMaxValue:value];
-                return CTD_OK;
-            }
-            return CTD_ERR_KIND;
-        case CTD_P_VALUE:
-            if ([object isKindOfClass:[NSSlider class]]) {
-                [(NSSlider *)object setDoubleValue:value];
-                return CTD_OK;
-            }
-            if ([object isKindOfClass:[NSProgressIndicator class]]) {
-                [(NSProgressIndicator *)object setDoubleValue:value];
-                return CTD_OK;
-            }
-            return CTD_ERR_KIND;
+        case CTD_P_MIN: {
+            id<CortadoRanged> ranged = ctd_ranged(object);
+            if (!ranged) return CTD_ERR_KIND;
+            [ranged setMinValue:value];
+            return CTD_OK;
+        }
+        case CTD_P_MAX: {
+            id<CortadoRanged> ranged = ctd_ranged(object);
+            if (!ranged) return CTD_ERR_KIND;
+            [ranged setMaxValue:value];
+            return CTD_OK;
+        }
+        case CTD_P_VALUE: {
+            id<CortadoRanged> ranged = ctd_ranged(object);
+            if (!ranged) return CTD_ERR_KIND;
+            [ranged setDoubleValue:value];
+            return CTD_OK;
+        }
         case CTD_P_STEP: {
+            if ([object isKindOfClass:[NSStepper class]]) {
+                // A stepper with no increment is two arrows that do nothing,
+                // which is a bug in the caller rather than a thing to honour.
+                if (value <= 0.0) return CTD_ERR_RANGE;
+                [(NSStepper *)object setIncrement:value];
+                return CTD_OK;
+            }
             if (![object isKindOfClass:[NSSlider class]]) return CTD_ERR_KIND;
             NSSlider *slider = (NSSlider *)object;
             if (value <= 0.0) {
@@ -242,26 +264,30 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
             value = (double)[[(NSControl *)object font] pointSize];
             break;
-        case CTD_P_MIN:
-            if ([object isKindOfClass:[NSSlider class]])
-                value = [(NSSlider *)object minValue];
-            else if ([object isKindOfClass:[NSProgressIndicator class]])
-                value = [(NSProgressIndicator *)object minValue];
-            else return CTD_ERR_KIND;
+        case CTD_P_MIN: {
+            id<CortadoRanged> ranged = ctd_ranged(object);
+            if (!ranged) return CTD_ERR_KIND;
+            value = [ranged minValue];
             break;
-        case CTD_P_MAX:
-            if ([object isKindOfClass:[NSSlider class]])
-                value = [(NSSlider *)object maxValue];
-            else if ([object isKindOfClass:[NSProgressIndicator class]])
-                value = [(NSProgressIndicator *)object maxValue];
-            else return CTD_ERR_KIND;
+        }
+        case CTD_P_MAX: {
+            id<CortadoRanged> ranged = ctd_ranged(object);
+            if (!ranged) return CTD_ERR_KIND;
+            value = [ranged maxValue];
             break;
-        case CTD_P_VALUE:
-            if ([object isKindOfClass:[NSSlider class]])
-                value = [(NSSlider *)object doubleValue];
-            else if ([object isKindOfClass:[NSProgressIndicator class]])
-                value = [(NSProgressIndicator *)object doubleValue];
-            else return CTD_ERR_KIND;
+        }
+        case CTD_P_VALUE: {
+            id<CortadoRanged> ranged = ctd_ranged(object);
+            if (!ranged) return CTD_ERR_KIND;
+            value = [ranged doubleValue];
+            break;
+        }
+        case CTD_P_STEP:
+            // Only a stepper reads one back. A slider's step is tick marks,
+            // and a count of ticks is not the increment that was asked for —
+            // answering the wrong number is worse than refusing.
+            if (![object isKindOfClass:[NSStepper class]]) return CTD_ERR_KIND;
+            value = [(NSStepper *)object increment];
             break;
         default: return CTD_ERR_UNSUPPORTED;
     }

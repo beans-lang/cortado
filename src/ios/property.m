@@ -152,6 +152,14 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
 // puts them on unrelated classes with different spellings — a progress view
 // has no range at all, only a 0..1 fraction. The property bag hides that: a
 // caller sets CTD_P_MIN on either and the host does the arithmetic.
+// And the value itself. A UIProgressView holds a 0..1 **float**, so the range
+// is not the only thing cortado has to keep: 3 in 0..10 becomes 0.3f, and
+// 0.3f read back and scaled is 3.0000001. The whole triple is cortado's data
+// on this platform, because UIKit has no range here at all — min and max were
+// already kept for exactly that reason, and the value belongs beside them.
+// Nothing but the program writes a progress bar, so there is no second writer
+// for this copy to disagree with.
+static double g_progress_value[CTD_SLOTS];
 static double g_progress_min[CTD_SLOTS];
 static double g_progress_max[CTD_SLOTS];
 
@@ -185,6 +193,10 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             return CTD_OK;
         }
         case CTD_P_MIN:
+            if ([object isKindOfClass:[UIStepper class]]) {
+                [(UIStepper *)object setMinimumValue:value];
+                return CTD_OK;
+            }
             if ([object isKindOfClass:[UISlider class]]) {
                 [(UISlider *)object setMinimumValue:(float)value];
                 return CTD_OK;
@@ -195,6 +207,10 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             }
             return CTD_ERR_KIND;
         case CTD_P_MAX:
+            if ([object isKindOfClass:[UIStepper class]]) {
+                [(UIStepper *)object setMaximumValue:value];
+                return CTD_OK;
+            }
             if ([object isKindOfClass:[UISlider class]]) {
                 [(UISlider *)object setMaximumValue:(float)value];
                 return CTD_OK;
@@ -205,6 +221,10 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             }
             return CTD_ERR_KIND;
         case CTD_P_VALUE:
+            if ([object isKindOfClass:[UIStepper class]]) {
+                [(UIStepper *)object setValue:value];
+                return CTD_OK;
+            }
             if ([object isKindOfClass:[UISlider class]]) {
                 [(UISlider *)object setValue:(float)value];
                 return CTD_OK;
@@ -217,10 +237,16 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
                 if (fraction < 0.0) fraction = 0.0;
                 if (fraction > 1.0) fraction = 1.0;
                 [(UIProgressView *)object setProgress:(float)fraction];
+                g_progress_value[slot] = value;
                 return CTD_OK;
             }
             return CTD_ERR_KIND;
         case CTD_P_STEP: {
+            if ([object isKindOfClass:[UIStepper class]]) {
+                if (value <= 0.0) return CTD_ERR_RANGE;
+                [(UIStepper *)object setStepValue:value];
+                return CTD_OK;
+            }
             // A UISlider is always continuous. Refusing beats snapping in the
             // host: a caller that asked for detents and got none should be
             // told, not left wondering why the thumb slides freely.
@@ -256,27 +282,37 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             }
             break;
         case CTD_P_MIN:
-            if ([object isKindOfClass:[UISlider class]]) {
+            if ([object isKindOfClass:[UIStepper class]]) {
+                value = [(UIStepper *)object minimumValue];
+            } else if ([object isKindOfClass:[UISlider class]]) {
                 value = [(UISlider *)object minimumValue];
             } else if ([object isKindOfClass:[UIProgressView class]]) {
                 value = g_progress_min[slot];
             } else { return CTD_ERR_KIND; }
             break;
         case CTD_P_MAX:
-            if ([object isKindOfClass:[UISlider class]]) {
+            if ([object isKindOfClass:[UIStepper class]]) {
+                value = [(UIStepper *)object maximumValue];
+            } else if ([object isKindOfClass:[UISlider class]]) {
                 value = [(UISlider *)object maximumValue];
             } else if ([object isKindOfClass:[UIProgressView class]]) {
                 value = g_progress_max[slot];
             } else { return CTD_ERR_KIND; }
             break;
         case CTD_P_VALUE:
-            if ([object isKindOfClass:[UISlider class]]) {
+            if ([object isKindOfClass:[UIStepper class]]) {
+                value = [(UIStepper *)object value];
+            } else if ([object isKindOfClass:[UISlider class]]) {
                 value = [(UISlider *)object value];
             } else if ([object isKindOfClass:[UIProgressView class]]) {
-                double low = g_progress_min[slot];
-                double high = g_progress_max[slot];
-                value = low + (high - low) * [(UIProgressView *)object progress];
+                value = g_progress_value[slot];
             } else { return CTD_ERR_KIND; }
+            break;
+        case CTD_P_STEP:
+            // Only a stepper has one. A UISlider is continuous and always was,
+            // so answering it a number would be inventing one.
+            if (![object isKindOfClass:[UIStepper class]]) return CTD_ERR_KIND;
+            value = [(UIStepper *)object stepValue];
             break;
         default: return CTD_ERR_UNSUPPORTED;
     }

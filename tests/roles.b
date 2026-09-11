@@ -91,6 +91,10 @@ fn build() -> Result<bool> {
     var shots: widgets.Slider = widgets.Slider.of(1.0, 4.0, 2.0)?
     var done: widgets.ProgressBar = widgets.ProgressBar.of(0.0, 4.0)?
     done.set_value(2.0)?
+    // A stepper is here and a level indicator is not, for the same reason the
+    // secure field is here and the switch is not: every host has a stepper,
+    // and only two have a gauge.
+    var shots_up: widgets.Stepper = widgets.Stepper.of(1.0, 4.0, 1.0, 2.0)?
     var rule: widgets.Separator = new widgets.Separator()
     var choice: widgets.ComboBox = widgets.ComboBox.of(["flat white", "espresso"])?
     choice.select(1)?
@@ -121,6 +125,7 @@ fn build() -> Result<bool> {
     root.add(eat_in)?
     root.add(shots)?
     root.add(done)?
+    root.add(shots_up)?
     root.add(rule)?
     root.add(choice)?
     root.add(secret)?
@@ -145,6 +150,7 @@ fn build() -> Result<bool> {
     page.add(fixed(sheet, "eat_in", eat_in, 20.0))
     page.add(fixed(sheet, "shots", shots, 20.0))
     page.add(fixed(sheet, "done", done, 12.0))
+    page.add(fixed(sheet, "shots_up", shots_up, 20.0))
     page.add(fixed(sheet, "rule", rule, 1.0))
     page.add(fixed(sheet, "choice", choice, 24.0))
     page.add(fixed(sheet, "secret", secret, 24.0))

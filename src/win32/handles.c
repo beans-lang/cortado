@@ -9,8 +9,12 @@ void     *g_object[CTD_SLOTS];      // HWND, or CtdMenu*
 uint32_t  g_generation[CTD_SLOTS];
 int32_t   g_kind[CTD_SLOTS];        // CTD_W_*, or -1 for a non-widget
 int32_t   g_type[CTD_SLOTS];        // CTD_T_*
+double    g_progress_value[CTD_SLOTS];
 double    g_progress_min[CTD_SLOTS];
 double    g_progress_max[CTD_SLOTS];
+double    g_step_min[CTD_SLOTS];
+double    g_step_max[CTD_SLOTS];
+double    g_step_size[CTD_SLOTS];
 uint32_t  g_used;
 
 ctd_event_fn g_sink;

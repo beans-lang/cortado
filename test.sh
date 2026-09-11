@@ -90,7 +90,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls opacity clock frames anim gpu triangle canvas shader)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers opacity clock frames anim gpu triangle canvas shader)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -104,6 +104,14 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # contract, and nothing else in the suite could see a disagreement about it:
 # `roles` reads the state with a match that treats a refusal and "enabled" the
 # same, so a host that refused printed identical bytes to one that accepted.
+#
+# It prints the *rule* per kind and then a count of the controls that obey it,
+# rather than one observed line per control — and that shape was forced rather
+# than chosen. The observed form worked for exactly as long as every host had
+# every kind, and stopped the day a level indicator landed: UIKit has none, so
+# iOS printed "is not a control on this platform" where macOS printed a
+# refusal, and a golden meant to be identical on four hosts was reporting an
+# inventory. Which controls exist is `controls`'s business.
 #
 # `checked` and `controls` are here for the reason `enabled` is, and they were
 # written because the same mistake had been made a second time without anybody
@@ -147,7 +155,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled checked controls opacity clock anim gpu canvas shader)
+cross_host=(roles events text applied leaks enabled checked controls numbers opacity clock anim gpu canvas shader)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -461,7 +469,7 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # display, and a gate must not need one. An example that is not built is an
     # example that goes stale, and the first person to find out is whoever
     # copied it.
-    for example in hello clock shader canvas signin; do
+    for example in hello clock shader canvas signin brew; do
         "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
         pass
     done

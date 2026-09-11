@@ -172,6 +172,44 @@ static HFONT ctd_font_at(int points) {
     return font;
 }
 
+
+// ---------------------------------------------------------------- a stepper
+//
+// An up-down control counts in whole numbers and cortado's range is real, so
+// the control holds a **tick index** and these three turn it into the number
+// the caller asked about: value = min + tick * step. The same shape the
+// progress bar already uses for its fraction, and for the same reason — the
+// alternative is truncating a caller's 0.25 to zero and never saying so.
+
+void ctd_stepper_range(HWND view, uint32_t slot) {
+    double span = g_step_max[slot] - g_step_min[slot];
+    double size = g_step_size[slot];
+    if (size <= 0.0) size = 1.0;
+    int ticks = span > 0.0 ? (int)(span / size + 0.5) : 0;
+    SendMessageW(view, UDM_SETRANGE32, 0, (LPARAM)ticks);
+}
+
+double ctd_stepper_value(HWND view, uint32_t slot) {
+    int position = (int)SendMessageW(view, UDM_GETPOS32, 0, 0);
+    double size = g_step_size[slot];
+    if (size <= 0.0) size = 1.0;
+    return g_step_min[slot] + (double)position * size;
+}
+
+ctd_status ctd_stepper_set(HWND view, uint32_t slot, double value) {
+    double size = g_step_size[slot];
+    if (size <= 0.0) size = 1.0;
+    double ticks = (value - g_step_min[slot]) / size;
+    // Rounded rather than truncated: a caller who writes the value they just
+    // read must get the same tick back, and floating point does not promise
+    // that (3 * 0.1 is 0.30000000000000004, and (0.30000000000000004 / 0.1)
+    // truncates to 2).
+    int position = (int)(ticks + (ticks < 0.0 ? -0.5 : 0.5));
+    if (position < 0) position = 0;
+    SendMessageW(view, UDM_SETPOS32, 0, (LPARAM)position);
+    return CTD_OK;
+}
+
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
     HWND view = ctd_window(widget);
     if (!view) return CTD_ERR_STALE;
@@ -216,6 +254,11 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
                 return CTD_OK;
             }
             if (kind == CTD_W_PROGRESS_BAR) { g_progress_min[slot] = value; return CTD_OK; }
+            if (kind == CTD_W_STEPPER) {
+                g_step_min[slot] = value;
+                ctd_stepper_range(view, slot);
+                return CTD_OK;
+            }
             return CTD_ERR_KIND;
         case CTD_P_MAX:
             if (kind == CTD_W_SLIDER) {
@@ -223,6 +266,11 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
                 return CTD_OK;
             }
             if (kind == CTD_W_PROGRESS_BAR) { g_progress_max[slot] = value; return CTD_OK; }
+            if (kind == CTD_W_STEPPER) {
+                g_step_max[slot] = value;
+                ctd_stepper_range(view, slot);
+                return CTD_OK;
+            }
             return CTD_ERR_KIND;
         case CTD_P_VALUE:
             if (kind == CTD_W_SLIDER) {
@@ -235,10 +283,21 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
                 if (fraction < 0.0) fraction = 0.0;
                 if (fraction > 1.0) fraction = 1.0;
                 SendMessageW(view, PBM_SETPOS, (WPARAM)(int)(fraction * 10000.0), 0);
+                g_progress_value[slot] = value;
                 return CTD_OK;
             }
+            if (kind == CTD_W_STEPPER) return ctd_stepper_set(view, slot, value);
             return CTD_ERR_KIND;
         case CTD_P_STEP:
+            if (kind == CTD_W_STEPPER) {
+                if (value <= 0.0) return CTD_ERR_RANGE;
+                double held = ctd_stepper_value(view, slot);
+                g_step_size[slot] = value;
+                ctd_stepper_range(view, slot);
+                // The tick index means something different now, so the number
+                // the control was showing is put back through the new one.
+                return ctd_stepper_set(view, slot, held);
+            }
             if (kind != CTD_W_SLIDER) return CTD_ERR_KIND;
             SendMessageW(view, TBM_SETLINESIZE, 0, (LPARAM)(LONG)value);
             SendMessageW(view, TBM_SETPAGESIZE, 0, (LPARAM)(LONG)value);
@@ -295,26 +354,33 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             if (kind == CTD_W_SLIDER) {
                 value = (double)(LONG)SendMessageW(view, TBM_GETRANGEMIN, 0, 0);
             } else if (kind == CTD_W_PROGRESS_BAR) { value = g_progress_min[slot]; }
+            else if (kind == CTD_W_STEPPER) { value = g_step_min[slot]; }
             else return CTD_ERR_KIND;
             break;
         case CTD_P_MAX:
             if (kind == CTD_W_SLIDER) {
                 value = (double)(LONG)SendMessageW(view, TBM_GETRANGEMAX, 0, 0);
             } else if (kind == CTD_W_PROGRESS_BAR) { value = g_progress_max[slot]; }
+            else if (kind == CTD_W_STEPPER) { value = g_step_max[slot]; }
             else return CTD_ERR_KIND;
             break;
         case CTD_P_VALUE:
             if (kind == CTD_W_SLIDER) {
                 value = (double)(LONG)SendMessageW(view, TBM_GETPOS, 0, 0);
             } else if (kind == CTD_W_PROGRESS_BAR) {
-                double span = g_progress_max[slot] - g_progress_min[slot];
-                double position = (double)SendMessageW(view, PBM_GETPOS, 0, 0);
-                value = g_progress_min[slot] + span * (position / 10000.0);
+                value = g_progress_value[slot];
+            } else if (kind == CTD_W_STEPPER) {
+                value = ctd_stepper_value(view, slot);
             } else return CTD_ERR_KIND;
             break;
         case CTD_P_STEP:
-            if (kind != CTD_W_SLIDER) return CTD_ERR_KIND;
-            value = (double)(LONG)SendMessageW(view, TBM_GETLINESIZE, 0, 0);
+            // A stepper and nothing else — the paragraph beside CTD_P_STEP in
+            // the header says why a slider's is write-only. This host *could*
+            // answer TBM_GETLINESIZE, and that is exactly the trap: one
+            // platform answering a number the other three cannot is a
+            // divergence that reads as a feature.
+            if (kind != CTD_W_STEPPER) return CTD_ERR_KIND;
+            value = g_step_size[slot];
             break;
         default: return CTD_ERR_UNSUPPORTED;
     }

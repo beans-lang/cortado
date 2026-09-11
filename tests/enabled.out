@@ -1,16 +1,21 @@
-Container refused wrong_widget
-Label refused wrong_widget
-Button enabled round-trips
-TextField enabled round-trips
-CheckBox enabled round-trips
-ImageView refused wrong_widget
-Slider enabled round-trips
-ProgressBar refused wrong_widget
-Separator refused wrong_widget
-TextArea refused wrong_widget
-ComboBox enabled round-trips
-ScrollView refused wrong_widget
-RadioButton enabled round-trips
-Canvas refused wrong_widget
-Switch enabled round-trips
-SecureField enabled round-trips
+Container has none
+Label has none
+Button has an enabled state
+TextField has an enabled state
+CheckBox has an enabled state
+ImageView has none
+Slider has an enabled state
+ProgressBar has none
+Separator has none
+TextArea has none
+ComboBox has an enabled state
+ScrollView has none
+RadioButton has an enabled state
+Canvas has none
+Switch has an enabled state
+SecureField has an enabled state
+Stepper has an enabled state
+LevelIndicator has none
+-- and what this platform does --
+  every control it builds was asked: true
+  and every one of them obeys the rule above: true

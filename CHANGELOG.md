@@ -949,6 +949,100 @@ First working macOS host.
   compile. The part that is not vacuous anywhere — a number that is not a kind
   must be refused rather than reported as a missing control — runs on all four.
 
+- **`CTD_W_STEPPER` and `CTD_W_LEVEL_INDICATOR` — two more controls that carry
+  a number.** A stepper is `NSStepper`, `UIStepper`, a `GtkSpinButton` and an
+  up-down control; a level indicator is `NSLevelIndicator` and `GtkLevelBar`,
+  and UIKit and the Win32 common controls have nothing that means it.
+
+  The gauge is the more useful of the two to have here, and not for what it
+  draws. `CTD_W_SWITCH` is missing only on Win32, whose goldens nothing runs,
+  so the "no" branch of `ctd_widget_supports` was held by a table and never
+  executed by the suite. A level indicator is missing on **iOS**, which does
+  run them — so `tests/controls.out` now has a host that takes the refusing
+  branch and still prints the same bytes as one that does not. The agreement
+  shape stopped being a claim about a file nobody runs.
+
+- **A Win32 up-down control counts in whole numbers, so the host keeps the real
+  range beside it.** `value = low + tick × step`, the same shape the progress
+  bar already uses for its fraction, and for the same reason: the alternative
+  is truncating a caller's 0.25 to zero and never saying so. The tick is
+  *rounded* rather than truncated, because a caller who writes back the value
+  they just read must get the same tick, and floating point does not promise it
+  — `3 × 0.1` is `0.30000000000000004`, and dividing that by `0.1` truncates
+  to 2.
+
+- **A slider's increment is write-only, and that is a rule rather than an
+  omission.** AppKit has no increment on a slider: a stepped `NSSlider` is one
+  with tick marks it must land on, so the host holds a count of positions and
+  not the number that was written, and reconstructing it is exact only when the
+  step divided the span evenly. Win32 could answer `TBM_GETLINESIZE`, which is
+  the right number — and that is the trap. One platform answering where three
+  cannot is a divergence that reads as a feature, so this host now refuses too.
+  `ctd_get_real(CTD_P_STEP)` is `CTD_ERR_KIND` on anything but a stepper, on
+  all four.
+
+- **`CTD_P_VALUE` now promises that the number which went in comes back out,
+  and three hosts had to change to keep it.** A progress bar is drawn from a
+  *fraction* on all but one platform — UIKit a 0..1 float, GTK a 0..1 double,
+  Win32 an int in a fixed span — so a value put in and read back goes through a
+  division and a multiplication and does not survive. The iOS leg printed
+  `ProgressBar was written 3 and read back 3.0000001192092896`; GTK would have
+  done the same for 1 in 0..3, and only passed because 0.3 × 10 happens to be
+  exactly 3 in double arithmetic.
+
+  Those three keep the value beside the range now, which was already theirs to
+  keep: none of those platforms has a range on a progress bar at all, so the
+  whole triple is cortado's data. It is the one place cortado answers from its
+  own copy rather than from the platform, and it is safe for a reason worth
+  naming — a progress bar takes no input, so the program is the only writer and
+  there is no second value for the copy to disagree with. A slider is the
+  opposite case and is still read from the control every time.
+
+- **A slider's step is a capability, not a promise.** AppKit, GTK and Win32 can
+  make a slider land on detents; a `UISlider` is continuous and has no way to
+  be anything else, so iOS answers `CTD_ERR_UNSUPPORTED` rather than snapping
+  the value in the host. A thumb that jumps in cortado's arithmetic rather than
+  the platform's is a control behaving in a way no other iOS control does, and
+  a caller who asked for detents and silently got none has no way to find out.
+  A stepper is what to reach for when the steps matter: every platform has one.
+
+  `tests/numbers.out` distinguishes the two refusals rather than folding them
+  together — `wrong_widget` is "no control anywhere has this" and `unsupported`
+  is "this platform cannot", and a test that treated them as one would let a
+  host swap one for the other.
+
+- **A case landed in the wrong function and the iOS leg is what found it.** The
+  `CTD_P_STEP` reader was inserted into `ctd_get_int` rather than
+  `ctd_get_real` on the UIKit host — both end in the same three lines, and the
+  edit anchored on those. macOS answered, iOS refused, and the cross-host diff
+  said so in one line. The same slip in a host with no second implementation to
+  disagree with would have shipped.
+
+- **`tests/enabled.out` had to stop printing an inventory, and the iOS leg is
+  what said so.** It printed one observed line per control — `Button enabled
+  round-trips`, `Label refused wrong_widget` — which worked for exactly as long
+  as every host had every kind. A level indicator ended that: UIKit has none,
+  so iOS printed `LevelIndicator is not a control on this platform` where macOS
+  printed a refusal, and a golden whose whole purpose is to be identical on
+  four hosts was reporting *what this computer happens to have*.
+
+  It prints the rule per kind now — which is the same everywhere — and then the
+  count of controls that obey it, with the disobedient one named on its own
+  line so a failure still says which control and what it did. Which controls
+  exist is `ctd_widget_supports`' business and `tests/controls.out`'s.
+
+- **`tests/numbers.out` — the third file in the family `enabled` started.** A
+  property whose *set of widgets* is part of the contract, written down as
+  output so four hosts cannot drift into four answers. Every kind is asked, so
+  a kind that should refuse and does not is caught by the same counter as one
+  that should accept and does not.
+
+- **AppKit has four controls that carry a number in a range and no common class
+  below `NSControl`.** `-respondsToSelector:` would have accepted an
+  `NSImageView`, which answers `-doubleValue` like every other `NSControl`, so
+  the host declares a protocol and keeps an explicit class check for membership.
+  "It compiles" is not "it means anything".
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

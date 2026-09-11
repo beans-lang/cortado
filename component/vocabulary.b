@@ -41,6 +41,8 @@ pub class Vocabulary {
         if tag == "Canvas" { return some(widgets.WidgetKind.canvas) }
         if tag == "Switch" { return some(widgets.WidgetKind.switch) }
         if tag == "SecureField" { return some(widgets.WidgetKind.secure_field) }
+        if tag == "Stepper" { return some(widgets.WidgetKind.stepper) }
+        if tag == "LevelIndicator" { return some(widgets.WidgetKind.level_indicator) }
         return none
     }
 

@@ -67,6 +67,9 @@ void ctd_emit_control(ctd_handle target, id sender) {
         // and never falls through to the push-button branch below.
         kind = CTD_EV_VALUE_CHANGED;
         index = [(NSSwitch *)sender state] == NSControlStateValueOn ? 1 : 0;
+    } else if ([sender isKindOfClass:[NSStepper class]]) {
+        kind = CTD_EV_VALUE_CHANGED;
+        index = (int64_t)[(NSStepper *)sender doubleValue];
     } else if ([sender isKindOfClass:[NSSlider class]]) {
         kind = CTD_EV_VALUE_CHANGED;
         index = (int64_t)[(NSSlider *)sender doubleValue];
