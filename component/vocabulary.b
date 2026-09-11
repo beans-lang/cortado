@@ -31,6 +31,13 @@ pub class Vocabulary {
         if tag == "TextField" { return some(widgets.WidgetKind.text_field) }
         if tag == "CheckBox" { return some(widgets.WidgetKind.check_box) }
         if tag == "Image" { return some(widgets.WidgetKind.image_view) }
+        if tag == "Slider" { return some(widgets.WidgetKind.slider) }
+        if tag == "ProgressBar" { return some(widgets.WidgetKind.progress_bar) }
+        if tag == "Separator" { return some(widgets.WidgetKind.separator) }
+        if tag == "TextArea" { return some(widgets.WidgetKind.text_area) }
+        if tag == "ComboBox" { return some(widgets.WidgetKind.combo_box) }
+        if tag == "ScrollView" { return some(widgets.WidgetKind.scroll_view) }
+        if tag == "RadioButton" { return some(widgets.WidgetKind.radio_button) }
         return none
     }
 
@@ -59,15 +66,19 @@ pub class Vocabulary {
         if name == "editable" { return host.P_EDITABLE }
         if name == "alignment" { return host.P_ALIGNMENT }
         if name == "font_size" { return host.P_FONT_SIZE }
+        if name == "step" { return host.P_STEP }
+        if name == "selected" { return host.P_SELECTED }
+        if name == "indeterminate" { return host.P_INDETERMINATE }
         return -1
     }
 
     /// How a property's value travels.
     pub static fn kind_of_property(name: string) -> AttributeKind {
-        if name == "min" || name == "max" || name == "value" || name == "font_size" {
+        if name == "min" || name == "max" || name == "value" ||
+           name == "font_size" || name == "step" {
             return AttributeKind.real
         }
-        if name == "checked" || name == "alignment" {
+        if name == "checked" || name == "alignment" || name == "selected" {
             return AttributeKind.whole
         }
         return AttributeKind.flag

@@ -36,6 +36,13 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "TextField" { return true }
     if tag == "CheckBox" { return true }
     if tag == "Image" { return true }
+    if tag == "Slider" { return true }
+    if tag == "ProgressBar" { return true }
+    if tag == "Separator" { return true }
+    if tag == "TextArea" { return true }
+    if tag == "ComboBox" { return true }
+    if tag == "ScrollView" { return true }
+    if tag == "RadioButton" { return true }
     return false
 }
 
@@ -72,6 +79,7 @@ pub fn is_boolean_attribute(name: string) -> bool {
     if name == "hidden" { return true }
     if name == "checked" { return true }
     if name == "editable" { return true }
+    if name == "indeterminate" { return true }
     return false
 }
 
@@ -100,10 +108,11 @@ pub fn is_reserved_attribute(name: string) -> bool {
 pub fn attribute_call(name: string) -> string {
     if name == "text" { return "text" }
     if is_boolean_attribute(name) { return "flag" }
-    if name == "min" || name == "max" || name == "value" || name == "font_size" {
+    if name == "min" || name == "max" || name == "value" ||
+       name == "font_size" || name == "step" {
         return "number"
     }
-    if name == "alignment" { return "number" }
+    if name == "alignment" || name == "selected" { return "number" }
     if name == "spacing" || name == "padding" || name == "margin" ||
        name == "grow" || name == "shrink" || name == "basis" ||
        name == "width" || name == "height" {
@@ -116,15 +125,17 @@ pub fn attribute_call(name: string) -> string {
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
 pub fn attribute_names() -> List<string> {
     return ["align", "alignment", "basis", "checked", "editable", "enabled",
-            "font_size", "grow", "height", "hidden", "justify", "margin",
-            "max", "min", "padding", "shrink", "spacing", "text", "value",
-            "width"]
+            "font_size", "grow", "height", "hidden", "indeterminate",
+            "justify", "margin", "max", "min", "padding", "selected", "shrink",
+            "spacing", "step", "text", "value", "width"]
 }
 
 /// Every control tag, for the same reason.
 pub fn widget_tags() -> List<string> {
-    return ["Box", "Button", "CheckBox", "Container", "Grid", "HFlex",
-            "HStack", "Image", "Label", "TextField", "VFlex", "VStack"]
+    return ["Box", "Button", "CheckBox", "ComboBox", "Container", "Grid",
+            "HFlex", "HStack", "Image", "Label", "ProgressBar", "RadioButton",
+            "ScrollView", "Separator", "Slider", "TextArea", "TextField",
+            "VFlex", "VStack"]
 }
 
 /// Whether a tag is spelled like an identifier.

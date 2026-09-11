@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 1
+pub const ABI_VERSION: int = 2
 
 // ---- statuses ----
 
@@ -78,6 +78,13 @@ pub const W_BUTTON: int = 2
 pub const W_TEXT_FIELD: int = 3
 pub const W_CHECK_BOX: int = 4
 pub const W_IMAGE_VIEW: int = 5
+pub const W_SLIDER: int = 6
+pub const W_PROGRESS_BAR: int = 7
+pub const W_SEPARATOR: int = 8
+pub const W_TEXT_AREA: int = 9
+pub const W_COMBO_BOX: int = 10
+pub const W_SCROLL_VIEW: int = 11
+pub const W_RADIO_BUTTON: int = 12
 
 // ---- property keys ----
 
@@ -90,3 +97,6 @@ pub const P_VALUE: int = 6
 pub const P_EDITABLE: int = 7
 pub const P_ALIGNMENT: int = 8
 pub const P_FONT_SIZE: int = 9
+pub const P_STEP: int = 10
+pub const P_SELECTED: int = 11
+pub const P_INDETERMINATE: int = 12

@@ -34,7 +34,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 1
+#define CTD_ABI_VERSION 2
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -67,6 +67,18 @@ typedef struct ctd_event {
     int64_t  token;             /* echoes ctd_post / a dialog's request token */
     double   x, y;              /* pointer position, in the target's space    */
     double   width, height;     /* new size, for resize events                */
+    /* The control's text at the moment the event was raised, for the events
+     * where that is the news: a value that changed, a field that committed.
+     * NULL and 0 for every other kind.
+     *
+     * It is in the record rather than left for the handler to go and read,
+     * because by the time a handler runs the control may already have moved
+     * on — a second keystroke, a re-render — and because a handler that had to
+     * fetch it would need the widget object, which is exactly the coupling the
+     * event exists to avoid. The bytes belong to the host and are valid only
+     * for the duration of the call; a binding that keeps them copies them. */
+    const char *text;
+    int32_t  text_len;
 } ctd_event;
 
 #define CTD_EV_ACTIVATE         1  /* button pressed, menu item chosen        */
@@ -156,12 +168,19 @@ int32_t    ctd_surface_visible(ctd_handle surface);
 
 /* ---- widgets ----------------------------------------------------------- */
 
-#define CTD_W_CONTAINER   0
-#define CTD_W_LABEL       1
-#define CTD_W_BUTTON      2
-#define CTD_W_TEXT_FIELD  3
-#define CTD_W_CHECK_BOX   4
-#define CTD_W_IMAGE_VIEW  5
+#define CTD_W_CONTAINER     0
+#define CTD_W_LABEL         1
+#define CTD_W_BUTTON        2
+#define CTD_W_TEXT_FIELD    3
+#define CTD_W_CHECK_BOX     4
+#define CTD_W_IMAGE_VIEW    5
+#define CTD_W_SLIDER        6
+#define CTD_W_PROGRESS_BAR  7
+#define CTD_W_SEPARATOR     8
+#define CTD_W_TEXT_AREA     9
+#define CTD_W_COMBO_BOX    10
+#define CTD_W_SCROLL_VIEW  11
+#define CTD_W_RADIO_BUTTON 12
 
 ctd_handle ctd_widget_new(int32_t kind);
 int32_t    ctd_widget_kind(ctd_handle widget);   /* -1 when stale */
@@ -209,6 +228,9 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
 #define CTD_P_EDITABLE     7
 #define CTD_P_ALIGNMENT    8  /* 0 leading, 1 center, 2 trailing             */
 #define CTD_P_FONT_SIZE    9
+#define CTD_P_STEP        10  /* a slider's increment; 0 for continuous      */
+#define CTD_P_SELECTED    11  /* index into an item list; -1 for none        */
+#define CTD_P_INDETERMINATE 12 /* a progress bar with no known total         */
 
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len);
 /* Answers the byte length the text needs, and writes at most `cap` bytes.
@@ -218,6 +240,24 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value);
 ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out);
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value);
 ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out);
+
+/* ---- item lists -------------------------------------------------------- */
+
+/* A control that offers a list of choices: a combo box today, a list and a
+ * segmented control later. The selection is CTD_P_SELECTED, an index, because
+ * two items may carry the same text and a selection by text could not tell
+ * them apart.
+ *
+ * Items are replaced wholesale rather than patched. A list that is rebuilt on
+ * every render is the common case by far, and an insert-and-move API would
+ * mean a second reconciler — with its own bugs — for a control whose contents
+ * are strings. When a list grows large enough that rebuilding it shows, the
+ * answer is a data-source control, not a diffed item list. */
+ctd_status ctd_items_clear(ctd_handle widget);
+ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len);
+ctd_status ctd_items_count(ctd_handle widget, int32_t *out);
+/* Same contract as ctd_get_text: answers the byte length, writes at most cap. */
+int32_t    ctd_items_at(ctd_handle widget, int32_t index, char *out, int32_t cap);
 
 /* ---- introspection ----------------------------------------------------- */
 
@@ -231,7 +271,25 @@ int32_t    ctd_a11y_role(ctd_handle widget, char *out, int32_t cap);
 
 /* Sends the control's action the way a real click does — through the
  * platform's own dispatch, not by calling the handler directly. This is public
- * API and it is also how every event test drives the framework. */
+ * API and it is also how every event test drives the framework.
+ *
+ * It is not usable on every control, and the reason is worth writing down: a
+ * click on a pop-up button opens its menu and runs a modal tracking loop, so
+ * calling this on one from a test never returns. The two calls below are what
+ * a test uses for controls that carry a value. */
 ctd_status ctd_widget_activate(ctd_handle widget);
+
+/* Moves a control's value the way a user would, and raises the event that
+ * follows.
+ *
+ * `ctd_set_int` and `ctd_set_real` change a control *silently*, which is
+ * right: a program that sets a value should not hear about its own write, or
+ * every render would feed itself. These are the other half — what a test needs
+ * to drive a control, and what an application needs to replay input.
+ *
+ * `index` selects for a control with a list and is ignored otherwise; `value`
+ * sets the position of a slider. */
+ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value);
+ctd_status ctd_widget_synth_text(ctd_handle widget, const char *utf8, int32_t len);
 
 #endif /* CORTADO_HOST_H */

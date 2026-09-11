@@ -9,7 +9,7 @@ import cortado.host
 /// subtree stays alive exactly as long as the container does. The platform's
 /// own view hierarchy mirrors that, it does not drive it — which is what keeps
 /// one lifetime story instead of two that can disagree.
-pub class Container extends Widget {
+pub class Container extends Widget implements Holder {
     contents: List<Widget> = []
 
     pub fn init() {
@@ -47,12 +47,7 @@ pub class Container extends Widget {
             return err("cannot insert a {child.kind().name()} at {index}: this container has {self.contents.len()} children",
                        "out_of_range")
         }
-        unsafe {
-            host.check(host.ctd_view_add_child(self.handle().raw,
-                                               child.handle().raw,
-                                               index as i32) as int,
-                       "add a {child.kind().name()} to a container")?
-        }
+        self.attach_child(child, index)?
         self.contents.insert(index, child)
         return ok(true)
     }
@@ -63,11 +58,7 @@ pub class Container extends Widget {
                        "out_of_range")
         }
         let child: Widget = self.contents[index]
-        unsafe {
-            host.check(host.ctd_view_remove_child(self.handle().raw,
-                                                  child.handle().raw) as int,
-                       "remove a {child.kind().name()} from a container")?
-        }
+        self.detach_child(child)?
         self.contents.remove(index)
         return ok(true)
     }
@@ -89,11 +80,7 @@ pub class Container extends Widget {
         if from == to {
             return ok(true)
         }
-        unsafe {
-            host.check(host.ctd_view_move_child(self.handle().raw,
-                                                from as i32, to as i32) as int,
-                       "reorder the children of a container")?
-        }
+        self.reorder_child(from, to)?
         let moving: Widget = self.contents[from]
         self.contents.remove(from)
         self.contents.insert(to, moving)

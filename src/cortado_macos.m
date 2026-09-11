@@ -21,6 +21,7 @@
 
 #import <Cocoa/Cocoa.h>
 #include <string.h>
+#include <float.h>
 #include "cortado_host.h"
 
 enum { CTD_SLOTS = 8192 };
@@ -122,10 +123,11 @@ static int32_t ctd_copy_out(NSString *text, char *out, int32_t cap) {
 
 static void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 
+static void ctd_emit_control(ctd_handle target, id sender);
+
 @implementation CortadoTarget
 - (void)fire:(id)sender {
-    (void)sender;
-    ctd_emit(CTD_EV_ACTIVATE, self.handle, 0, 0);
+    ctd_emit_control(self.handle, sender);
 }
 @end
 
@@ -139,6 +141,59 @@ static void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t to
     event.target = target;
     event.index = index;
     event.token = token;
+    g_sink(g_sink_context, &event);
+}
+
+// One control's action, as the event it actually is.
+//
+// AppKit sends every control's action down one selector, so the kind has to be
+// decided here. The rule is the one a person would give: a control that
+// carries a *value* reports that the value changed; a control that is a
+// *command* reports that it was activated; a field that has been committed
+// reports the commit. A framework that called all of them "activate" would
+// make a slider and a button indistinguishable to a handler, and every
+// application would re-derive this from the control's class.
+static void ctd_emit_control(ctd_handle target, id sender) {
+    if (!g_sink) return;
+    uint32_t kind = CTD_EV_ACTIVATE;
+    int64_t index = 0;
+    NSString *text = nil;
+
+    if ([sender isKindOfClass:[NSSlider class]]) {
+        kind = CTD_EV_VALUE_CHANGED;
+        index = (int64_t)[(NSSlider *)sender doubleValue];
+    } else if ([sender isKindOfClass:[NSPopUpButton class]]) {
+        kind = CTD_EV_VALUE_CHANGED;
+        index = (int64_t)[(NSPopUpButton *)sender indexOfSelectedItem];
+        text = [(NSPopUpButton *)sender titleOfSelectedItem];
+    } else if ([sender isKindOfClass:[NSTextField class]]) {
+        kind = CTD_EV_TEXT_COMMIT;
+        text = [(NSTextField *)sender stringValue];
+    } else if ([sender isKindOfClass:[NSButton class]]) {
+        // A switch and a radio carry a state; a push button is a command. The
+        // kind cortado created it as is the authority — AppKit uses one class
+        // for all three and the cell's button type is not readable back.
+        int32_t made_as = ctd_slot_kind(target);
+        if (made_as == CTD_W_CHECK_BOX || made_as == CTD_W_RADIO_BUTTON) {
+            kind = CTD_EV_VALUE_CHANGED;
+            NSControlStateValue state = [(NSButton *)sender state];
+            index = state == NSControlStateValueMixed ? 2
+                  : state == NSControlStateValueOn    ? 1 : 0;
+        }
+    }
+
+    ctd_event event;
+    memset(&event, 0, sizeof event);
+    event.kind = kind;
+    event.target = target;
+    event.index = index;
+    if (text) {
+        // Valid only for the duration of the call, which is the contract in
+        // the header: a binding that keeps the text copies it.
+        const char *utf8 = [text UTF8String];
+        event.text = utf8;
+        event.text_len = utf8 ? (int32_t)strlen(utf8) : 0;
+    }
     g_sink(g_sink_context, &event);
 }
 
@@ -364,6 +419,83 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_IMAGE_VIEW:
             view = [[NSImageView alloc] initWithFrame:NSZeroRect];
             break;
+        case CTD_W_SLIDER: {
+            NSSlider *slider = [[NSSlider alloc] initWithFrame:NSZeroRect];
+            [slider setMinValue:0.0];
+            [slider setMaxValue:1.0];
+            [slider setDoubleValue:0.0];
+            // Continuous by default: a slider that only reports on mouse-up
+            // cannot drive a live preview, which is most of what sliders are
+            // for. A program that wants the other behaviour ignores the events
+            // until it stops getting them.
+            [slider setContinuous:YES];
+            view = slider;
+            break;
+        }
+        case CTD_W_PROGRESS_BAR: {
+            NSProgressIndicator *bar =
+                [[NSProgressIndicator alloc] initWithFrame:NSZeroRect];
+            [bar setStyle:NSProgressIndicatorStyleBar];
+            [bar setIndeterminate:NO];
+            [bar setMinValue:0.0];
+            [bar setMaxValue:1.0];
+            [bar setDoubleValue:0.0];
+            view = bar;
+            break;
+        }
+        case CTD_W_SEPARATOR: {
+            NSBox *rule = [[NSBox alloc] initWithFrame:NSZeroRect];
+            [rule setBoxType:NSBoxSeparator];
+            view = rule;
+            break;
+        }
+        case CTD_W_TEXT_AREA: {
+            // A text view has to live inside a scroll view to scroll, and a
+            // multi-line field that cannot scroll is a field with a hidden
+            // bottom. The scroll view is what cortado tracks: it is the thing
+            // with a frame, and the text view inside it is an implementation
+            // detail the tree never shows.
+            NSScrollView *scroller =
+                [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 100, 60)];
+            NSTextView *text =
+                [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 100, 60)];
+            [text setMinSize:NSMakeSize(0, 0)];
+            [text setMaxSize:NSMakeSize(FLT_MAX, FLT_MAX)];
+            [text setVerticallyResizable:YES];
+            [text setHorizontallyResizable:NO];
+            [text setAutoresizingMask:NSViewWidthSizable];
+            [[text textContainer] setWidthTracksTextView:YES];
+            [scroller setDocumentView:text];
+            [scroller setHasVerticalScroller:YES];
+            [scroller setBorderType:NSBezelBorder];
+            [text release];
+            view = scroller;
+            break;
+        }
+        case CTD_W_COMBO_BOX: {
+            NSPopUpButton *menu =
+                [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+            view = menu;
+            break;
+        }
+        case CTD_W_SCROLL_VIEW: {
+            NSScrollView *scroller = [[NSScrollView alloc] initWithFrame:NSZeroRect];
+            CortadoView *content = [[CortadoView alloc] initWithFrame:NSZeroRect];
+            [scroller setDocumentView:content];
+            [scroller setHasVerticalScroller:YES];
+            [scroller setDrawsBackground:NO];
+            ctd_tag(content);
+            [content release];
+            view = scroller;
+            break;
+        }
+        case CTD_W_RADIO_BUTTON: {
+            NSButton *radio = [[NSButton alloc] initWithFrame:NSZeroRect];
+            [radio setButtonType:NSButtonTypeRadio];
+            [radio setTitle:@""];
+            view = radio;
+            break;
+        }
         default:
             return 0;
     }
@@ -404,16 +536,45 @@ ctd_status ctd_widget_release(ctd_handle widget) {
 // ----------------------------------------------------------------------- tree
 
 // A surface addresses its content view; everything else addresses itself.
+// Where a widget's children actually live.
+//
+// Two of the cases are indirections the tree above must not know about: a
+// window's children sit in its content view, and a scroll view's in its
+// document view. A caller that had to know which control wraps what would be a
+// caller writing platform code in Beans.
+//
+// Every view answers something here, including a leaf. Asking a label how many
+// children it has is a question with a real answer — none — and refusing it
+// would make every tree walk special-case every kind. Refusing to *add* a
+// child to one is a different question, and `ctd_can_hold` is where that lives.
 static NSView *ctd_container_of(id object) {
     if ([object isKindOfClass:[NSWindow class]]) return [(NSWindow *)object contentView];
+    if ([object isKindOfClass:[NSScrollView class]]) {
+        id inner = [(NSScrollView *)object documentView];
+        if ([inner isKindOfClass:[NSView class]]) return (NSView *)inner;
+        return (NSView *)object;
+    }
     if ([object isKindOfClass:[NSView class]]) return (NSView *)object;
     return nil;
 }
 
+// Whether a widget may be given children.
+//
+// A text area is a scroll view whose document view holds text, not widgets.
+// Adding a button to one would put it inside a paragraph — AppKit allows it
+// and nothing good comes of it — so the refusal is here rather than in a
+// comment.
+static BOOL ctd_can_hold(NSView *content) {
+    if (!content) return NO;
+    return ![content isKindOfClass:[NSTextView class]];
+}
+
 ctd_status ctd_view_add_child(ctd_handle parent, ctd_handle child, int32_t index) {
-    NSView *container = ctd_container_of(ctd_resolve(parent));
+    id owner = ctd_resolve(parent);
     NSView *view = (NSView *)ctd_resolve(child);
-    if (!container || !view) return CTD_ERR_STALE;
+    if (!owner || !view) return CTD_ERR_STALE;
+    NSView *container = ctd_container_of(owner);
+    if (!ctd_can_hold(container)) return CTD_ERR_KIND;
     NSArray *existing = ctd_children(container);
     if (index < 0 || index >= (int32_t)[existing count]) {
         [container addSubview:view];
@@ -426,17 +587,21 @@ ctd_status ctd_view_add_child(ctd_handle parent, ctd_handle child, int32_t index
 }
 
 ctd_status ctd_view_remove_child(ctd_handle parent, ctd_handle child) {
-    NSView *container = ctd_container_of(ctd_resolve(parent));
+    id owner = ctd_resolve(parent);
     NSView *view = (NSView *)ctd_resolve(child);
-    if (!container || !view) return CTD_ERR_STALE;
+    if (!owner || !view) return CTD_ERR_STALE;
+    NSView *container = ctd_container_of(owner);
+    if (!ctd_can_hold(container)) return CTD_ERR_KIND;
     if ([view superview] != container) return CTD_ERR_RANGE;
     [view removeFromSuperview];
     return CTD_OK;
 }
 
 ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to) {
-    NSView *container = ctd_container_of(ctd_resolve(parent));
-    if (!container) return CTD_ERR_STALE;
+    id owner = ctd_resolve(parent);
+    if (!owner) return CTD_ERR_STALE;
+    NSView *container = ctd_container_of(owner);
+    if (!ctd_can_hold(container)) return CTD_ERR_KIND;
     NSArray *children = ctd_children(container);
     int32_t count = (int32_t)[children count];
     if (from < 0 || from >= count || to < 0 || to >= count) return CTD_ERR_RANGE;
@@ -464,15 +629,25 @@ ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to) {
 }
 
 ctd_status ctd_view_child_count(ctd_handle parent, int32_t *out) {
-    NSView *container = ctd_container_of(ctd_resolve(parent));
-    if (!container) return CTD_ERR_STALE;
+    id owner = ctd_resolve(parent);
+    if (!owner) return CTD_ERR_STALE;
+    NSView *container = ctd_container_of(owner);
+    // A control that cannot hold children has none, which is an answer and not
+    // a refusal — a tree walk asks this of every node and would otherwise have
+    // to know which kinds to skip.
+    if (!container || !ctd_can_hold(container)) {
+        if (out) *out = 0;
+        return CTD_OK;
+    }
     if (out) *out = (int32_t)[ctd_children(container) count];
     return CTD_OK;
 }
 
 ctd_handle ctd_view_child_at(ctd_handle parent, int32_t index) {
-    NSView *container = ctd_container_of(ctd_resolve(parent));
-    if (!container) return 0;
+    id owner = ctd_resolve(parent);
+    if (!owner) return 0;
+    NSView *container = ctd_container_of(owner);
+    if (!container || !ctd_can_hold(container)) return 0;
     NSArray *children = ctd_children(container);
     if (index < 0 || index >= (int32_t)[children count]) return 0;
     id wanted = [children objectAtIndex:(NSUInteger)index];
@@ -541,14 +716,32 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
 
 // ----------------------------------------------------------------- properties
 
-ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
-    id object = ctd_resolve(widget);
-    if (!object) return CTD_ERR_STALE;
+// UTF-8 bytes with an explicit length, as an NSString. Never NUL-terminated:
+// a string with an embedded NUL crosses this boundary whole.
+static NSString *ctd_string(const char *utf8, int32_t len) {
     NSString *text = [[[NSString alloc] initWithBytes:utf8
                                                length:(NSUInteger)(len < 0 ? 0 : len)
                                              encoding:NSUTF8StringEncoding] autorelease];
-    if (!text) text = @"";
-    if ([object isKindOfClass:[NSButton class]])         [(NSButton *)object setTitle:text];
+    return text ? text : @"";
+}
+
+// The object a widget's text actually lives on. A text area is tracked as its
+// scroll view, because that is the thing with a frame — the text view inside
+// is an implementation detail, and every text call has to reach through it.
+static NSTextView *ctd_text_view(id object) {
+    if (![object isKindOfClass:[NSScrollView class]]) return nil;
+    id inner = [(NSScrollView *)object documentView];
+    if ([inner isKindOfClass:[NSTextView class]]) return (NSTextView *)inner;
+    return nil;
+}
+
+ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    NSString *text = ctd_string(utf8, len);
+    NSTextView *inner = ctd_text_view(object);
+    if (inner)                                           [inner setString:text];
+    else if ([object isKindOfClass:[NSButton class]])    [(NSButton *)object setTitle:text];
     else if ([object isKindOfClass:[NSTextField class]]) [(NSTextField *)object setStringValue:text];
     else return CTD_ERR_KIND;
     return CTD_OK;
@@ -560,10 +753,15 @@ int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
     // Class checks are explicit rather than -respondsToSelector:, because
     // NSImageView inherits -stringValue from NSControl and answers its
     // objectValue's description, which carries a heap address in it.
+    NSTextView *inner = ctd_text_view(object);
+    if (inner)
+        return ctd_copy_out([inner string], out, cap);
     if ([object isKindOfClass:[NSButton class]])
         return ctd_copy_out([(NSButton *)object title], out, cap);
     if ([object isKindOfClass:[NSTextField class]])
         return ctd_copy_out([(NSTextField *)object stringValue], out, cap);
+    if ([object isKindOfClass:[NSPopUpButton class]])
+        return ctd_copy_out([(NSPopUpButton *)object titleOfSelectedItem], out, cap);
     return ctd_copy_out(@"", out, cap);
 }
 
@@ -598,6 +796,23 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             [(NSTextField *)object setAlignment:alignment];
             return CTD_OK;
         }
+        case CTD_P_SELECTED: {
+            if (![object isKindOfClass:[NSPopUpButton class]]) return CTD_ERR_KIND;
+            NSPopUpButton *menu = (NSPopUpButton *)object;
+            if (value < 0) { [menu selectItem:nil]; return CTD_OK; }
+            if (value >= (int64_t)[menu numberOfItems]) return CTD_ERR_RANGE;
+            [menu selectItemAtIndex:(NSInteger)value];
+            return CTD_OK;
+        }
+        case CTD_P_INDETERMINATE: {
+            if (![object isKindOfClass:[NSProgressIndicator class]]) return CTD_ERR_KIND;
+            NSProgressIndicator *bar = (NSProgressIndicator *)object;
+            [bar setIndeterminate:value ? YES : NO];
+            // An indeterminate bar that is not animating is a bar that looks
+            // broken, so the two are one property rather than two.
+            if (value) [bar startAnimation:nil]; else [bar stopAnimation:nil];
+            return CTD_OK;
+        }
         default: return CTD_ERR_UNSUPPORTED;
     }
 }
@@ -628,32 +843,171 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             if (![object isKindOfClass:[NSTextField class]]) return CTD_ERR_KIND;
             value = [(NSTextField *)object isEditable] ? 1 : 0;
             break;
+        case CTD_P_SELECTED:
+            if (![object isKindOfClass:[NSPopUpButton class]]) return CTD_ERR_KIND;
+            value = (int64_t)[(NSPopUpButton *)object indexOfSelectedItem];
+            break;
+        case CTD_P_INDETERMINATE:
+            if (![object isKindOfClass:[NSProgressIndicator class]]) return CTD_ERR_KIND;
+            value = [(NSProgressIndicator *)object isIndeterminate] ? 1 : 0;
+            break;
         default: return CTD_ERR_UNSUPPORTED;
     }
     if (out) *out = value;
     return CTD_OK;
 }
 
+/* A slider and a progress bar both carry a range and a position, and AppKit
+ * puts them on unrelated classes — NSSlider is an NSControl, NSProgressIndicator
+ * is not. The property bag hides that: a caller sets CTD_P_MIN on either and
+ * the host knows which message to send. */
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
-    if (key == CTD_P_FONT_SIZE) {
-        if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
-        [(NSControl *)object setFont:[NSFont systemFontOfSize:value]];
-        return CTD_OK;
+    switch (key) {
+        case CTD_P_FONT_SIZE:
+            if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
+            [(NSControl *)object setFont:[NSFont systemFontOfSize:value]];
+            return CTD_OK;
+        case CTD_P_MIN:
+            if ([object isKindOfClass:[NSSlider class]]) {
+                [(NSSlider *)object setMinValue:value];
+                return CTD_OK;
+            }
+            if ([object isKindOfClass:[NSProgressIndicator class]]) {
+                [(NSProgressIndicator *)object setMinValue:value];
+                return CTD_OK;
+            }
+            return CTD_ERR_KIND;
+        case CTD_P_MAX:
+            if ([object isKindOfClass:[NSSlider class]]) {
+                [(NSSlider *)object setMaxValue:value];
+                return CTD_OK;
+            }
+            if ([object isKindOfClass:[NSProgressIndicator class]]) {
+                [(NSProgressIndicator *)object setMaxValue:value];
+                return CTD_OK;
+            }
+            return CTD_ERR_KIND;
+        case CTD_P_VALUE:
+            if ([object isKindOfClass:[NSSlider class]]) {
+                [(NSSlider *)object setDoubleValue:value];
+                return CTD_OK;
+            }
+            if ([object isKindOfClass:[NSProgressIndicator class]]) {
+                [(NSProgressIndicator *)object setDoubleValue:value];
+                return CTD_OK;
+            }
+            return CTD_ERR_KIND;
+        case CTD_P_STEP: {
+            if (![object isKindOfClass:[NSSlider class]]) return CTD_ERR_KIND;
+            NSSlider *slider = (NSSlider *)object;
+            if (value <= 0.0) {
+                [slider setAllowsTickMarkValuesOnly:NO];
+                [slider setNumberOfTickMarks:0];
+                return CTD_OK;
+            }
+            double span = [slider maxValue] - [slider minValue];
+            if (span <= 0.0) return CTD_ERR_RANGE;
+            // AppKit has no increment: a stepped slider is one with tick marks
+            // it must land on. The count is the number of positions, which is
+            // one more than the number of steps.
+            [slider setNumberOfTickMarks:(NSInteger)(span / value) + 1];
+            [slider setAllowsTickMarkValuesOnly:YES];
+            return CTD_OK;
+        }
+        default: return CTD_ERR_UNSUPPORTED;
     }
-    return CTD_ERR_UNSUPPORTED;
 }
 
 ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
-    if (key == CTD_P_FONT_SIZE) {
-        if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
-        if (out) *out = (double)[[(NSControl *)object font] pointSize];
-        return CTD_OK;
+    double value = 0.0;
+    switch (key) {
+        case CTD_P_FONT_SIZE:
+            if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
+            value = (double)[[(NSControl *)object font] pointSize];
+            break;
+        case CTD_P_MIN:
+            if ([object isKindOfClass:[NSSlider class]])
+                value = [(NSSlider *)object minValue];
+            else if ([object isKindOfClass:[NSProgressIndicator class]])
+                value = [(NSProgressIndicator *)object minValue];
+            else return CTD_ERR_KIND;
+            break;
+        case CTD_P_MAX:
+            if ([object isKindOfClass:[NSSlider class]])
+                value = [(NSSlider *)object maxValue];
+            else if ([object isKindOfClass:[NSProgressIndicator class]])
+                value = [(NSProgressIndicator *)object maxValue];
+            else return CTD_ERR_KIND;
+            break;
+        case CTD_P_VALUE:
+            if ([object isKindOfClass:[NSSlider class]])
+                value = [(NSSlider *)object doubleValue];
+            else if ([object isKindOfClass:[NSProgressIndicator class]])
+                value = [(NSProgressIndicator *)object doubleValue];
+            else return CTD_ERR_KIND;
+            break;
+        default: return CTD_ERR_UNSUPPORTED;
     }
-    return CTD_ERR_UNSUPPORTED;
+    if (out) *out = value;
+    return CTD_OK;
+}
+
+// ------------------------------------------------------------------ item lists
+
+// The control that holds the items. A combo box is its own list; a wrapper —
+// a text area's scroll view, say — is not, and answers nil so the caller gets
+// CTD_ERR_KIND rather than a silent no-op.
+static NSPopUpButton *ctd_item_list(id object) {
+    if ([object isKindOfClass:[NSPopUpButton class]]) return (NSPopUpButton *)object;
+    return nil;
+}
+
+ctd_status ctd_items_clear(ctd_handle widget) {
+    NSPopUpButton *menu = ctd_item_list(ctd_resolve(widget));
+    if (!ctd_resolve(widget)) return CTD_ERR_STALE;
+    if (!menu) return CTD_ERR_KIND;
+    [menu removeAllItems];
+    return CTD_OK;
+}
+
+ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    NSPopUpButton *menu = ctd_item_list(object);
+    if (!menu) return CTD_ERR_KIND;
+    if (len < 0) return CTD_ERR_RANGE;
+    NSString *text = ctd_string(utf8, len);
+    // NSPopUpButton drops a duplicate title, which would silently renumber
+    // every later index and make a selection point at the wrong row. Adding
+    // the item directly keeps the list exactly as the caller wrote it.
+    NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:text
+                                                 action:NULL
+                                          keyEquivalent:@""];
+    [[menu menu] addItem:item];
+    [item release];
+    return CTD_OK;
+}
+
+ctd_status ctd_items_count(ctd_handle widget, int32_t *out) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    NSPopUpButton *menu = ctd_item_list(object);
+    if (!menu) return CTD_ERR_KIND;
+    if (out) *out = (int32_t)[menu numberOfItems];
+    return CTD_OK;
+}
+
+int32_t ctd_items_at(ctd_handle widget, int32_t index, char *out, int32_t cap) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    NSPopUpButton *menu = ctd_item_list(object);
+    if (!menu) return CTD_ERR_KIND;
+    if (index < 0 || index >= (int32_t)[menu numberOfItems]) return CTD_ERR_RANGE;
+    return ctd_copy_out([[menu itemAtIndex:index] title], out, cap);
 }
 
 // -------------------------------------------------------------- introspection
@@ -669,15 +1023,55 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
     if (kind < 0 && !ctd_resolve(widget)) return CTD_ERR_STALE;
     NSString *role;
     switch (kind) {
-        case CTD_W_CONTAINER:  role = @"group";    break;
-        case CTD_W_LABEL:      role = @"text";     break;
-        case CTD_W_BUTTON:     role = @"button";   break;
-        case CTD_W_TEXT_FIELD: role = @"textbox";  break;
-        case CTD_W_CHECK_BOX:  role = @"checkbox"; break;
-        case CTD_W_IMAGE_VIEW: role = @"image";    break;
+        case CTD_W_CONTAINER:    role = @"group";       break;
+        case CTD_W_LABEL:        role = @"text";        break;
+        case CTD_W_BUTTON:       role = @"button";      break;
+        case CTD_W_TEXT_FIELD:   role = @"textbox";     break;
+        case CTD_W_CHECK_BOX:    role = @"checkbox";    break;
+        case CTD_W_IMAGE_VIEW:   role = @"image";       break;
+        case CTD_W_SLIDER:       role = @"slider";      break;
+        case CTD_W_PROGRESS_BAR: role = @"progressbar"; break;
+        case CTD_W_SEPARATOR:    role = @"separator";   break;
+        case CTD_W_TEXT_AREA:    role = @"textbox";     break;
+        case CTD_W_COMBO_BOX:    role = @"combobox";    break;
+        case CTD_W_SCROLL_VIEW:  role = @"scrollarea";  break;
+        case CTD_W_RADIO_BUTTON: role = @"radio";       break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);
+}
+
+ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if ([object isKindOfClass:[NSSlider class]]) {
+        [(NSSlider *)object setDoubleValue:value];
+    } else if ([object isKindOfClass:[NSPopUpButton class]]) {
+        NSPopUpButton *menu = (NSPopUpButton *)object;
+        if (index < 0 || index >= (int64_t)[menu numberOfItems]) return CTD_ERR_RANGE;
+        [menu selectItemAtIndex:(NSInteger)index];
+    } else if ([object isKindOfClass:[NSButton class]]) {
+        NSControlStateValue state = index == 2 ? NSControlStateValueMixed
+                                  : index == 1 ? NSControlStateValueOn
+                                               : NSControlStateValueOff;
+        [(NSButton *)object setState:state];
+    } else {
+        return CTD_ERR_KIND;
+    }
+    ctd_emit_control(widget, object);
+    return CTD_OK;
+}
+
+ctd_status ctd_widget_synth_text(ctd_handle widget, const char *utf8, int32_t len) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    NSString *text = ctd_string(utf8, len);
+    NSTextView *inner = ctd_text_view(object);
+    if (inner)                                           [inner setString:text];
+    else if ([object isKindOfClass:[NSTextField class]]) [(NSTextField *)object setStringValue:text];
+    else return CTD_ERR_KIND;
+    ctd_emit_control(widget, object);
+    return CTD_OK;
 }
 
 ctd_status ctd_widget_activate(ctd_handle widget) {

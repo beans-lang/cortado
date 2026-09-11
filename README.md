@@ -53,7 +53,7 @@ run).
 
 | | |
 |---|---|
-| macOS | AppKit. Window, container, label, button, text field, check box, image view, events, measurement |
+| macOS | AppKit. Twelve controls, events, measurement, layout, components, markup |
 | Windows | designed, not written. The layout engine already runs and is tested here |
 | Linux | designed, not written. The layout engine already runs and is tested here |
 | iOS, Android | designed, not written. Beans has no target triple for either yet |
@@ -315,11 +315,13 @@ has to be renamed as markup is added, moved or nested. It also means the two
 halves of a screen are never neighbours, so nobody edits the generated one by
 mistake.
 
-**The tags are controls, not HTML.** `VStack`, `HStack`, `VFlex`, `HFlex`,
-`Grid`, `Box`, `Container`, `Label`, `Button`, `TextField`, `CheckBox`,
-`Image` — a closed set, and any other capitalised tag is a component. There is
-no `<div>`, no entity table, no escaping and no `$html`: the output is a tree
-of native objects, and there is nothing to inject into.
+**The tags are controls, not HTML.** Containers are `VStack`, `HStack`,
+`VFlex`, `HFlex`, `Grid`, `Box`, `Container` and `ScrollView`; controls are
+`Label`, `Button`, `TextField`, `TextArea`, `CheckBox`, `RadioButton`,
+`Slider`, `ProgressBar`, `ComboBox`, `Separator` and `Image`. A closed set, and
+any other capitalised tag is a component. There is no `<div>`, no entity table,
+no escaping and no `$html`: the output is a tree of native objects, and there
+is nothing to inject into.
 
 **The generated code is the code you would have written.** `.bx` is sugar over
 `Builder`'s methods, not a second way of saying the same thing:
@@ -350,6 +352,43 @@ stale one fails the build instead of shipping. The same gate diffs
 holds the compile-time tag table against the run-time one — it caught three
 container tags that markup accepted and the Builder did not, the first time it
 ran.
+
+## The controls
+
+| tag | macOS | what it is |
+|---|---|---|
+| `Label` | `NSTextField` | static text |
+| `Button` | `NSButton` | a command |
+| `TextField` | `NSTextField` | one line of editable text |
+| `TextArea` | `NSScrollView` + `NSTextView` | many lines, scrolling |
+| `CheckBox` | `NSButton` | on, off or mixed |
+| `RadioButton` | `NSButton` | one choice of several; grouped by parent |
+| `Slider` | `NSSlider` | a number in a range, optionally stepped |
+| `ProgressBar` | `NSProgressIndicator` | progress, or that work is happening |
+| `ComboBox` | `NSPopUpButton` | one of a list |
+| `Separator` | `NSBox` | a rule between groups |
+| `Image` | `NSImageView` | a picture |
+| `Container` | `CortadoView` | holds children |
+| `ScrollView` | `NSScrollView` | holds children, and scrolls them |
+
+`examples/gallery` is all of them in one window, written in markup.
+
+**A control reports the event it actually is.** A `Button` raises `activate`; a
+`CheckBox`, `RadioButton`, `Slider` and `ComboBox` raise `value_changed`; a
+`TextField` raises `commit`. AppKit sends all of them down one selector, so the
+host decides — a framework that called every action "activate" would leave each
+application working the difference out again from the control's class.
+
+**An event carries what the control said.** `event.text` is the committed text
+or the chosen item, filled by the platform at the moment it raised the event,
+because by the time a handler runs the control may already have moved on.
+
+**Setting a value is silent; driving one is not.** `slider.set_value(3.0)`
+changes the control and raises nothing — a program that heard about its own
+writes would feed itself and never settle. `slider.set_value_as_user(0, 3.0)`
+does what a person does, and the event follows. That is also how the tests
+drive controls: `activate()` on a combo box would open its menu and never
+return.
 
 ## Building
 

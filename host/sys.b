@@ -12,6 +12,8 @@ pub extern "C" struct CtdEvent {
     pub y: f64
     pub width: f64
     pub height: f64
+    pub text: RawPtr<i8>
+    pub text_len: i32
 }
 
 pub extern "C" fn ctd_abi_version() -> u32
@@ -51,6 +53,12 @@ pub extern "C" fn ctd_set_int(widget: u64, key: i32, value: i64) -> i32
 pub extern "C" fn ctd_get_int(widget: u64, key: i32, out: RawPtr<i64>) -> i32
 pub extern "C" fn ctd_set_real(widget: u64, key: i32, value: f64) -> i32
 pub extern "C" fn ctd_get_real(widget: u64, key: i32, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_items_clear(widget: u64) -> i32
+pub extern "C" fn ctd_items_add(widget: u64, utf8: RawPtr<i8>, len: i32) -> i32
+pub extern "C" fn ctd_items_count(widget: u64, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_items_at(widget: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_native_class(widget: u64, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_a11y_role(widget: u64, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_widget_activate(widget: u64) -> i32
+pub extern "C" fn ctd_widget_synth_value(widget: u64, index: i64, value: f64) -> i32
+pub extern "C" fn ctd_widget_synth_text(widget: u64, utf8: RawPtr<i8>, len: i32) -> i32

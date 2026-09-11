@@ -1,8 +1,8 @@
-registered=2
+registered=3
 order activate #1
 order activate #2
-extra toggled
+extra value_changed state=1
 clicks=2
-after forgetting order: clicks=2 registered=1
+after forgetting order: clicks=2 registered=2
 registered at teardown=0
 drove=true

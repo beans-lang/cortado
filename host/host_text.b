@@ -38,6 +38,26 @@ pub class HostText {
     /// labels, pasted text — and would do it silently.
     ///
     /// A negative answer from either call is a host status, not a length.
+    /// Copies a string the host handed over with an explicit length.
+    ///
+    /// Used for the text on an event, where the host owns the bytes and they
+    /// are valid only while it is raising the event. Copying here rather than
+    /// keeping the pointer is the whole point: every handler runs after the
+    /// call that carried it.
+    ///
+    /// A null pointer or a non-positive length answers "", which is what an
+    /// event of a kind that carries no text has.
+    pub static fn copy_in(pointer: RawPtr<i8>, length: int) -> string {
+        if pointer.is_null() || length <= 0 {
+            return ""
+        }
+        unsafe {
+            let bytes: RawPtr<u8> = RawPtr.from_address(pointer.address())
+            let copy: Bytes = Bytes.from_raw(bytes, length)
+            return copy.to_string()
+        }
+    }
+
     pub static fn read(attempt: string, probe: fn(RawPtr<i8>, i32) -> i32) -> Result<string> {
         let needed: int = probe(RawPtr.null(), 0) as int
         check(needed, attempt)?

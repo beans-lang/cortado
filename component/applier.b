@@ -87,7 +87,7 @@ pub class Applier {
                 }
             }
             remove => {
-                let box: widgets.Container = self.container(target, change)?
+                let box: widgets.Holder = self.container(target, change)?
                 match box.child_at(change.index) {
                     none => {}
                     some(going) => { self.forget(going) }
@@ -142,33 +142,33 @@ pub class Applier {
         var step: int = 0
         for step: int in 0..change.depth() {
             let index: int = change.step(step)
-            match here as? widgets.Container {
-                none => {
-                    return err("{change.path_text()} runs through a {here.kind().name()}, which holds no children",
-                               "bad_path")
-                }
-                some(box) => {
-                    match box.child_at(index) {
-                        none => {
-                            return err("{change.path_text()} names child {index} of a widget with {box.count()}",
-                                       "bad_path")
-                        }
-                        some(child) => { here = child }
-                    }
-                }
+            let children: List<widgets.Widget> = here.children()
+            if index < 0 || index >= children.len() {
+                return err("{change.path_text()} names child {index} of a {here.kind().name()} with {children.len()}",
+                           "bad_path")
             }
+            here = children[index]
         }
         return ok(here)
     }
 
-    fn container(target: widgets.Widget, change: Change) -> Result<widgets.Container> {
+    /// The control a structural change acts inside.
+    ///
+    /// Two kinds hold children, and a `ScrollView` is not a `Container` — it
+    /// keeps its own list and puts the children somewhere the platform decided.
+    /// A `Holder` is the interface both answer, so the applier does not care
+    /// which it has.
+    fn container(target: widgets.Widget, change: Change) -> Result<widgets.Holder> {
         match target as? widgets.Container {
-            none => {
-                return err("{change.kind.name()} at {change.path_text()} needs a container, but that is a {target.kind().name()}",
-                           "not_a_container")
-            }
             some(box) => { return ok(box) }
+            none => {}
         }
+        match target as? widgets.ScrollView {
+            some(scroller) => { return ok(scroller) }
+            none => {}
+        }
+        return err("{change.kind.name()} at {change.path_text()} needs something that holds children, but that is a {target.kind().name()}",
+                   "not_a_container")
     }
 
     /// Drops every registration under a subtree that is going away.

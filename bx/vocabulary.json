@@ -41,7 +41,7 @@
   "reservedAttributes": [
     {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position."}
   ],
-  "controls": ["Box", "Button", "CheckBox", "Container", "Grid", "HFlex", "HStack", "Image", "Label", "TextField", "VFlex", "VStack"],
+  "controls": ["Box", "Button", "CheckBox", "ComboBox", "Container", "Grid", "HFlex", "HStack", "Image", "Label", "ProgressBar", "RadioButton", "ScrollView", "Separator", "Slider", "TextArea", "TextField", "VFlex", "VStack"],
   "attributes": [
     {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
     {"name": "alignment", "detail": "number", "note": "text alignment inside the control"},
@@ -53,13 +53,16 @@
     {"name": "grow", "detail": "number", "note": "share of leftover space along the main axis"},
     {"name": "height", "detail": "number", "note": "pins the height"},
     {"name": "hidden", "detail": "flag", "note": "whether the control is drawn"},
+    {"name": "indeterminate", "detail": "flag", "note": "a progress bar with no known total"},
     {"name": "justify", "detail": "word", "note": "main-axis distribution: start, center, end, space_between, space_around, space_evenly"},
     {"name": "margin", "detail": "number", "note": "space kept outside this control"},
     {"name": "max", "detail": "number", "note": "the high end of a range"},
     {"name": "min", "detail": "number", "note": "the low end of a range"},
     {"name": "padding", "detail": "number", "note": "space kept inside a container"},
+    {"name": "selected", "detail": "number", "note": "which item of a list is chosen, as an index; -1 for none"},
     {"name": "shrink", "detail": "number", "note": "share of overflow this control gives up"},
     {"name": "spacing", "detail": "number", "note": "the gap between a container's children"},
+    {"name": "step", "detail": "number", "note": "the increment a slider's thumb lands on; 0 for continuous"},
     {"name": "text", "detail": "text", "note": "the text this control shows"},
     {"name": "value", "detail": "number", "note": "a slider or progress value"},
     {"name": "width", "detail": "number", "note": "pins the width"}

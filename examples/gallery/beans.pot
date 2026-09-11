@@ -1,0 +1,7 @@
+module gallery
+kind application
+
+# Every control cortado has, in one window, written in markup.
+require path "../.."
+require path "../../app"
+require path "../../../barista"

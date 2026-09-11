@@ -22,6 +22,15 @@ pub class UiEvent {
     pub position: geometry.Point = geometry.Point.zero()
     pub size: geometry.Size = geometry.Size.zero()
 
+    /// What the control said, for the events where that is the news: a value
+    /// that changed, a field that committed. Empty for every other kind.
+    ///
+    /// Copied out of the host's buffer here and not later. The bytes belong to
+    /// the platform and are valid only while it is raising the event; a
+    /// handler that runs afterwards — and every handler does — would be
+    /// reading memory the platform has moved on from.
+    pub text: string = ""
+
     pub fn init(record: host.CtdEvent) {
         self.kind = EventKind.of(record.kind as int)
         self.target = host.Handle.of(record.target)
@@ -30,6 +39,7 @@ pub class UiEvent {
         self.token = record.token as int
         self.position = geometry.Point.at(record.x, record.y)
         self.size = geometry.Size.of(record.width, record.height)
+        self.text = host.HostText.copy_in(record.text, record.text_len as int)
     }
 
     /// An event cortado raised itself, rather than one the platform sent.
@@ -42,7 +52,8 @@ pub class UiEvent {
     pub static fn of(kind: EventKind, target: host.Handle) -> UiEvent {
         var record: host.CtdEvent = host.CtdEvent {
             kind: kind.name_code() as u32, modifiers: 0, target: target.raw,
-            index: 0, token: 0, x: 0.0, y: 0.0, width: 0.0, height: 0.0
+            index: 0, token: 0, x: 0.0, y: 0.0, width: 0.0, height: 0.0,
+            text: RawPtr.null(), text_len: 0
         }
         return new UiEvent(record)
     }

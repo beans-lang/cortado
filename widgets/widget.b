@@ -4,6 +4,15 @@ package widgets
 import cortado.host
 import cortado.geometry
 
+/// A control's text with its line breaks and tabs escaped, so one widget
+/// occupies exactly one line of a dump.
+fn one_line(text: string) -> string {
+    return text.replace("\\", "\\\\")
+               .replace("\n", "\\n")
+               .replace("\r", "\\r")
+               .replace("\t", "\\t")
+}
+
 /// A native control.
 ///
 /// Every `Widget` owns exactly one native object — an `NSButton`, an `HWND`, a
@@ -116,6 +125,20 @@ pub abstract class Widget {
         }
     }
 
+    /// Reads one real-valued property by its `host.P_*` id.
+    ///
+    /// Package-private: the subclass that has the property exposes it under a
+    /// name that says what it is — a slider's `value`, a progress bar's — and
+    /// the generic form is for them and for the applier.
+    fn read_real(key: int, attempt: string) -> Result<f64> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        unsafe {
+            host.check(host.ctd_get_real(self.slot.raw, key as i32, scratch.reals) as int,
+                       attempt)?
+        }
+        return ok(scratch.real(0))
+    }
+
     fn read_flag(key: int, attempt: string) -> Result<bool> {
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
@@ -145,6 +168,39 @@ pub abstract class Widget {
             fn(out: RawPtr<i8>, cap: i32) -> i32 {
                 unsafe { return host.ctd_get_text(raw, out, cap) }
             })
+    }
+
+    // ---- the platform's own child list ----
+    //
+    // Two controls hold children — a `Container` and a `ScrollView` — and both
+    // keep a Beans list beside the platform's. The three calls that keep the
+    // two in step live here rather than being written twice, because a fix to
+    // one copy and not the other is exactly the drift the tree dump exists to
+    // catch.
+
+    fn attach_child(child: Widget, index: int) -> Result<bool> {
+        unsafe {
+            return host.check(host.ctd_view_add_child(self.slot.raw,
+                                                      child.handle().raw,
+                                                      index as i32) as int,
+                              "add a {child.kind().name()} to a {self.kind_value.name()}")
+        }
+    }
+
+    fn detach_child(child: Widget) -> Result<bool> {
+        unsafe {
+            return host.check(host.ctd_view_remove_child(self.slot.raw,
+                                                         child.handle().raw) as int,
+                              "remove a {child.kind().name()} from a {self.kind_value.name()}")
+        }
+    }
+
+    fn reorder_child(from: int, to: int) -> Result<bool> {
+        unsafe {
+            return host.check(host.ctd_view_move_child(self.slot.raw,
+                                                       from as i32, to as i32) as int,
+                              "reorder the children of a {self.kind_value.name()}")
+        }
     }
 
     // ---- generic property access ----
@@ -300,7 +356,11 @@ pub abstract class Widget {
     pub fn describe() -> Result<string> {
         let native: string = self.native_class()?
         let role: string = self.a11y_role()?
-        let text: string = self.display_text()?
+        // Escaped, because a text area's text has newlines in it and one
+        // widget has to be one line: a dump whose rows depend on the content
+        // of a control cannot be read down a column, and a diff of it points
+        // at the wrong row.
+        let text: string = one_line(self.display_text()?)
         let frame: geometry.Rect = self.frame()?
         var line: string = "{self.kind_value.name()} {native} role={role} \"{text}\" frame={frame.show()}"
         // Only a widget that actually has the state reports it. A container
@@ -320,10 +380,46 @@ pub abstract class Widget {
     /// Sends this control's action the way a real click does — through the
     /// platform's own target/action dispatch, not by calling a handler
     /// directly. Public API, and how every event test drives the framework.
+    ///
+    /// Not usable on every control, and the reason is worth knowing: clicking
+    /// a combo box opens its menu and runs a modal tracking loop, so this
+    /// never returns for one. Use `set_value_as_user` for anything that
+    /// carries a value.
     pub fn activate() -> Result<bool> {
         unsafe {
             return host.check(host.ctd_widget_activate(self.slot.raw) as int,
                               "activate a {self.kind_value.name()}")
+        }
+    }
+
+    /// Moves this control's value the way a user would, and raises the event
+    /// that follows.
+    ///
+    /// The setters above change a control **silently**, and that is
+    /// deliberate: a program that writes a value should not hear about its own
+    /// write, or a render would feed itself and never settle. This is the
+    /// other half — what a test uses to drive a control, and what an
+    /// application uses to replay input.
+    ///
+    /// `index` chooses for a control with a list and is the new state for a
+    /// check box; `value` is the position of a slider.
+    pub fn set_value_as_user(index: int, value: f64) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_widget_synth_value(self.slot.raw, index as i64, value) as int,
+                "drive the value of a {self.kind_value.name()}")
+        }
+    }
+
+    /// Types text into this control the way a user would, and raises the
+    /// commit event that follows.
+    pub fn set_text_as_user(text: string) -> Result<bool> {
+        let buffer: Bytes = host.HostText.encode(text)
+        unsafe {
+            return host.check(
+                host.ctd_widget_synth_text(self.slot.raw, host.HostText.pointer(buffer),
+                                           buffer.len() as i32) as int,
+                "type into a {self.kind_value.name()}")
         }
     }
 

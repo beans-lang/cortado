@@ -1,0 +1,72 @@
+<VStack spacing={12} padding={20} align="stretch">
+  <Label font_size={18} text="Every control" />
+  <Separator />
+
+  <HFlex spacing={10}>
+    <Label width={110} text="Drink" />
+    <ComboBox grow={1} on:change={fn(e: UiEvent) { self.pick(e.index) }} />
+  </HFlex>
+
+  <HFlex spacing={10}>
+    <Label width={110}>Shots: $self.shots</Label>
+    <Slider grow={1} min={1} max={4} step={1} value={self.shots}
+            on:change={fn(e: UiEvent) { self.set_shots(e) }} />
+  </HFlex>
+
+  <HStack spacing={10}>
+    <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>Rush it</CheckBox>
+    <RadioButton>Eat in</RadioButton>
+    <RadioButton>Take away</RadioButton>
+  </HStack>
+
+  <ProgressBar height={12} min={0} max={4} value={self.shots} />
+
+  <TextArea height={70} bind:value={self.note} />
+
+  <HStack spacing={10} justify="end">
+    <Button enabled={self.shots > 0} on:click={fn(e: UiEvent) { self.order() }}>Order</Button>
+  </HStack>
+
+  <Label>$self.status</Label>
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import cortado.events
+import {view} from cortado.annotations
+
+/// The order screen, showing one of every control cortado has.
+@view
+pub partial class Shelf extends component.Component {
+    pub drink: string = "flat white"
+    pub shots: int = 2
+    pub rush: bool = false
+    pub note: string = "no sugar"
+    pub status: string = "Nothing ordered yet"
+
+    pub fn init() { super.init() }
+
+    pub fn pick(index: int) {
+        if index == 1 { self.drink = "espresso" }
+        else if index == 2 { self.drink = "cortado" }
+        else { self.drink = "flat white" }
+        self.request_render()
+    }
+
+    pub fn set_shots(event: events.UiEvent) {
+        self.shots = event.index
+        self.request_render()
+    }
+
+    pub fn toggle_rush() {
+        self.rush = !self.rush
+        self.request_render()
+    }
+
+    pub fn order() {
+        self.status = "Ordered {self.shots} × {self.drink}"
+        self.request_render()
+    }
+}
+</beans>

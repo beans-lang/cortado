@@ -24,17 +24,25 @@ pub class WidgetMaker {
             return ok(control)
         }
         match control as? widgets.Container {
-            none => {
-                return err("<{element.tag}> was given {element.count()} children but a {element.kind.name()} cannot hold any",
-                           "not_a_container")
-            }
             some(box) => {
                 for child: Element in element.children() {
                     box.add(WidgetMaker.make(child)?)?
                 }
+                return ok(control)
             }
+            none => {}
         }
-        return ok(control)
+        match control as? widgets.ScrollView {
+            some(scroller) => {
+                for child: Element in element.children() {
+                    scroller.add(WidgetMaker.make(child)?)?
+                }
+                return ok(control)
+            }
+            none => {}
+        }
+        return err("<{element.tag}> was given {element.count()} children but a {element.kind.name()} cannot hold any",
+                   "not_a_container")
     }
 
     /// An empty control of the right kind.
@@ -46,6 +54,13 @@ pub class WidgetMaker {
             text_field => { return ok(new widgets.TextField()) }
             check_box => { return ok(new widgets.CheckBox()) }
             image_view => { return ok(new widgets.ImageView()) }
+            slider => { return ok(new widgets.Slider()) }
+            progress_bar => { return ok(new widgets.ProgressBar()) }
+            separator => { return ok(new widgets.Separator()) }
+            text_area => { return ok(new widgets.TextArea()) }
+            combo_box => { return ok(new widgets.ComboBox()) }
+            scroll_view => { return ok(new widgets.ScrollView()) }
+            radio_button => { return ok(new widgets.RadioButton()) }
         }
     }
 

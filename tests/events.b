@@ -43,15 +43,24 @@ fn drive() -> Result<bool> {
         tally.clicks = tally.clicks + 1
         tally.log.push("order {event.kind.name()} #{tally.clicks}")
     })
+    // A check box reports `value_changed`, not `activate`: it carries a
+    // value, and a button is a command. Both handlers are registered so the
+    // golden records which one fires — a framework that reported every action
+    // as "activate" would make a check box and a button indistinguishable to a
+    // handler, and every application would work the difference out again from
+    // the control's class.
     app.router.on(extra.handle(), events.EventKind.activate, fn(event: events.UiEvent) {
-        tally.log.push("extra toggled")
+        tally.log.push("extra activate (a check box should not raise this)")
+    })
+    app.router.on(extra.handle(), events.EventKind.value_changed, fn(event: events.UiEvent) {
+        tally.log.push("extra value_changed state={event.index}")
     })
 
     io.println("registered={app.router.registered()}")
 
     order.activate()?
     order.activate()?
-    extra.activate()?
+    extra.set_value_as_user(1, 0.0)?
 
     for line: string in tally.log {
         io.println(line)

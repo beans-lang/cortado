@@ -63,7 +63,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount)
+cases=(tree events bridge mount shelf)
 
 # Cases that need nothing but the language. These are the layout engine, which
 # is pure Beans with no foreign call in it at all, so they run on every
@@ -199,16 +199,17 @@ pass
 # Regenerated from the repository root with a relative path, because the path
 # is written into the generated file's header — so the diff has to be run the
 # way a person regenerates, or it fails on the absolute path alone.
-for source in examples/markup/site/*.bx; do
+for source in examples/markup/site/*.bx examples/gallery/site/*.bx; do
     stem="$(basename "${source%.bx}")"
     (cd "$root" && "$tmp/cortado-bx" build "$source" --stdout) >"$tmp/regen.b" 2>"$tmp/regen.err" || {
         echo "FAIL markup: cortado-bx refused $(basename "$source")" >&2
         cat "$tmp/regen.err" >&2
         exit 1
     }
-    if ! diff -u "$root/examples/markup/generated/site/$stem.b" "$tmp/regen.b"; then
-        echo "FAIL markup: generated/site/$stem.b is stale — regenerate it with" >&2
-        echo "    build/cortado-bx build examples/markup/site/*.bx" >&2
+    module="$(dirname "$(dirname "$source")")"
+    if ! diff -u "$root/$module/generated/site/$stem.b" "$tmp/regen.b"; then
+        echo "FAIL markup: $module/generated/site/$stem.b is stale — regenerate it with" >&2
+        echo "    build/cortado-bx build $module/site/*.bx" >&2
         exit 1
     fi
 done
@@ -230,7 +231,14 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         "$tmp/markup.bin" --dump >"$tmp/markup.out" 2>&1
         diff -u "$root/tests/markup.out" "$tmp/markup.out"
         pass
-        echo "ok markup: a .bx screen mounts to real controls"
+        # Every control cortado has, in one window, described in markup. This
+        # is the file a second host will be read against: when Win32 lands, the
+        # same markup produces the same tree with different native classes.
+        "$BEANSC" build "$root/examples/gallery/main.b" -o "$tmp/gallery.bin" >/dev/null
+        "$tmp/gallery.bin" --dump >"$tmp/gallery.out" 2>&1
+        diff -u "$root/tests/gallery.out" "$tmp/gallery.out"
+        pass
+        echo "ok markup: a .bx screen mounts to real controls, and the gallery shows every one"
     else
         skip markup_mount "barista is not checked out at ../barista, so the markup example cannot be built"
     fi

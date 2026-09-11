@@ -334,6 +334,24 @@ pub class Builder {
         return some(self.open_stack[self.open_stack.len() - 1])
     }
 
+    /// Whether the element the open one sits inside shares out leftover space.
+    ///
+    /// A root element has no parent here, so it answers false — which is
+    /// right: whatever mounts it decides its size, and a `grow` on it would be
+    /// read by nobody.
+    fn parent_flexes() -> bool {
+        if self.open_stack.len() < 2 { return false }
+        match self.open_stack[self.open_stack.len() - 2].arranger {
+            none => { return false }
+            some(arranger) => {
+                match arranger as? layout.FlexLayout {
+                    some(run) => { return true }
+                    none => { return false }
+                }
+            }
+        }
+    }
+
     // `spacing` and `padding` configure the container's own arrangement;
     // everything else is what this element asks of the run around it. The
     // split matters because the two live on different objects and are read at
@@ -360,9 +378,23 @@ pub class Builder {
             element.spec.margin = geometry.EdgeInsets.all(value)
             return
         }
-        if name == "grow" { element.spec.grow = value; return }
-        if name == "shrink" { element.spec.shrink = value; return }
-        if name == "basis" { element.spec.basis = value; return }
+        // `grow`, `shrink` and `basis` are read by a flexing run and by
+        // nothing else. An author who writes `grow={1}` inside a plain
+        // `<HStack>` gets a control that does not grow and no explanation —
+        // the exact silent no-op cortado refuses everywhere else — so the
+        // parent is checked here, where both markup and hand-written code go
+        // through.
+        if name == "grow" || name == "shrink" || name == "basis" {
+            if !self.parent_flexes() {
+                self.faults.push(
+                    "{name} is shared out by a flexing run, and <{element.tag}> sits in one that does not flex — write <VFlex> or <HFlex> around it, or set width/height instead")
+                return
+            }
+            if name == "grow" { element.spec.grow = value }
+            if name == "shrink" { element.spec.shrink = value }
+            if name == "basis" { element.spec.basis = value }
+            return
+        }
         if name == "width" {
             element.spec.min_width = value
             element.spec.max_width = value

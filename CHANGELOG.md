@@ -106,6 +106,31 @@ First working macOS host.
   `component/vocabulary.b`. Two tables exist because `cortado.bx` must build
   where there is no platform host, and two tables drift.
 
+- Seven more controls: `Slider`, `ProgressBar`, `Separator`, `TextArea`,
+  `ComboBox`, `ScrollView` and `RadioButton`. Twelve in all, every one a real
+  platform object — `tests/shelf.b` prints each one's native class, which is
+  the only answer that proves it.
+- Item lists in the ABI (`ctd_items_*`), replaced wholesale rather than
+  patched: a list of choices is rebuilt from whatever the program is showing,
+  and diffing one would mean a second reconciler for a control whose contents
+  are strings. The selection is an index, because two items may read the same.
+- **A control now reports the event it actually is.** A button raises
+  `activate`; a check box, radio button, slider and combo box raise
+  `value_changed`; a text field raises `commit`. AppKit sends all of them down
+  one selector, so the host decides from the kind the control was created as.
+- `ctd_event` carries `text` (ABI 2): the committed text or the chosen item, at
+  the moment the platform raised the event. A handler that had to go and read
+  it would need the widget object — the coupling the event exists to avoid —
+  and by then the control may have moved on.
+- `ctd_widget_synth_value` / `ctd_widget_synth_text`, and
+  `Widget.set_value_as_user` / `set_text_as_user`. The ordinary setters change
+  a control **silently**, which is right: a program that heard about its own
+  writes would feed itself. These are the other half, and they are what a test
+  uses — `activate()` on a combo box opens its menu and never returns.
+- `widgets.Holder` — the interface a `Container` and a `ScrollView` both
+  answer. They are not related by inheritance, because a scroll view is not a
+  box with a scrollbar: it puts its children somewhere the platform chose.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump
@@ -117,6 +142,16 @@ First working macOS host.
   reads as *disabled* rather than as *has no such property*. It answers
   `wrong_widget` now, and `describe()` prints the flag only for widgets that
   actually carry one.
+- `grow={1}` inside a plain `<HStack>` did nothing and said nothing — the
+  silent no-op cortado refuses everywhere else. It was visible the moment the
+  gallery ran: a slider that should have filled its row came out zero wide.
+  `Builder` now refuses `grow`, `shrink` and `basis` whose parent does not
+  flex, and names `<HFlex>` in the message.
+- Asking a text area how many children it had answered `stale_handle`. The
+  host used one helper for "where do children go" and "where are the children",
+  and a text area has an answer to the second (none) and not the first. They
+  are two questions now, and a tree walk no longer has to know which kinds to
+  skip.
 - Three container tags — `Grid`, `HFlex`, `VFlex` — compiled in markup and
   were refused by the run-time Builder, so a `<Grid>` would have produced a
   fault at mount rather than a grid. `tools/check_vocabulary.sh` caught it the
