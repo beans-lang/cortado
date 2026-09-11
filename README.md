@@ -511,6 +511,47 @@ test — so there is a bounded run that waits with a deadline. It is what lets
 `tests/frames.b` wait for a real display without being able to hang on a
 machine that has none.
 
+## The GPU
+
+**Some things are not a tree of controls.** A chart with fifty thousand points,
+a waveform, a map, a game — drawing one of those by making controls is how a
+program ends up with fifty thousand views. `cortado.gpu` is the other door: the
+machine's own graphics processor, opened directly.
+
+```beans
+if !platform.Capability.gpu.available() {
+    // draw it with controls, or say there is no chart
+}
+var card: gpu.Device = gpu.Device.open()?
+let shared: bool = card.shares_memory()?      // is an upload a copy, or nothing?
+```
+
+The shape of the ABI is WebGPU's rather than any one platform's — a device,
+resources made on it, a pipeline that says how to draw, a pass that draws —
+because that shape was designed to sit over Metal, D3D12 and Vulkan at once,
+which is this header's problem exactly. **Metal fills it on macOS and iOS.**
+GTK4 and Win32 answer `unsupported` to every call and `Capability.gpu` answers
+no, so a program asks once instead of finding out one call at a time.
+`src/gtk4/gpu.c` and `src/win32/gpu.c` say what a Vulkan or D3D12 backend would
+have to bring.
+
+**Shaders are the one difference cortado does not hide.** MSL, HLSL and SPIR-V
+are three languages with three compilers, and the only way to paper over that
+is to vendor a translator — a project larger than this one, whose output would
+still not be exact. So `gpu.ShaderLanguage.msl.accepted()` says what the host
+in front of you speaks, and a program that targets Metal and Direct3D ships two
+shaders and picks one. That is more work than pretending, and it finishes.
+
+Metal is linked into every cortado program on Apple platforms, and that was
+measured rather than assumed: against a binary linking only AppKit and
+Foundation, adding Metal changes the size not at all, adds three load commands,
+and moves launch time less than the noise between two runs of the same binary.
+
+`tests/gpu.out` is the same bytes through all four hosts, and the two sides run
+entirely different code to produce it: every line asks whether what happened
+agrees with what the capability promised. A host that could not draw but said
+it could — or one that quietly did nothing — fails it.
+
 ## Shipping
 
 ```

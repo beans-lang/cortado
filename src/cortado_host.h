@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 3
+#define CTD_ABI_VERSION 4
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -163,6 +163,7 @@ void       ctd_post(int64_t token);
 #define CTD_CAP_RESIZABLE       4
 #define CTD_CAP_FILE_DIALOG     5
 #define CTD_CAP_SNAPSHOT        6  /* can read a widget back as pixels       */
+#define CTD_CAP_GPU             7  /* can draw with shaders; see "the GPU"   */
 
 int32_t    ctd_capability(int32_t capability);
 
@@ -467,6 +468,100 @@ ctd_status ctd_anim_start(ctd_handle anim, int64_t token);
  * Cancelling an animation that was built and never started is allowed, and is
  * how one is thrown away: it releases the handle and raises nothing. */
 ctd_status ctd_anim_cancel(ctd_handle anim);
+
+/* ---- the GPU ----------------------------------------------------------- */
+
+/* Drawing that is not a control.
+ *
+ * Everything else in this header asks the platform for a control and lets the
+ * platform paint it. This is the other thing a program sometimes needs: a
+ * rectangle it paints itself, with a shader, on the GPU. A chart with fifty
+ * thousand points, a waveform, a map, a game — none of those is a tree of
+ * controls, and drawing one by making controls is how a program ends up with
+ * fifty thousand views.
+ *
+ * The shape is WebGPU's rather than any one platform's: a device, resources
+ * made on it, a pipeline that says how to draw, and a pass that draws. That
+ * shape was designed to sit over Metal, D3D12 and Vulkan at once, which is the
+ * same problem this header has. Metal fills it today; nothing below names
+ * Metal, and a D3D12 or Vulkan host fills the same declarations.
+ *
+ * Where there is no such host every call answers CTD_ERR_UNSUPPORTED and
+ * ctd_capability(CTD_CAP_GPU) answers 0 — so a program asks once and draws
+ * something else, instead of finding out one call at a time.
+ *
+ * **Shaders are not portable, and this header does not pretend they are.**
+ * MSL, HLSL and SPIR-V are three languages. ctd_gpu_shader_langs says which
+ * this host accepts and a shader in any other is refused. Translating between
+ * them means vendoring a compiler the size of this project, and the result
+ * would still not be exact — so the honest ABI is one that says which language
+ * it speaks. */
+
+/* The shading languages a host accepts, as bits: a host that took two would
+ * have no way to say so otherwise, and a host that takes none answers 0. */
+#define CTD_SHADER_MSL    1u  /* Metal Shading Language                      */
+#define CTD_SHADER_HLSL   2u  /* Direct3D                                    */
+#define CTD_SHADER_SPIRV  4u  /* Vulkan                                      */
+#define CTD_SHADER_GLSL   8u
+
+uint32_t   ctd_gpu_shader_langs(void);
+
+/* The GPU this machine draws with. Zero when the platform has no GPU host, or
+ * when the machine really has no device — a virtual machine with no passthrough
+ * is the case that happens.
+ *
+ * The system's default one, and only that one. A Mac with two GPUs can be
+ * asked for the others, and a program that renders for hours on battery would
+ * want to; that is two more entry points which would arrive already untested,
+ * because every machine this has run on has exactly one. It is left out
+ * deliberately and not forgotten: adding ctd_gpu_device_count and
+ * ctd_gpu_device_at later changes nothing about this call or anything made
+ * from it. What would have been the mistake is a `which` argument here that
+ * three hosts ignore. */
+ctd_handle ctd_gpu_device_new(void);
+
+/* The GPU's own name for itself — "Apple M1 Pro", "NVIDIA GeForce RTX 4080".
+ * Same two-call shape as every other text reader here. */
+int32_t    ctd_gpu_device_name(ctd_handle device, char *out, int32_t cap);
+
+/* What this device can do, one number at a time.
+ *
+ * Numbers rather than a struct because rule 1 forbids the struct, and one call
+ * rather than one per question because each of those would cost four
+ * implementations to answer something a program reads once at start-up.
+ * CTD_GPU_UNIFIED_MEMORY is a yes-or-no answered as 1 or 0; it is here rather
+ * than in a call of its own for the same reason.
+ *
+ * These three and not a dozen: each is a real number every one of the three
+ * backends can answer — Metal from the device, D3D12 from
+ * D3D12_FEATURE_DATA_ARCHITECTURE and QueryVideoMemoryInfo, Vulkan from the
+ * memory heaps and the physical-device limits — and each is one a program
+ * actually branches on. A tier or a feature-set name is none of those things:
+ * it means something on one backend and has to be invented on the others.
+ *
+ * They leave through a double, like every other number in this header, and a
+ * double holds a byte count exactly up to 2^53 — eight petabytes, which no GPU
+ * will have before this ABI is replaced. CTD_ERR_RANGE for a key this host
+ * does not know. */
+#define CTD_GPU_UNIFIED_MEMORY    1  /* 1 when CPU and GPU share memory      */
+#define CTD_GPU_MAX_BUFFER_BYTES  2  /* the largest single buffer           */
+#define CTD_GPU_MEMORY_BYTES      3  /* what the driver asks you to stay under */
+
+ctd_status ctd_gpu_device_limit(ctd_handle device, int32_t which, double *out);
+
+/* Lets go of a GPU object — a device, and later everything made on one.
+ *
+ * One release for every kind of GPU object rather than one per kind. A buffer,
+ * a texture, a shader and a pipeline are released identically and differ only
+ * in what the driver does afterwards, so five entry points would be five
+ * copies of the same four implementations. ctd_widget_release stays separate
+ * because releasing a widget is not the same act: it takes the control out of
+ * its parent first, and a GPU object has no parent.
+ *
+ * CTD_ERR_KIND for a handle that is not a GPU object, which is what a widget
+ * passed here gets. A release that quietly accepted anything would make
+ * releasing the wrong thing invisible exactly where it is most expensive. */
+ctd_status ctd_gpu_release(ctd_handle object);
 
 /* ---- menus ------------------------------------------------------------- */
 

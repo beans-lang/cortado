@@ -15,6 +15,7 @@
 //   cortado.layout     where everything goes; pure arithmetic, no controls
 //   cortado.widgets    the controls themselves
 //   cortado.motion     the frame clock, and animation
+//   cortado.gpu        drawing that is not a control: shaders, on the GPU
 //   cortado.surface    windows, menus and dialogs
 //   cortado.component  the retained tree that .bx markup renders into
 //

@@ -7,7 +7,9 @@
 # 2. No Beans file outside cortado.host names a platform symbol. This is the
 #    structural form of cortado's central rule — Objective-C, COM and GObject
 #    stop at the C boundary — and it is a gate rather than a comment because a
-#    comment cannot fail.
+#    comment cannot fail. The list grows with every framework a host reaches
+#    for: Metal's types join it in the same commit that links Metal, because a
+#    leak nobody has written yet is the only kind a gate can still prevent.
 # 3. Every bound symbol is either reached by the test suite or listed in
 #    SKIPPED.md with a reason.
 #
@@ -45,7 +47,7 @@ fi
 leaked=""
 while IFS= read -r file; do
     if sed 's://.*::' "$file" \
-        | grep -qE 'objc_|msgSend|sel_registerName|NSString|NSView|NSWindow|HWND|LPCWSTR|g_object_|GtkWidget|UIView'; then
+        | grep -qE 'objc_|msgSend|sel_registerName|NSString|NSView|NSWindow|HWND|LPCWSTR|g_object_|GtkWidget|UIView|MTL[A-Z]|CAMetalLayer'; then
         leaked="$leaked$file"$'\n'
     fi
 done < <(find "$root" -name '*.b' -not -path "$root/host/*" -not -path "$root/build/*")
@@ -60,7 +62,7 @@ fi
 : >"$root/build/.abi.unused"
 while read -r symbol; do
     if grep -rq "$symbol" --include='*.b' "$root/host" "$root/widgets" "$root/surface" \
-        "$root/events" "$root/platform" "$root/motion" 2>/dev/null \
+        "$root/events" "$root/platform" "$root/motion" "$root/gpu" 2>/dev/null \
         && [[ $(grep -rl "$symbol" --include='*.b' "$root" | grep -vc "sys\.b$") -gt 0 ]]; then
         continue
     fi

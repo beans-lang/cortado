@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 3
+pub const ABI_VERSION: int = 4
 
 // ---- statuses ----
 
@@ -73,6 +73,7 @@ pub const CAP_MULTI_SURFACE: int = 3
 pub const CAP_RESIZABLE: int = 4
 pub const CAP_FILE_DIALOG: int = 5
 pub const CAP_SNAPSHOT: int = 6
+pub const CAP_GPU: int = 7
 
 // ---- widget kinds ----
 
@@ -143,3 +144,18 @@ pub const FONT_BODY: int = 0
 pub const FONT_HEADING: int = 1
 pub const FONT_CAPTION: int = 2
 pub const FONT_MONO: int = 3
+
+// ---- the GPU ----
+//
+// Which shading languages this host accepts, as bits. Three languages and no
+// translation between them: see "the GPU" in the header for why that is the
+// honest answer rather than a portability failure.
+pub const SHADER_MSL: int = 1
+pub const SHADER_HLSL: int = 2
+pub const SHADER_SPIRV: int = 4
+pub const SHADER_GLSL: int = 8
+
+// What a device can be asked about itself.
+pub const GPU_UNIFIED_MEMORY: int = 1
+pub const GPU_MAX_BUFFER_BYTES: int = 2
+pub const GPU_MEMORY_BYTES: int = 3

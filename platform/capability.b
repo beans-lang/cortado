@@ -20,6 +20,7 @@ pub enum Capability {
     resizable
     file_dialog
     snapshot
+    gpu
 
     fn code() -> int {
         return match self {
@@ -29,6 +30,7 @@ pub enum Capability {
             resizable => host.CAP_RESIZABLE,
             file_dialog => host.CAP_FILE_DIALOG,
             snapshot => host.CAP_SNAPSHOT,
+            gpu => host.CAP_GPU,
         }
     }
 
@@ -40,6 +42,7 @@ pub enum Capability {
             resizable => "resizable",
             file_dialog => "file_dialog",
             snapshot => "snapshot",
+            gpu => "gpu",
         }
     }
 

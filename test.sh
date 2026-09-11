@@ -90,7 +90,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim gpu)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -124,7 +124,15 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # back as pixels, which only macOS can do, so its golden is the macOS answer
 # and every other host correctly prints that it cannot. `frames` runs a real
 # display link, which a window that is never shown only has on macOS.
-cross_host=(roles events text applied leaks enabled opacity clock anim)
+# `gpu` is here, and it is the only case in this list whose two sides run
+# entirely different code. macOS and iOS open a Metal device, read its name and
+# three limits and close it; GTK4 and Win32 refuse all four. Every line of its
+# golden asks whether what happened agrees with what `Capability.gpu` promised,
+# so the same bytes come out of both — which is a stronger claim than either
+# side alone, and it is the one that matters: a platform that cannot draw with
+# shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
+# alternative, where the refusing hosts go unchecked.
+cross_host=(roles events text applied leaks enabled opacity clock anim gpu)
 
 # Cases the iOS leg builds but does not run, and why.
 #

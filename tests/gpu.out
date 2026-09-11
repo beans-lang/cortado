@@ -1,0 +1,16 @@
+-- the promise --
+  cortado has a name for this many languages: 4
+  a shading language is offered exactly where there is a GPU: true
+  and the host offers none this build has no name for: true
+-- what a device answers, or refuses --
+  one opens exactly where the capability says so: true
+  it has a name exactly where one opened: true
+  the name is never empty: true
+  unified memory is a yes or a no: true
+  a device answers this many limits: 3
+  it answered every one of them, and none was negative: true
+-- refusals --
+  a device is refused where a widget belongs: true
+  every call on it is refused once it is closed: true
+  closing it twice is quiet rather than an error: true
+drove=true

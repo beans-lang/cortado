@@ -66,6 +66,11 @@ pub extern "C" fn ctd_anim_delay(anim: u64, seconds: f64) -> i32
 pub extern "C" fn ctd_anim_curve(anim: u64, curve: i32) -> i32
 pub extern "C" fn ctd_anim_start(anim: u64, token: i64) -> i32
 pub extern "C" fn ctd_anim_cancel(anim: u64) -> i32
+pub extern "C" fn ctd_gpu_shader_langs() -> u32
+pub extern "C" fn ctd_gpu_device_new() -> u64
+pub extern "C" fn ctd_gpu_device_name(device: u64, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_gpu_device_limit(device: u64, which: i32, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_gpu_release(object: u64) -> i32
 pub extern "C" fn ctd_menu_new(title: RawPtr<i8>, len: i32) -> u64
 pub extern "C" fn ctd_menu_add_item(menu: u64, title: RawPtr<i8>, title_len: i32, key: RawPtr<i8>, key_len: i32, role: i32, token: i64) -> i32
 pub extern "C" fn ctd_menu_add_separator(menu: u64) -> i32

@@ -315,6 +315,11 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_RESIZABLE:     return 0;
         case CTD_CAP_FILE_DIALOG:   return 1;
         case CTD_CAP_SNAPSHOT:      return 0;
+        // Metal, and it is real here rather than a refusal: a device
+        // comes back in the Simulator, MSL compiles at run time, and a
+        // command queue is made. A phone is the platform where drawing
+        // on the GPU matters most.
+        case CTD_CAP_GPU:           return 1;
         default:                    return 0;
     }
 }

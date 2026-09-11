@@ -24,6 +24,7 @@ csrc macos "src/mac/items.m"
 csrc macos "src/mac/introspect.m"
 csrc macos "src/mac/clock.m"
 csrc macos "src/mac/anim.m"
+csrc macos "src/mac/gpu.m"
 
 link macos framework "AppKit"
 link macos framework "Foundation"
@@ -34,6 +35,21 @@ link macos framework "CoreVideo"
 # Animation. CABasicAnimation and CALayer live in QuartzCore, which AppKit
 # pulls in on its own — but not when frameworks are named explicitly.
 link macos framework "QuartzCore"
+# The GPU. Metal is here rather than in a module of its own, and that was
+# measured rather than assumed: against a binary that links only AppKit and
+# Foundation, adding Metal changes the size not at all, adds three load
+# commands, and moves launch time by less than the noise between two runs of
+# the same binary. What would have forced a separate module is a cost; there
+# is none.
+#
+# The structure decides it as well. A GPU device lives in the same handle
+# table as every widget, and that table is inside `src/mac/internal.h`, which
+# is private to this platform by design — a second module could not reach it
+# without making the platform's internals public. And the canvas that a GPU
+# draws into is a widget kind, laid out by the same solver and named in
+# `tests/roles.out` like any other control; a widget kind cannot live anywhere
+# but here.
+link macos framework "Metal"
 
 # The iOS host. Same header, same Beans above it — `tests/roles.out` is the
 # same bytes on both, which is the claim this file exists to make testable.
@@ -53,6 +69,7 @@ csrc ios "src/ios/system.m"
 csrc ios "src/ios/introspect.m"
 csrc ios "src/ios/clock.m"
 csrc ios "src/ios/anim.m"
+csrc ios "src/ios/gpu.m"
 
 link ios framework "UIKit"
 link ios framework "Foundation"
@@ -62,6 +79,11 @@ link ios framework "QuartzCore"
 # CGRectZero and CGRectIsEmpty come from CoreGraphics, and UIKit does not pull
 # it in transitively when frameworks are named explicitly.
 link ios framework "CoreGraphics"
+# The GPU. Metal is the same framework the Mac draws with, and this host uses
+# it for real: a device comes back in the Simulator, MSL compiles at run
+# time, and a command queue is made. See src/ios/gpu.m for what the
+# Simulator answers differently from the machine it runs on.
+link ios framework "Metal"
 
 # The Linux host, over GTK4. The same header again, and a third object system:
 # GObject rather than Objective-C, signals rather than target/action, floating
@@ -92,6 +114,7 @@ csrc linux "src/gtk4/system.c"
 csrc linux "src/gtk4/introspect.c"
 csrc linux "src/gtk4/clock.c"
 csrc linux "src/gtk4/anim.c"
+csrc linux "src/gtk4/gpu.c"
 
 # The Windows host, over Win32 and common controls v6. A fourth object system,
 # or rather the absence of one: a control is an HWND, its state is set by
@@ -115,6 +138,7 @@ csrc windows "src/win32/system.c"
 csrc windows "src/win32/introspect.c"
 csrc windows "src/win32/clock.c"
 csrc windows "src/win32/anim.c"
+csrc windows "src/win32/gpu.c"
 
 # Common controls carries the trackbar and the progress bar; comdlg32 the file
 # choosers; gdi32 the device contexts every measurement goes through. user32

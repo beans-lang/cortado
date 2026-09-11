@@ -515,6 +515,80 @@ First working macOS host.
   golden passed, because none of them had such a node. `tests/bridge.b` has one
   now, and reverting the fix turns two of its lines red.
 
+- **`cortado.gpu` — drawing that is not a control.** `Device.open()` opens the
+  machine's graphics processor; `name`, `limit` and `shares_memory` ask it what
+  it is and what it can hold. The shape of the ABI is WebGPU's — a device,
+  resources made on it, a pipeline, a pass — because that shape was designed to
+  sit over Metal, D3D12 and Vulkan at once, which is this header's problem
+  exactly. Metal fills it on macOS and iOS; GTK4 and Win32 answer
+  `unsupported` to every call and `Capability.gpu` answers no.
+
+  **Three limits and not a dozen**, because each is a number every one of the
+  three backends can really answer — Metal from the device, D3D12 from
+  `D3D12_FEATURE_DATA_ARCHITECTURE` and `QueryVideoMemoryInfo`, Vulkan from its
+  memory heaps — and each is one a program branches on. A tier or a feature-set
+  name is neither: it means something on one backend and has to be invented on
+  the others.
+
+- **`ctd_gpu_release` is one call for every kind of GPU object**, not one per
+  kind. A buffer, a texture, a shader and a pipeline are released identically
+  and differ only in what the driver does afterwards, so five entry points
+  would be five copies of the same four implementations. `ctd_widget_release`
+  stays separate because releasing a widget is not the same act — it takes the
+  control out of its parent first, and a GPU object has no parent.
+
+- **Shaders ship as source, per language, and cortado says which it speaks.**
+  `ctd_gpu_shader_langs` answers a bitmask. MSL, HLSL and SPIR-V are three
+  languages with three compilers; papering over that means vendoring a
+  translator larger than this project whose output would still not be exact. So
+  the honest ABI is one that says which language it takes, and a program
+  targeting Metal and Direct3D ships two shaders.
+
+- **`tests/gpu.out` is the same bytes through a host with Metal and a host with
+  no GPU at all**, and the two sides run entirely different code to produce it.
+  Every line asks whether what happened agrees with what `Capability.gpu`
+  promised: macOS and iOS open a device, read a name and three limits and close
+  it; GTK4 and Win32 refuse all four. The alternative was `tests/pixels.b`'s
+  shape — golden the one host that can, let the others print that they cannot —
+  which leaves the refusing hosts unchecked by the suite, and that is exactly
+  where a silent no-op would hide.
+
+### Found while building the GPU device
+
+- **Linking Metal costs nothing, and the plan had assumed it did.** The design
+  called for `cortado.gpu` to be a separate module so that a plain
+  button-and-label program would not link Metal, CoreBluetooth and the rest.
+  Measured against a binary linking only AppKit and Foundation: the size does
+  not change, three load commands are added, and launch time moves less than
+  the noise between two runs of the same binary. The structure settles it the
+  same way — a GPU device lives in the same handle table as every widget, that
+  table is inside `src/mac/internal.h` which is private to its platform by
+  design, and a canvas is a widget kind. So it is one module.
+
+- **Metal works in the iOS Simulator, and answers different numbers from the
+  Mac it runs on.** A device comes back, MSL compiles at run time and a command
+  queue is made — so the iOS host is real rather than a refusal. But its device
+  is "Apple iOS simulator GPU", it reports *no* unified memory on a machine
+  that has it, its largest buffer is 256 MB against the Mac's 9.5 GB, and
+  `recommendedMaxWorkingSetSize` answers zero. Zero is a real answer and not a
+  failure — the driver has no opinion — which is why the contract says so
+  rather than refusing, and why no golden here prints a number a device
+  answered.
+
+- **A probe that guesses tells you your guess.** The first version of that
+  probe wrapped `recommendedMaxWorkingSetSize` in `#if TARGET_OS_IPHONE` and
+  printed "iOS has no such property", which is what it then reported — and it
+  is wrong: the property is `API_AVAILABLE(ios(16.0))` and compiles and runs
+  there. The answer came from reading the SDK header and compiling it, not from
+  the probe. A probe only proves what it actually executes.
+
+- **Metal's own protocol conformance is the type check.** A device is an
+  instance of a private class — `AGXG13GDevice` on this machine — and what
+  makes it a device is that the class declares `<MTLDevice>`. A buffer answers
+  no to that and yes to `<MTLBuffer>`, so one mechanism keeps every GPU kind
+  apart as the file grows, and a widget handle passed to `ctd_gpu_release` is a
+  typed refusal rather than a message sent to an NSView.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two
