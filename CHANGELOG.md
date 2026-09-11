@@ -151,6 +151,15 @@ First working macOS host.
   running process is named after it, which only holds if Launch Services read
   the plist.
 
+- `tests/roles.out` — the one golden every platform must print. It holds
+  cortado's own vocabulary and frames from a layout where every size is a
+  constant, and nothing a platform names, so a second host's diff against it is
+  the port's definition of done. The gate refuses the file if a platform's
+  class name ever appears in it.
+- `tools/check_hosts.sh` — holds every host in `src/` to the header. The C
+  linker is the real enforcement, but a link only happens where a toolchain
+  does; this does the same check on text and runs anywhere.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump
@@ -196,6 +205,18 @@ First working macOS host.
   now, and reverting the fix turns two of its lines red.
 
 ### Not done yet, on purpose
+
+- **There is one host, AppKit.** A Windows or GTK4 host is a bounded piece of
+  work against a header that twelve controls, menus, dialogs, events,
+  measurement and a component layer have now exercised — and `tests/roles.out`
+  is waiting to be the proof. Neither is written. This machine has no mingw and
+  no GTK4, so one written here could not be compiled, let alone run, and a host
+  nobody has run is not a port.
+- **iOS and Android need a Beans target first.** `beansc --help` lists 31
+  triples and not one of them is either. Adding one is tractable — 20 sites
+  branch on `"macos"` across six compiler files, and the runtime has nine
+  `__APPLE__` branches — but it is compiler work, not framework work, and it
+  comes before any UIKit or JNI host.
 
 - `Application.shutdown` unregisters the platform callback but does not
   `close()` it. Closing wants a named local, and Beans refuses `move self.sink`

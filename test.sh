@@ -63,7 +63,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system)
+cases=(tree events bridge mount shelf menu system roles)
 
 # Cases that need nothing but the language. These are the layout engine, which
 # is pure Beans with no foreign call in it at all, so they run on every
@@ -82,6 +82,8 @@ pass
 "$root/tools/check_constants.sh"
 pass
 "$root/tools/check_vocabulary.sh"
+pass
+"$root/tools/check_hosts.sh"
 pass
 
 # ----------------------------------------------------------- portable leg
@@ -113,6 +115,27 @@ for name in "${cases[@]}"; do
     pass
 done
 echo "ok interpreter: ${#cases[@]} cases"
+
+# ------------------------------------------------------- the portable golden
+#
+# `tests/roles.out` is the file that makes "write once, run anywhere" a test
+# rather than a claim: a second host prints these same bytes, and that diff is
+# the port's definition of done. So it must hold nothing platform-specific, and
+# the two ways it could stop being portable are checked here rather than
+# discovered at the Windows port.
+if grep -qE "NS[A-Z]|Cortado[A-Z]|Gtk|HWND" "$root/tests/roles.out"; then
+    echo "FAIL roles: tests/roles.out names a platform's own class." >&2
+    echo "     It is the one golden every host must print identically, so it" >&2
+    echo "     can hold cortado's vocabulary and nothing else. Native class" >&2
+    echo "     names belong in tests/shelf.out, which is per-platform." >&2
+    exit 1
+fi
+if grep -q "native_class" "$root/tests/roles.b"; then
+    echo "FAIL roles: tests/roles.b asks for a native class name." >&2
+    exit 1
+fi
+pass
+echo "ok roles: the portable golden names no platform"
 
 # ------------------------------------------------------------- negative control
 #

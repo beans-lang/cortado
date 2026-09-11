@@ -54,9 +54,9 @@ run).
 | | |
 |---|---|
 | macOS | AppKit. Twelve controls, events, measurement, layout, components, markup |
-| Windows | designed, not written. The layout engine already runs and is tested here |
-| Linux | designed, not written. The layout engine already runs and is tested here |
-| iOS, Android | designed, not written. Beans has no target triple for either yet |
+| Windows | host not written. Everything above the host runs and is tested here |
+| Linux | host not written. Everything above the host runs and is tested here |
+| iOS, Android | host not written, and Beans has no target triple for either yet |
 
 ## How it is put together
 
@@ -444,6 +444,36 @@ Signing is ad-hoc (`-s -`) by default: enough to run locally on Apple silicon,
 not enough to distribute. That needs a Developer ID and notarisation, which
 need an account — so the script does the part that can be automated and says
 which part it did not.
+
+## Porting to a second platform
+
+A port is one file: `src/cortado_<platform>.c`, implementing every entry point
+in `src/cortado_host.h`. Nothing above it changes — the Beans half already
+type-checks for Windows and Linux on every run, and `cortado.layout`,
+`cortado.component` and `cortado.bx` have no foreign call in them at all.
+
+**`tests/roles.out` is the definition of done.** It holds cortado's own
+vocabulary — kind, accessibility role, text, enabled, hidden, child order, and
+frames from a layout where every size is a constant — and nothing a platform
+names. A second host prints those same bytes, and the diff is the port. The
+gate refuses the file if a platform's class name ever appears in it.
+
+`tests/shelf.out` is the per-platform companion: it holds `NSButton`,
+`NSSlider`, `NSPopUpButton`. That one *cannot* be shared, and should not be —
+it is the answer that proves a real native control was built rather than
+something drawn, and every platform has a different one.
+
+`tools/check_hosts.sh` holds every host in `src/` to the header. The C linker
+is the real enforcement — add an entry point, forget a host, and that
+platform's build fails — but a link only happens where a toolchain does, so
+this does the same check on text and runs anywhere.
+
+**What is actually written today is one host, AppKit.** A Windows or GTK4 host
+is a known, bounded piece of work against a header that has now been exercised
+by twelve controls, menus, dialogs, events, measurement and a component
+layer — but neither exists, and neither is claimed. This machine has no mingw
+and no GTK4, so one written here could not be compiled, let alone run, and a
+host nobody has run is not a port.
 
 ## Building
 

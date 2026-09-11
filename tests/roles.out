@@ -1,0 +1,14 @@
+Container role=group "" frame=0,0,400,400 children=11
+  Label role=text "Order a coffee" frame=16,16,368,20
+  TextField role=textbox "flat white" frame=16,42,368,24
+  TextArea role=textbox "no sugar" frame=16,72,368,60
+  CheckBox role=checkbox "Extra shot" frame=16,138,368,20
+  RadioButton role=radio "Eat in" frame=16,164,368,20
+  Slider role=slider "" frame=16,190,368,20
+  ProgressBar role=progressbar "" frame=16,216,368,12
+  Separator role=separator "" frame=16,234,368,1
+  ComboBox role=combobox "espresso" frame=16,241,368,24
+  ImageView role=image "" frame=16,271,368,40 hidden
+  Container role=group "" frame=16,317,368,28 children=2
+    Button role=button "Order" frame=180,0,90,28
+    Button role=button "Cancel" frame=278,0,90,28 disabled
