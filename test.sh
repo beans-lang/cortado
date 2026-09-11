@@ -145,6 +145,42 @@ fi
 pass
 echo "ok roles: the portable golden names no platform"
 
+# ------------------------------------------------------------- the Android leg
+#
+# cortado's portable half — the layout solver — has no foreign call in it at
+# all, so it builds for a phone with no host at all and runs there. That is the
+# design claim `cortado.layout` was written to make, and this is the diff that
+# tests it: 69 goldens, the same bytes on a Mac and on an Android device.
+#
+# The component layer is *not* here, and cannot be: it reaches `cortado.host`,
+# and there is no Android host. That is M10's work and it is JNI, not this.
+if [[ -n "${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}" ]]; then
+    if ! { "$BEANSC" --help 2>&1 || true; } | grep -q "aarch64-linux-android"; then
+        skip android "this beansc has no Android target"
+    else
+        "$BEANSC" build "$root/tests/layout.b" --target aarch64-linux-android \
+            -o "$tmp/layout-android" >"$tmp/android.build" 2>&1 || {
+            echo "FAIL android: the layout engine does not build for Android" >&2
+            tail -20 "$tmp/android.build" >&2
+            exit 1
+        }
+        pass
+        adb="${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb"
+        if [[ ! -x "$adb" ]] || ! "$adb" shell true >/dev/null 2>&1; then
+            skip android_run "no device or emulator attached"
+            echo "ok android: the layout engine builds for Android"
+        else
+            "$adb" push "$tmp/layout-android" /data/local/tmp/cortado_layout >/dev/null 2>&1
+            "$adb" shell chmod 755 /data/local/tmp/cortado_layout >/dev/null 2>&1
+            "$adb" shell /data/local/tmp/cortado_layout 2>&1 | tr -d '\r' >"$tmp/layout-android.out"
+            "$adb" shell rm -f /data/local/tmp/cortado_layout >/dev/null 2>&1 || true
+            diff -u "$root/tests/layout.out" "$tmp/layout-android.out"
+            pass
+            echo "ok android: the layout goldens are the same bytes on Android"
+        fi
+    fi
+fi
+
 # ----------------------------------------------------------------- the iOS leg
 #
 # The same program, built for a phone and run on one. This is the leg that

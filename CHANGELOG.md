@@ -183,6 +183,15 @@ First working macOS host.
 - Content lands in the **safe area**, and the surface reports its size when the
   scene connects, so a phone's notch and home indicator do not cover anything.
 
+- **The gate runs on three platforms.** A booted iOS simulator adds a leg that
+  builds `tests/roles.b` for the simulator and diffs it against the macOS run;
+  an attached Android device or emulator adds one that builds `tests/layout.b`
+  for `aarch64-linux-android` and diffs its 69 goldens. Both skip with a stated
+  reason when their platform is absent.
+- `cortado.layout` runs on Android **with no host at all** — the zero-FFI
+  design doing exactly what it was for. The component layer does not: it
+  reaches `cortado.host`, and an Android host is JNI work that is not done.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump

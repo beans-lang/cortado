@@ -57,7 +57,7 @@ run).
 | iOS | UIKit. Twelve controls on screen in the Simulator, and the same `tests/roles.out` as macOS |
 | Windows | host not written. Everything above the host runs and is tested here |
 | Linux | host not written. Everything above the host runs and is tested here |
-| Android | host not written, and Beans has no target triple for it yet |
+| Android | no host yet — but `cortado.layout` builds for it and runs on an emulator, printing the same 69 goldens |
 
 ## How it is put together
 
@@ -518,6 +518,20 @@ and a host nobody has run is not a port.
 ./test.sh --native     # also build and run every case as a real binary
 ./test.sh --sanitize   # also every headless case under ASan and UBSan
 ```
+
+**The gate runs on three platforms.** A booted iOS simulator adds a leg that
+builds `tests/roles.b` for `arm64-apple-ios-sim`, runs it there and diffs it
+against the macOS run. An attached Android device or emulator, with
+`ANDROID_NDK_HOME` set, adds one that builds `tests/layout.b` for
+`aarch64-linux-android` and diffs its 69 goldens the same way. Both skip with a
+stated reason when their platform is not available, and an undeclared skip
+fails the run.
+
+The Android leg is the layout engine and not the component layer, and that is
+the honest shape of things: `cortado.layout` has no foreign call in it at all,
+so it builds and runs on a phone with **no host whatsoever**. The component
+layer reaches `cortado.host`, and there is no Android host — that is JNI work,
+and it is not done.
 
 The sanitizer leg is not about the Beans half — the compiler's own gate covers
 that. It is about the host: fifteen hundred lines of Objective-C with manual
