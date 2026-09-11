@@ -74,7 +74,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -94,7 +94,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # given — iOS established that and GTK confirmed it. `pixels` reads a widget
 # back as pixels, which only macOS can do, so its golden is the macOS answer
 # and every other host correctly prints that it cannot.
-cross_host=(roles events text applied leaks enabled)
+cross_host=(roles events text applied leaks enabled opacity)
 
 # Cases that need nothing but the language. These are the layout engine and the
 # reconciler, both pure Beans with no foreign call in them at all, so they run

@@ -69,13 +69,14 @@ pub class Vocabulary {
         if name == "step" { return host.P_STEP }
         if name == "selected" { return host.P_SELECTED }
         if name == "indeterminate" { return host.P_INDETERMINATE }
+        if name == "opacity" { return host.P_OPACITY }
         return -1
     }
 
     /// How a property's value travels.
     pub static fn kind_of_property(name: string) -> AttributeKind {
         if name == "min" || name == "max" || name == "value" ||
-           name == "font_size" || name == "step" {
+           name == "font_size" || name == "step" || name == "opacity" {
             return AttributeKind.real
         }
         if name == "checked" || name == "alignment" || name == "selected" {

@@ -139,6 +139,10 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
     if (!object) return CTD_ERR_STALE;
     uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     switch (key) {
+        case CTD_P_OPACITY:
+            if (value < 0.0 || value > 1.0) return CTD_ERR_RANGE;
+            gtk_widget_set_opacity(GTK_WIDGET(object), value);
+            return CTD_OK;
         case CTD_P_FONT_SIZE: {
             // GTK sets fonts with CSS, and since GTK 4.10 a style context is
             // not something a caller may add a provider to. The supported
@@ -210,6 +214,9 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     double value = 0.0;
     switch (key) {
+        case CTD_P_OPACITY:
+            value = gtk_widget_get_opacity(GTK_WIDGET(object));
+            break;
         case CTD_P_FONT_SIZE: {
             PangoContext *context = gtk_widget_get_pango_context(GTK_WIDGET(object));
             const PangoFontDescription *font = pango_context_get_font_description(context);

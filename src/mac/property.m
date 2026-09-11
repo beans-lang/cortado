@@ -157,6 +157,10 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     switch (key) {
+        case CTD_P_OPACITY:
+            if (value < 0.0 || value > 1.0) return CTD_ERR_RANGE;
+            [(NSView *)object setAlphaValue:value];
+            return CTD_OK;
         case CTD_P_FONT_SIZE:
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
             [(NSControl *)object setFont:[NSFont systemFontOfSize:value]];
@@ -217,6 +221,9 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     if (!object) return CTD_ERR_STALE;
     double value = 0.0;
     switch (key) {
+        case CTD_P_OPACITY:
+            value = [(NSView *)object alphaValue];
+            break;
         case CTD_P_FONT_SIZE:
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
             value = (double)[[(NSControl *)object font] pointSize];

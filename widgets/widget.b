@@ -145,6 +145,27 @@ pub abstract class Widget {
         return self.read_flag(host.P_ENABLED, "read whether a {self.kind_value.name()} is enabled")
     }
 
+    /// How opaque this control is, 0.0 to 1.0.
+    ///
+    /// Every kind has one, containers included: unlike `enabled` this really is
+    /// a property of any view, and fading a box fades everything in it, which
+    /// is what a caller means by it and what all four platforms already do.
+    ///
+    /// Out of range is a refusal rather than a clamp. A caller that computed
+    /// 1.5 has a bug, and quietly showing them 1.0 hides it.
+    pub fn set_opacity(value: f64) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_set_real(self.slot.raw, host.P_OPACITY as i32, value) as int,
+                "set the opacity of a {self.kind_value.name()}")
+        }
+    }
+
+    pub fn opacity() -> Result<f64> {
+        return self.read_real(host.P_OPACITY,
+                              "read the opacity of a {self.kind_value.name()}")
+    }
+
     pub fn set_hidden(on: bool) -> Result<bool> {
         return self.set_flag(host.P_HIDDEN, on, "hide a {self.kind_value.name()}")
     }

@@ -58,6 +58,7 @@
     {"name": "margin", "detail": "number", "note": "space kept outside this control"},
     {"name": "max", "detail": "number", "note": "the high end of a range"},
     {"name": "min", "detail": "number", "note": "the low end of a range"},
+    {"name": "opacity", "detail": "number", "note": "how opaque this control is, 0.0 to 1.0"},
     {"name": "padding", "detail": "number", "note": "space kept inside a container"},
     {"name": "selected", "detail": "number", "note": "which item of a list is chosen, as an index; -1 for none"},
     {"name": "shrink", "detail": "number", "note": "share of overflow this control gives up"},

@@ -241,6 +241,15 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
 #define CTD_P_STEP        10  /* a slider's increment; 0 for continuous      */
 #define CTD_P_SELECTED    11  /* index into an item list; -1 for none        */
 #define CTD_P_INDETERMINATE 12 /* a progress bar with no known total         */
+/* How opaque the control is, 0.0 to 1.0. Every kind has one, containers
+ * included — unlike CTD_P_ENABLED this really is a property of any view, and
+ * setting it on a box is a meaningful thing to ask for: it fades the box and
+ * everything in it together, which is what a caller wants and what every
+ * platform already does.
+ *
+ * Out of range is CTD_ERR_RANGE rather than a clamp. A caller that computed
+ * 1.5 has a bug, and quietly showing them 1.0 hides it. */
+#define CTD_P_OPACITY     13
 
 /* **Which widgets carry CTD_P_ENABLED**, because leaving it unsaid cost four
  * hosts four different answers.

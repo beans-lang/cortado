@@ -1,0 +1,15 @@
+Container opacity round-trips
+Label opacity round-trips
+Button opacity round-trips
+TextField opacity round-trips
+CheckBox opacity round-trips
+ImageView opacity round-trips
+Slider opacity round-trips
+ProgressBar opacity round-trips
+Separator opacity round-trips
+TextArea opacity round-trips
+ComboBox opacity round-trips
+ScrollView opacity round-trips
+RadioButton opacity round-trips
+above one refused: out_of_range
+below zero refused: out_of_range

@@ -159,6 +159,7 @@ fn attribute_note(name: string) -> string {
     if name == "value" { return "a slider or progress value" }
     if name == "min" { return "the low end of a range" }
     if name == "max" { return "the high end of a range" }
+    if name == "opacity" { return "how opaque this control is, 0.0 to 1.0" }
     if name == "alignment" { return "text alignment inside the control" }
     if name == "step" { return "the increment a slider's thumb lands on; 0 for continuous" }
     if name == "selected" { return "which item of a list is chosen, as an index; -1 for none" }

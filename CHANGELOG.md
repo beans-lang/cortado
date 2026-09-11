@@ -256,6 +256,18 @@ First working macOS host.
   `Mount.close` releases the tree it built and drops its layout sheet, and
   `Applier` releases a removed subtree once it has left the tree.
 
+- **`opacity`, the first property that is about how a control looks rather
+  than what it holds.** A real from 0.0 to 1.0, on every kind including a
+  container — unlike `enabled`, fading a box really does mean fading everything
+  in it, and all four platforms already do exactly that. It cost no new ABI
+  entry point, which is the scalar property bag doing the job the header says
+  it is for: `alphaValue`, `alpha`, `gtk_widget_set_opacity`, and a layered
+  window on Win32 that the host takes back off again at full opacity so a
+  control that is not faded is not paying for a layer.
+
+  Out of range is `CTD_ERR_RANGE`, not a clamp. A caller who computed 1.5 has a
+  bug, and quietly showing them 1.0 hides it.
+
 ### Found while building this
 
 - **A string with an embedded NUL went out whole and came back cut in half**,

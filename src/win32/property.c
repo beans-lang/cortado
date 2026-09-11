@@ -176,6 +176,30 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
     uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     int32_t kind = ctd_slot_kind(widget);
     switch (key) {
+        case CTD_P_OPACITY: {
+            if (value < 0.0 || value > 1.0) return CTD_ERR_RANGE;
+            // A layered *child* window is a Windows 8 feature; before that
+            // WS_EX_LAYERED was top-level only and setting it on a control did
+            // nothing visible. cortado's floor is Windows 10 (WINVER 0x0A00),
+            // so it is simply available — but the style has to be turned on
+            // before the attribute takes, and turned off again at full opacity
+            // so a control that is not faded is not paying for a layer.
+            LONG_PTR style = GetWindowLongPtrW(view, GWL_EXSTYLE);
+            if (value >= 1.0) {
+                if (style & WS_EX_LAYERED) {
+                    SetWindowLongPtrW(view, GWL_EXSTYLE, style & ~WS_EX_LAYERED);
+                    RedrawWindow(view, NULL, NULL,
+                                 RDW_ERASE | RDW_INVALIDATE | RDW_ALLCHILDREN);
+                }
+                return CTD_OK;
+            }
+            if (!(style & WS_EX_LAYERED))
+                SetWindowLongPtrW(view, GWL_EXSTYLE, style | WS_EX_LAYERED);
+            if (!SetLayeredWindowAttributes(view, 0, (BYTE)(value * 255.0 + 0.5),
+                                            LWA_ALPHA))
+                return CTD_ERR_PLATFORM;
+            return CTD_OK;
+        }
         case CTD_P_FONT_SIZE: {
             int points = (int)value;
             if (points <= 0) return CTD_ERR_RANGE;
@@ -228,6 +252,21 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     int32_t kind = ctd_slot_kind(widget);
     double value = 0.0;
     switch (key) {
+        case CTD_P_OPACITY: {
+            // A window with no layered style is fully opaque and has no
+            // attribute to read — answering the platform's failure here would
+            // report "no opacity" for the overwhelmingly common case.
+            BYTE alpha = 255;
+            DWORD flags = 0;
+            if ((GetWindowLongPtrW(view, GWL_EXSTYLE) & WS_EX_LAYERED) &&
+                GetLayeredWindowAttributes(view, NULL, &alpha, &flags) &&
+                (flags & LWA_ALPHA)) {
+                value = (double)alpha / 255.0;
+            } else {
+                value = 1.0;
+            }
+            break;
+        }
         case CTD_P_FONT_SIZE: {
             HFONT font = (HFONT)SendMessageW(view, WM_GETFONT, 0, 0);
             if (!font) font = g_ui_font;

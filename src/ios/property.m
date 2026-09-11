@@ -154,6 +154,11 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
     if (!object) return CTD_ERR_STALE;
     uint32_t slot = ctd_slot_of(widget);
     switch (key) {
+        case CTD_P_OPACITY:
+            if (value < 0.0 || value > 1.0) return CTD_ERR_RANGE;
+            if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
+            [(UIView *)object setAlpha:value];
+            return CTD_OK;
         case CTD_P_FONT_SIZE: {
             UIFont *font = [UIFont systemFontOfSize:value];
             if ([object isKindOfClass:[UILabel class]]) {
@@ -223,6 +228,10 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     uint32_t slot = ctd_slot_of(widget);
     double value = 0.0;
     switch (key) {
+        case CTD_P_OPACITY:
+            if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
+            value = [(UIView *)object alpha];
+            break;
         case CTD_P_FONT_SIZE:
             if ([object isKindOfClass:[UILabel class]]) {
                 value = [[(UILabel *)object font] pointSize];

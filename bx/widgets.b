@@ -109,7 +109,7 @@ pub fn attribute_call(name: string) -> string {
     if name == "text" { return "text" }
     if is_boolean_attribute(name) { return "flag" }
     if name == "min" || name == "max" || name == "value" ||
-       name == "font_size" || name == "step" {
+       name == "font_size" || name == "step" || name == "opacity" {
         return "number"
     }
     if name == "alignment" || name == "selected" { return "number" }
@@ -126,8 +126,8 @@ pub fn attribute_call(name: string) -> string {
 pub fn attribute_names() -> List<string> {
     return ["align", "alignment", "basis", "checked", "editable", "enabled",
             "font_size", "grow", "height", "hidden", "indeterminate",
-            "justify", "margin", "max", "min", "padding", "selected", "shrink",
-            "spacing", "step", "text", "value", "width"]
+            "justify", "margin", "max", "min", "opacity", "padding",
+            "selected", "shrink", "spacing", "step", "text", "value", "width"]
 }
 
 /// Every control tag, for the same reason.

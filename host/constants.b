@@ -101,6 +101,7 @@ pub const P_FONT_SIZE: int = 9
 pub const P_STEP: int = 10
 pub const P_SELECTED: int = 11
 pub const P_INDETERMINATE: int = 12
+pub const P_OPACITY: int = 13
 
 // Menu command roles. The platform places, names and keys a command that has
 // one; a command with no role goes where the application puts it.
