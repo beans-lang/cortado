@@ -89,10 +89,24 @@ pub class Applier {
             remove => {
                 let box: widgets.Holder = self.container(target, change)?
                 match box.child_at(change.index) {
-                    none => {}
-                    some(going) => { self.forget(going) }
+                    none => { return box.remove(change.index) }
+                    some(going) => {
+                        self.forget(going)
+                        box.remove(change.index)?
+                        // And then the control itself. Dropping the last Beans
+                        // reference would get there eventually, but "eventually"
+                        // means after the layout sheet that also holds it has
+                        // been rebuilt — so a list that churned rows kept a
+                        // native control per dead row until the next render,
+                        // and a torn-down screen kept all of them.
+                        //
+                        // After `remove`, not before: releasing a control while
+                        // it is still a child leaves the parent unparenting a
+                        // handle the platform has already let go.
+                        self.let_go(going)
+                        return ok(true)
+                    }
                 }
-                return box.remove(change.index)
             }
             relocate => {
                 return self.container(target, change)?.move_child(change.index, change.target)
@@ -177,6 +191,18 @@ pub class Applier {
     /// life of the window. The closure holds the mount, the mount holds
     /// everything — so one list that churns a thousand rows would hold a
     /// thousand dead subscriptions, and nothing would ever say so.
+    /// Releases a subtree's controls, depth first.
+    ///
+    /// Separate from `forget` because they happen at different moments:
+    /// forgetting has to precede the removal, so a handler cannot fire at a
+    /// control on its way out, and releasing has to follow it.
+    fn let_go(going: widgets.Widget) {
+        for child: widgets.Widget in going.children() {
+            self.let_go(child)
+        }
+        going.release()
+    }
+
     fn forget(going: widgets.Widget) {
         self.router.forget(going.handle())
         self.owner.release(going.handle().raw)

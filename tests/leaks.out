@@ -1,0 +1,7 @@
+rounds: 10, screens made: 10
+controls per round: true
+handlers held while up: true
+handlers left after close: 0
+controls left alive after close: 0
+a reference held across the close: 0
+screens still live: 0

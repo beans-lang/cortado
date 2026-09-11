@@ -665,6 +665,46 @@ visible rather than quietly green. Deleting the differ's rule that a dropped
 property goes back to its default produces 38 faults; breaking the keyed move
 produces 63.
 
+`tests/applied.b` points the same idea at the applier that really exists. The
+sweep's reference applier proves the *edit list* is right and says nothing
+about the applier that ships, so this one drives `component.Applier` — the one
+that makes and moves real AppKit controls — down two roads to the same place:
+build `before` and apply the diff, or build `after` directly in a second
+container. Then it reads both live widget trees back off the platform and
+requires them to be identical. Nothing in the file says what the answer should
+look like; the assertion is that the cheap path and the obvious path agree.
+Making `move` a no-op in the applier produces 12 faults, and dropping property
+writes produces 32.
+
+**`tests/leaks.b` is the gate for the one hazard the design flagged and could
+not design away.** A stored callback is invisible to the cycle collector, so a
+per-widget closure capturing its own widget would keep that widget, its
+component and everything behind it alive forever with nothing on screen to show
+for it. cortado's answer is that handlers are not stored per widget at all —
+one platform callback for the process, handlers in a table keyed by handle —
+and this is what that claim is worth: a thousand handler-bearing controls, torn
+down ten times, asserting that the router empties, that every control is dead
+at the platform, that a reference the *application* still holds is dead too,
+and that the component's own destructor ran.
+
+Ten thousand is not arbitrary. The handle table is 8192 slots, so a run that
+size only finishes if released slots are reused — which is the second thing
+this file found.
+
+Writing it turned up two real defects, and `tests/mount.b` had been checking
+the same teardown with about five controls and passing:
+
+- **`Mount.close` released nothing.** It emptied the container and the router
+  table, but the layout sheet keeps a `Widget` per node and `close` never
+  cleared it — so every native control a screen ever built stayed alive until
+  the whole `Mount` was dropped. A screen closed and reopened held that many
+  screens' worth of AppKit objects.
+- **The handle table never reused a slot.** `ctd_track` only ever handed out
+  the next one, so a program that made and destroyed widgets — which is any
+  program with a list in it — died after 8192 of them however few were alive
+  at once. The generation in every handle exists precisely to make reuse safe;
+  it just was not being used.
+
 **Text is tested at the edges, not in the middle.** `tests/text.b` sends an
 astral emoji, a combining mark beside its precomposed twin, and right-to-left
 and CJK text through four kinds of control and reads each back. The combining

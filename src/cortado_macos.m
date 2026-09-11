@@ -38,9 +38,35 @@ static void        *g_sink_context;
 static int32_t      g_role = CTD_ROLE_GUI;
 static int          g_started;
 
-static ctd_handle ctd_track(id object, int32_t kind) {
+
+// Slots a released widget gave back.
+//
+// The handle carries a generation *so that* a slot can be reused: a stale copy
+// of a handle names the old generation and answers CTD_ERR_STALE, and a new
+// widget in the same slot is a different handle entirely. Without this list
+// the table is an arena that only ever grows, and a program that makes and
+// destroys widgets — which is every program with a list in it — runs out after
+// CTD_SLOTS of them however few are alive at once.
+// Named `g_recycled` rather than `g_free`: the GTK host includes glib, and
+// `g_free` is one of its functions.
+static uint32_t g_recycled[CTD_SLOTS];
+static uint32_t g_recycled_count;
+
+// The next slot to use: one somebody gave back, or the next never-used one.
+// Zero when the table is genuinely full.
+static uint32_t ctd_take_slot(void) {
+    if (g_recycled_count > 0) return g_recycled[--g_recycled_count];
     if (g_used + 1 >= CTD_SLOTS) return 0;
-    uint32_t slot = ++g_used;
+    return ++g_used;
+}
+
+static void ctd_give_back(uint32_t slot) {
+    if (g_recycled_count < CTD_SLOTS) g_recycled[g_recycled_count++] = slot;
+}
+
+static ctd_handle ctd_track(id object, int32_t kind) {
+    uint32_t slot = ctd_take_slot();
+    if (slot == 0) return 0;
     g_object[slot] = [object retain];
     g_kind[slot] = kind;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
@@ -556,6 +582,8 @@ ctd_status ctd_widget_release(ctd_handle widget) {
     // The bump is what makes every copy of this handle answer CTD_ERR_STALE
     // from here on, rather than one of them reaching a recycled widget.
     g_generation[slot]++;
+    if (g_generation[slot] == 0) g_generation[slot] = 1;
+    ctd_give_back(slot);
     return CTD_OK;
 }
 

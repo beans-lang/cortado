@@ -74,7 +74,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks)
 
 # Cases that need nothing but the language. These are the layout engine and the
 # reconciler, both pure Beans with no foreign call in them at all, so they run
@@ -430,7 +430,10 @@ fi
 # both ways. `csrc` does not pass sanitizer flags to a manifest's C sources, so
 # `tools/sanitize.sh` compiles the host itself with them and links by hand.
 if [[ $sanitize -eq 1 && $have_host -eq 1 ]]; then
-    "$root/tools/sanitize.sh"
+    # The same list the rest of the run used, not a second copy: a case added
+    # above has to reach the sanitizers too, and a hard-coded list here silently
+    # stopped covering four of them.
+    "$root/tools/sanitize.sh" "${cases[@]}"
     pass
 elif [[ $sanitize -eq 1 ]]; then
     skip sanitize "the only host written is macOS"

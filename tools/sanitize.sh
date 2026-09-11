@@ -40,6 +40,10 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
     exit 0
 fi
 
+# The cases to run. `test.sh` passes its own list, which is the point: a second
+# copy of that list here drifted the moment a case was added, and four cases
+# went unsanitized without anything saying so. The default is for running this
+# script by hand.
 cases=("${@:-tree events shelf menu system roles bridge mount}")
 [[ $# -gt 0 ]] && cases=("$@")
 

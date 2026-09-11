@@ -242,6 +242,19 @@ First working macOS host.
   pair must stay different: a host that normalised would return a string equal
   on screen and different in bytes.
 
+- `tests/leaks.b` — a thousand handler-bearing controls, torn down ten times.
+  The gate for the one hazard the design flagged and could not design away: a
+  stored callback is invisible to the cycle collector, so a handler that
+  captured its own widget would pin the widget, its component and everything
+  behind it. It asserts the router empties, every control is dead at the
+  platform, a reference the application still holds is dead too, and the
+  component's own destructor ran. Ten thousand controls is not arbitrary — the
+  handle table is 8192 slots, so a run that size only finishes if released
+  slots are reused.
+- `Widget.release` is now called by the framework that made the control:
+  `Mount.close` releases the tree it built and drops its layout sheet, and
+  `Applier` releases a removed subtree once it has left the tree.
+
 ### Found while building this
 
 - **A string with an embedded NUL went out whole and came back cut in half**,
@@ -253,6 +266,18 @@ First working macOS host.
   string and again at the ABI with `CTD_ERR_RANGE`, and `tests/text.b` pins
   both: removing the Beans check leaves the host's refusal, and removing that
   leaves the truncation the test was written against.
+- **`Mount.close` released nothing.** It emptied the container and the router
+  table and left every native control alive. The layout sheet keeps a `Widget`
+  per node and `close` never cleared it, so the last Beans reference did not go
+  until the whole `Mount` did — a screen closed and reopened twenty times held
+  twenty screens' worth of AppKit objects. `tests/mount.b` had been checking
+  this same teardown with about five controls and passing, which is what a case
+  built from one element is worth.
+- **The handle table never reused a slot.** `ctd_track` only ever handed out
+  the next one and a released slot was gone for good, so a program that made
+  and destroyed widgets died after 8192 of them however few were alive at once.
+  The generation in every handle exists precisely to make reuse safe — it was
+  simply not being used. All four hosts hand slots back now.
 - **`Capability.snapshot` answered yes on four platforms and there was nothing
   to call.** The capability was declared, Beans exposed it, every host returned
   1, and no entry point existed anywhere in the header. Now macOS implements it

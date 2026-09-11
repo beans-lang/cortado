@@ -173,7 +173,20 @@ pub class Mount implements Composer {
                         some(child) => { self.forget_all(child) }
                         none => {}
                     }
+                    let leaving: Option<widgets.Widget> = box.child_at(back)
                     box.remove(back)?
+                    // And the controls themselves. Until this was here, `close`
+                    // let go of the component tree and the router table and
+                    // left every native control alive — because the layout
+                    // sheet below holds a Widget per node, so the last Beans
+                    // reference did not go until the whole Mount did. A screen
+                    // closed and reopened twenty times held twenty screens'
+                    // worth of AppKit objects, and `tests/leaks.b` is the gate
+                    // that says so.
+                    match leaving {
+                        some(gone) => { self.let_go(gone) }
+                        none => {}
+                    }
                     back = back - 1
                 }
             }
@@ -184,7 +197,21 @@ pub class Mount implements Composer {
         self.shown = none
         self.top = none
         self.face = none
+        // The layout sheet keeps a control per node, so a mount that let go of
+        // its component tree and kept its sheet would keep every control in
+        // it. This is the reference that made the leak invisible: everything
+        // named in `close` was already being cleared.
+        self.sheet = new widgets.WidgetLayout()
+        self.solver = new layout.Solver(self.sheet)
         return ok(true)
+    }
+
+    /// Releases a subtree's controls, depth first.
+    fn let_go(control: widgets.Widget) {
+        for child: widgets.Widget in control.children() {
+            self.let_go(child)
+        }
+        control.release()
     }
 
     fn forget_all(control: widgets.Widget) {
