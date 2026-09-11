@@ -39,3 +39,23 @@ link ios framework "CoreGraphics"
 # this file does not yet carry, and re-running it updates them in place. A
 # manifest that listed them by hand would name one computer.
 csrc linux "src/cortado_gtk4.c"
+
+# The Windows host, over Win32 and common controls v6. A fourth object system,
+# or rather the absence of one: a control is an HWND, its state is set by
+# sending it a message, and it reports what happened by sending a message back
+# to its *parent*. `tests/roles.out` is the same bytes through it.
+#
+# `tools/win32.sh` builds and runs it from a Mac, using mingw-w64 for the C
+# half and llc for the Beans half, because beansc's bundled clang has no
+# Windows sysroot to compile against. On a Windows machine this manifest is
+# all that is needed and the rows below are what beansc links.
+csrc windows "src/cortado_win32.c"
+
+# Common controls carries the trackbar and the progress bar; comdlg32 the file
+# choosers; gdi32 the device contexts every measurement goes through. user32
+# and kernel32 the toolchain links on its own.
+link windows library "comctl32"
+link windows library "comdlg32"
+link windows library "gdi32"
+link windows library "user32"
+link windows library "advapi32"
