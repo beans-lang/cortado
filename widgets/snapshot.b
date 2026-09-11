@@ -1,6 +1,8 @@
 // What a control actually painted.
 package widgets
 
+import cortado.host
+
 /// The pixels of a widget, read back off the platform.
 ///
 /// This is the only thing in cortado that answers a question the program did
@@ -19,6 +21,13 @@ package widgets
 ///
 /// Rows run top to bottom with no padding, so a pixel is at
 /// `(y * width + x) * 4` — the layout the ABI promises.
+///
+/// It is also what a GPU render target reads back into, through the same
+/// `read` below. An RGBA image is an RGBA image; the two differ in who painted
+/// it, not in what came back. What a GPU target *does* let you golden is the
+/// pixels themselves — a quad on a pixel boundary is exact arithmetic, not a
+/// font rasterizer — which is why `tests/triangle.b` asserts colours where
+/// `tests/pixels.b` can only assert shape.
 pub class Snapshot {
     pub width: int = 0
     pub height: int = 0
@@ -47,6 +56,42 @@ pub class Snapshot {
 
     pub fn byte_count() -> int {
         return self.pixels.len()
+    }
+
+    /// Reads an image out of the host with the two-call shape.
+    ///
+    /// `probe` is called first with a null buffer and a capacity of zero to
+    /// learn the byte count and the dimensions, then again with a buffer that
+    /// size. It is written once here, and not in each caller, because the
+    /// interesting part is the check at the end: a host that answers a bigger
+    /// image the second time has resized between the two calls, and the buffer
+    /// then holds part of one picture and part of another.
+    ///
+    /// A closure rather than a handle, because the two callers reach different
+    /// entry points — `ctd_snapshot` for a control that painted, and
+    /// `ctd_gpu_target_read` for an image a program computed on the GPU — and
+    /// what they share is the shape, not the symbol. `buffer()` stays
+    /// package-visible: a raw pointer into a live object's field is not
+    /// something an application should be handed, and this is how a caller in
+    /// another package fills one without being given one.
+    pub static fn read(attempt: string,
+                       probe: fn(RawPtr<f64>, RawPtr<i8>, i32) -> i32) -> Result<Snapshot> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        let needed: int = probe(scratch.reals, RawPtr.null(), 0) as int
+        host.check(needed, "measure {attempt}")?
+        let width: int = scratch.real(0) as int
+        let height: int = scratch.real(1) as int
+        var shot: Snapshot = new Snapshot(width, height, needed)
+        if needed == 0 {
+            return ok(shot)
+        }
+        let wrote: int = probe(scratch.reals, shot.buffer(), needed as i32) as int
+        host.check(wrote, attempt)?
+        if wrote != needed {
+            return err("could not {attempt}: it changed size while it was being read",
+                       "host_raced")
+        }
+        return ok(shot)
     }
 
     /// The pixel at `x`, `y`, with the top-left at 0, 0.

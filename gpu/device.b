@@ -110,6 +110,78 @@ pub class Device {
         return ok(answer != 0.0)
     }
 
+    /// A block of numbers on the GPU, filled from `values`.
+    pub fn buffer(values: List<f64>) -> Result<Buffer> {
+        let block: Floats = Floats.of(values)?
+        return self.buffer_block(block)
+    }
+
+    /// The same, from a block that already exists.
+    pub fn buffer_block(block: Floats) -> Result<Buffer> {
+        var raw: u64 = 0
+        unsafe {
+            raw = host.ctd_gpu_buffer_new(self.slot.raw, block.pointer(), block.count() as i32)
+        }
+        if raw == 0 {
+            return err("the GPU would not make a buffer of {block.count()} numbers — a closed device, or no room left on the card",
+                       "no_gpu_buffer")
+        }
+        return ok(Buffer.of(host.Handle.of(raw)))
+    }
+
+    /// An off-screen image to draw into, in pixels.
+    pub fn target(width: int, height: int) -> Result<Target> {
+        var raw: u64 = 0
+        unsafe {
+            raw = host.ctd_gpu_target_new(self.slot.raw, width as i32, height as i32)
+        }
+        if raw == 0 {
+            return err("the GPU would not make a {width}x{height} target — a closed device, a size of zero, or one larger than the card allows",
+                       "no_gpu_target")
+        }
+        return ok(Target.of(host.Handle.of(raw)))
+    }
+
+    /// Compiles shader source.
+    ///
+    /// The message on a failure is the platform's own compiler talking — file,
+    /// line, column and what it did not understand — because a shader that
+    /// failed with no message is a blank window and a long evening.
+    pub fn shader(language: ShaderLanguage, source: string) -> Result<Shader> {
+        if !language.accepted() {
+            return err("this platform does not compile {language.name()} — ask ShaderLanguage.accepted() and ship a shader it takes",
+                       "unsupported")
+        }
+        let bytes: Bytes = host.HostText.encode(source, "compile a shader")?
+        var raw: u64 = 0
+        unsafe {
+            raw = host.ctd_gpu_shader_new(self.slot.raw, language.bit() as i32,
+                                          host.HostText.pointer(bytes), bytes.len() as i32)
+        }
+        if raw == 0 {
+            return err("the shader did not compile: {self.shader_problem()}", "shader_refused")
+        }
+        return ok(Shader.of(host.Handle.of(raw)))
+    }
+
+    /// What the compiler said about the last shader that failed on this
+    /// device. Empty when the last one compiled.
+    ///
+    /// On the device rather than on the shader, because the shader that failed
+    /// has no handle to ask. That makes it *the last one* — read it at once.
+    pub fn shader_problem() -> string {
+        let slot: host.Handle = self.slot
+        match host.HostText.read("read why a shader failed",
+                                 fn(out: RawPtr<i8>, cap: i32) -> i32 {
+            unsafe {
+                return host.ctd_gpu_shader_problem(slot.raw, out, cap)
+            }
+        }) {
+            ok(text) => { return text }
+            err(problem) => { return "the host would not say" }
+        }
+    }
+
     /// Lets go of the device.
     ///
     /// Calling it twice is not an error: the second answers that it was

@@ -589,6 +589,100 @@ First working macOS host.
   apart as the file grows, and a widget handle passed to `ctd_gpu_release` is a
   typed refusal rather than a message sent to an NSView.
 
+- **Drawing.** A buffer, a render target, a shader compiled at run time, a
+  pipeline built up and frozen, and a pass that clears, draws and waits. Eighteen
+  entry points, and `examples/shader.b` puts a Mandelbrot set through all of
+  them and writes a bitmap.
+
+  **Numbers, and only numbers.** A buffer holds floats; an attribute's offset
+  and a layout's stride are counted in floats too. Narrower than any of the
+  three backends, on purpose: the alternative is an API where a caller computes
+  byte offsets for data they wrote as numbers and gets one of them wrong. It is
+  also the only thing that crosses this boundary today without a second
+  representation — Beans can hand C a `RawPtr<f32>` and cannot bit-cast a float.
+
+  **A pass is synchronous.** When it finishes the pixels are there to read,
+  which is the right trade for an image a program computes and reads back and
+  the wrong one for a surface presented sixty times a second. That is a
+  different call with a different contract, not a flag on this one.
+
+  **Three blend modes, not eight blend factors.** Every backend has `replace`,
+  `alpha` and `add` and means the same by them; a factor pair is eight enums to
+  combine correctly, unchecked, to arrive at one of these three anyway.
+
+- **`tests/triangle.out` asserts colours, where `tests/pixels.out` can only
+  assert shape.** A control's pixels come out of a font rasterizer that changes
+  with every OS point release, so goldening them teaches a team to re-record
+  the file. A GPU target has no such excuse: every quad in `triangle.b` lands
+  on a pixel boundary, so coverage is arithmetic — 64 green pixels of 64 for
+  the whole target, 32 for the top half, 16 for a quad the shader halved — and
+  the blend cases are chosen so every answer is exact in eight bits. Green at
+  alpha 0 over red leaves red; at alpha 1 it covers it; added, it is yellow. A
+  half-and-half mix would land on 127.5 and two GPUs are allowed to round it
+  differently.
+
+  It is the same bytes on this Mac's GPU and in the iOS Simulator, which report
+  different names, different unified-memory answers and buffer limits forty
+  times apart.
+
+- **`widgets.Snapshot.read` is now where the two-call image read lives**, and
+  `Widget.snapshot` and `Target.read` both go through it. The interesting part
+  is the check at the end — a host that answers a bigger image the second time
+  has resized between the calls, and the buffer holds half of one picture and
+  half of another — and it was written once rather than twice.
+
+- **One guard this suite cannot see, said out loud.** `ctd_gpu_pass_end` waits
+  for the GPU before the pixels are read, because reading a texture the GPU is
+  still writing is undefined. Removing that wait passes every golden at full
+  speed — the readback wins a race it should not be running — and fails under
+  Metal's validation layer only because validation is slower. Neither is a
+  check. A test tuned to lose a race would go quietly green on faster hardware,
+  which is worse than not having one, so there is no such test and the reason
+  is written beside the line.
+
+  What the validation layer *does* check deterministically is worth a leg of
+  its own, and now has one: an encoder used after it ended, a resource released
+  while a command buffer still references it, a descriptor a pipeline cannot
+  honour. ASan sees none of those — the memory is all valid, it is the order
+  that is wrong. `tests/gpu.out` and `tests/triangle.out` are byte-identical
+  under it.
+
+### Found while building the drawing path
+
+- **A `#import` was invisible to beansc's csrc cache, so every Objective-C
+  header change was.** `beans/src/csrc.b` hashes a source and every header it
+  reaches by `#include "..."`, which was added precisely because "the old cache
+  used only the .c text". `#import` was never added — and Objective-C uses
+  `#import` and nothing else, so the headers of every `.m` file were missing
+  from the key. cortado's four hosts share one ABI header: bumping it to 5 kept
+  reusing the iOS objects built against 4, and the program answered
+  `abi_mismatch: this build speaks cortado ABI 5 but the platform host speaks
+  4`. Fixed in the compiler, with a case in `beans/test/csrc_build.sh` written
+  in C — clang takes `#import` there with no warning — so the suite still runs
+  where there is no Objective-C runtime. Reverting the fix turns that suite red.
+
+- **`CortadoTarget` was already taken.** The host's AppKit target/action object
+  has that name in `internal.h`, and the GPU's render target got it too. The
+  compiler caught it at once, which is the argument for a shared private header
+  per platform rather than statics in one file: a collision is a build error
+  instead of two objects that quietly disagree. The GPU's is `CortadoCanvas`.
+
+- **Clip space is y-up and row 0 is the top, and these are not in conflict.**
+  The vertex at y = +1 lands in row zero of the readback, which is the same
+  "top row first" `ctd_snapshot` already promised. Checked with a bare Metal
+  program before the ABI committed to it, and checked again by
+  `tests/triangle.b` drawing a quad over the top half.
+
+- **A Mac with a discrete GPU needs a managed texture and an explicit blit
+  synchronize before the CPU can read a render target; iOS has no such mode at
+  all.** `MTLStorageModeManaged` is macOS-only, and `hasUnifiedMemory` is what
+  decides. The managed branch is in `src/mac/gpu.m` and **is not exercised by
+  this machine's gate**, which has unified memory; an Intel Mac with a separate
+  graphics card would run it. Writing only the Shared half would not have been
+  the safer choice — it would have made cortado silently unusable on those
+  machines, which is a failure that reaches a user rather than a build. It is
+  also the concrete reason the macOS and iOS GPU hosts are two files.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

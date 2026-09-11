@@ -43,3 +43,106 @@ ctd_status ctd_gpu_release(ctd_handle object) {
     (void)object;
     return CTD_ERR_UNSUPPORTED;
 }
+
+// ---------------------------------------------------------- what you draw with
+//
+// The same answer, eighteen more times. Each one is written out rather than
+// folded into a macro or a shared file, because `tools/check_hosts.sh` reads
+// this directory for the entry points it defines and a host whose symbols came
+// from somewhere else would read as incomplete — and because a refusal is a
+// place somebody will one day put an implementation, one function at a time.
+
+ctd_handle ctd_gpu_buffer_new(ctd_handle device, const float *data, int32_t count) {
+    (void)device; (void)data; (void)count;
+    return 0;
+}
+
+ctd_status ctd_gpu_buffer_write(ctd_handle buffer, int32_t first,
+                                const float *data, int32_t count) {
+    (void)buffer; (void)first; (void)data; (void)count;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_buffer_count(ctd_handle buffer, int32_t *out) {
+    (void)buffer; (void)out;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_handle ctd_gpu_target_new(ctd_handle device, int32_t width, int32_t height) {
+    (void)device; (void)width; (void)height;
+    return 0;
+}
+
+int32_t ctd_gpu_target_read(ctd_handle target, double *out_size, char *out, int32_t cap) {
+    (void)target; (void)out_size; (void)out; (void)cap;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_handle ctd_gpu_shader_new(ctd_handle device, int32_t language,
+                              const char *source, int32_t len) {
+    (void)device; (void)language; (void)source; (void)len;
+    return 0;
+}
+
+int32_t ctd_gpu_shader_problem(ctd_handle device, char *out, int32_t cap) {
+    (void)device; (void)out; (void)cap;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_handle ctd_gpu_pipeline_new(ctd_handle shader,
+                                const char *vertex, int32_t vertex_len,
+                                const char *fragment, int32_t fragment_len) {
+    (void)shader; (void)vertex; (void)vertex_len; (void)fragment; (void)fragment_len;
+    return 0;
+}
+
+ctd_status ctd_gpu_pipeline_attr(ctd_handle pipeline, int32_t index,
+                                 int32_t floats, int32_t offset) {
+    (void)pipeline; (void)index; (void)floats; (void)offset;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_pipeline_stride(ctd_handle pipeline, int32_t floats) {
+    (void)pipeline; (void)floats;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_pipeline_blend(ctd_handle pipeline, int32_t blend) {
+    (void)pipeline; (void)blend;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_pipeline_build(ctd_handle pipeline) {
+    (void)pipeline;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_handle ctd_gpu_pass_begin(ctd_handle target, double r, double g, double b, double a) {
+    (void)target; (void)r; (void)g; (void)b; (void)a;
+    return 0;
+}
+
+ctd_status ctd_gpu_pass_pipeline(ctd_handle pass, ctd_handle pipeline) {
+    (void)pass; (void)pipeline;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_pass_vertices(ctd_handle pass, ctd_handle buffer) {
+    (void)pass; (void)buffer;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_pass_uniform(ctd_handle pass, const float *data, int32_t count) {
+    (void)pass; (void)data; (void)count;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_pass_draw(ctd_handle pass, int32_t shape, int32_t first, int32_t count) {
+    (void)pass; (void)shape; (void)first; (void)count;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_pass_end(ctd_handle pass) {
+    (void)pass;
+    return CTD_ERR_UNSUPPORTED;
+}

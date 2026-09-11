@@ -1,0 +1,35 @@
+-- nothing drawn --
+  the target is 8x8, 256 bytes
+  every pixel is the clear colour: true
+  and nothing else got drawn: true
+-- the whole target --
+  the vertex buffer holds 36 numbers, six to a vertex
+  green pixels: 64 of 64
+  no pixel is anything but green or the clear colour: true
+-- the top half, which is where y=+1 lands --
+  green pixels: 32 of 64
+  row 0 is green: true
+  row 7 is not: true
+-- a uniform the shader multiplies by --
+  green pixels at half scale: 16 of 64
+  the corner is empty: true
+  the centre is not: true
+-- blending --
+  green at alpha 0 over red leaves red: rgba(255,0,0,255)
+  green at alpha 1 over red covers it: rgba(0,255,0,255)
+  green added to red is both: rgba(255,255,0,255)
+-- refusals --
+  drawing with a pipeline nobody built refused: wrong_moment
+  drawing with no pipeline set refused: wrong_moment
+  building a pipeline with no vertex layout refused: wrong_moment
+  five numbers in one attribute refused: out_of_range
+  changing a pipeline after it is built refused: wrong_moment
+  writing past the end of a buffer refused: out_of_range
+  writing before the start of one refused: out_of_range
+  running a pass twice refused: wrong_moment
+  drawing into a pass that already ran refused: stale_handle
+  a shader that does not compile: shader_refused
+  and it said why: true
+  a function name that is not in the shader: no_such_function
+  a language this host does not speak: unsupported
+drove=true

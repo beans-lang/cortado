@@ -90,7 +90,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim gpu)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim gpu triangle)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -133,6 +133,21 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
 cross_host=(roles events text applied leaks enabled opacity clock anim gpu)
+
+# Cases that run on macOS and iOS and nowhere else.
+#
+# `cross_host` is for goldens every host prints. This is the other shape: a
+# case only the hosts with a GPU can run at all, whose golden is still worth
+# comparing between the two that can. `triangle` draws quads onto pixel
+# boundaries and asserts the colours exactly — and those colours came back the
+# same through this Mac's GPU and through the Simulator's, which are different
+# hardware with different limits. That equality is what this list exists to
+# keep checking.
+#
+# GTK4 and Win32 are not missing from it by omission. They have no GPU host,
+# `tests/gpu.b` is where that is checked, and a case that asserted a green
+# pixel could only ever print a refusal there.
+apple_only=(triangle)
 
 # Cases the iOS leg builds but does not run, and why.
 #
@@ -313,7 +328,7 @@ if [[ "$host_os" == "Darwin" ]]; then
     elif ! { "$BEANSC" --help 2>&1 || true; } | grep -q "arm64-apple-ios-sim"; then
         skip ios "this beansc has no iOS target; build one from a tree that has it"
     else
-        for name in "${cross_host[@]}"; do
+        for name in "${cross_host[@]}" "${apple_only[@]}"; do
             "$BEANSC" build "$root/tests/$name.b" --target arm64-apple-ios-sim \
                 -o "$tmp/$name-ios" >"$tmp/ios.build" 2>&1 || {
                 echo "FAIL ios: tests/$name.b does not build for the simulator" >&2
@@ -325,20 +340,47 @@ if [[ "$host_os" == "Darwin" ]]; then
         booted="$(xcrun simctl list devices booted 2>/dev/null | grep -oE '[0-9A-F-]{36}' | head -1 || true)"
         if [[ -z "$booted" ]]; then
             skip ios_run "no booted simulator — 'xcrun simctl boot <device>' to run the iOS leg"
-            echo "ok ios: ${#cross_host[@]} cases build for the simulator"
+            echo "ok ios: $(( ${#cross_host[@]} + ${#apple_only[@]} )) cases build for the simulator"
         else
             ran=0
-            for name in "${cross_host[@]}"; do
+            for name in "${cross_host[@]}" "${apple_only[@]}"; do
                 if [[ " ${ios_builds_only[*]} " == *" $name "* ]]; then continue; fi
                 xcrun simctl spawn "$booted" "$tmp/$name-ios" >"$tmp/$name-ios.out" 2>&1
                 diff -u "$root/tests/$name.out" "$tmp/$name-ios.out"
                 ran=$((ran + 1))
                 pass
             done
-            echo "ok ios: $ran portable goldens are the same bytes on macOS and iOS"
+            echo "ok ios: $ran goldens are the same bytes on macOS and iOS"
             echo "   (${ios_builds_only[*]} built for the phone but not run there — see ios_builds_only)"
         fi
     fi
+fi
+
+# --------------------------------------------------------- Metal API validation
+#
+# The GPU host is the only part of cortado that hands raw objects to a driver
+# and manages their lifetimes by hand, and Metal ships a validation layer that
+# catches exactly the misuse that costs: an encoder used after it ended, a
+# resource released while a command buffer still references it, a descriptor
+# with a field the pipeline cannot honour. ASan sees none of that — the memory
+# is all valid, it is the *order* that is wrong.
+#
+# What this leg does **not** prove is that `ctd_gpu_pass_end` waits for the GPU
+# before the pixels are read. Removing that wait passes at full speed, because
+# the readback happens to lose a race it should not be running at all, and it
+# fails under validation only because validation is slower. A test tuned to
+# lose a race would go quietly green on faster hardware, which is worse than
+# not having one. The wait stays because Metal's contract requires it, and that
+# is written beside it in src/mac/gpu.m.
+if [[ "$host_os" == "Darwin" && $have_host -eq 1 ]]; then
+    for name in gpu triangle; do
+        MTL_DEBUG_LAYER=1 MTL_DEBUG_LAYER_ERROR_MODE=assert \
+            "$BEANSC" run "$root/tests/$name.b" 2>&1 \
+            | grep -v 'Metal API Validation' >"$tmp/$name.validated"
+        diff -u "$root/tests/$name.out" "$tmp/$name.validated"
+        pass
+    done
+    echo "ok metal: 2 cases clean under Metal API Validation"
 fi
 
 # ------------------------------------------------------------- negative control
@@ -396,10 +438,21 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # display, and a gate must not need one. An example that is not built is an
     # example that goes stale, and the first person to find out is whoever
     # copied it.
-    for example in hello clock; do
+    for example in hello clock shader; do
         "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
         pass
     done
+    # `shader` is the one example that is also *run*, because it is the one
+    # that needs no display: it opens the GPU, renders a Mandelbrot set into an
+    # off-screen target and writes it out. Its output names one machine — a GPU
+    # by name, a size in bytes — so there is no golden, and what is asserted is
+    # that it drew something the size it meant to and said where it put it.
+    ( cd "$tmp" && mkdir -p build && "$tmp/shader.bin" ) >"$tmp/shader.out" 2>&1
+    grep -q "rendered 640x480, 1228800 bytes" "$tmp/shader.out"
+    grep -q "^wrote build/mandelbrot.bmp" "$tmp/shader.out"
+    # 640 * 480 * 3 padded to a multiple of four, plus a 54-byte header.
+    [[ "$(wc -c <"$tmp/build/mandelbrot.bmp" | tr -d ' ')" == "921654" ]]
+    pass
     # The component example is a separate module, because it names barista as
     # well as cortado. It is built only when barista is checked out beside us —
     # cortado's own core does not depend on it, and a gate that hard-required a

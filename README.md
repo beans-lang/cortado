@@ -547,10 +547,66 @@ measured rather than assumed: against a binary linking only AppKit and
 Foundation, adding Metal changes the size not at all, adds three load commands,
 and moves launch time less than the noise between two runs of the same binary.
 
+### Drawing something
+
+```beans
+var card: gpu.Device = gpu.Device.open()?
+var canvas: gpu.Target = card.target(640, 480)?          // pixels, not points
+var shader: gpu.Shader = card.shader(gpu.ShaderLanguage.msl, source)?
+
+var line: gpu.Pipeline = shader.pipeline("v_main", "f_main")?
+line.attr(0, 2, 0)?        // attribute 0: two numbers, starting at number 0
+line.attr(1, 4, 2)?        // attribute 1: four numbers, starting at number 2
+line.stride(6)?            // so a vertex is six numbers
+line.blend(gpu.Blend.alpha)?
+line.build()?
+
+var draw: gpu.Pass = canvas.begin(0.0, 0.0, 0.0, 1.0)?   // clears as it starts
+draw.pipeline(line)?
+draw.vertices(card.buffer(vertices)?)?
+draw.uniform([1.0])?
+draw.draw(gpu.Shape.triangles, 0, 6)?
+draw.finish()?                                           // runs it, and waits
+
+let picture: widgets.Snapshot = canvas.read()?           // top row first
+```
+
+`examples/shader.b` is this program with a Mandelbrot set in the fragment
+shader: `beansc build examples/shader.b -o build/shader && ./build/shader`
+writes a bitmap you can open.
+
+**Numbers, and only numbers.** A buffer holds floats; an attribute's offset and
+a layout's stride are counted in floats too. That is narrower than any of the
+three backends and it is narrow on purpose — the alternative is an API where
+you compute byte offsets for data you wrote as numbers and get one of them
+wrong. Packed colours and 16-bit indices are the reason this will grow, and
+they will arrive as their own call rather than by changing what these arguments
+mean.
+
+**A pass is synchronous.** When `finish` returns the pixels are there to read.
+That is the right trade for an image a program computes and reads back. It is
+the wrong one for a surface being presented sixty times a second, which is a
+different call with a different contract rather than a flag on this one.
+
+**Three blend modes, not eight blend factors.** `replace`, `alpha` and `add`:
+every backend has these three and means the same by them, and a factor pair is
+eight enums to combine correctly, unchecked, to arrive at one of these three
+anyway.
+
+### What the tests can say
+
 `tests/gpu.out` is the same bytes through all four hosts, and the two sides run
 entirely different code to produce it: every line asks whether what happened
 agrees with what the capability promised. A host that could not draw but said
 it could — or one that quietly did nothing — fails it.
+
+`tests/triangle.out` is the opposite kind of test. `tests/pixels.b` reads a
+control back and can only assert *shape*, because its numbers come out of a
+font rasterizer that changes with every OS release. A GPU target has no such
+excuse: every quad in `triangle.b` lands on a pixel boundary, so coverage is
+arithmetic, and the colours are asserted exactly — 64 green pixels of 64, 32 of
+64 for the top half, 16 for a quad the shader halved. It is the same bytes on
+this Mac's GPU and on the iOS Simulator's, which are different hardware.
 
 ## Shipping
 

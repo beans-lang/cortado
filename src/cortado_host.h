@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 4
+#define CTD_ABI_VERSION 5
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -562,6 +562,171 @@ ctd_status ctd_gpu_device_limit(ctd_handle device, int32_t which, double *out);
  * passed here gets. A release that quietly accepted anything would make
  * releasing the wrong thing invisible exactly where it is most expensive. */
 ctd_status ctd_gpu_release(ctd_handle object);
+
+/* ---- the GPU: what you draw with ---------------------------------------- */
+
+/* A block of floats the GPU can read.
+ *
+ * Floats, and only floats, everywhere in this section: a buffer's contents,
+ * an attribute's offset, a layout's stride, a uniform. That is narrower than
+ * any of the three backends, and it is narrow on purpose — the alternative is
+ * a byte-addressed API in which the caller computes offsets in bytes for data
+ * they wrote in floats, and gets one of them wrong. Beans can hand C a
+ * `RawPtr<f32>` and cannot bit-cast a float, so floats are also the only thing
+ * that crosses this boundary today without a second representation.
+ *
+ * Packed colours and 16-bit indices are the reason this will grow, and when
+ * they land they arrive as `ctd_gpu_buffer_write_bytes` with byte offsets of
+ * its own rather than by changing the meaning of these arguments.
+ *
+ * `count` is a number of floats, not bytes. Zero or fewer is CTD_ERR_RANGE:
+ * a buffer with nothing in it is a description somebody left half written. */
+ctd_handle ctd_gpu_buffer_new(ctd_handle device, const float *data, int32_t count);
+
+/* Overwrites `count` floats starting at float `first`. Writing past the end is
+ * CTD_ERR_RANGE and never a partial write — a GPU buffer is memory the driver
+ * owns, and a clamped write there is a corruption nobody sees until a frame
+ * looks wrong. */
+ctd_status ctd_gpu_buffer_write(ctd_handle buffer, int32_t first,
+                                const float *data, int32_t count);
+/* How many floats it holds. */
+ctd_status ctd_gpu_buffer_count(ctd_handle buffer, int32_t *out);
+
+/* Somewhere to draw: an off-screen image, 8-bit RGBA.
+ *
+ * One pixel format, and it is the one `ctd_snapshot` already answers in.
+ * A format argument would be the first thing a caller had to decide and the
+ * last thing they could check, and every extra format multiplies what a golden
+ * has to assert. Wider colour is a real want and it is a later decision with
+ * its own capability, not an argument here.
+ *
+ * Width and height are in pixels, not points: this is an image the program
+ * computes, and there is no display involved to have a scale. */
+ctd_handle ctd_gpu_target_new(ctd_handle device, int32_t width, int32_t height);
+
+/* Reads the target back as pixels — 8-bit RGBA, row after row, **top row
+ * first**, no padding, so the image is exactly width * height * 4 bytes and a
+ * pixel is at (y * width + x) * 4. The same layout and the same two-call shape
+ * as ctd_snapshot: ask with `cap` 0 for the byte count, then again with a
+ * buffer. `out_size` is filled on both calls.
+ *
+ * Top row first is a promise about the GPU as well as about this call: in clip
+ * space y grows *upward*, so the vertex at y = +1 is the one that lands in row
+ * zero. Every backend this ABI is shaped for agrees about that, and it is
+ * checked rather than assumed — `tests/triangle.b` draws a quad over the top
+ * half and asserts which half comes back filled. */
+int32_t    ctd_gpu_target_read(ctd_handle target, double *out_size, char *out, int32_t cap);
+
+/* Compiles shader source, at run time, in the language `ctd_gpu_shader_langs`
+ * said this host accepts. Anything else is refused rather than attempted.
+ *
+ * At run time and not as a build step, because there is no build step to put
+ * it in: a Beans package declares C sources and frameworks, and nothing that
+ * would run `xcrun metal`. Compiling from source costs about two milliseconds
+ * cold and nothing at all warm, which is cheaper than the machinery would be.
+ *
+ * Answers no handle when the source does not compile. **`ctd_gpu_shader_problem`
+ * is then how you find out why** — a shader that failed with no message is a
+ * blank window and a long evening. */
+ctd_handle ctd_gpu_shader_new(ctd_handle device, int32_t language,
+                              const char *source, int32_t len);
+
+/* What went wrong the last time this device was asked to compile something,
+ * as the platform's own compiler said it — file, line, column and message.
+ * Empty when the last compile succeeded.
+ *
+ * On the device rather than on the shader, because the shader that failed has
+ * no handle to ask. That makes it *the last one*, which is the one thing worth
+ * being exact about: read it immediately, and never from two threads, which
+ * costs nothing here because every call in this header is on the UI thread. */
+int32_t    ctd_gpu_shader_problem(ctd_handle device, char *out, int32_t cap);
+
+/* How to draw: which shader functions, how a vertex is laid out, how the
+ * result is mixed with what is already there.
+ *
+ * A builder, the shape `ctd_menu_*` uses, because rule 1 forbids handing a
+ * descriptor across by value — and because a pipeline is genuinely a list of
+ * decisions rather than four arguments.
+ *
+ * `vertex` and `fragment` are function names in the shader source. A name that
+ * is not in it answers no handle rather than failing later at draw time. */
+ctd_handle ctd_gpu_pipeline_new(ctd_handle shader,
+                                const char *vertex, int32_t vertex_len,
+                                const char *fragment, int32_t fragment_len);
+
+/* One field of a vertex: which `[[attribute(index)]]` it feeds, how many
+ * floats it is (1 to 4), and how many floats into the vertex it starts. */
+ctd_status ctd_gpu_pipeline_attr(ctd_handle pipeline, int32_t index,
+                                 int32_t floats, int32_t offset);
+/* How many floats one vertex takes, including any padding between them. */
+ctd_status ctd_gpu_pipeline_stride(ctd_handle pipeline, int32_t floats);
+
+/* How a drawn pixel is mixed with the one already there.
+ *
+ * Three named modes rather than a pair of blend factors. Every backend has
+ * these three and means the same by them; a factor pair is eight enums a
+ * caller has to get right in a combination nothing checks, to arrive at one of
+ * these three anyway. Custom factors are a later call of their own and change
+ * nothing about this one. */
+#define CTD_BLEND_REPLACE  0  /* the new pixel, whatever was there          */
+#define CTD_BLEND_ALPHA    1  /* over: src*a + dst*(1-a) — what a UI wants  */
+#define CTD_BLEND_ADD      2  /* src + dst — glows, particles, heat maps    */
+
+ctd_status ctd_gpu_pipeline_blend(ctd_handle pipeline, int32_t blend);
+
+/* Finishes it. Everything above must come first; nothing may change after.
+ *
+ * CTD_ERR_STATE when no attribute or no stride was given: a pipeline with no
+ * vertex layout could only be driven by a shader that indexes a raw buffer
+ * itself, which is a second way to write every shader and a second thing for
+ * this ABI to describe. One way, and it is checked. */
+ctd_status ctd_gpu_pipeline_build(ctd_handle pipeline);
+
+/* Everything drawn into one target between a begin and an end.
+ *
+ * The target is cleared to the colour given here, because every backend clears
+ * as part of starting a pass and a separate "clear" call would be a second
+ * pass that costs a whole round trip. Components are 0 to 1.
+ *
+ * A pass is **synchronous**: `ctd_gpu_pass_end` hands the work to the GPU and
+ * waits for it, so the pixels are there to read the moment it returns. That is
+ * the right trade for an image a program computes and reads back, which is
+ * what this pair of calls is for. It is the wrong trade for a surface being
+ * presented sixty times a second, and that is a different call with a
+ * different contract rather than a flag on this one. */
+ctd_handle ctd_gpu_pass_begin(ctd_handle target, double r, double g, double b, double a);
+ctd_status ctd_gpu_pass_pipeline(ctd_handle pass, ctd_handle pipeline);
+
+/* The vertices to read. One buffer, bound where the shader declares
+ * `[[buffer(0)]]`; the uniform below is `[[buffer(1)]]`.
+ *
+ * One, because interleaved data in a single buffer is what a program writes
+ * and what every example of this shape does. A second buffer is what instanced
+ * drawing wants, and it arrives as a call that names its slot — leaving this
+ * one meaning exactly what it says today rather than growing an argument. */
+ctd_status ctd_gpu_pass_vertices(ctd_handle pass, ctd_handle buffer);
+
+/* Constants for the draws that follow, read by the shader at `[[buffer(1)]]`.
+ *
+ * Copied out of the caller's memory as the call is made, not referenced, so
+ * the floats may be a local that goes out of scope on the next line. That is
+ * the same promise rule 3 makes about text, for the same reason. */
+ctd_status ctd_gpu_pass_uniform(ctd_handle pass, const float *data, int32_t count);
+
+#define CTD_SHAPE_TRIANGLES       0
+#define CTD_SHAPE_TRIANGLE_STRIP  1
+#define CTD_SHAPE_LINES           2
+#define CTD_SHAPE_LINE_STRIP      3
+#define CTD_SHAPE_POINTS          4
+
+/* Draws `count` vertices starting at `first`. */
+ctd_status ctd_gpu_pass_draw(ctd_handle pass, int32_t shape, int32_t first, int32_t count);
+
+/* Ends the pass, runs it, and waits. The pass's handle is released as it ends,
+ * the way an animation's is — everything it described has happened, and a
+ * handle that outlived it would be a thing to remember to release on a path
+ * that runs every frame. */
+ctd_status ctd_gpu_pass_end(ctd_handle pass);
 
 /* ---- menus ------------------------------------------------------------- */
 

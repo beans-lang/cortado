@@ -71,6 +71,24 @@ pub extern "C" fn ctd_gpu_device_new() -> u64
 pub extern "C" fn ctd_gpu_device_name(device: u64, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_gpu_device_limit(device: u64, which: i32, out: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_gpu_release(object: u64) -> i32
+pub extern "C" fn ctd_gpu_buffer_new(device: u64, data: RawPtr<f32>, count: i32) -> u64
+pub extern "C" fn ctd_gpu_buffer_write(buffer: u64, first: i32, data: RawPtr<f32>, count: i32) -> i32
+pub extern "C" fn ctd_gpu_buffer_count(buffer: u64, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_gpu_target_new(device: u64, width: i32, height: i32) -> u64
+pub extern "C" fn ctd_gpu_target_read(target: u64, out_size: RawPtr<f64>, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_gpu_shader_new(device: u64, language: i32, source: RawPtr<i8>, len: i32) -> u64
+pub extern "C" fn ctd_gpu_shader_problem(device: u64, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_gpu_pipeline_new(shader: u64, vertex: RawPtr<i8>, vertex_len: i32, fragment: RawPtr<i8>, fragment_len: i32) -> u64
+pub extern "C" fn ctd_gpu_pipeline_attr(pipeline: u64, index: i32, floats: i32, offset: i32) -> i32
+pub extern "C" fn ctd_gpu_pipeline_stride(pipeline: u64, floats: i32) -> i32
+pub extern "C" fn ctd_gpu_pipeline_blend(pipeline: u64, blend: i32) -> i32
+pub extern "C" fn ctd_gpu_pipeline_build(pipeline: u64) -> i32
+pub extern "C" fn ctd_gpu_pass_begin(target: u64, r: f64, g: f64, b: f64, a: f64) -> u64
+pub extern "C" fn ctd_gpu_pass_pipeline(pass: u64, pipeline: u64) -> i32
+pub extern "C" fn ctd_gpu_pass_vertices(pass: u64, buffer: u64) -> i32
+pub extern "C" fn ctd_gpu_pass_uniform(pass: u64, data: RawPtr<f32>, count: i32) -> i32
+pub extern "C" fn ctd_gpu_pass_draw(pass: u64, shape: i32, first: i32, count: i32) -> i32
+pub extern "C" fn ctd_gpu_pass_end(pass: u64) -> i32
 pub extern "C" fn ctd_menu_new(title: RawPtr<i8>, len: i32) -> u64
 pub extern "C" fn ctd_menu_add_item(menu: u64, title: RawPtr<i8>, title_len: i32, key: RawPtr<i8>, key_len: i32, role: i32, token: i64) -> i32
 pub extern "C" fn ctd_menu_add_separator(menu: u64) -> i32

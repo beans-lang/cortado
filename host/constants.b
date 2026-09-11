@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 4
+pub const ABI_VERSION: int = 5
 
 // ---- statuses ----
 
@@ -159,3 +159,18 @@ pub const SHADER_GLSL: int = 8
 pub const GPU_UNIFIED_MEMORY: int = 1
 pub const GPU_MAX_BUFFER_BYTES: int = 2
 pub const GPU_MEMORY_BYTES: int = 3
+
+// How a drawn pixel is mixed with the one already there. Three named modes
+// rather than a pair of blend factors: every backend has these three and means
+// the same by them, and a factor pair is eight enums to get right in a
+// combination nothing checks.
+pub const BLEND_REPLACE: int = 0
+pub const BLEND_ALPHA: int = 1
+pub const BLEND_ADD: int = 2
+
+// What a draw call makes out of its vertices.
+pub const SHAPE_TRIANGLES: int = 0
+pub const SHAPE_TRIANGLE_STRIP: int = 1
+pub const SHAPE_LINES: int = 2
+pub const SHAPE_LINE_STRIP: int = 3
+pub const SHAPE_POINTS: int = 4

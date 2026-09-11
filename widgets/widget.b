@@ -93,31 +93,13 @@ pub abstract class Widget {
     /// back — ask `Application.can(Capability.snapshot)` first rather than
     /// finding out here.
     pub fn snapshot() -> Result<Snapshot> {
-        let scratch: host.HostScratch = host.HostScratch.instance
-        var needed: int = 0
-        unsafe {
-            needed = host.ctd_snapshot(self.slot.raw, scratch.reals,
-                                       RawPtr.null(), 0) as int
-        }
-        host.check(needed, "measure a snapshot of a {self.kind_value.name()}")?
-        let width: int = scratch.real(0) as int
-        let height: int = scratch.real(1) as int
-        var shot: Snapshot = new Snapshot(width, height, needed)
-        if needed == 0 { return ok(shot) }
-        var wrote: int = 0
-        unsafe {
-            wrote = host.ctd_snapshot(self.slot.raw, scratch.reals,
-                                      shot.buffer(), needed as i32) as int
-        }
-        host.check(wrote, "snapshot a {self.kind_value.name()}")?
-        // A host that answers a bigger image the second time has been resized
-        // between the two calls, and the buffer holds part of one picture and
-        // part of another.
-        if wrote != needed {
-            return err("could not snapshot a {self.kind_value.name()}: it changed size while it was being read",
-                       "host_raced")
-        }
-        return ok(shot)
+        let slot: host.Handle = self.slot
+        return Snapshot.read("snapshot a {self.kind_value.name()}",
+                             fn(size: RawPtr<f64>, out: RawPtr<i8>, cap: i32) -> i32 {
+            unsafe {
+                return host.ctd_snapshot(slot.raw, size, out, cap)
+            }
+        })
     }
 
     /// How big this control wants to be inside `available`.
