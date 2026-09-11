@@ -1,0 +1,14 @@
+Container CortadoView role=group "" frame=0,0,480,320 children=5
+  Label NSTextField role=text "Order a coffee" frame=20,20,240,20
+  TextField NSTextField role=textbox "flat white" frame=20,52,200,24
+  CheckBox NSButton role=checkbox "Extra shot" frame=20,88,200,20
+  ImageView NSImageView role=image "" frame=300,20,64,64
+  Container CortadoView role=group "" frame=20,130,300,40 children=2
+    Button NSButton role=button "Order" frame=0,0,100,32
+    Button NSButton role=button "Cancel" frame=110,0,100,32 disabled
+-- after reordering the buttons --
+Container CortadoView role=group "" frame=20,130,300,40 children=2
+  Button NSButton role=button "Cancel" frame=110,0,100,32 disabled
+  Button NSButton role=button "Order" frame=0,0,100,32
+cancel alive before=true after=false
+built=true

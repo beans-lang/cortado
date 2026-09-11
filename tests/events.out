@@ -1,0 +1,8 @@
+registered=2
+order activate #1
+order activate #2
+extra toggled
+clicks=2
+after forgetting order: clicks=2 registered=1
+registered at teardown=0
+drove=true

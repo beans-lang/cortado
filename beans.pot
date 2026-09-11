@@ -1,0 +1,10 @@
+module cortado
+kind library
+
+# The macOS host. Every Objective-C detail in cortado lives in this one
+# translation unit; the .m suffix is what tells clang to compile it as
+# Objective-C, the same way raylib's Cocoa backend does it.
+csrc macos "src/cortado_macos.m"
+
+link macos framework "AppKit"
+link macos framework "Foundation"
