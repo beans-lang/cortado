@@ -51,6 +51,31 @@ First working macOS host.
   independently, so neighbouring boxes always meet and a parent rounded by half
   a pixel does not shift its descendants.
 
+- `cortado.component` — components, and the reconciler behind them. A render
+  produces a tree of `Element` values and touches no control; `Differ` compares
+  it with the previous tree and `Applier` turns the difference into platform
+  calls. `Component` carries the lifecycle (`on_init`, `on_params_set`,
+  `on_mount`, `on_unmount`, `should_render`), `Builder` is the method ABI `.bx`
+  will emit against, and `Mount` owns a live tree and re-renders it.
+- `cortado.annotations` — `@view`, `@param`, `@inject`, `@window`, `@command`
+  and `@platform`, every one `@retention(value: "runtime")` because the default
+  is not runtime and a scan that cannot see an annotation is not a scan.
+- `cortado_app` — a sibling module holding the barista bridge. It is separate
+  because a package under a module may not import its own module root, so the
+  composition root cannot live inside cortado; and because keeping it out means
+  cortado's core has no dependency on any container at all.
+- Keyed reconciliation. A child with a `key` keeps its control across
+  reordering, insertion and filtering; children without one match by position.
+  Reversing three keyed rows emits two moves, and `tests/diff.b` records the
+  unkeyed cost beside the keyed one so the difference is visible rather than
+  claimed.
+- `EventRouter.after` — one callback, run after a batch of events drains rather
+  than after each event, so a handler that triggers three more causes one
+  render and not four.
+- `Widget.set_display_text`, `set_property` and `set_property_real` — generic
+  access by host property id, for the applier. Application code keeps the named
+  methods, which say what they do.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump
@@ -62,6 +87,15 @@ First working macOS host.
   reads as *disabled* rather than as *has no such property*. It answers
   `wrong_widget` now, and `describe()` prints the flag only for widgets that
   actually carry one.
+- A first render produced controls that looked right and did nothing. The
+  differ emits one `create` carrying the whole tree, and no `bind` for anything
+  inside it — there was no previous tree to compare against — so the applier
+  built the subtree and never subscribed its handlers. Found by a test that
+  fires a real `performClick:` rather than by one that checks the tree looks
+  right.
+- Tearing a mount down left one dead subscription per control below the top
+  level, each holding the mount alive. `close` forgot only its direct children.
+  The gate asserts the router is empty afterwards, which is what caught it.
 - A control grouped by a layout-only node landed at the top of the window
   instead of on its row. The layout tree and the control tree deliberately have
   different shapes — `WidgetLayout.spacer` groups widgets without creating a

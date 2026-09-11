@@ -1,0 +1,9 @@
+module counter
+kind application
+
+# A component-driven window. It needs three modules: cortado for the framework,
+# cortado_app for the composition root that wires barista in, and barista
+# because this file names `ServiceCollection` itself.
+require path "../.."
+require path "../../app"
+require path "../../../barista"

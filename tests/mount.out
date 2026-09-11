@@ -1,0 +1,37 @@
+== first render ==
+Container CortadoView role=group "" frame=0,0,320,220 children=1
+  Container CortadoView role=group "" frame=0,0,320,220 children=4
+    Label NSTextField role=text "Order a coffee" frame=16,16,288,16
+    Label NSTextField role=text "380p" frame=16,40,288,16
+    CheckBox NSButton role=checkbox "Extra shot" frame=16,64,288,16
+    Container CortadoView role=group "" frame=16,88,288,24 children=2
+      Button NSButton role=button "Buy" frame=167,0,47,24
+      Button NSButton role=button "Cancel" frame=222,0,66,24
+renders so far: 2
+the injected service answered: true
+== nothing changed ==
+refresh_if_needed did anything: false
+== after a click ==
+the click reached the component: true
+it asked for a render: true
+Container CortadoView role=group "" frame=0,0,320,220 children=1
+  Container CortadoView role=group "" frame=0,0,320,220 children=4
+    Label NSTextField role=text "Order a coffee" frame=16,16,288,16
+    Label NSTextField role=text "380p" frame=16,40,288,16
+    CheckBox NSButton role=checkbox "Extra shot" frame=16,64,288,16
+    Container CortadoView role=group "" frame=16,88,288,24 children=2
+      Button NSButton role=button "Buy" frame=167,0,47,24
+      Button NSButton role=button "Cancel" frame=222,0,66,24
+renders so far: 3
+the checkbox followed the component: true
+the memoised child rendered once: true
+== after a second click ==
+the button disabled itself: true
+a disabled button ignores a click: true
+== two buttons, two handlers ==
+they are different controls: true
+cancel ran cancel: true
+cancel did not run buy: true
+== closed ==
+the container is empty: true
+the router holds nothing: true

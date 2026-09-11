@@ -63,7 +63,7 @@ run).
 ```
 your program
      │
-cortado.component   the retained tree .bx markup renders into        (not yet)
+cortado.component   components, the differ, and the applier
 cortado.surface     windows, and the application that owns them
 cortado.widgets     the controls
 cortado.layout      where everything goes — arithmetic, no controls
@@ -71,6 +71,7 @@ cortado.events      what the user did
 cortado.platform    what this platform can and cannot do
 cortado.geometry    points, sizes, rectangles
 cortado.host        the flat C ABI, and the only package that names it
+cortado.annotations @view · @param · @inject · @window · @command · @platform
      │
 src/cortado_host.h  ── src/cortado_macos.m   (+ win32, gtk4, uikit, android)
 ```
@@ -165,6 +166,85 @@ the absolute left and right edges instead, so the right edge of one box and the
 left edge of the next are the same number and always meet. It is absolute
 because a parent rounded by half a pixel would otherwise shift every descendant
 by that half pixel.
+
+## Components
+
+A component is an ordinary Beans class. Its fields are its state, `render` says
+what it should look like, and cortado works out the difference from the last
+render and changes only that.
+
+```beans
+@view
+pub class Counter extends component.Component {
+    @param pub heading: string = "Order a coffee"
+    @inject pub menu: Menu = new Menu()
+    shots: int = 1
+    price: Price = new Price()
+
+    pub override fn render(into: component.Builder) {
+        into.open("VStack")
+        into.number("spacing", 14.0)
+        into.number("padding", 24.0)
+        into.word("align", "stretch")
+            into.open("Label")
+            into.text("{self.shots} shots")
+            into.close()
+
+            into.child("price", self.price)
+
+            into.open("Button")
+            into.text("Another shot")
+            into.flag("enabled", self.shots < 4)
+            into.on("click", fn(event: events.UiEvent) { self.add_shot() })
+            into.close()
+        into.close()
+    }
+
+    fn add_shot() {
+        self.shots = self.shots + 1
+        self.request_render()
+    }
+}
+```
+
+`examples/counter/` is that screen, running, with the service registered
+through barista.
+
+**Why a render does not touch the platform.** `render` produces a tree of
+`Element` values. A `Differ` compares it with the last one and answers a list
+of `Change`s; an `Applier` turns those into platform calls. Three things follow,
+and they are the reason for the indirection:
+
+- **Nothing is destroyed that did not change.** A native control holds focus, a
+  text selection, an input-method session and a scroll position. Rebuilding one
+  because its sibling changed loses all of it, visibly.
+- **Renders are values, so they are testable with no platform.** `tests/diff.b`
+  checks 23 reconciliation cases on every operating system with no display —
+  including that reordering keyed rows emits moves and creates nothing.
+- **The markup compiler has a target.** `Builder`'s methods are the ABI `.bx`
+  will emit against, and they are deliberately something a person can write by
+  hand, so markup is sugar over one API rather than a second one.
+
+**Keys.** A child with a `key` keeps its control when the list around it is
+reordered or filtered. Without one, children match by position — which is right
+for a fixed layout and wrong for a list: remove the first of five unkeyed rows
+and every row after it is told it is now the row below, so four controls are
+rewritten where one should have been removed. The golden file records both
+costs side by side.
+
+**Annotations.** `@view` marks a component, `@param` a field the caller sets,
+`@inject` a field the container fills. `@inject` needs a placeholder value
+(`= new Menu()`) because Beans proves every field is assigned before a
+constructor returns and `init` runs long before anything has a container to ask
+— so prefer constructor injection for what a component cannot work without, and
+`@inject` where a constructor cannot reach.
+
+**Dependency injection** is [barista](https://github.com/beans-lang/barista),
+and the whole of the dependency is one class in a *separate module*,
+`cortado_app`. `cortado.component` asks for a `ServiceSource` — an interface
+over `std.reflect` with two methods — so an application with its own idea of
+where services come from writes twenty lines instead of adopting a container,
+and cortado's own gate needs no dependency to run.
 
 ## Building
 

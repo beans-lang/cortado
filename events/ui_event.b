@@ -32,6 +32,21 @@ pub class UiEvent {
         self.size = geometry.Size.of(record.width, record.height)
     }
 
+    /// An event cortado raised itself, rather than one the platform sent.
+    ///
+    /// The component layer needs this to deliver a change it made on the
+    /// Beans side — a parameter that moved, a value the framework set — down
+    /// the same path a real click takes, so a handler has one shape whatever
+    /// woke it. It is also what lets the differ and the router be tested with
+    /// no platform at all.
+    pub static fn of(kind: EventKind, target: host.Handle) -> UiEvent {
+        var record: host.CtdEvent = host.CtdEvent {
+            kind: kind.name_code() as u32, modifiers: 0, target: target.raw,
+            index: 0, token: 0, x: 0.0, y: 0.0, width: 0.0, height: 0.0
+        }
+        return new UiEvent(record)
+    }
+
     pub fn has_modifier(bit: int) -> bool {
         return (self.modifiers & bit) != 0
     }

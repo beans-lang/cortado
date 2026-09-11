@@ -37,6 +37,10 @@ pub class StackLayout extends Layout {
         return new StackLayout(Direction.vertical, spacing)
     }
 
+    pub fn set_spacing(gap: f64) {
+        self.spacing = gap
+    }
+
     pub fn set_padding(insets: geometry.EdgeInsets) {
         self.pad = insets
     }

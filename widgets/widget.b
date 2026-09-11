@@ -147,6 +147,37 @@ pub abstract class Widget {
             })
     }
 
+    // ---- generic property access ----
+    //
+    // The component layer applies a render's result by property id, because
+    // the differ compares integers and a translation back to method names
+    // would put a string table in the hot path of every frame. Application
+    // code should reach for the named methods above and the ones each subclass
+    // adds — `set_enabled`, `Button.set_title` — which say what they do.
+
+    /// Writes the text this control shows, whatever the control calls it.
+    pub fn set_display_text(text: string) -> Result<bool> {
+        return self.set_text_raw(text)
+    }
+
+    /// Writes one integer property by its `host.P_*` id.
+    pub fn set_property(property: int, value: int) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_set_int(self.slot.raw, property as i32, value as i64) as int,
+                "set property {property} of a {self.kind_value.name()}")
+        }
+    }
+
+    /// Writes one real-valued property by its `host.P_*` id.
+    pub fn set_property_real(property: int, value: f64) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_set_real(self.slot.raw, property as i32, value) as int,
+                "set property {property} of a {self.kind_value.name()}")
+        }
+    }
+
     // ---- introspection ----
 
     /// The platform's own class name for this control — `NSButton`, `Button`,

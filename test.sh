@@ -63,14 +63,14 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge)
+cases=(tree events bridge mount)
 
 # Cases that need nothing but the language. These are the layout engine, which
 # is pure Beans with no foreign call in it at all, so they run on every
 # operating system cortado will ever target — including the ones whose host has
 # not been written. A layout bug is therefore found by any runner, not only by
 # a Mac.
-portable=(layout)
+portable=(layout diff)
 
 # ---------------------------------------------------------- the boundary gates
 #
@@ -93,7 +93,7 @@ for name in "${portable[@]}"; do
     diff -u "$golden" "$tmp/$name.interp"
     pass
 done
-echo "ok portable: ${#portable[@]} cases, $(grep -c '^== ' "$root/tests/layout.out") layout goldens, no display and no FFI"
+echo "ok portable: ${#portable[@]} suites, $(cat "$root/tests/layout.out" "$root/tests/diff.out" | grep -c '^== ') goldens, no display and no FFI"
 
 # ------------------------------------------------------------- interpreter leg
 if [[ $have_host -eq 0 ]]; then
@@ -134,7 +134,7 @@ fi
 # to reach, even before that platform's host exists. A type error that only
 # appears at the Windows port is a type error that was always there.
 for target in x86_64-pc-windows-gnu aarch64-unknown-linux-gnu; do
-    for probe in tree layout; do
+    for probe in tree layout diff; do
         "$BEANSC" check "$root/tests/$probe.b" --target "$target" >"$tmp/cross.out" 2>&1 || {
             echo "FAIL cross-check $probe for $target:" >&2
             cat "$tmp/cross.out" >&2
@@ -163,11 +163,22 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         diff -u "$root/tests/$name.out" "$tmp/$name.native"
         pass
     done
-    # The windowed example is built and linked but never run: it wants a
+    # The windowed examples are built and linked but never run: they want a
     # display, and a gate must not need one.
     "$BEANSC" build "$root/examples/hello.b" -o "$tmp/hello.bin" >/dev/null
     pass
-    echo "ok native: ${#cases[@]} cases, and examples/hello links"
+    # The component example is a separate module, because it names barista as
+    # well as cortado. It is built only when barista is checked out beside us —
+    # cortado's own core does not depend on it, and a gate that hard-required a
+    # sibling repository would be red for anyone who cloned one repo.
+    if [[ -f "$root/../barista/beans.pot" ]]; then
+        "$BEANSC" build "$root/examples/counter/main.b" -o "$tmp/counter.bin" >/dev/null
+        pass
+        echo "ok native: ${#cases[@]} cases, and both examples link"
+    else
+        skip counter_example "barista is not checked out at ../barista, so the dependency-injection example cannot be built"
+        echo "ok native: ${#cases[@]} cases, and examples/hello links"
+    fi
 elif [[ $native -eq 1 ]]; then
     echo "-- native leg not run: no host for $host_os"
 else

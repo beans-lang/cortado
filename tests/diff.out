@@ -1,0 +1,59 @@
+== first render is one create ==
+  create surface[0] <VStack> +2
+== text changed ==
+  set root text="after"
+== nothing changed ==
+  (nothing changed)
+== a property appeared ==
+  set root enabled=false
+== a property went away ==
+  set root enabled=true
+== a number changed ==
+  set root font_size=18
+== a handler appeared ==
+  bind root activate
+== a handler went away ==
+  unbind root activate
+== the same handler, a different closure ==
+  (nothing changed)
+== append one unkeyed child ==
+  create root[2] <Label>
+== remove the last unkeyed child ==
+  remove root[2]
+== remove the first unkeyed child ==
+  remove root[2]
+  set root.0 text="b"
+  set root.1 text="c"
+== remove the first keyed child ==
+  remove root[0]
+== reorder keyed children ==
+  move root[2] -> [0]
+== insert into the middle, keyed ==
+  create root[1] <Label> key=b
+== reverse keyed children ==
+  move root[2] -> [0]
+  move root[2] -> [1]
+== replace every keyed child ==
+  remove root[1]
+  remove root[0]
+  create root[0] <Label> key=x
+  create root[1] <Label> key=y
+== empty the list ==
+  remove root[1]
+  remove root[0]
+== fill an empty list ==
+  create root[0] <Label> key=a
+  create root[1] <Label> key=b
+== the root changed kind ==
+  remove surface[0]
+  create surface[0] <Button>
+== a child gained a wrapper ==
+  remove root[0]
+  create root[0] <HStack> +1
+== a deep leaf changed ==
+  set root.0.1 text="TWO"
+== checks ==
+  a tree against itself is silent: true
+  reordering keys creates nothing: true
+  keys beat positions on a head removal: true
+  no edit is wasted or out of range: true

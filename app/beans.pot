@@ -1,0 +1,20 @@
+module cortado_app
+kind library
+
+# `cortado_app` is the composition root: the one place that names cortado and
+# barista together and wires them onto each other.
+#
+# It is a sibling module rather than a package under `cortado/` for a reason
+# the language enforces: a package under a module may not import its own module
+# root. `cortado.component` therefore cannot name anything that assembles an
+# application, which is why it asks for a `ServiceSource` — an interface over
+# `std.reflect` alone — instead of knowing what a container is.
+#
+# A separate module has no such restriction, so the assembling that every
+# `main.b` would otherwise hand-write lives here.
+#
+# Nothing under cortado's module root imports this, so cortado's core stays
+# free of barista: an application that wants no container at all pays nothing
+# for one, and cortado's own gate needs no dependency to run.
+require path ".."
+require path "../../barista"

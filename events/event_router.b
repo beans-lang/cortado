@@ -25,6 +25,9 @@ pub class EventRouter {
     pending: List<UiEvent> = []
     depth: int = 0
 
+    /// Run once after each batch of events, if anything registered.
+    settled: Option<fn()> = none
+
     pub fn init() {}
 
     /// Registers `handler` for one kind of event on one widget, replacing any
@@ -72,6 +75,22 @@ pub class EventRouter {
         return total
     }
 
+    /// Runs after a batch of events has been handled, once.
+    ///
+    /// This is the seam a component framework needs and nothing else does: a
+    /// handler changes some state, and something has to notice and re-render.
+    /// It runs **after the whole batch drains**, not after each event, so a
+    /// handler that triggers three more does not cause four renders — and so a
+    /// render that is itself observable cannot be re-entered from inside one.
+    ///
+    /// A plain callback and not a list of them. One mount owns one surface,
+    /// and a framework that let several things register here would make the
+    /// order they run in matter without giving anyone a way to say what it
+    /// should be.
+    pub fn after(handler: fn()) {
+        self.settled = some(handler)
+    }
+
     /// Hands one event to its handler, then drains anything that arrived while
     /// that handler was running.
     pub fn deliver(event: UiEvent) {
@@ -87,6 +106,10 @@ pub class EventRouter {
             self.dispatch(next)
         }
         self.depth = self.depth - 1
+        match self.settled {
+            none => {}
+            some(handler) => { handler() }
+        }
     }
 
     fn dispatch(event: UiEvent) {
