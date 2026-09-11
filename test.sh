@@ -90,7 +90,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim gpu triangle canvas)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim gpu triangle canvas shader)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -132,7 +132,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled opacity clock anim gpu canvas)
+cross_host=(roles events text applied leaks enabled opacity clock anim gpu canvas shader)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -381,14 +381,14 @@ fi
 # not having one. The wait stays because Metal's contract requires it, and that
 # is written beside it in src/mac/gpu.m.
 if [[ "$host_os" == "Darwin" && $have_host -eq 1 ]]; then
-    for name in gpu triangle canvas; do
+    for name in gpu triangle canvas shader; do
         MTL_DEBUG_LAYER=1 MTL_DEBUG_LAYER_ERROR_MODE=assert \
             "$BEANSC" run "$root/tests/$name.b" 2>&1 \
             | grep -v 'Metal API Validation' >"$tmp/$name.validated"
         diff -u "$root/tests/$name.out" "$tmp/$name.validated"
         pass
     done
-    echo "ok metal: 3 cases clean under Metal API Validation"
+    echo "ok metal: 4 cases clean under Metal API Validation"
 fi
 
 # ------------------------------------------------------------- negative control

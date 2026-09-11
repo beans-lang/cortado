@@ -82,10 +82,16 @@ pub abstract class Component {
     /// one changes.
     pub fn on_params_set() {}
 
-    /// Run once, after this component's controls exist on the platform. The
-    /// place to ask a control for something only it knows, or to start
-    /// something that has to stop in `on_unmount`.
-    pub fn on_mount() {}
+    /// Run once, after this component's controls exist on the platform.
+    ///
+    /// `stage` is how a component reaches them: `stage.control(key)` answers
+    /// the handle an element with that key became. This is the place to ask a
+    /// control something only it knows, or to start something that has to stop
+    /// in `on_unmount` — a frame clock, a subscription, a file.
+    ///
+    /// The stage is made for this call and carries no reference to the mount,
+    /// so keeping one is not a cycle; it is simply stale. See `Stage`.
+    pub fn on_mount(stage: Stage) {}
 
     /// Run when this component goes away. Stop here whatever `on_mount`
     /// started: a timer, a subscription, a file. `deinit` is not the place —

@@ -336,3 +336,16 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
     }
     return CTD_OK;
 }
+
+// The surface a widget is in.
+//
+// GA_ROOT walks up to the top-level window, which for cortado is the HWND a
+// surface was made as. `ctd_handle_of` turns it back into a handle — this host
+// already had the reverse lookup, because a Win32 control reports what
+// happened by sending a message to its parent and the parent has to be found
+// by HWND every time.
+ctd_handle ctd_view_surface(ctd_handle widget) {
+    HWND window = ctd_window(widget);
+    if (!window) return 0;
+    return ctd_handle_of(GetAncestor(window, GA_ROOT));
+}

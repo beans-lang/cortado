@@ -182,3 +182,23 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
     }
     return CTD_OK;
 }
+
+// The surface a widget is in.
+//
+// The window is what AppKit answers; turning it back into a handle is a scan
+// of the table, and that is the right trade here. A reverse map would have to
+// be kept correct on every track and untrack — two more places to be wrong —
+// to save a walk over eight thousand pointers on a call that happens when a
+// control is set up, not when it draws.
+ctd_handle ctd_view_surface(ctd_handle widget) {
+    id object = ctd_resolve(widget);
+    if (!object || ![object isKindOfClass:[NSView class]]) return 0;
+    NSWindow *window = [(NSView *)object window];
+    if (!window) return 0;
+    for (uint32_t slot = 1; slot <= g_used; slot++) {
+        if (g_object[slot] == window) {
+            return ((uint64_t)g_generation[slot] << 32) | slot;
+        }
+    }
+    return 0;
+}

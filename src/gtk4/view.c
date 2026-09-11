@@ -219,3 +219,16 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
     }
     return CTD_OK;
 }
+
+// The surface a widget is in.
+//
+// `gtk_widget_get_root` answers the GtkRoot, which for cortado is always the
+// GtkWindow a surface was made as. `ctd_handle_of` turns it back into a
+// handle; this host already had that lookup.
+ctd_handle ctd_view_surface(ctd_handle widget) {
+    gpointer object = ctd_resolve(widget);
+    if (!object || !GTK_IS_WIDGET(object)) return 0;
+    GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(object));
+    if (!root) return 0;
+    return ctd_handle_of(root);
+}

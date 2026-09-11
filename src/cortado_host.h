@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 6
+#define CTD_ABI_VERSION 7
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -284,6 +284,20 @@ ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to);
 ctd_status ctd_view_child_count(ctd_handle parent, int32_t *out);
 ctd_handle ctd_view_child_at(ctd_handle parent, int32_t index);
 ctd_handle ctd_view_parent(ctd_handle child);
+
+/* The surface a widget is in, or zero when it is in none yet.
+ *
+ * Walking up with ctd_view_parent stops at the root widget, because a surface
+ * is not a widget and never appears as one's parent. This is the step past
+ * that, and it is in the ABI rather than worked out above it because only the
+ * host can ask a control which window it ended up in.
+ *
+ * What needs it: anything a *control* wants that belongs to a surface. A frame
+ * clock is the case that forced it — a canvas that draws itself every frame
+ * has to start one, and making the application pass its window down to every
+ * control that might want one is plumbing through code that has no other
+ * reason to know about windows. */
+ctd_handle ctd_view_surface(ctd_handle widget);
 
 /* ---- geometry ---------------------------------------------------------- */
 

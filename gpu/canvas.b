@@ -74,7 +74,24 @@ pub class Canvas {
             raw = host.ctd_gpu_canvas_next(self.slot.raw)
         }
         if raw == 0 {
-            return err("the canvas had no frame to give — nothing is attached to it, it has no size yet, or the platform is holding every frame it has",
+            // A canvas with no width or no height is the common reason, and it
+            // is worth its own message: it is a layout mistake several rooms
+            // away, and "no frame available" sends somebody to read about
+            // compositors instead. It happens to every column whose cross
+            // alignment is not `stretch`, because an empty view measures
+            // nothing and so gets nothing.
+            let scratch: host.HostScratch = host.HostScratch.instance
+            unsafe {
+                if host.ctd_view_frame(self.slot.raw, scratch.reals) == 0 {
+                    let wide: f64 = scratch.real(2)
+                    let tall: f64 = scratch.real(3)
+                    if wide <= 0.0 || tall <= 0.0 {
+                        return err("this canvas is {wide} by {tall}, so there is nothing to draw into — give it a size, or put it in a run that stretches its children",
+                                   "no_size")
+                    }
+                }
+            }
+            return err("the canvas had no frame to give — nothing is attached to it, or the platform is holding every frame it has",
                        "no_frame")
         }
         return ok(Target.of(host.Handle.of(raw)))

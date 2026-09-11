@@ -3,6 +3,7 @@ package gpu
 
 import cortado.host
 import cortado.widgets
+import cortado.geometry
 
 /// An off-screen image the GPU draws into, 8-bit RGBA.
 ///
@@ -30,6 +31,22 @@ pub class Target {
 
     pub fn handle() -> host.Handle {
         return self.slot
+    }
+
+    /// How big it is, in pixels.
+    ///
+    /// The first half of the two-call read, on its own: asking for zero bytes
+    /// fills in the size and copies nothing. A canvas frame is the reason this
+    /// is worth having — its size is the view's, in real pixels, and a shader
+    /// that wants to know the aspect ratio has no other way to ask.
+    pub fn size() -> Result<geometry.Size> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        unsafe {
+            host.check(host.ctd_gpu_target_read(self.slot.raw, scratch.reals,
+                                                RawPtr.null(), 0) as int,
+                       "measure a GPU target")?
+        }
+        return ok(geometry.Size.of(scratch.real(0), scratch.real(1)))
     }
 
     /// Reads the pixels back, top row first.

@@ -93,10 +93,19 @@ for name in ${cases[@]}; do
 
     # The IR file beansc leaves behind carries a content hash in its name, so
     # the newest one for this program is the one that was just built.
+    #
+    # **`BEANS_BUILD_JOBS=1` is load-bearing, not a speed setting.** Above
+    # about four megabytes of IR, beansc splits a module into eight chunks and
+    # compiles them in parallel — there is then no single `.ll` to pick up, and
+    # this reads one. One job puts the chunk count back to one. It broke for
+    # real: `tests/triangle.b` crossed the threshold the day `cortado.gpu`
+    # grew, and the failure was a bare exit with nothing printed, because the
+    # guard below could not fire — `set -o pipefail` killed the assignment that
+    # was meant to feed it. Hence the `|| true`.
     rm -f "$root/build/$name".*.ll "$root/build/$name".*_ffi.c
-    ( cd "$root" && BEANS_SANITIZE=address,undefined \
+    ( cd "$root" && BEANS_SANITIZE=address,undefined BEANS_BUILD_JOBS=1 \
         "$BEANSC" build "tests/$name.b" -o "$out/$name.unused" >/dev/null )
-    ir="$(ls -t "$root/build/$name".*.ll 2>/dev/null | head -1)"
+    ir="$(ls -t "$root/build/$name".*.ll 2>/dev/null | head -1 || true)"
     [[ -n "$ir" ]] || { echo "sanitize: beansc emitted no IR for $name" >&2; exit 1; }
 
     # The foreign-call wrappers and stored-callback trampolines are generated C
@@ -104,7 +113,7 @@ for name in ${cases[@]}; do
     # `beans_ffi_wrap_*` symbols, which is how this script failed the first
     # time it ran.
     ffi=()
-    bridge="$(ls -t "$root/build/$name".*_ffi.c 2>/dev/null | head -1)"
+    bridge="$(ls -t "$root/build/$name".*_ffi.c 2>/dev/null | head -1 || true)"
     [[ -n "$bridge" ]] && ffi+=("$bridge")
 
     clang -O1 -g -pthread -fsanitize=address,undefined \

@@ -56,12 +56,15 @@ if [[ ${#host_objects[@]} -eq 0 ]]; then
     exit 1
 fi
 
+# `BEANS_BUILD_JOBS=1` is load-bearing, not a speed setting: above about four
+# megabytes of IR beansc splits a module into eight parallel chunks, and there
+# is then no single `.ll` to pick up. One job puts the chunk count back to one.
 rm -f "$root/build/$name".*.ll "$root/build/$name".*_ffi.c
-( cd "$root" && "$BEANSC" build "tests/$name.b" -o "$out/$name.unused" >/dev/null )
-ir="$(ls -t "$root/build/$name".*.ll 2>/dev/null | head -1)"
+( cd "$root" && BEANS_BUILD_JOBS=1 "$BEANSC" build "tests/$name.b" -o "$out/$name.unused" >/dev/null )
+ir="$(ls -t "$root/build/$name".*.ll 2>/dev/null | head -1 || true)"
 [[ -n "$ir" ]] || { echo "gtk4: beansc emitted no IR for $name" >&2; exit 1; }
 ffi=()
-bridge="$(ls -t "$root/build/$name".*_ffi.c 2>/dev/null | head -1)"
+bridge="$(ls -t "$root/build/$name".*_ffi.c 2>/dev/null | head -1 || true)"
 [[ -n "$bridge" ]] && ffi+=("$bridge")
 
 clang -O1 -g -pthread -Wno-override-module \

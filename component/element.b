@@ -1,6 +1,7 @@
 // What a component said it wants.
 package component
 
+import cortado.host
 import cortado.widgets
 import cortado.layout
 import cortado.events
@@ -47,6 +48,14 @@ pub class Element {
 
     /// What this element asks of the run it sits in.
     pub spec: layout.LayoutSpec = layout.LayoutSpec {}
+
+    /// The control this element became, once one exists.
+    ///
+    /// An integer, not a reference, so an element that outlives its control
+    /// holds a stale handle rather than a dangling pointer — every call
+    /// through it is a typed refusal. Written by the mount as it records the
+    /// control, and read by `Stage` so a component can reach what it rendered.
+    pub control: host.Handle = host.Handle.none()
 
     attributes: List<Attribute> = []
     listeners: List<Listener> = []

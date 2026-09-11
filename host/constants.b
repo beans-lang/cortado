@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 6
+pub const ABI_VERSION: int = 7
 
 // ---- statuses ----
 

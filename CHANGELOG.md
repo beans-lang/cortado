@@ -746,6 +746,77 @@ First working macOS host.
   Worth writing down because the failure named the drawable, and the bug was
   four lines away in the layout.
 
+- **`gpu.ShaderCanvas` — a rectangle with a shader in it, in one markup tag.**
+
+  ```xml
+  <ShaderCanvas height={120} shader={self.ripple} />
+  ```
+
+  It opens the device, supplies the vertex shader and a quad covering the area,
+  builds the pipeline, starts a frame clock on whichever surface the canvas
+  turned out to be in, draws every frame, and takes it all down when the
+  component goes away. The shader is a *function body* — it gets `uv`,
+  `seconds` and `size`, and returns a `float4` — not a Metal program. Everything
+  underneath it is still there for a program that places its own vertices; this
+  is for the case that is almost always what somebody wants.
+
+  Where there is no GPU it renders the canvas anyway, an empty area of the right
+  size in the right place, and `problem()` says why nothing is in it. A markup
+  screen does not fall apart on a platform cortado cannot draw on.
+
+- **`Component.on_mount(stage)` — a component can reach the controls it
+  rendered.** `render` describes controls and does not have any; by `on_mount`
+  they exist, and `stage.control(key)` is how a component finds one. The
+  documentation for `on_mount` had promised exactly this — "the place to ask a
+  control for something only it knows" — and there was no API behind it.
+
+  `Stage` carries copies rather than a reference to the mount: the handles as
+  they were, the router, and the surface. A component holding its mount would be
+  a cycle, and a cycle whose members hold platform resources is the shape that
+  never runs `deinit`. It is scoped to one component's own subtree, so two
+  components may both use the key "plot" and neither finds the other's.
+
+- **`ctd_view_surface` — the surface a widget is in.** Walking up with
+  `ctd_view_parent` stops at the root, because a surface is not a widget and
+  never appears as one's parent. Only the host can ask a control which window it
+  ended up in. A frame clock is what forced it: a canvas that draws itself every
+  frame has to start one, and making the application pass its window down to
+  every control that might want one is plumbing through code with no other
+  reason to know about windows. Win32 and GTK4 already had the reverse lookup
+  for their own purposes, so only the two Apple hosts gained a scan.
+
+- **Markup needed no compiler change for any of this.** `<ShaderCanvas>` is an
+  ordinary component tag — the same `b.child<T>` shape any project's own
+  component gets — and the only line that makes it work is the import.
+
+- **A canvas with no width says so by name.** `this canvas is 0 by 32, so there
+  is nothing to draw into — give it a size, or put it in a run that stretches
+  its children`. It is the first thing everybody gets wrong: a column whose
+  cross alignment is not `stretch` gives each child the size it measured, and a
+  control that paints nothing of its own measures nothing. The same mistake cost
+  an hour in `examples/canvas.b` earlier in this changelog, where it showed up
+  as a frame clock running at sixty per second with nothing drawn, so it is
+  a typed refusal now rather than a black rectangle.
+
+### Found while making markup easy
+
+- **Three tools scraped a build artifact whose layout changes with program
+  size.** `tools/sanitize.sh`, `gtk4.sh` and `win32.sh` all link a host by hand
+  and pick up the `.ll` beansc leaves in `build/`. Above about four megabytes
+  of IR beansc splits a module into eight chunks and compiles them in parallel,
+  and there is then no single `.ll` to pick up. `tests/triangle.b` crossed that
+  threshold the day `cortado.gpu` grew — nothing about the test changed.
+  `BEANS_BUILD_JOBS=1` puts the chunk count back to one, and all three now say
+  so where they say it.
+
+- **And the guard that was supposed to catch it could never fire.**
+  `ir="$(ls -t ... | head -1)"` under `set -o pipefail`: `ls` fails when nothing
+  matches, the pipeline fails, and `set -e` kills the script one line *before*
+  the `[[ -n "$ir" ]]` that would have printed why. So a real failure came out
+  as a bare exit with no output at all. It is `|| true` now, and removing the
+  one-job pin prints `sanitize: beansc emitted no IR for triangle` instead of
+  nothing.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

@@ -59,11 +59,14 @@ source="$root/tests/$name.b"
 # is wanted is the IR it has already written. A failure that is *not* the
 # sysroot would be hidden by ignoring the exit code, so the log is kept and
 # shown if no IR turns up.
+# `BEANS_BUILD_JOBS=1` is load-bearing, not a speed setting: above about four
+# megabytes of IR beansc splits a module into eight parallel chunks, and there
+# is then no single `.ll` to pick up. One job puts the chunk count back to one.
 rm -f "$root/build/$name".*.ll "$root/build/$name".*_ffi.c
-( cd "$root" && "$BEANSC" build "tests/$name.b" \
+( cd "$root" && BEANS_BUILD_JOBS=1 "$BEANSC" build "tests/$name.b" \
     --target x86_64-pc-windows-gnu -o "$out/$name.unused" ) \
     >"$out/$name.beansc" 2>&1 || true
-ir="$(ls -t "$root/build/$name".*.ll 2>/dev/null | head -1)"
+ir="$(ls -t "$root/build/$name".*.ll 2>/dev/null | head -1 || true)"
 if [[ -z "$ir" ]]; then
     echo "FAIL win32 $name: beansc emitted no Windows IR" >&2
     tail -20 "$out/$name.beansc" >&2
@@ -80,7 +83,7 @@ objects=("$out/$name.o")
 "$CC" -O1 -c "$BEANS_RUNTIME" -o "$out/beans_rt.o"
 objects+=("$out/beans_rt.o")
 
-bridge="$(ls -t "$root/build/$name".*_ffi.c 2>/dev/null | head -1)"
+bridge="$(ls -t "$root/build/$name".*_ffi.c 2>/dev/null | head -1 || true)"
 if [[ -n "$bridge" ]]; then
     "$CC" -O1 -c "$bridge" -o "$out/$name.ffi.o"
     objects+=("$out/$name.ffi.o")

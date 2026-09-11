@@ -639,6 +639,58 @@ costs a little — the drawable gives up lossless compression to be readable —
 and if that ever shows, the way out is a flag on attach, not a silently
 unreadable canvas.
 
+### A shader in markup, in one line
+
+Everything above is the machinery. Most of the time what you want is *a
+rectangle with a shader in it*, and that is one tag:
+
+```xml
+<VStack spacing={12} padding={20} align="stretch">
+  <Label>Every pixel below is a fragment shader</Label>
+  <ShaderCanvas height={120} shader={self.ripple} />
+</VStack>
+```
+
+```beans
+import {ShaderCanvas} from cortado.gpu
+
+pub ripple: string = r"
+    float rings = sin(length(uv - 0.5) * 26.0 - seconds * 3.0);
+    float shade = 0.5 + 0.5 * rings;
+    return float4(shade * 0.25, shade * 0.55, 0.75, 1.0);
+"
+```
+
+That is the whole program. `gpu.ShaderCanvas` opens the device, supplies the
+vertex shader and a quad covering the area, builds the pipeline, starts a frame
+clock on the surface the canvas turned out to be in, draws every frame, and
+takes it all down when the component goes away. `examples/gallery/site/shelf.bx`
+has one running between a progress bar and a text area.
+
+**The shader is a function body, not a Metal program.** It gets three things —
+`uv` (0 to 1 across the canvas, 0,0 at the top left), `seconds`, and `size` in
+pixels — and returns a `float4`. A program that needs more than that has
+outgrown this class, and the rest of this package is what it grows into.
+
+**Markup needed no new machinery for this.** `<ShaderCanvas>` is an ordinary
+component tag, the same shape as any component a project writes itself; the
+only line that makes it work is the import. What did have to be added is
+`Stage`: `on_mount(stage)` hands a component the controls it rendered, by the
+`key` it gave them. `render` describes controls and does not have any, so
+before this there was no way for a component to reach one — which is why
+`on_mount`'s own documentation promised something the API could not do.
+
+**Where there is no GPU it renders the canvas anyway** — an empty area of the
+right size, in the right place — and `problem()` says why nothing is in it. A
+markup screen does not fall apart on a platform cortado cannot draw on.
+
+**A canvas with no width says so.** It is the first thing everybody gets wrong:
+a column whose cross alignment is not `stretch` gives each child the size it
+measured, and a control that paints nothing of its own measures nothing. That
+used to be a silent black rectangle. Now it is
+`this canvas is 0 by 32, so there is nothing to draw into — give it a size, or
+put it in a run that stretches its children`.
+
 ### What the tests can say
 
 `tests/gpu.out` is the same bytes through all four hosts, and the two sides run

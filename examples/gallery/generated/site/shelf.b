@@ -16,6 +16,7 @@ import {UiEvent} from cortado.events
 
 import cortado.component
 import cortado.events
+import {ShaderCanvas} from cortado.gpu
 import {view} from cortado.annotations
 
 /// The order screen, showing one of every control cortado has.
@@ -26,6 +27,15 @@ pub partial class Shelf extends component.Component {
     pub rush: bool = false
     pub note: string = "no sugar"
     pub status: string = "Nothing ordered yet"
+
+    /// Three lines about colour. Everything a shader usually needs around it —
+    /// the vertex stage, the quad, the stage_in structs, the uniform — is
+    /// cortado's, not this file's.
+    pub ripple: string = r"
+    float rings = sin(length(uv - 0.5) * 26.0 - seconds * 3.0);
+    float shade = 0.5 + 0.5 * rings;
+    return float4(shade * 0.25, shade * 0.55, 0.75, 1.0);
+"
 
     pub fn init() { super.init() }
 
@@ -51,6 +61,12 @@ pub partial class Shelf extends component.Component {
         self.request_render()
     }
 }
+
+// Every component tag in shelf.bx, checked by beansc rather than by cortado-bx:
+// a tag whose type is not a Component is a type error naming the type,
+// instead of a blank subtree and a fault at run time. Unused, and an
+// unused free function is not an error.
+fn _cortado_component_shelf_ShaderCanvas(value: ShaderCanvas) -> Component { return value }
 
 partial class Shelf {
     pub override fn render(b: Builder) {
@@ -109,24 +125,28 @@ partial class Shelf {
         b.number("max", (4) as f64)
         b.number("value", (self.shots) as f64)
         b.close()
-        b.open("Canvas")  // shelf.bx:27
-        b.number("height", (40) as f64)
+        b.open("Canvas")  // shelf.bx:25
+        b.number("height", (24) as f64)
         b.close()
-        b.open("TextArea")  // shelf.bx:29
+        b.child<ShaderCanvas>("c4", fn(_cortado_c: ShaderCanvas) {  // shelf.bx:30
+            _cortado_c.height = 44
+            _cortado_c.shader = self.ripple
+        })
+        b.open("TextArea")  // shelf.bx:32
         b.number("height", (70) as f64)
         b.on("commit", fn(_e: UiEvent) { self.note = _e.text })
         b.text("{self.note}")
         b.close()
-        b.open("HStack")  // shelf.bx:31
+        b.open("HStack")  // shelf.bx:34
         b.number("spacing", (10) as f64)
         b.word("justify", "end")
-        b.open("Button")  // shelf.bx:32
+        b.open("Button")  // shelf.bx:35
         b.flag("enabled", self.shots > 0)
         b.on("click", fn(e: UiEvent) { self.order() })
         b.text("Order")
         b.close()
         b.close()
-        b.open("Label")  // shelf.bx:35
+        b.open("Label")  // shelf.bx:38
         b.text("{self.status}")
         b.close()
         b.close()

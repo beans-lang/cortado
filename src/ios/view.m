@@ -163,3 +163,17 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
     }
     return CTD_OK;
 }
+
+// The surface a widget is in. See the macOS host for why this is a scan.
+ctd_handle ctd_view_surface(ctd_handle widget) {
+    id object = ctd_resolve(widget);
+    if (!object || ![object isKindOfClass:[UIView class]]) return 0;
+    UIWindow *window = [(UIView *)object window];
+    if (!window) return 0;
+    for (uint32_t slot = 1; slot <= g_used; slot++) {
+        if (g_object[slot] == window) {
+            return ((uint64_t)g_generation[slot] << 32) | slot;
+        }
+    }
+    return 0;
+}

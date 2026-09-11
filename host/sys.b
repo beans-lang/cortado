@@ -49,6 +49,7 @@ pub extern "C" fn ctd_view_move_child(parent: u64, from: i32, to: i32) -> i32
 pub extern "C" fn ctd_view_child_count(parent: u64, out: RawPtr<i32>) -> i32
 pub extern "C" fn ctd_view_child_at(parent: u64, index: i32) -> u64
 pub extern "C" fn ctd_view_parent(child: u64) -> u64
+pub extern "C" fn ctd_view_surface(widget: u64) -> u64
 pub extern "C" fn ctd_view_set_frame(widget: u64, x: f64, y: f64, width: f64, height: f64) -> i32
 pub extern "C" fn ctd_view_frame(widget: u64, out_frame: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_view_measure(widget: u64, avail_width: f64, avail_height: f64, out_size: RawPtr<f64>) -> i32

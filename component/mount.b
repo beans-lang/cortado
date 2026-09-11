@@ -1,6 +1,7 @@
 // A component tree, alive on a surface.
 package component
 
+import cortado.host
 import cortado.widgets
 import cortado.events
 import cortado.layout
@@ -399,21 +400,52 @@ pub class Mount implements Composer {
     fn settle_all() {
         match self.top {
             none => {}
-            some(component) => { self.settle_one(component) }
+            some(component) => { self.settle_one(component, self.shown) }
         }
         for key: string in self.prepared.keys() {
             match self.prepared.get(key) {
-                some(child) => { self.settle_one(child) }
+                some(child) => { self.settle_one(child, self.cached.get(key)) }
                 none => {}
             }
         }
     }
 
-    fn settle_one(component: Component) {
+    fn settle_one(component: Component, rendered: Option<Element>) {
         component.settle()
         if !component.is_mounted() {
             component.note_mounted(true)
-            component.on_mount()
+            component.on_mount(self.stage_for(rendered))
+        }
+    }
+
+    /// The controls one component rendered, by the key it gave them.
+    ///
+    /// Walks that component's own element subtree rather than the whole
+    /// mount's, so two components may both use the key "plot" and neither
+    /// finds the other's.
+    fn stage_for(rendered: Option<Element>) -> Stage {
+        var found: Map<string, host.Handle> = {}
+        match rendered {
+            some(root) => { Mount.collect_keys(root, found) }
+            none => {}
+        }
+        var surface: u64 = 0
+        unsafe {
+            surface = host.ctd_view_surface(self.root.handle().raw)
+        }
+        return new Stage(move found, self.router, host.Handle.of(surface))
+    }
+
+    /// Every keyed element in a subtree, with the control it became.
+    ///
+    /// A child component's own subtree is skipped: it was rendered by that
+    /// component and belongs to its stage, not to this one.
+    static fn collect_keys(element: Element, into: Map<string, host.Handle>) {
+        if element.key != "" && element.control.raw != 0 {
+            into[element.key] = element.control
+        }
+        for child: Element in element.children() {
+            Mount.collect_keys(child, into)
         }
     }
 
@@ -473,6 +505,10 @@ pub class Mount implements Composer {
     /// Framework use: records which element a control stands for.
     pub fn record(handle: u64, element: Element) {
         self.by_handle[handle] = element
+        // The element keeps its control too, which is what lets `Stage` hand a
+        // component the controls it rendered without a reverse map anybody has
+        // to keep correct.
+        element.control = host.Handle.of(handle)
     }
 
     /// Framework use: forgets a control that has gone.

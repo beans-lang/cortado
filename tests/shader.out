@@ -1,0 +1,12 @@
+-- what the component made --
+  the screen mounted: true
+  a canvas is in the tree: true
+  it says why it is empty exactly when there is no GPU: true
+-- drawing --
+  a frame was drawn exactly where there is a GPU: true
+  and it counted them: true
+-- a canvas with no size --
+  says so by name rather than drawing nothing: true
+-- after it goes --
+  drawing stops once the component is unmounted: true
+drove=true
