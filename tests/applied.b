@@ -84,7 +84,7 @@ fn leaf(dice: Random, key: string) -> component.Element {
     if tag != "Slider" && dice.chance(75) {
         made.set(component.Attribute.of_text(words()[dice.below(words().len())]))
     }
-    if dice.chance(40) {
+    if has_enabled(kind) && dice.chance(40) {
         made.set(component.Attribute.of_flag(host.P_ENABLED, dice.chance(50)))
     }
     if tag == "Slider" && dice.chance(60) {
@@ -118,16 +118,32 @@ fn grow(dice: Random, depth: int, names: Random) -> component.Element {
     return box
 }
 
-/// Whether this element is one that can hold children and be laid out — which
-/// is also the one that has no enabled state, because a plain view has none.
+/// Whether this element is one that can hold children and be laid out.
 ///
 /// The generator has to know this and the differ does not: a render that puts
-/// a child inside a `Label`, or asks a `VStack` to be disabled, is a program
-/// cortado refuses by name — `a CheckBox cannot hold any children`, `that
-/// widget does not have this property` — and a generator that produced them
-/// would be testing the refusals rather than the applier.
+/// a child inside a `Label` is a program cortado refuses by name — `a CheckBox
+/// cannot hold any children` — and a generator that produced one would be
+/// testing the refusals rather than the applier.
 fn is_box(element: component.Element) -> bool {
     return element.kind == widgets.WidgetKind.container
+}
+
+/// Whether this kind carries `P_ENABLED`, mirroring the rule stated beside
+/// `CTD_P_ENABLED` in `src/cortado_host.h`: a widget has an enabled state
+/// exactly when it accepts input.
+///
+/// This used to read "anything but a container", which is why the sweep wrote
+/// the flag onto labels — accepted on two hosts, refused on the other two, and
+/// invisible until iOS ran the same golden. `tests/enabled.out` is the rule
+/// itself; this is the generator agreeing with it, so a sweep case is never
+/// built out of a program cortado would refuse.
+fn has_enabled(kind: widgets.WidgetKind) -> bool {
+    return kind == widgets.WidgetKind.button ||
+           kind == widgets.WidgetKind.text_field ||
+           kind == widgets.WidgetKind.check_box ||
+           kind == widgets.WidgetKind.radio_button ||
+           kind == widgets.WidgetKind.slider ||
+           kind == widgets.WidgetKind.combo_box
 }
 
 fn mutate(dice: Random, element: component.Element, names: Random) -> component.Element {
@@ -175,10 +191,10 @@ fn mutate(dice: Random, element: component.Element, names: Random) -> component.
         }
         kept = move trimmed
     } else if action == 3 && kept.len() > 0 {
-        // Written on a child rather than on the box: a container has no
-        // enabled state on any platform cortado targets.
+        // Written on a child rather than on the box, and only on a child
+        // whose kind carries the flag at all.
         let who: int = dice.below(kept.len())
-        if !is_box(kept[who]) {
+        if !is_box(kept[who]) && has_enabled(kept[who].kind) {
             var touched: component.Element = mutate(dice, kept[who], names)
             touched.set(component.Attribute.of_flag(host.P_ENABLED, dice.chance(50)))
             kept[who] = touched

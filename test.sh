@@ -74,7 +74,27 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled)
+
+# The cases whose golden names nothing a platform gets to decide, so every host
+# must print them byte for byte. This is the list that makes "write once, run
+# anywhere" a diff rather than a claim, and it is deliberately more than
+# `roles`: a tree of controls agreeing says nothing about whether two hosts
+# agree on *which event a control raises*, on what survives a round trip
+# through their text APIs, or on what a teardown releases.
+#
+# `enabled` is here because it is the case that caught four hosts answering
+# four different things. It is a property whose *set of widgets* is part of the
+# contract, and nothing else in the suite could see a disagreement about it:
+# `roles` reads the state with a match that treats a refusal and "enabled" the
+# same, so a host that refused printed identical bytes to one that accepted.
+#
+# The three that are not here are not here for a reason. `mount` and `bridge`
+# measure real controls, and a control is allowed to refuse the size it is
+# given — iOS established that and GTK confirmed it. `pixels` reads a widget
+# back as pixels, which only macOS can do, so its golden is the macOS answer
+# and every other host correctly prints that it cannot.
+cross_host=(roles events text applied leaks enabled)
 
 # Cases that need nothing but the language. These are the layout engine and the
 # reconciler, both pure Beans with no foreign call in them at all, so they run
@@ -212,8 +232,10 @@ fi
 if ! command -v pkg-config >/dev/null 2>&1 || ! pkg-config --exists gtk4 2>/dev/null; then
     skip gtk4 "no gtk4 on pkg-config's path — 'brew install gtk4' or the distro package"
 else
-    bash "$root/tools/gtk4.sh" roles
-    pass
+    for name in "${cross_host[@]}"; do
+        bash "$root/tools/gtk4.sh" "$name"
+        pass
+    done
 fi
 
 # ----------------------------------------------------------------- the iOS leg
@@ -235,22 +257,26 @@ if [[ "$host_os" == "Darwin" ]]; then
     elif ! { "$BEANSC" --help 2>&1 || true; } | grep -q "arm64-apple-ios-sim"; then
         skip ios "this beansc has no iOS target; build one from a tree that has it"
     else
-        "$BEANSC" build "$root/tests/roles.b" --target arm64-apple-ios-sim \
-            -o "$tmp/roles-ios" >"$tmp/ios.build" 2>&1 || {
-            echo "FAIL ios: cortado does not build for the simulator" >&2
-            tail -20 "$tmp/ios.build" >&2
-            exit 1
-        }
-        pass
+        for name in "${cross_host[@]}"; do
+            "$BEANSC" build "$root/tests/$name.b" --target arm64-apple-ios-sim \
+                -o "$tmp/$name-ios" >"$tmp/ios.build" 2>&1 || {
+                echo "FAIL ios: tests/$name.b does not build for the simulator" >&2
+                tail -20 "$tmp/ios.build" >&2
+                exit 1
+            }
+            pass
+        done
         booted="$(xcrun simctl list devices booted 2>/dev/null | grep -oE '[0-9A-F-]{36}' | head -1 || true)"
         if [[ -z "$booted" ]]; then
             skip ios_run "no booted simulator — 'xcrun simctl boot <device>' to run the iOS leg"
-            echo "ok ios: cortado builds for the simulator"
+            echo "ok ios: ${#cross_host[@]} cases build for the simulator"
         else
-            xcrun simctl spawn "$booted" "$tmp/roles-ios" >"$tmp/roles-ios.out" 2>&1
-            diff -u "$root/tests/roles.out" "$tmp/roles-ios.out"
-            pass
-            echo "ok ios: the portable golden is the same bytes on macOS and iOS"
+            for name in "${cross_host[@]}"; do
+                xcrun simctl spawn "$booted" "$tmp/$name-ios" >"$tmp/$name-ios.out" 2>&1
+                diff -u "$root/tests/$name.out" "$tmp/$name-ios.out"
+                pass
+            done
+            echo "ok ios: ${#cross_host[@]} portable goldens are the same bytes on macOS and iOS"
         fi
     fi
 fi

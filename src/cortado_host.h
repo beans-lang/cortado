@@ -228,6 +228,8 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
 /* Keys for the scalar property bag. Adding a property here costs no new
  * symbol, no new extern declaration and no new interpreter trampoline. */
 #define CTD_P_CHECKED      1  /* 0 off, 1 on, 2 mixed                        */
+/* Whether the control accepts input. See the rule below: this is the one
+ * property whose *set of widgets* is part of the contract. */
 #define CTD_P_ENABLED      2
 #define CTD_P_HIDDEN       3
 #define CTD_P_MIN          4
@@ -239,6 +241,36 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
 #define CTD_P_STEP        10  /* a slider's increment; 0 for continuous      */
 #define CTD_P_SELECTED    11  /* index into an item list; -1 for none        */
 #define CTD_P_INDETERMINATE 12 /* a progress bar with no known total         */
+
+/* **Which widgets carry CTD_P_ENABLED**, because leaving it unsaid cost four
+ * hosts four different answers.
+ *
+ * Each host used to decide from its own class tree, and the trees disagree:
+ * AppKit asked `isKindOfClass:[NSControl class]`, which a label is and a
+ * progress bar is not; UIKit asked for `UIControl`, which a label is *not*;
+ * GTK4 and Win32 made every widget sensitive, containers included. So a
+ * program that disabled a label worked on two platforms out of four, and
+ * `tests/roles.out` could not see it because it reads the state with a match
+ * that treats a refusal and "enabled" the same.
+ *
+ * The rule is cortado's, not any platform's:
+ *
+ *   **A widget has an enabled state exactly when it accepts input.**
+ *
+ * That is CTD_W_BUTTON, CTD_W_TEXT_FIELD, CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON,
+ * CTD_W_SLIDER and CTD_W_COMBO_BOX. Every other kind answers CTD_ERR_KIND from
+ * both `ctd_set_int` and `ctd_get_int`, on every host.
+ *
+ * A label, an image, a separator and a progress bar take no input, so there is
+ * nothing for "disabled" to turn off; what a caller actually wants for one of
+ * those is a dimmed *look*, which is CTD_P_OPACITY and a different question. A
+ * container and a scroll view are refused for a second reason as well: they
+ * exist to hold children, and answering for the box would be answering for
+ * everything inside it.
+ *
+ * `tests/enabled.out` is this paragraph as a golden, one line per kind, and it
+ * is a cross-host file — so a host that guesses again prints different bytes.
+ */
 
 /* CTD_ERR_RANGE when the bytes contain a zero: see rule 3 at the top. */
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len);

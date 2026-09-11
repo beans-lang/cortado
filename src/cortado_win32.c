@@ -61,6 +61,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "cortado_host.h"
+#include "cortado_rules.h"
 
 // ---------------------------------------------------------------- the table
 
@@ -1369,6 +1370,9 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
     int32_t kind = ctd_slot_kind(widget);
     switch (key) {
         case CTD_P_ENABLED:
+            // EnableWindow works on any HWND, a static label included, so the
+            // rule is applied here rather than inherited from the platform.
+            if (!ctd_kind_has_enabled(kind)) return CTD_ERR_KIND;
             EnableWindow(view, value ? TRUE : FALSE);
             return CTD_OK;
         case CTD_P_HIDDEN:
@@ -1445,6 +1449,7 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
     int64_t value = 0;
     switch (key) {
         case CTD_P_ENABLED:
+            if (!ctd_kind_has_enabled(kind)) return CTD_ERR_KIND;
             value = IsWindowEnabled(view) ? 1 : 0;
             break;
         case CTD_P_HIDDEN:

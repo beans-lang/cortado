@@ -33,6 +33,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "cortado_host.h"
+#include "cortado_rules.h"
 
 // ---------------------------------------------------------------- the table
 
@@ -750,6 +751,10 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
     if (!object) return CTD_ERR_STALE;
     switch (key) {
         case CTD_P_ENABLED:
+            // Every GtkWidget is sensitive, containers included — so unlike
+            // the Apple hosts there is nothing here the object system refuses,
+            // and the rule has to be applied rather than inherited.
+            if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             gtk_widget_set_sensitive(GTK_WIDGET(object), value ? TRUE : FALSE);
             return CTD_OK;
         case CTD_P_HIDDEN:
@@ -814,8 +819,7 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
     int64_t value = 0;
     switch (key) {
         case CTD_P_ENABLED:
-            // GTK makes every widget sensitive, containers included, so unlike
-            // AppKit there is nothing here to refuse.
+            if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = gtk_widget_get_sensitive(GTK_WIDGET(object)) ? 1 : 0;
             break;
         case CTD_P_HIDDEN:

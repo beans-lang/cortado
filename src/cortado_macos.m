@@ -23,6 +23,7 @@
 #include <string.h>
 #include <float.h>
 #include "cortado_host.h"
+#include "cortado_rules.h"
 
 enum { CTD_SLOTS = 8192 };
 
@@ -825,7 +826,7 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
     if (!object) return CTD_ERR_STALE;
     switch (key) {
         case CTD_P_ENABLED:
-            if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
+            if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             [(NSControl *)object setEnabled:value ? YES : NO];
             return CTD_OK;
         case CTD_P_HIDDEN:
@@ -878,10 +879,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
     int64_t value = 0;
     switch (key) {
         case CTD_P_ENABLED:
-            // A plain container has no enabled state, and answering 0 for it
-            // would read as "disabled" — a wrong answer rather than a missing
-            // one. The caller gets to tell the difference.
-            if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
+            // A kind with no enabled state answers "wrong widget" rather than
+            // 0, because 0 reads as "disabled" — a wrong answer rather than a
+            // missing one. The caller gets to tell the difference.
+            if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = [(NSControl *)object isEnabled] ? 1 : 0;
             break;
         case CTD_P_HIDDEN:

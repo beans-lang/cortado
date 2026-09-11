@@ -1,0 +1,13 @@
+Container refused wrong_widget
+Label refused wrong_widget
+Button enabled round-trips
+TextField enabled round-trips
+CheckBox enabled round-trips
+ImageView refused wrong_widget
+Slider enabled round-trips
+ProgressBar refused wrong_widget
+Separator refused wrong_widget
+TextArea refused wrong_widget
+ComboBox enabled round-trips
+ScrollView refused wrong_widget
+RadioButton enabled round-trips
