@@ -11,6 +11,14 @@
 # This is that check, done on text so it runs anywhere: every function the
 # header declares must be defined by every host present. It does not prove a
 # host is correct; it proves none of them is silently incomplete.
+#
+# **A host is a platform, not a file.** It is either one translation unit,
+# `src/cortado_<platform>.{m,c}`, or a directory of them, `src/<platform>/`, and
+# the check is against the union of what that platform defines. The earlier
+# version of this script globbed files and demanded that *each* file implement
+# every entry point, which was true only while a host was a single file — the
+# moment `src/mac/` was split by concern it failed with thirty-four missing
+# symbols, every one of them present in a sibling file.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,24 +31,55 @@ header="$root/src/cortado_host.h"
 grep -oE '\b(ctd_[a-z0-9_]+)\(' "$header" \
     | sed 's/($//; s/(//' | sort -u >"$root/build/.host.declared"
 
-hosts=0
-for host in "$root"/src/cortado_*.m "$root"/src/cortado_*.c; do
-    [[ -e "$host" ]] || continue
-    hosts=$((hosts + 1))
-    name="$(basename "$host")"
-    # A definition is a name before `(` at the start of a line — a call is
-    # indented, and a declaration inside the file is followed by `;`.
-    grep -oE '^[a-z0-9_ ]*\**(ctd_[a-z0-9_]+)\(' "$host" \
-        | grep -oE 'ctd_[a-z0-9_]+' | sort -u >"$root/build/.host.$name"
+# A definition is a name before `(` at the start of a line — a call is
+# indented, and a declaration inside the file is followed by `;`.
+definitions() {
+    cat "$@" 2>/dev/null \
+        | grep -oE '^[a-z0-9_ ]*\**(ctd_[a-z0-9_]+)\(' \
+        | grep -oE 'ctd_[a-z0-9_]+' | sort -u
+}
+
+check() {
+    local name="$1"; shift
+    definitions "$@" >"$root/build/.host.$name"
+    local missing
     missing="$(comm -23 "$root/build/.host.declared" "$root/build/.host.$name" || true)"
     if [[ -n "$missing" ]]; then
-        echo "$name does not implement every entry point in cortado_host.h:" >&2
+        echo "the $name host does not implement every entry point in cortado_host.h:" >&2
         echo "$missing" | sed 's/^/  /' >&2
         echo >&2
         echo "A host that is missing one is a platform whose build breaks for" >&2
         echo "whoever has that machine, not for whoever added the function." >&2
         exit 1
     fi
+}
+
+hosts=0
+files=0
+
+# A host that is a directory of files, one per concern.
+for directory in "$root"/src/*/; do
+    [[ -d "$directory" ]] || continue
+    name="$(basename "$directory")"
+    sources=("$directory"*.m "$directory"*.c)
+    present=()
+    for source in "${sources[@]}"; do [[ -e "$source" ]] && present+=("$source"); done
+    if [[ ${#present[@]} -eq 0 ]]; then
+        echo "check_hosts: src/$name/ holds no .m or .c — a host directory with" >&2
+        echo "no host in it reads as a platform that passed, so it fails instead." >&2
+        exit 1
+    fi
+    check "$name" "${present[@]}"
+    hosts=$((hosts + 1))
+    files=$((files + ${#present[@]}))
+done
+
+# A host that is still a single translation unit.
+for source in "$root"/src/cortado_*.m "$root"/src/cortado_*.c; do
+    [[ -e "$source" ]] || continue
+    check "$(basename "$source")" "$source"
+    hosts=$((hosts + 1))
+    files=$((files + 1))
 done
 
 if [[ $hosts -eq 0 ]]; then
@@ -48,4 +87,4 @@ if [[ $hosts -eq 0 ]]; then
     exit 1
 fi
 
-echo "ok hosts: $hosts implementing all $(wc -l <"$root/build/.host.declared" | tr -d ' ') entry points"
+echo "ok hosts: $hosts implementing all $(wc -l <"$root/build/.host.declared" | tr -d ' ') entry points, across $files files"

@@ -76,9 +76,16 @@ cortado.geometry    points, sizes, rectangles
 cortado.host        the flat C ABI, and the only package that names it
 cortado.annotations @view · @param · @inject · @window · @command · @platform
      │
-src/cortado_host.h  ── cortado_macos.m · cortado_uikit.m · cortado_gtk4.c
-                       (+ win32, android)
+src/cortado_host.h  ── src/mac/ · cortado_uikit.m · cortado_gtk4.c
+                       · cortado_win32.c   (+ android)
 ```
+
+A host is a platform, not a file. `src/mac/` is eleven translation units — one
+per concern, sharing a `src/mac/internal.h` that is private to that platform —
+because the AppKit host had grown to 1,600 lines and the work coming would have
+made it unreadable. The other three are still one file each and will follow.
+`tools/check_hosts.sh` checks the union of what a platform defines, so how a
+host is filed is its own business and the contract is unchanged.
 
 Five rules hold the boundary, and each one is enforced by something that can
 fail rather than by a comment:

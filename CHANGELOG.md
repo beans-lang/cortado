@@ -13,7 +13,8 @@ First working macOS host.
   `cortado.surface` — points and rectangles, capability queries, the event
   router, `Container` / `Label` / `Button` / `TextField` / `CheckBox` /
   `ImageView`, and `Window`.
-- `src/cortado_macos.m` — the AppKit host. Coordinates are top-left with y
+- `src/mac/` — the AppKit host (one file at first; split by concern later).
+  Coordinates are top-left with y
   downward everywhere in cortado, which the four other target platforms already
   use; this file is where the flip happens, in a `CortadoView` that answers YES
   to `-isFlipped`.

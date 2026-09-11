@@ -1,10 +1,27 @@
 module cortado
 kind library
 
-# The macOS host. Every Objective-C detail in cortado lives in this one
-# translation unit; the .m suffix is what tells clang to compile it as
-# Objective-C, the same way raylib's Cocoa backend does it.
-csrc macos "src/cortado_macos.m"
+# The macOS host. Every Objective-C detail in cortado stops inside `src/mac/`;
+# the .m suffix is what tells clang to compile it as Objective-C, the same way
+# raylib's Cocoa backend does it.
+#
+# One file per concern rather than one file per platform. The host was a single
+# 1,600-line translation unit, and the work coming — Core Animation, Metal, and
+# the device frameworks — would have made it unreadable. What the files share
+# is `src/mac/internal.h`, which is private to this platform: no other host and
+# no Beans file ever sees it, and `tools/check_abi.sh` fails the build if an
+# AppKit name reaches Beans.
+csrc macos "src/mac/handles.m"
+csrc macos "src/mac/app.m"
+csrc macos "src/mac/surface.m"
+csrc macos "src/mac/widget.m"
+csrc macos "src/mac/view.m"
+csrc macos "src/mac/property.m"
+csrc macos "src/mac/dialog.m"
+csrc macos "src/mac/system.m"
+csrc macos "src/mac/menu.m"
+csrc macos "src/mac/items.m"
+csrc macos "src/mac/introspect.m"
 
 link macos framework "AppKit"
 link macos framework "Foundation"

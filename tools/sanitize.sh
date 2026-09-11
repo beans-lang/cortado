@@ -47,10 +47,22 @@ fi
 cases=("${@:-tree events shelf menu system roles bridge mount}")
 [[ $# -gt 0 ]] && cases=("$@")
 
-host="$out/cortado_macos.o"
-clang -c -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
-      -Wall -Wextra -x objective-c "$root/src/cortado_macos.m" \
-      -I "$root/src" -o "$host"
+# The host is one file per concern under src/mac/, so every one of them is
+# compiled and every one of them is linked. A glob rather than a list: a file
+# added to the host and forgotten here would go unsanitized, which is exactly
+# the drift the case list above already had to be cured of.
+host_objects=()
+for source in "$root"/src/mac/*.m; do
+    object="$out/$(basename "${source%.m}").o"
+    clang -c -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+          -Wall -Wextra -x objective-c "$source" \
+          -I "$root/src" -I "$root/src/mac" -o "$object"
+    host_objects+=("$object")
+done
+if [[ ${#host_objects[@]} -eq 0 ]]; then
+    echo "sanitize: no host sources in src/mac — the layout moved" >&2
+    exit 1
+fi
 
 failures=0
 for name in ${cases[@]}; do
@@ -75,7 +87,7 @@ for name in ${cases[@]}; do
 
     clang -O1 -g -pthread -fsanitize=address,undefined \
           -fno-sanitize-recover=undefined -Wno-override-module \
-          "$ir" "$BEANS_RUNTIME" "$host" "${ffi[@]}" \
+          "$ir" "$BEANS_RUNTIME" "${host_objects[@]}" "${ffi[@]}" \
           -framework AppKit -framework Foundation \
           -lm -o "$out/$name"
 
