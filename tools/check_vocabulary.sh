@@ -21,9 +21,13 @@ runtime="$root/component/vocabulary.b"
 markup="$root/bx/widgets.b"
 events="$root/bx/events.b"
 
+# `$2` names where to go and look. It is a second argument rather than one
+# fixed line because this script checks two different pairs of tables now, and
+# an error that sent somebody to bx/widgets.b over a missing accessibility role
+# would cost them the time this gate was meant to save.
 fail() {
     echo "$1" >&2
-    echo "  bx/widgets.b and component/vocabulary.b have drifted." >&2
+    echo "  ${2:-bx/widgets.b and component/vocabulary.b have drifted.}" >&2
     exit 1
 }
 
@@ -104,4 +108,51 @@ if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.kinded" >"$root/bui
     fail "attribute_names() and attribute_call() disagree about which names exist:"
 fi
 
-echo "ok vocabulary: $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes, in both tables"
+# ---- accessibility roles ----
+#
+# Every widget kind must have a role in every host, and this is the one table
+# that could not fail on its own. `ctd_a11y_role` is a C switch with a
+# `default`, so a kind nobody added lands on the fallback and a screen reader
+# calls a new control a window — no error, no warning, nothing in a golden that
+# reads as wrong rather than as a choice.
+#
+# The Beans side needs no check of its own: `WidgetMaker.bare` is an exhaustive
+# `match` over `WidgetKind`, so a kind with no case there is a compile error
+# and the compiler is a better gate than this script.
+grep -oE '^#define CTD_W_[A-Z_]+' "$root/src/cortado_host.h" \
+    | sed 's/^#define //' | sort -u >"$root/build/.roles.header"
+
+hosts_read=0
+for directory in "$root"/src/*/; do
+    [[ -d "$directory" ]] || continue
+    name="$(basename "$directory")"
+    # Only the files that are there. A glob that matches nothing expands to
+    # itself, and `cat` on a literal `*.m` fails the pipeline — which under
+    # `set -e` would read as "this host answered nothing", the exact silent
+    # green this gate exists to prevent.
+    present=()
+    for source in "$directory"*.m "$directory"*.c; do
+        [[ -e "$source" ]] && present+=("$source")
+    done
+    # The body of ctd_a11y_role in whichever file of this host defines it.
+    sed -n '/ctd_a11y_role(ctd_handle/,/^}/p' "${present[@]}" \
+        | { grep -oE 'CTD_W_[A-Z_]+' || true; } | sort -u >"$root/build/.roles.$name"
+    if [[ ! -s "$root/build/.roles.$name" ]]; then
+        fail "src/$name/ has no ctd_a11y_role to read, so this check covered nothing:" \
+             "Look for the function this script greps for, not for a drifted table."
+    fi
+    if ! diff -u "$root/build/.roles.header" "$root/build/.roles.$name" \
+            >"$root/build/.roles.$name.diff"; then
+        cat "$root/build/.roles.$name.diff" >&2
+        echo "  < declared in cortado_host.h      > answered by src/$name/" >&2
+        fail "the $name host has no accessibility role for every widget kind:" \
+             "Add the case to ctd_a11y_role in src/$name/, beside the others."
+    fi
+    hosts_read=$((hosts_read + 1))
+done
+if [[ $hosts_read -eq 0 ]]; then
+    fail "no host directory was read for accessibility roles:" \
+         "src/ has no platform directories, so this check covered nothing."
+fi
+
+echo "ok vocabulary: $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes, $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles in $hosts_read hosts, in both tables"
