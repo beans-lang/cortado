@@ -1043,6 +1043,33 @@ First working macOS host.
   the host declares a protocol and keeps an explicit class check for membership.
   "It compiles" is not "it means anything".
 
+- **A component in a nested folder, and the gate that could not see one.**
+  `.bx` already handled it — the `<beans>` block is copied through byte for
+  byte, so `import {Badge} from markup.generated.site.parts` lands in the
+  generated file and resolves like any other import. What did not handle it was
+  everything around it.
+
+  `test.sh` globbed `examples/markup/site/*.bx`, and a shell glob is not
+  recursive: a component in `site/parts/` was never regenerated and never
+  diffed. That is this repository's worst failure mode — a *stale* generated
+  file that still compiles, still renders last week's screen, and says nothing.
+  The loop uses `find` now, and `examples/markup` has a real nested component
+  so the case is a case rather than a claim.
+
+- **`cortado-bx build <directory>` walks it, however deep.** The same reason:
+  a person with `site/`, `site/parts/` and `site/rows/` cannot write one glob
+  that catches all three, and the one they do write looks like it worked.
+  Handing the tool the folder means the tool decides what is in it, and
+  `Dir.walk` is recursive and sorted, so two machines write the same files in
+  the same order. A directory with no markup under it is an error rather than
+  no work — a build pointed at the wrong folder that quietly did nothing reads
+  exactly like a build with nothing to do.
+
+  The gate checks both halves: every file `find` sees is regenerated and
+  diffed, **and** cortado-bx's own walk finds the same number. The first loop
+  is only as good as the list it iterates, and the list is not what a person
+  hands the tool.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

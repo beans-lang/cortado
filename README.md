@@ -304,8 +304,16 @@ pub partial class Checkout extends component.Component {
 
 ```
 beansc build examples/cortado_bx.b -o build/cortado-bx
-build/cortado-bx build site/checkout.bx
+build/cortado-bx build site/checkout.bx      # one file
+build/cortado-bx build site                  # every .bx under it, however deep
 ```
+
+**Hand it the folder.** A shell glob is not recursive — `site/*.bx` silently
+misses `site/parts/` — and what that produces is the worst kind of failure
+this library has: a *stale* generated file that still compiles, still renders
+last week's screen, and says nothing. A directory input means cortado-bx
+decides what is in the folder, and the answer cannot come up one short. A
+directory with no markup in it is an error rather than no work.
 
 **Generated code goes under `generated/`, mirroring the source tree.**
 `site/checkout.bx` becomes `generated/site/checkout.b`, and the mirror hangs
@@ -318,12 +326,30 @@ examples/markup/
 ├── main.b
 ├── site/                  markup only; not a Beans package
 │   ├── checkout.bx
-│   └── price.bx
+│   ├── price.bx
+│   └── parts/
+│       └── badge.bx
 └── generated/
     └── site/              package site → markup.generated.site
         ├── checkout.b
-        └── price.b
+        ├── price.b
+        └── parts/         package parts → markup.generated.site.parts
+            └── badge.b
 ```
+
+**A component in a nested folder needs one import line and nothing else.**
+`parts/badge.bx` generates into `generated/site/parts/`, which is the package
+`parts`, so the screen above it writes
+
+```beans
+import {Badge} from markup.generated.site.parts
+```
+
+in its own `<beans>` block — cortado-bx copies that through byte for byte. The
+tag is spelled `<Badge rush={self.rush} />` either way; nesting costs the
+import and buys the folders. `examples/markup` is that, and
+`tests/markup.out` follows one parameter across the package boundary and
+watches the label change.
 
 Mirroring rather than flattening, because **a directory is a package in Beans**
 and its name is the folder's name, not what a file declares. A mirrored tree

@@ -63,6 +63,34 @@ fn mirror_for(source: string, out_root: string) -> string {
     return bx.generated_path_under(path.join(here, out_root), bx.base_name(source))
 }
 
+/// Every input, with each directory replaced by the `.bx` files under it.
+///
+/// Sorted and recursive, because `Dir.walk` is both — so two machines that run
+/// the same command write the same files in the same order, and a folder
+/// somebody nested one deeper is not a folder the build forgets.
+///
+/// A directory with no markup in it is an error rather than nothing. A build
+/// that was pointed at the wrong folder and quietly did no work is a build
+/// that reads exactly like a build with nothing to do.
+fn expand(given: List<string>, into: List<string>) -> Result<bool> {
+    for one: string in given {
+        if !Dir.exists(one) {
+            into.push(one)
+            continue
+        }
+        var here: int = 0
+        for under: string in Dir.walk(one)? {
+            if !under.ends_with(".bx") { continue }
+            into.push(path.join(one, under))
+            here = here + 1
+        }
+        if here == 0 {
+            return err("{one} is a directory with no .bx files under it", "no_markup")
+        }
+    }
+    return ok(true)
+}
+
 /// `source` with `root/` taken off the front, or `source` unchanged when it
 /// does not start there.
 fn strip_prefix(source: string, root: string) -> string {
@@ -79,6 +107,7 @@ fn usage() {
     io.eprintln("")
     io.eprintln("commands:")
     io.eprintln("  build       compile each file into generated/, mirroring its path")
+    io.eprintln("              an input may be a directory: every .bx under it, however deep")
     io.eprintln("  check       parse and emit, and write nothing")
     io.eprintln("  vocabulary  print cortado's .bx surface as JSON, for an editor")
     io.eprintln("")
@@ -189,16 +218,34 @@ fn main() {
         usage()
         os.exit(2)
     }
-    if output != "" && inputs.len() > 1 {
-        io.eprintln("cortado-bx: -o names one output and there are {inputs.len()} inputs")
+    // A directory stands for every `.bx` under it, however deep.
+    //
+    // This is not a convenience. A screen written in markup ends up in folders
+    // like any other code — `site/`, `site/parts/`, `site/rows/` — and a shell
+    // glob is not recursive: `site/*.bx` silently misses `site/parts/`. What
+    // that produces is the worst kind of failure this repository has, a
+    // *stale* generated file that still compiles, still renders the screen it
+    // rendered last week, and says nothing. Handing cortado-bx the folder
+    // means the tool decides what is in it, and the answer cannot go one
+    // short.
+    var sources: List<string> = []
+    match expand(inputs, sources) {
+        ok(done) => {}
+        err(problem) => {
+            io.eprintln("cortado-bx: {problem.msg}")
+            os.exit(2)
+        }
+    }
+    if output != "" && sources.len() > 1 {
+        io.eprintln("cortado-bx: -o names one output and there are {sources.len()} inputs")
         os.exit(2)
     }
 
     var failed: bool = false
-    for path: string in inputs {
-        let compiled: bx.Compiled = bx.compile_file(path, options)
+    for source: string in sources {
+        let compiled: bx.Compiled = bx.compile_file(source, options)
         if !compiled.is_ok() {
-            io.eprintln(compiled.report(path))
+            io.eprintln(compiled.report(source))
             failed = true
             continue
         }
@@ -208,7 +255,7 @@ fn main() {
             continue
         }
         var target: string = output
-        if target == "" { target = mirror_for(path, out_root) }
+        if target == "" { target = mirror_for(source, out_root) }
         // The mirror does not exist until something makes it, and a generated
         // tree that failed to be written because a folder was missing is a
         // build that fails for a reason nobody can act on.

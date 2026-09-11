@@ -16,6 +16,12 @@ import {UiEvent} from cortado.events
 
 import cortado.component
 import {view, param, inject} from cortado.annotations
+// `site/parts/badge.bx` generates into `generated/site/parts/`, and a Beans
+// package is its folder — so the component one level down is one segment
+// further along the import path. cortado-bx copies this line through, so a
+// nested component needs nothing from the markup compiler that a flat one
+// does not.
+import {Badge} from markup.generated.site.parts
 
 /// What a drink costs.
 pub class Menu {
@@ -72,6 +78,7 @@ pub partial class Checkout extends component.Component {
 // instead of a blank subtree and a fault at run time. Unused, and an
 // unused free function is not an error.
 fn _cortado_component_checkout_Price(value: Price) -> Component { return value }
+fn _cortado_component_checkout_Badge(value: Badge) -> Component { return value }
 
 partial class Checkout {
     pub override fn render(b: Builder) {
@@ -89,25 +96,28 @@ partial class Checkout {
         b.child<Price>("c1", fn(_cortado_c: Price) {  // checkout.bx:5
             _cortado_c.drink = self.drink
         })
-        b.open("CheckBox")  // checkout.bx:7
+        b.child<Badge>("c2", fn(_cortado_c: Badge) {  // checkout.bx:9
+            _cortado_c.rush = self.rush
+        })
+        b.open("CheckBox")  // checkout.bx:11
         b.flag("checked", self.rush)
         b.on("change", fn(e: UiEvent) { self.toggle_rush() })
         b.text("Rush it")
         b.close()
-        if self.shots > 2 {  // checkout.bx:11
-            b.open("Label")  // checkout.bx:12
+        if self.shots > 2 {  // checkout.bx:15
+            b.open("Label")  // checkout.bx:16
             b.text("That is a lot of caffeine")
             b.close()
         }
-        b.open("HStack")  // checkout.bx:15
+        b.open("HStack")  // checkout.bx:19
         b.number("spacing", (10) as f64)
         b.word("justify", "end")
-        b.open("Button")  // checkout.bx:16
+        b.open("Button")  // checkout.bx:20
         b.flag("enabled", self.shots < 4)
         b.on("click", fn(e: UiEvent) { self.add_shot() })
         b.text("Another shot")
         b.close()
-        b.open("Button")  // checkout.bx:19
+        b.open("Button")  // checkout.bx:23
         b.on("click", fn(e: UiEvent) { self.change_drink() })
         b.text("Change drink")
         b.close()

@@ -1,0 +1,32 @@
+<Label font_size={12} text={self.word()} />
+<beans>
+package parts
+
+import cortado.component
+import {view, param} from cortado.annotations
+
+/// A word for how the order is going.
+///
+/// **This file is the nested-package case.** It sits in `site/parts/`, so its
+/// generated half lands in `generated/site/parts/` and declares `package
+/// parts` — a Beans package is its folder, one level deeper than the screen
+/// that uses it. `site/checkout.bx` reaches it with
+/// `import {Badge} from markup.generated.site.parts` in its own `<beans>`
+/// block, which cortado-bx copies through byte for byte.
+///
+/// Nothing about the tag changes: `<Badge rush={self.rush} />` is the same
+/// spelling it would have in a flat tree. What the nesting costs is one import
+/// line, and what it buys is that a screen with forty components can be
+/// arranged in folders like any other code.
+@view
+pub partial class Badge extends component.Component {
+    @param pub rush: bool = false
+
+    pub fn init() { super.init() }
+
+    pub fn word() -> string {
+        if self.rush { return "rushing" }
+        return "steady"
+    }
+}
+</beans>

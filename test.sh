@@ -514,17 +514,41 @@ pass
 # Regenerated from the repository root with a relative path, because the path
 # is written into the generated file's header — so the diff has to be run the
 # way a person regenerates, or it fails on the absolute path alone.
-for source in examples/markup/site/*.bx examples/gallery/site/*.bx; do
-    stem="$(basename "${source%.bx}")"
+# Found with `find`, not with a shell glob, and that is the point: `site/*.bx`
+# is not recursive, so a component somebody put in `site/parts/` would never be
+# regenerated and never be diffed. What that produces is the worst failure this
+# repository has — a *stale* generated file that still compiles, still renders
+# last week's screen, and says nothing.
+for source in $(find examples/markup/site examples/gallery/site -name '*.bx' | sort); do
+    module="${source%%/site/*}"
+    relative="${source#"$module/"}"
+    target="$module/generated/${relative%.bx}.b"
     (cd "$root" && "$tmp/cortado-bx" build "$source" --stdout) >"$tmp/regen.b" 2>"$tmp/regen.err" || {
-        echo "FAIL markup: cortado-bx refused $(basename "$source")" >&2
+        echo "FAIL markup: cortado-bx refused $source" >&2
         cat "$tmp/regen.err" >&2
         exit 1
     }
-    module="$(dirname "$(dirname "$source")")"
-    if ! diff -u "$root/$module/generated/site/$stem.b" "$tmp/regen.b"; then
-        echo "FAIL markup: $module/generated/site/$stem.b is stale — regenerate it with" >&2
-        echo "    build/cortado-bx build $module/site/*.bx" >&2
+    if ! diff -u "$root/$target" "$tmp/regen.b"; then
+        echo "FAIL markup: $target is stale — regenerate it with" >&2
+        echo "    build/cortado-bx build $module/site" >&2
+        exit 1
+    fi
+done
+pass
+
+# And the tool's own walk finds what `find` found. The loop above is only as
+# good as the list it iterates; this is the half that checks cortado-bx agrees
+# about what is in a folder, which is what a person actually hands it.
+for module in examples/markup examples/gallery; do
+    (cd "$root" && "$tmp/cortado-bx" build "$module/site" --stdout) >"$tmp/walk.b" 2>&1 || {
+        echo "FAIL markup: cortado-bx refused the directory $module/site" >&2
+        cat "$tmp/walk.b" >&2
+        exit 1
+    }
+    walked="$(grep -c '^// Generated from ' "$tmp/walk.b" || true)"
+    present="$(find "$root/$module/site" -name '*.bx' | wc -l | tr -d ' ')"
+    if [[ "$walked" != "$present" ]]; then
+        echo "FAIL markup: cortado-bx walked $walked .bx files under $module/site, there are $present" >&2
         exit 1
     fi
 done

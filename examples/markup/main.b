@@ -61,6 +61,17 @@ fn dump() -> Result<bool> {
     io.println("-- after three shots --")
     io.print(widgets.WidgetDump.of(root)?)
 
+    // And the nested component's parameter, moved. `Badge` lives in
+    // `site/parts/`, so it is in a package one level deeper than the screen —
+    // the only thing that costs is the import line in checkout.bx's <beans>
+    // block. Moving `rush` proves the whole path: the parameter crosses a
+    // package boundary, the component re-renders, and the label changes.
+    screen.rush = true
+    screen.request_render()
+    mount.refresh_if_needed()?
+    io.println("-- after rushing it --")
+    io.print(widgets.WidgetDump.of(root)?)
+
     mount.close()?
     app.shutdown()
     provider.close().expect("close the container")

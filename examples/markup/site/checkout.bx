@@ -4,6 +4,10 @@
 
   <Price drink={self.drink} />
 
+  <!-- A component from a nested package. The tag is spelled the same as any
+       other; what makes it reachable is the import in the <beans> block. -->
+  <Badge rush={self.rush} />
+
   <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>
     Rush it
   </CheckBox>
@@ -24,6 +28,12 @@ package site
 
 import cortado.component
 import {view, param, inject} from cortado.annotations
+// `site/parts/badge.bx` generates into `generated/site/parts/`, and a Beans
+// package is its folder — so the component one level down is one segment
+// further along the import path. cortado-bx copies this line through, so a
+// nested component needs nothing from the markup compiler that a flat one
+// does not.
+import {Badge} from markup.generated.site.parts
 
 /// What a drink costs.
 pub class Menu {
