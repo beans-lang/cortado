@@ -47,6 +47,7 @@ pub const EV_APP_FOREGROUND: int = 18
 pub const EV_APP_BACKGROUND: int = 19
 pub const EV_APP_WILL_QUIT: int = 20
 pub const EV_LOW_MEMORY: int = 21
+pub const EV_COMMAND: int = 22
 
 // ---- modifier bits ----
 
@@ -100,3 +101,34 @@ pub const P_FONT_SIZE: int = 9
 pub const P_STEP: int = 10
 pub const P_SELECTED: int = 11
 pub const P_INDETERMINATE: int = 12
+
+// Menu command roles. The platform places, names and keys a command that has
+// one; a command with no role goes where the application puts it.
+pub const CMD_NONE: int = 0
+pub const CMD_ABOUT: int = 1
+pub const CMD_PREFERENCES: int = 2
+pub const CMD_QUIT: int = 3
+pub const CMD_HIDE: int = 4
+pub const CMD_UNDO: int = 5
+pub const CMD_REDO: int = 6
+pub const CMD_CUT: int = 7
+pub const CMD_COPY: int = 8
+pub const CMD_PASTE: int = 9
+pub const CMD_SELECT_ALL: int = 10
+pub const CMD_CLOSE: int = 11
+pub const CMD_MINIMIZE: int = 12
+pub const CMD_FULLSCREEN: int = 13
+
+// Dialog kinds. Every one is asynchronous: the answer arrives as an event
+// carrying the token the request was made with.
+pub const DLG_MESSAGE: int = 0
+pub const DLG_CONFIRM: int = 1
+pub const DLG_OPEN: int = 2
+pub const DLG_SAVE: int = 3
+
+// The system's own fonts, by role, so a program never hard-codes a family that
+// is wrong on three platforms out of four.
+pub const FONT_BODY: int = 0
+pub const FONT_HEADING: int = 1
+pub const FONT_CAPTION: int = 2
+pub const FONT_MONO: int = 3

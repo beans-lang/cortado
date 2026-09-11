@@ -53,6 +53,21 @@ pub extern "C" fn ctd_set_int(widget: u64, key: i32, value: i64) -> i32
 pub extern "C" fn ctd_get_int(widget: u64, key: i32, out: RawPtr<i64>) -> i32
 pub extern "C" fn ctd_set_real(widget: u64, key: i32, value: f64) -> i32
 pub extern "C" fn ctd_get_real(widget: u64, key: i32, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_menu_new(title: RawPtr<i8>, len: i32) -> u64
+pub extern "C" fn ctd_menu_add_item(menu: u64, title: RawPtr<i8>, title_len: i32, key: RawPtr<i8>, key_len: i32, role: i32, token: i64) -> i32
+pub extern "C" fn ctd_menu_add_separator(menu: u64) -> i32
+pub extern "C" fn ctd_menu_add_submenu(menu: u64, child: u64) -> i32
+pub extern "C" fn ctd_menu_item_count(menu: u64, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_menu_item_title(menu: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_menu_item_key(menu: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_menu_set_bar(menu: u64) -> i32
+pub extern "C" fn ctd_menu_set_enabled(menu: u64, token: i64, on: i32) -> i32
+pub extern "C" fn ctd_menu_invoke(menu: u64, token: i64) -> i32
+pub extern "C" fn ctd_dialog_open(parent: u64, kind: i32, title: RawPtr<i8>, title_len: i32, body: RawPtr<i8>, body_len: i32, token: i64) -> i32
+pub extern "C" fn ctd_appearance() -> i32
+pub extern "C" fn ctd_surface_scale(surface: u64, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_font_family(role: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_font_size(role: i32, out: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_items_clear(widget: u64) -> i32
 pub extern "C" fn ctd_items_add(widget: u64, utf8: RawPtr<i8>, len: i32) -> i32
 pub extern "C" fn ctd_items_count(widget: u64, out: RawPtr<i32>) -> i32

@@ -1,0 +1,16 @@
+-- appearance --
+  the system reports one of light or dark: true
+-- fonts --
+  body: named=true size in range=true
+  heading: named=true size in range=true
+  caption: named=true size in range=true
+  mono: named=true size in range=true
+  a heading is larger than a caption: true
+  mono is a different family from body: true
+-- scale --
+  a surface answers a scale: true
+-- dialogs --
+  token=201 button=0 text=""
+  token=202 button=1 text=""
+  both dialogs answered: true
+-- refusals --

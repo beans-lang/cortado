@@ -125,6 +125,15 @@ static void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t to
 
 static void ctd_emit_control(ctd_handle target, id sender);
 
+// One target object for every menu item cortado owns. The interface is here,
+// beside the declaration, because `ctd_init` makes it and the menu section
+// further down implements it.
+@interface CortadoCommand : NSObject
+- (void)chose:(id)sender;
+@end
+
+static CortadoCommand *g_commands;
+
 @implementation CortadoTarget
 - (void)fire:(id)sender {
     ctd_emit_control(self.handle, sender);
@@ -207,6 +216,7 @@ ctd_status ctd_init(uint32_t want_abi) {
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
     g_targets = [[NSMutableArray alloc] init];
+    g_commands = [[CortadoCommand alloc] init];
     g_started = 1;
     return CTD_OK;
 }
@@ -953,6 +963,404 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
         default: return CTD_ERR_UNSUPPORTED;
     }
     if (out) *out = value;
+    return CTD_OK;
+}
+
+// -------------------------------------------------------------------- dialogs
+
+ctd_status ctd_dialog_open(ctd_handle parent, int32_t kind,
+                           const char *title, int32_t title_len,
+                           const char *body, int32_t body_len,
+                           int64_t token) {
+    NSWindow *window = nil;
+    if (parent) {
+        id object = ctd_resolve(parent);
+        if (!object) return CTD_ERR_STALE;
+        if (![object isKindOfClass:[NSWindow class]]) return CTD_ERR_KIND;
+        window = (NSWindow *)object;
+        // A sheet needs a window that is actually on screen. Attaching one to
+        // a window that was never shown runs no completion handler at all, so
+        // the caller waits on a token that will never arrive — a hang, and the
+        // worst possible failure for an asynchronous API. A window that cannot
+        // host a sheet is treated as no window, which answers immediately.
+        if (![window isVisible]) window = nil;
+    }
+    NSString *heading = ctd_string(title, title_len);
+    NSString *detail = ctd_string(body, body_len);
+
+    // The answer is delivered as an event and never returned, because every
+    // platform's dialog is asynchronous and a blocking form would have to spin
+    // an inner event loop — re-entering the render this call came out of.
+    void (^answer)(NSInteger, NSString *) = ^(NSInteger which, NSString *path) {
+        ctd_event event;
+        memset(&event, 0, sizeof event);
+        event.kind = CTD_EV_POST;
+        event.token = token;
+        event.index = (int64_t)which;
+        const char *utf8 = path ? [path UTF8String] : NULL;
+        event.text = utf8;
+        event.text_len = utf8 ? (int32_t)strlen(utf8) : 0;
+        if (g_sink) g_sink(g_sink_context, &event);
+    };
+
+    if (kind == CTD_DLG_MESSAGE || kind == CTD_DLG_CONFIRM) {
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:heading];
+        [alert setInformativeText:detail];
+        [alert addButtonWithTitle:@"OK"];
+        if (kind == CTD_DLG_CONFIRM) [alert addButtonWithTitle:@"Cancel"];
+        if (window) {
+            [alert beginSheetModalForWindow:window
+                          completionHandler:^(NSModalResponse response) {
+                answer(response == NSAlertFirstButtonReturn ? 0 : 1, nil);
+            }];
+        } else {
+            // No surface to attach to — which is the headless case, where
+            // running a modal alert would hang. The answer is the default
+            // button, reported the same way, so a caller's code path is the
+            // same with and without a display.
+            answer(0, nil);
+        }
+        [alert release];
+        return CTD_OK;
+    }
+
+    if (kind == CTD_DLG_OPEN || kind == CTD_DLG_SAVE) {
+        if (!window) {
+            // Same reason: a file panel with nothing to attach to would run
+            // modally and never return under a test. Report a cancel.
+            answer(1, nil);
+            return CTD_OK;
+        }
+        NSSavePanel *panel = kind == CTD_DLG_OPEN
+            ? (NSSavePanel *)[NSOpenPanel openPanel]
+            : [NSSavePanel savePanel];
+        [panel setTitle:heading];
+        [panel setMessage:detail];
+        [panel beginSheetModalForWindow:window
+                      completionHandler:^(NSModalResponse response) {
+            if (response != NSModalResponseOK) { answer(1, nil); return; }
+            answer(0, [[panel URL] path]);
+        }];
+        return CTD_OK;
+    }
+    return CTD_ERR_RANGE;
+}
+
+// ----------------------------------------------------------------- appearance
+
+int32_t ctd_appearance(void) {
+    NSAppearance *current = [NSApp effectiveAppearance];
+    NSAppearanceName best =
+        [current bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua,
+                                                     NSAppearanceNameDarkAqua]];
+    return [best isEqualToString:NSAppearanceNameDarkAqua] ? 1 : 0;
+}
+
+ctd_status ctd_surface_scale(ctd_handle surface, double *out) {
+    double scale = [[NSScreen mainScreen] backingScaleFactor];
+    if (surface) {
+        id object = ctd_resolve(surface);
+        if (!object) return CTD_ERR_STALE;
+        if (![object isKindOfClass:[NSWindow class]]) return CTD_ERR_KIND;
+        scale = [(NSWindow *)object backingScaleFactor];
+        // A window that has not been shown has no screen yet, and AppKit
+        // answers 0 for one. The main display's scale is the honest guess and
+        // the one the window will get when it appears.
+        if (scale <= 0.0) scale = [[NSScreen mainScreen] backingScaleFactor];
+    }
+    if (scale <= 0.0) scale = 1.0;
+    if (out) *out = scale;
+    return CTD_OK;
+}
+
+// ---------------------------------------------------------------------- fonts
+
+static NSFont *ctd_font_for(int32_t role) {
+    switch (role) {
+        case CTD_FONT_HEADING:
+            return [NSFont systemFontOfSize:[NSFont systemFontSize] + 4.0
+                                     weight:NSFontWeightSemibold];
+        case CTD_FONT_CAPTION:
+            return [NSFont systemFontOfSize:[NSFont smallSystemFontSize]];
+        case CTD_FONT_MONO:
+            return [NSFont monospacedSystemFontOfSize:[NSFont systemFontSize]
+                                               weight:NSFontWeightRegular];
+        case CTD_FONT_BODY:
+            return [NSFont systemFontOfSize:[NSFont systemFontSize]];
+        default:
+            return nil;
+    }
+}
+
+int32_t ctd_font_family(int32_t role, char *out, int32_t cap) {
+    NSFont *font = ctd_font_for(role);
+    if (!font) return CTD_ERR_RANGE;
+    return ctd_copy_out([font familyName], out, cap);
+}
+
+ctd_status ctd_font_size(int32_t role, double *out) {
+    NSFont *font = ctd_font_for(role);
+    if (!font) return CTD_ERR_RANGE;
+    if (out) *out = (double)[font pointSize];
+    return CTD_OK;
+}
+
+// ---------------------------------------------------------------------- menus
+
+// One menu item's identity, carried on the NSMenuItem itself.
+//
+// AppKit gives a menu item one `tag`, an NSInteger, and that is exactly what is
+// needed: the application's own token, handed back on CTD_EV_COMMAND. Nothing
+// else about the item has to be remembered.
+
+@implementation CortadoCommand
+- (void)chose:(id)sender {
+    if (![sender isKindOfClass:[NSMenuItem class]]) return;
+    ctd_event event;
+    memset(&event, 0, sizeof event);
+    event.kind = CTD_EV_COMMAND;
+    event.token = (int64_t)[(NSMenuItem *)sender tag];
+    if (g_sink) g_sink(g_sink_context, &event);
+}
+@end
+
+// A portable shortcut description — "mod+shift+s" — as the key and the
+// modifier mask AppKit wants.
+//
+// `mod` is Command here and Control elsewhere, which is the whole reason the
+// description is portable rather than a literal key. An unrecognised word is
+// ignored rather than refused: a shortcut that did not attach is a menu item
+// that still works, and refusing the whole menu over one would be worse.
+static NSString *ctd_shortcut(NSString *spec, NSEventModifierFlags *mask) {
+    *mask = 0;
+    if ([spec length] == 0) return @"";
+    NSArray *parts = [[spec lowercaseString] componentsSeparatedByString:@"+"];
+    NSString *key = @"";
+    for (NSString *part in parts) {
+        if ([part isEqualToString:@"mod"] || [part isEqualToString:@"cmd"]) {
+            *mask |= NSEventModifierFlagCommand;
+        } else if ([part isEqualToString:@"shift"]) {
+            *mask |= NSEventModifierFlagShift;
+        } else if ([part isEqualToString:@"alt"] || [part isEqualToString:@"opt"]) {
+            *mask |= NSEventModifierFlagOption;
+        } else if ([part isEqualToString:@"ctrl"] || [part isEqualToString:@"control"]) {
+            *mask |= NSEventModifierFlagControl;
+        } else {
+            key = part;
+        }
+    }
+    return key;
+}
+
+// The shortcut a menu item ended up with, in the portable spelling.
+static NSString *ctd_shortcut_text(NSMenuItem *item) {
+    NSString *key = [item keyEquivalent];
+    if ([key length] == 0) return @"";
+    NSMutableArray *parts = [NSMutableArray array];
+    NSEventModifierFlags mask = [item keyEquivalentModifierMask];
+    if (mask & NSEventModifierFlagCommand) [parts addObject:@"mod"];
+    if (mask & NSEventModifierFlagControl) [parts addObject:@"ctrl"];
+    if (mask & NSEventModifierFlagOption)  [parts addObject:@"alt"];
+    if (mask & NSEventModifierFlagShift)   [parts addObject:@"shift"];
+    [parts addObject:[key lowercaseString]];
+    return [parts componentsJoinedByString:@"+"];
+}
+
+// What the platform calls a role, and what key it gives it.
+//
+// The titles are Apple's own words — "Quit Coffee", not "Exit" — because a
+// menu that said the wrong word would be the one thing a user notices
+// immediately. The selector matters more: Cut, Copy, Paste, Undo and Select
+// All go to `nil`, so AppKit walks the responder chain and the focused text
+// field handles them. Wiring them to a handler of ours would break editing in
+// every system control in the window.
+static SEL ctd_role_selector(int32_t role) {
+    switch (role) {
+        case CTD_CMD_HIDE:       return @selector(hide:);
+        case CTD_CMD_QUIT:       return @selector(terminate:);
+        case CTD_CMD_UNDO:       return @selector(undo:);
+        case CTD_CMD_REDO:       return @selector(redo:);
+        case CTD_CMD_CUT:        return @selector(cut:);
+        case CTD_CMD_COPY:       return @selector(copy:);
+        case CTD_CMD_PASTE:      return @selector(paste:);
+        case CTD_CMD_SELECT_ALL: return @selector(selectAll:);
+        case CTD_CMD_CLOSE:      return @selector(performClose:);
+        case CTD_CMD_MINIMIZE:   return @selector(performMiniaturize:);
+        case CTD_CMD_FULLSCREEN: return @selector(toggleFullScreen:);
+        default:                 return NULL;
+    }
+}
+
+static NSString *ctd_role_title(int32_t role, NSString *fallback) {
+    switch (role) {
+        case CTD_CMD_ABOUT:       return @"About";
+        case CTD_CMD_PREFERENCES: return @"Settings…";
+        case CTD_CMD_QUIT:        return @"Quit";
+        case CTD_CMD_HIDE:        return @"Hide";
+        case CTD_CMD_UNDO:        return @"Undo";
+        case CTD_CMD_REDO:        return @"Redo";
+        case CTD_CMD_CUT:         return @"Cut";
+        case CTD_CMD_COPY:        return @"Copy";
+        case CTD_CMD_PASTE:       return @"Paste";
+        case CTD_CMD_SELECT_ALL:  return @"Select All";
+        case CTD_CMD_CLOSE:       return @"Close";
+        case CTD_CMD_MINIMIZE:    return @"Minimize";
+        case CTD_CMD_FULLSCREEN:  return @"Enter Full Screen";
+        default:                  return fallback;
+    }
+}
+
+static NSString *ctd_role_key(int32_t role, NSString *fallback) {
+    switch (role) {
+        case CTD_CMD_PREFERENCES: return @"mod+,";
+        case CTD_CMD_QUIT:        return @"mod+q";
+        case CTD_CMD_HIDE:        return @"mod+h";
+        case CTD_CMD_UNDO:        return @"mod+z";
+        case CTD_CMD_REDO:        return @"mod+shift+z";
+        case CTD_CMD_CUT:         return @"mod+x";
+        case CTD_CMD_COPY:        return @"mod+c";
+        case CTD_CMD_PASTE:       return @"mod+v";
+        case CTD_CMD_SELECT_ALL:  return @"mod+a";
+        case CTD_CMD_CLOSE:       return @"mod+w";
+        case CTD_CMD_MINIMIZE:    return @"mod+m";
+        case CTD_CMD_FULLSCREEN:  return @"mod+ctrl+f";
+        default:                  return fallback;
+    }
+}
+
+static NSMenu *ctd_menu_of(ctd_handle handle) {
+    id object = ctd_resolve(handle);
+    if ([object isKindOfClass:[NSMenu class]]) return (NSMenu *)object;
+    return nil;
+}
+
+ctd_handle ctd_menu_new(const char *title, int32_t len) {
+    NSMenu *menu = [[NSMenu alloc] initWithTitle:ctd_string(title, len)];
+    // A menu enables its own items by asking their targets; cortado's items
+    // are enabled explicitly, so automatic validation is off and an item stays
+    // as the application set it.
+    [menu setAutoenablesItems:NO];
+    ctd_handle handle = ctd_track(menu, CTD_W_CONTAINER);
+    [menu release];
+    return handle;
+}
+
+ctd_status ctd_menu_add_item(ctd_handle handle, const char *title, int32_t title_len,
+                             const char *key, int32_t key_len,
+                             int32_t role, int64_t token) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    if (role < 0 || role > CTD_CMD_FULLSCREEN) return CTD_ERR_RANGE;
+
+    NSString *shown = ctd_role_title(role, ctd_string(title, title_len));
+    NSString *spec = ctd_role_key(role, ctd_string(key, key_len));
+    NSEventModifierFlags mask = 0;
+    NSString *equivalent = ctd_shortcut(spec, &mask);
+
+    SEL action = ctd_role_selector(role);
+    NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:shown
+                                                 action:action ? action : @selector(chose:)
+                                          keyEquivalent:equivalent];
+    [item setKeyEquivalentModifierMask:mask];
+    [item setTag:(NSInteger)token];
+    // A role with a platform selector goes to nil, so AppKit's responder chain
+    // finds whoever can do it — the focused text field, the window, NSApp.
+    // Anything else is the application's own command.
+    [item setTarget:action ? nil : g_commands];
+    [item setEnabled:YES];
+    [menu addItem:item];
+    [item release];
+    return CTD_OK;
+}
+
+ctd_status ctd_menu_add_separator(ctd_handle handle) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    [menu addItem:[NSMenuItem separatorItem]];
+    return CTD_OK;
+}
+
+ctd_status ctd_menu_add_submenu(ctd_handle handle, ctd_handle child) {
+    NSMenu *menu = ctd_menu_of(handle);
+    NSMenu *inner = ctd_menu_of(child);
+    if (!menu || !inner) return CTD_ERR_STALE;
+    NSMenuItem *holder = [[NSMenuItem alloc] initWithTitle:[inner title]
+                                                   action:NULL
+                                            keyEquivalent:@""];
+    [holder setSubmenu:inner];
+    [menu addItem:holder];
+    [holder release];
+    return CTD_OK;
+}
+
+ctd_status ctd_menu_item_count(ctd_handle handle, int32_t *out) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    if (out) *out = (int32_t)[menu numberOfItems];
+    return CTD_OK;
+}
+
+int32_t ctd_menu_item_title(ctd_handle handle, int32_t index, char *out, int32_t cap) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    if (index < 0 || index >= (int32_t)[menu numberOfItems]) return CTD_ERR_RANGE;
+    NSMenuItem *item = [menu itemAtIndex:index];
+    if ([item isSeparatorItem]) return ctd_copy_out(@"-", out, cap);
+    return ctd_copy_out([item title], out, cap);
+}
+
+int32_t ctd_menu_item_key(ctd_handle handle, int32_t index, char *out, int32_t cap) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    if (index < 0 || index >= (int32_t)[menu numberOfItems]) return CTD_ERR_RANGE;
+    return ctd_copy_out(ctd_shortcut_text([menu itemAtIndex:index]), out, cap);
+}
+
+ctd_status ctd_menu_set_bar(ctd_handle handle) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    [NSApp setMainMenu:menu];
+    return CTD_OK;
+}
+
+// Finds an item by token anywhere under `menu`, submenus included. A token is
+// the application's own number and it names one command; where that command
+// was placed is not something the application should have to remember.
+static NSMenuItem *ctd_find_command(NSMenu *menu, int64_t token) {
+    for (NSMenuItem *item in [menu itemArray]) {
+        if (!([item isSeparatorItem]) && (int64_t)[item tag] == token) return item;
+        NSMenu *inner = [item submenu];
+        if (inner) {
+            NSMenuItem *found = ctd_find_command(inner, token);
+            if (found) return found;
+        }
+    }
+    return nil;
+}
+
+ctd_status ctd_menu_set_enabled(ctd_handle handle, int64_t token, int32_t on) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    NSMenuItem *item = ctd_find_command(menu, token);
+    if (!item) return CTD_ERR_RANGE;
+    [item setEnabled:on ? YES : NO];
+    return CTD_OK;
+}
+
+ctd_status ctd_menu_invoke(ctd_handle handle, int64_t token) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    NSMenuItem *item = ctd_find_command(menu, token);
+    if (!item) return CTD_ERR_RANGE;
+    if (![item isEnabled]) return CTD_ERR_PLATFORM;
+    // Through the item's own target and action, so a role's command reaches
+    // the responder chain exactly as choosing it would.
+    if ([item target] == g_commands) {
+        [g_commands chose:item];
+    } else if ([item action]) {
+        [NSApp sendAction:[item action] to:[item target] from:item];
+    }
     return CTD_OK;
 }
 

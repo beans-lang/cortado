@@ -63,7 +63,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf)
+cases=(tree events bridge mount shelf menu system)
 
 # Cases that need nothing but the language. These are the layout engine, which
 # is pure Beans with no foreign call in it at all, so they run on every
@@ -239,6 +239,42 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         diff -u "$root/tests/gallery.out" "$tmp/gallery.out"
         pass
         echo "ok markup: a .bx screen mounts to real controls, and the gallery shows every one"
+
+        # ---------------------------------------------------------- bundling
+        #
+        # A bare binary runs and shows a window, which is why the examples work
+        # without a bundle. What it does not get is a name in the Dock and the
+        # menu bar, a place in Launch Services, an icon, or the ability to be
+        # signed — all of which come from an Info.plist. A program nobody can
+        # double-click is not shipped.
+        #
+        # Three things are checked, and the third is the one that matters: the
+        # plist parses, the signature verifies, and the running process is
+        # named after the bundle. That last one only holds if Launch Services
+        # actually read the plist, which is the whole point of making one.
+        "$root/tools/bundle.sh" "$tmp/gallery.bin" CortadoGate org.beans-lang.cortado.gate >"$tmp/bundle.log" 2>&1 || {
+            echo "FAIL bundle:" >&2; cat "$tmp/bundle.log" >&2; exit 1
+        }
+        plutil -lint "$tmp/CortadoGate.app/Contents/Info.plist" >/dev/null
+        codesign --verify --strict "$tmp/CortadoGate.app"
+        open "$tmp/CortadoGate.app"
+        named=""
+        for _ in 1 2 3 4 5 6 7 8; do
+            sleep 1
+            if osascript -e 'tell application "System Events" to get name of every process whose name is "CortadoGate"' 2>/dev/null | grep -q CortadoGate; then
+                named="yes"
+                break
+            fi
+        done
+        osascript -e 'tell application "System Events" to quit (every process whose name is "CortadoGate")' >/dev/null 2>&1 || true
+        pkill -f CortadoGate.app >/dev/null 2>&1 || true
+        if [[ -z "$named" ]]; then
+            echo "FAIL bundle: the bundled app did not run under its bundle name," >&2
+            echo "     which means Launch Services did not read the Info.plist." >&2
+            exit 1
+        fi
+        pass
+        echo "ok bundle: a .app lints, verifies, and runs under its own name"
     else
         skip markup_mount "barista is not checked out at ../barista, so the markup example cannot be built"
     fi

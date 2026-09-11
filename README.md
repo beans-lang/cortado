@@ -390,6 +390,61 @@ does what a person does, and the event follows. That is also how the tests
 drive controls: `activate()` on a combo box would open its menu and never
 return.
 
+## Menus, dialogs and the system
+
+**A menu command carries a role, and the platform places it.** This is the one
+idea that makes a menu portable:
+
+```beans
+var edit: surface.Menu = surface.Menu.of("Edit")?
+edit.add("", "", surface.CommandRole.undo, 0)?
+edit.add("", "", surface.CommandRole.cut, 0)?
+edit.add("", "", surface.CommandRole.select_all, 0)?
+```
+
+comes back as `Undo [mod+z]`, `Cut [mod+x]`, `Select All [mod+a]` — the
+platform's own words and keys, not the ones you typed. Ask for
+`CommandRole.preferences` and macOS gives you `Settings…` at Command-comma;
+Windows would give you something else, under a different menu. A command with
+no role is yours, and goes exactly where you put it with the title and key you
+gave it.
+
+Cut, Copy, Paste, Undo and Select All get **no target at all**, so AppKit's
+responder chain finds the focused text field. Wiring them to a handler of your
+own is how editing stops working in every system control in your window.
+
+**Every dialog is asynchronous**, and that is what the platforms do rather than
+a style cortado chose — a blocking `open_file()` would have to spin an inner
+event loop and re-enter the render it was called from. So a dialog takes a
+token and answers with an event carrying it. **A dialog always answers**: with
+no visible surface to hang from, a message answers its default button and a
+file dialog answers a cancel, immediately, because a sheet on an unshown window
+runs no completion handler and the caller would wait forever.
+
+**The system's own answers**, rather than constants somebody typed:
+`platform.Appearance.current()` is light or dark, `window.scale()` is 1 or 2 to
+hand to the layout solver, and `platform.SystemFont.body.family()` is San
+Francisco here and Segoe UI there.
+
+## Shipping
+
+```
+tools/bundle.sh build/gallery Gallery com.example.gallery
+open build/Gallery.app
+```
+
+A bare binary runs and shows a window — that is why the examples work without
+this. What it does not get is a name in the Dock and the menu bar, a place in
+Launch Services, an icon, or a signature. The gate builds a bundle, lints its
+plist, verifies its signature and then launches it and checks the **running
+process is named after the bundle**, which only holds if Launch Services really
+read the plist.
+
+Signing is ad-hoc (`-s -`) by default: enough to run locally on Apple silicon,
+not enough to distribute. That needs a Developer ID and notarisation, which
+need an account — so the script does the part that can be automated and says
+which part it did not.
+
 ## Building
 
 ```

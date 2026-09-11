@@ -131,6 +131,26 @@ First working macOS host.
   answer. They are not related by inheritance, because a scroll view is not a
   box with a scrollbar: it puts its children somewhere the platform chose.
 
+- **Menus, with roles.** A command declared with a role is placed, named and
+  keyed by the platform: `CommandRole.preferences` comes back as `Settings…` at
+  Command-comma on macOS. Cut, Copy, Paste, Undo and Select All get no target,
+  so the responder chain finds the focused field — wiring them to a handler
+  would break editing in every system control in the window. A command with no
+  role is the application's own and raises `command` with its token.
+- **Dialogs, asynchronous.** Message, confirm, open and save, each taking a
+  token and answering with an event. A dialog always answers: with no visible
+  surface to hang from, a message answers its default button and a file dialog
+  answers a cancel. A sheet on an unshown window runs no completion handler at
+  all, so anything else would leave the caller waiting on a token that never
+  arrives.
+- `platform.Appearance`, `Surface.scale` and `platform.SystemFont` — light or
+  dark, the backing-store scale to hand the layout solver, and the system's own
+  font families by role rather than by name.
+- `tools/bundle.sh` — a `.app` with an `Info.plist`, ad-hoc signed. The gate
+  lints the plist, verifies the signature, launches the bundle and checks the
+  running process is named after it, which only holds if Launch Services read
+  the plist.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump

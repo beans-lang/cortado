@@ -102,6 +102,7 @@ typedef struct ctd_event {
 #define CTD_EV_APP_BACKGROUND  19  /* mobile sends these; desktop may ignore  */
 #define CTD_EV_APP_WILL_QUIT   20
 #define CTD_EV_LOW_MEMORY      21
+#define CTD_EV_COMMAND         22  /* a menu command; token identifies which  */
 
 #define CTD_MOD_SHIFT    1u
 #define CTD_MOD_CONTROL  2u
@@ -240,6 +241,112 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value);
 ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out);
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value);
 ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out);
+
+/* ---- menus ------------------------------------------------------------- */
+
+/* A command's **role**, and this is the part that makes menus portable.
+ *
+ * Every desktop platform has opinions about where certain commands live, what
+ * they are called and what key they take. About and Preferences belong in the
+ * application menu on macOS and under Help and Edit on Windows. Quit is Cmd-Q
+ * here and Alt-F4 there. Cut, Copy and Paste must be wired to the platform's
+ * own editing machinery — on macOS that means a nil target so the responder
+ * chain finds the focused field — or the system text controls stop working
+ * inside your own application.
+ *
+ * So a command with a role is placed, named and keyed by the platform, and its
+ * title and key are advisory. A command with no role is an application
+ * command and goes exactly where the application puts it. Describing a menu as
+ * a tree of titles instead produces a menu that is right on the platform it
+ * was written on and wrong everywhere else. */
+#define CTD_CMD_NONE         0
+#define CTD_CMD_ABOUT        1
+#define CTD_CMD_PREFERENCES  2
+#define CTD_CMD_QUIT         3
+#define CTD_CMD_HIDE         4
+#define CTD_CMD_UNDO         5
+#define CTD_CMD_REDO         6
+#define CTD_CMD_CUT          7
+#define CTD_CMD_COPY         8
+#define CTD_CMD_PASTE        9
+#define CTD_CMD_SELECT_ALL  10
+#define CTD_CMD_CLOSE       11
+#define CTD_CMD_MINIMIZE    12
+#define CTD_CMD_FULLSCREEN  13
+
+ctd_handle ctd_menu_new(const char *title, int32_t len);
+/* `key` is a portable shortcut description — "mod+s", "mod+shift+n" — where
+ * `mod` is Command on macOS and Control elsewhere. Empty for none.
+ *
+ * `token` is what comes back on CTD_EV_COMMAND. It is the application's own
+ * number: cortado never interprets it, so an application can key its command
+ * table however it likes. */
+ctd_status ctd_menu_add_item(ctd_handle menu, const char *title, int32_t title_len,
+                             const char *key, int32_t key_len,
+                             int32_t role, int64_t token);
+ctd_status ctd_menu_add_separator(ctd_handle menu);
+ctd_status ctd_menu_add_submenu(ctd_handle menu, ctd_handle child);
+ctd_status ctd_menu_item_count(ctd_handle menu, int32_t *out);
+/* The item's title as the platform ended up showing it, which for a role is
+ * the platform's word and not the one that was passed in. */
+int32_t    ctd_menu_item_title(ctd_handle menu, int32_t index, char *out, int32_t cap);
+/* The shortcut as the platform ended up assigning it, in the same portable
+ * spelling `ctd_menu_add_item` takes. */
+int32_t    ctd_menu_item_key(ctd_handle menu, int32_t index, char *out, int32_t cap);
+/* Installs `menu` as the application's menu bar. CTD_ERR_UNSUPPORTED where
+ * CTD_CAP_MENU_BAR says no. */
+ctd_status ctd_menu_set_bar(ctd_handle menu);
+ctd_status ctd_menu_set_enabled(ctd_handle menu, int64_t token, int32_t on);
+/* Fires a command the way choosing it does, for a test and for a program that
+ * offers the same command from a toolbar. */
+ctd_status ctd_menu_invoke(ctd_handle menu, int64_t token);
+
+/* ---- dialogs ----------------------------------------------------------- */
+
+/* Dialogs are **asynchronous**, on every platform, and that is not a style
+ * choice cortado is making — it is what the platforms do. A macOS sheet runs
+ * its own loop and calls back; a GTK dialog is async by construction; and on
+ * iOS a modal view controller has no synchronous form at all. A blocking
+ * `open_file()` would have to spin an inner event loop, which re-enters
+ * everything — including the render this call came out of.
+ *
+ * So a dialog is asked for with a token and answered with an event carrying
+ * that token. `index` says which button, and `text` carries the path or the
+ * typed answer where there is one. */
+#define CTD_DLG_MESSAGE  0  /* text and buttons                               */
+#define CTD_DLG_CONFIRM  1  /* the same, with a cancel                        */
+#define CTD_DLG_OPEN     2  /* choose an existing file                        */
+#define CTD_DLG_SAVE     3  /* choose a name to write                         */
+
+/* `parent` may be 0 for an application-wide dialog; where the platform can, a
+ * dialog with a parent is attached to that surface rather than floating. */
+ctd_status ctd_dialog_open(ctd_handle parent, int32_t kind,
+                           const char *title, int32_t title_len,
+                           const char *body, int32_t body_len,
+                           int64_t token);
+
+/* ---- appearance -------------------------------------------------------- */
+
+/* 0 light, 1 dark. Changes raise CTD_EV_APPEARANCE with the new value in
+ * `index`, so a program that draws its own content can follow the system
+ * without polling. Native controls follow on their own. */
+int32_t    ctd_appearance(void);
+/* Backing-store scale for a surface: 1 on a standard display, 2 on a Retina
+ * one. Writes the scale into out[0]; a surface that has not been shown yet
+ * answers the main display's. Changes raise CTD_EV_SCALE_CHANGED. */
+ctd_status ctd_surface_scale(ctd_handle surface, double *out);
+
+/* ---- fonts ------------------------------------------------------------- */
+
+/* The system's own font, by role, so a program does not hard-code a family
+ * that is wrong on three platforms out of four. Writes the size into out[0]. */
+#define CTD_FONT_BODY     0
+#define CTD_FONT_HEADING  1
+#define CTD_FONT_CAPTION  2
+#define CTD_FONT_MONO     3
+
+int32_t    ctd_font_family(int32_t role, char *out, int32_t cap);
+ctd_status ctd_font_size(int32_t role, double *out);
 
 /* ---- item lists -------------------------------------------------------- */
 

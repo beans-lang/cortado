@@ -1,0 +1,31 @@
+menu bar available: true
+-- what the platform made of it --
+  application:
+    About
+    Settings…  [mod+,]
+    -
+    Hide  [mod+h]
+    Quit  [mod+q]
+  file:
+    New Order  [mod+n]
+    Print  [mod+p]
+    -
+    Close  [mod+w]
+  edit:
+    Undo  [mod+z]
+    Redo  [mod+shift+z]
+    -
+    Cut  [mod+x]
+    Copy  [mod+c]
+    Paste  [mod+v]
+    Select All  [mod+a]
+-- choosing commands --
+  command token=101
+  command token=103
+-- enabling --
+  a disabled command is refused: platform_refused
+  re-enabled, and it ran
+  tokens seen: 3
+-- refusals --
+  an unknown token is refused: out_of_range
+  an out-of-range item is refused: out_of_range

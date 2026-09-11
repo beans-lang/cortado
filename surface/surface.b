@@ -94,6 +94,21 @@ pub abstract class Surface {
     }
 
     /// The area a widget tree may use, in points. Never includes a title bar.
+    /// The backing-store scale of the display this surface is on — 1 on a
+    /// standard display, 2 on a Retina one.
+    ///
+    /// Hand it to `layout.Solver.set_scale` so frames land on whole device
+    /// pixels. A surface that has not been shown answers the main display's
+    /// scale, which is what it will get when it appears.
+    pub fn scale() -> Result<f64> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        unsafe {
+            host.check(host.ctd_surface_scale(self.slot.raw, scratch.reals) as int,
+                       "read a surface's scale")?
+        }
+        return ok(scratch.real(0))
+    }
+
     pub fn content_size() -> Result<geometry.Size> {
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
