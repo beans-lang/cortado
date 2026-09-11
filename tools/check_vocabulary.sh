@@ -108,6 +108,33 @@ if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.kinded" >"$root/bui
     fail "attribute_names() and attribute_call() disagree about which names exist:"
 fi
 
+# ---- widget kinds ----
+#
+# `WidgetKind.all()` is a hand-written list of the enum's own cases, and it is
+# what `tests/enabled.b` walks. Nothing in Beans can enumerate an enum, so the
+# list is the only way to walk the kinds — and a hand-written list of things
+# declared six lines above it is exactly the sort of thing that goes one short
+# and stays that way. `canvas` did: it reached the enum, never reached the
+# walk, and the golden kept its old length looking perfectly healthy.
+kinds="$root/widgets/widget_kind.b"
+awk '/^pub enum WidgetKind \{/,/^    pub static fn all/' "$kinds" \
+    | grep -oE '^    [a-z_][a-z_0-9]*$' | tr -d ' ' | sort -u >"$root/build/.kinds.declared"
+sed -n '/pub static fn all(/,/^    }/p' "$kinds" \
+    | grep -oE 'WidgetKind\.[a-z_][a-z_0-9]*' | sed 's/WidgetKind\.//' \
+    | sort -u >"$root/build/.kinds.walked"
+
+if [[ ! -s "$root/build/.kinds.declared" ]]; then
+    fail "no widget kinds were read from the enum, so this check covered nothing:" \
+         "Look for 'pub enum WidgetKind {' in widgets/widget_kind.b."
+fi
+if ! diff -u "$root/build/.kinds.declared" "$root/build/.kinds.walked" \
+        >"$root/build/.kinds.diff"; then
+    cat "$root/build/.kinds.diff" >&2
+    echo "  < declared in the enum      > listed by all()" >&2
+    fail "WidgetKind.all() does not list every kind the enum declares:" \
+         "Add the case to all() in widgets/widget_kind.b, beside the others."
+fi
+
 # ---- accessibility roles ----
 #
 # Every widget kind must have a role in every host, and this is the one table
@@ -155,4 +182,4 @@ if [[ $hosts_read -eq 0 ]]; then
          "src/ has no platform directories, so this check covered nothing."
 fi
 
-echo "ok vocabulary: $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes, $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles in $hosts_read hosts, in both tables"
+echo "ok vocabulary: $(wc -l <"$root/build/.kinds.declared" | tr -d ' ') kinds, $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes, $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles in $hosts_read hosts, in both tables"

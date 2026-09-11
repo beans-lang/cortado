@@ -47,7 +47,18 @@ pub class WidgetMaker {
 
     /// An empty control of the right kind.
     pub static fn bare(element: Element) -> Result<widgets.Widget> {
-        match element.kind {
+        return WidgetMaker.of_kind(element.kind)
+    }
+
+    /// An empty control of one kind, with no element behind it.
+    ///
+    /// The one exhaustive `match` over `WidgetKind` in cortado, and the reason
+    /// it is public: a kind added to the enum is a **compile error here**, not
+    /// a missing line in a golden somewhere. `tests/enabled.b` walks
+    /// `WidgetKind.all()` through this, so the suite grows a row for a new
+    /// kind whether or not anybody remembered to add one.
+    pub static fn of_kind(kind: widgets.WidgetKind) -> Result<widgets.Widget> {
+        match kind {
             container => { return ok(new widgets.Container()) }
             label => { return ok(new widgets.Label()) }
             button => { return ok(new widgets.Button()) }

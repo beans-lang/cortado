@@ -29,27 +29,27 @@ package main
 import cortado.platform
 import cortado.surface
 import cortado.widgets
+import cortado.component
 import std.io
 
-/// One empty control of every kind, in the order `WidgetKind` declares them,
-/// so a kind added without a decision about this property shows up as a
-/// missing line rather than as nothing at all.
-fn every_kind() -> List<widgets.Widget> {
-    return [
-        new widgets.Container(),
-        new widgets.Label(),
-        new widgets.Button(),
-        new widgets.TextField(),
-        new widgets.CheckBox(),
-        new widgets.ImageView(),
-        new widgets.Slider(),
-        new widgets.ProgressBar(),
-        new widgets.Separator(),
-        new widgets.TextArea(),
-        new widgets.ComboBox(),
-        new widgets.ScrollView(),
-        new widgets.RadioButton(),
-    ]
+/// One empty control of every kind, in the order `WidgetKind` declares them.
+///
+/// Walked rather than listed. The first version of this file spelled the
+/// thirteen kinds out by hand, and the comment above it claimed that a kind
+/// added without a decision about this property would "show up as a missing
+/// line". It would not have — and it did not: `canvas` landed with the GPU
+/// work, never reached this list, and the golden simply stayed thirteen lines
+/// long. A list that is one short looks exactly like a list.
+///
+/// So the walk goes through `WidgetMaker.of_kind`, whose `match` the compiler
+/// checks for exhaustiveness. A new kind now stops the build here until
+/// somebody decides what it answers.
+fn every_kind() -> Result<List<widgets.Widget>> {
+    var built: List<widgets.Widget> = []
+    for kind: widgets.WidgetKind in widgets.WidgetKind.all() {
+        built.push(component.WidgetMaker.of_kind(kind)?)
+    }
+    return ok(move built)
 }
 
 /// What one kind answers: whether it takes the property, and whether what it
@@ -82,7 +82,7 @@ fn report(widget: widgets.Widget) -> string {
 fn run() -> Result<bool> {
     var app: surface.Application = new surface.Application(platform.AppRole.headless)
     app.check_abi()?
-    for widget: widgets.Widget in every_kind() {
+    for widget: widgets.Widget in every_kind()? {
         io.println(report(widget))
     }
     app.shutdown()

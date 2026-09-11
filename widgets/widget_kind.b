@@ -69,6 +69,34 @@ pub enum WidgetKind {
         }
     }
 
+    /// Every kind, in the order they are declared above.
+    ///
+    /// Hand-written, because Beans has no way to enumerate an enum's cases —
+    /// and hand-written lists drift, so `tools/check_vocabulary.sh` holds this
+    /// one to the declarations above. That gate is not decoration: before it
+    /// existed, `canvas` was added to this enum and never reached
+    /// `tests/enabled.b`, which walks the kinds by hand. The golden lost a
+    /// line and stayed green, because a list that is one short looks exactly
+    /// like a list.
+    pub static fn all() -> List<WidgetKind> {
+        var every: List<WidgetKind> = []
+        every.push(WidgetKind.container)
+        every.push(WidgetKind.label)
+        every.push(WidgetKind.button)
+        every.push(WidgetKind.text_field)
+        every.push(WidgetKind.check_box)
+        every.push(WidgetKind.image_view)
+        every.push(WidgetKind.slider)
+        every.push(WidgetKind.progress_bar)
+        every.push(WidgetKind.separator)
+        every.push(WidgetKind.text_area)
+        every.push(WidgetKind.combo_box)
+        every.push(WidgetKind.scroll_view)
+        every.push(WidgetKind.radio_button)
+        every.push(WidgetKind.canvas)
+        return move every
+    }
+
     pub static fn of(code: int) -> Option<WidgetKind> {
         if code == host.W_CONTAINER { return some(WidgetKind.container) }
         if code == host.W_LABEL { return some(WidgetKind.label) }

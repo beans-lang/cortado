@@ -11,3 +11,4 @@ TextArea refused wrong_widget
 ComboBox enabled round-trips
 ScrollView refused wrong_widget
 RadioButton enabled round-trips
+Canvas refused wrong_widget
