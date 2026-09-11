@@ -1,0 +1,296 @@
+== column, no spacing ==
+root stack frame=0,0,300,300
+  a leaf frame=0,0,100,20
+  b leaf frame=0,20,60,30
+  c leaf frame=0,50,40,40
+== column, spacing 8 ==
+root stack frame=0,0,300,300
+  a leaf frame=0,0,100,20
+  b leaf frame=0,28,60,30
+  c leaf frame=0,66,40,40
+== row, spacing 12 ==
+root stack frame=0,0,300,300
+  a leaf frame=0,0,100,20
+  b leaf frame=112,0,60,30
+== column, padding 10 ==
+root stack frame=0,0,300,300
+  a leaf frame=10,10,100,20
+  b leaf frame=10,34,60,30
+== column, asymmetric padding ==
+root stack frame=0,0,300,300
+  a leaf frame=32,4,100,20
+== column, no children ==
+root stack frame=0,0,300,300
+== column, one child ==
+root stack frame=0,0,300,300
+  only leaf frame=0,0,100,20
+== align start ==
+root stack frame=0,0,300,300
+  wide leaf frame=0,0,200,16
+  narrow leaf frame=0,20,24,24
+== align center ==
+root stack frame=0,0,300,300
+  wide leaf frame=50,0,200,16
+  narrow leaf frame=138,20,24,24
+== align end ==
+root stack frame=0,0,300,300
+  wide leaf frame=100,0,200,16
+  narrow leaf frame=276,20,24,24
+== align stretch ==
+root stack frame=0,0,300,300
+  wide leaf frame=0,0,300,16
+  narrow leaf frame=0,20,300,24
+== align per child ==
+root stack frame=0,0,300,300
+  inherits leaf frame=138,0,24,24
+  overrides leaf frame=276,28,24,24
+== row align stretch ==
+root stack frame=0,0,300,120
+  a leaf frame=0,0,100,120
+  b leaf frame=104,0,60,120
+== justify start ==
+root stack frame=0,0,300,60
+  a leaf frame=0,0,24,24
+  b leaf frame=24,0,24,24
+  c leaf frame=48,0,24,24
+== justify center ==
+root stack frame=0,0,300,60
+  a leaf frame=114,0,24,24
+  b leaf frame=138,0,24,24
+  c leaf frame=162,0,24,24
+== justify end ==
+root stack frame=0,0,300,60
+  a leaf frame=228,0,24,24
+  b leaf frame=252,0,24,24
+  c leaf frame=276,0,24,24
+== justify space_between ==
+root stack frame=0,0,300,60
+  a leaf frame=0,0,24,24
+  b leaf frame=138,0,24,24
+  c leaf frame=276,0,24,24
+== justify space_around ==
+root stack frame=0,0,300,60
+  a leaf frame=38,0,24,24
+  b leaf frame=138,0,24,24
+  c leaf frame=238,0,24,24
+== justify space_evenly ==
+root stack frame=0,0,300,60
+  a leaf frame=57,0,24,24
+  b leaf frame=138,0,24,24
+  c leaf frame=219,0,24,24
+== justify space_between, one child ==
+root stack frame=0,0,300,60
+  only leaf frame=0,0,24,24
+== justify space_evenly, one child ==
+root stack frame=0,0,300,60
+  only leaf frame=138,0,24,24
+== justify with overflow ==
+root stack frame=0,0,300,60
+  a leaf frame=0,0,200,16
+  b leaf frame=200,0,200,16
+== margins in a column ==
+root stack frame=0,0,300,300
+  boxed leaf frame=6,6,100,20
+  lopsided leaf frame=8,34,100,20
+== margins in a row ==
+root stack frame=0,0,300,60
+  a leaf frame=10,0,24,24
+  b leaf frame=54,0,24,24
+== margin under stretch ==
+root stack frame=0,0,300,60
+  banner leaf frame=25,0,250,20
+== min and max on a child ==
+root stack frame=0,0,300,300
+  has minimum leaf frame=0,0,150,50
+  has maximum leaf frame=0,50,40,10
+== fixed size ==
+root stack frame=0,0,300,300
+  pinned leaf frame=0,0,77,33
+== child wider than parent ==
+root stack frame=0,0,300,300
+  too wide leaf frame=0,0,300,20
+== leaf clipped by padding ==
+root stack frame=0,0,300,300
+  long label leaf frame=90,0,120,16
+== flex, equal weights ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,100,24
+  b leaf frame=100,0,100,24
+  c leaf frame=200,0,100,24
+== flex, 1 and 2 ==
+root flex frame=0,0,300,60
+  one leaf frame=0,0,108,24
+  two leaf frame=108,0,192,24
+== flex, one rigid one flexible ==
+root flex frame=0,0,300,60
+  fixed leaf frame=0,0,100,20
+  rest leaf frame=100,0,200,24
+== flex with spacing ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,145,24
+  b leaf frame=155,0,145,24
+== flex with a maximum ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,110,24
+  b leaf frame=110,0,80,24
+  c leaf frame=190,0,110,24
+== flex with a minimum ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,238,24
+  b leaf frame=238,0,62,24
+== flex from a basis ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,188,24
+  b leaf frame=188,0,112,24
+== flex with no weights ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,24,24
+  b leaf frame=24,0,24,24
+== flex column, body fills ==
+root flex frame=0,0,200,200
+  head leaf frame=0,0,80,12
+  body leaf frame=0,12,80,176
+  foot leaf frame=0,188,80,12
+== shrink, equal sizes ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,150,16
+  b leaf frame=150,0,150,16
+== shrink, weighted by size ==
+root flex frame=0,0,240,60
+  wide leaf frame=0,0,160,16
+  narrow leaf frame=160,0,80,16
+== shrink, one refuses ==
+root flex frame=0,0,300,60
+  rigid leaf frame=0,0,200,16
+  gives leaf frame=200,0,100,16
+== shrink against a minimum ==
+root flex frame=0,0,300,60
+  keeps 180 leaf frame=0,0,180,16
+  b leaf frame=180,0,120,16
+== nested row inside a column ==
+root stack frame=0,0,320,200
+  title leaf frame=16,16,200,16
+  buttons stack frame=16,42,288,30
+    ok leaf frame=160,0,60,30
+    cancel leaf frame=228,0,60,30
+== flex inside flex ==
+root flex frame=0,0,200,100
+  band flex frame=0,0,200,100
+    left leaf frame=0,0,62,24
+    right leaf frame=62,0,138,24
+== grid, three equal columns ==
+root grid frame=0,0,320,200
+  a leaf frame=0,0,24,24
+  b leaf frame=110,0,24,24
+  c leaf frame=220,0,24,24
+  d leaf frame=0,34,24,24
+== grid, fixed and fraction ==
+root grid frame=0,0,300,200
+  label leaf frame=0,0,80,12
+  field leaf frame=92,0,100,20
+  label2 leaf frame=0,26,80,12
+  field2 leaf frame=92,26,100,20
+== grid, auto column takes the widest ==
+root grid frame=0,0,300,200
+  narrow leaf frame=0,0,24,24
+  rest leaf frame=68,0,100,20
+  wider leaf frame=0,32,60,30
+  rest2 leaf frame=68,32,100,20
+== grid, 1fr and 2fr ==
+root grid frame=0,0,300,100
+  one leaf frame=0,0,24,24
+  two leaf frame=100,0,24,24
+== grid, stretch into the cell ==
+root grid frame=0,0,200,100
+  a leaf frame=0,0,100,24
+  b leaf frame=100,0,100,24
+== grid, centre in the cell ==
+root grid frame=0,0,200,100
+  a leaf frame=38,0,24,24
+  b leaf frame=138,0,24,24
+== grid, ragged last row ==
+root grid frame=0,0,200,200
+  a leaf frame=0,0,24,24
+  tall leaf frame=102,0,40,40
+  c leaf frame=0,44,24,24
+  d leaf frame=102,44,24,24
+  odd one out leaf frame=0,72,24,24
+== grid, first row pinned to 50 ==
+root grid frame=0,0,200,200
+  a leaf frame=0,0,24,24
+  b leaf frame=100,0,24,24
+  c leaf frame=0,50,24,24
+  d leaf frame=100,50,24,24
+== grid, padded ==
+root grid frame=0,0,200,100
+  a leaf frame=12,12,24,24
+  b leaf frame=105,12,24,24
+== grid, no children ==
+root grid frame=0,0,200,100
+== absolute positions ==
+root absolute frame=0,0,300,160
+  badge leaf frame=240,8,24,24
+  caption leaf frame=12,120,80,12
+== absolute inside padding ==
+root absolute frame=0,0,300,160
+  pinned leaf frame=20,20,24,24
+== absolute past the edge ==
+root absolute frame=0,0,300,160
+  outside leaf frame=290,150,24,24
+== row, left to right ==
+root stack frame=0,0,300,60
+  first leaf frame=0,0,24,24
+  second leaf frame=34,0,60,30
+  third leaf frame=104,0,24,24
+== row, right to left ==
+root stack frame=0,0,300,60
+  first leaf frame=276,0,24,24
+  second leaf frame=206,0,60,30
+  third leaf frame=172,0,24,24
+== column start edge, right to left ==
+root stack frame=0,0,300,100
+  a leaf frame=276,0,24,24
+  b leaf frame=240,28,60,30
+== asymmetric padding, right to left ==
+root stack frame=0,0,300,60
+  a leaf frame=266,0,24,24
+  b leaf frame=242,0,24,24
+== nested row, right to left ==
+root stack frame=0,0,300,100
+  inner stack frame=0,0,300,24
+    a leaf frame=276,0,24,24
+    b leaf frame=246,0,24,24
+== absolute, right to left ==
+root absolute frame=0,0,300,60
+  badge leaf frame=240,8,24,24
+== grid, right to left ==
+root grid frame=0,0,200,100
+  a leaf frame=176,0,24,24
+  b leaf frame=66,0,24,24
+== thirds, snapping off ==
+root flex frame=0,0,100,40
+  a leaf frame=0,0,33.33333333333333,24
+  b leaf frame=33.33333333333333,0,33.33333333333333,24
+  c leaf frame=66.66666666666666,0,33.33333333333333,24
+== thirds, snapped to whole points ==
+root flex frame=0,0,100,40
+  a leaf frame=0,0,33,24
+  b leaf frame=33,0,34,24
+  c leaf frame=67,0,33,24
+== thirds, snapped to half points ==
+root flex frame=0,0,100,40
+  a leaf frame=0,0,33.5,24
+  b leaf frame=33.5,0,33,24
+  c leaf frame=66.5,0,33.5,24
+== fractional padding, snapped ==
+root stack frame=0,0,100,60
+  inner flex frame=11,11,79,24
+    a leaf frame=0,0,26,24
+    b leaf frame=26,0,26,24
+    c leaf frame=52,0,27,24
+== checks ==
+  snapped neighbours meet: true, last edge 100
+  whole points at scale 1: true
+  half points at scale 2: true
+  mirror is exact: true
+  fit answers 100x58

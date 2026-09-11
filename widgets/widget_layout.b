@@ -1,0 +1,138 @@
+// Where the layout engine meets real controls.
+package widgets
+
+import cortado.geometry
+import cortado.layout
+
+/// Ties a layout tree to the widgets it describes.
+///
+/// `cortado.layout` is pure arithmetic and knows nothing about native
+/// controls: it asks an integer key how big it wants to be and writes a
+/// rectangle next to that key. This class is the other half — it hands out the
+/// keys, answers the measurement question by asking the real control, and
+/// writes the finished frames back onto the controls.
+///
+/// Keeping it here rather than inside the engine is what lets the engine's
+/// entire test suite run on a machine with no window server. Everything that
+/// touches a platform is in this file; everything that computes a position is
+/// in `cortado.layout`, and the two meet only through `layout.Measure`.
+///
+/// ```
+/// var sheet: widgets.WidgetLayout = new widgets.WidgetLayout()
+/// var body: layout.StackLayout = layout.StackLayout.column(12.0)
+/// body.set_padding(geometry.EdgeInsets.all(24.0))
+///
+/// var root: layout.LayoutNode = sheet.group("root", container, body)
+/// root.add(sheet.leaf("heading", heading))
+/// root.add(sheet.leaf("buy", button))
+///
+/// var solver: layout.Solver = new layout.Solver(sheet)
+/// solver.solve(root, window.content_frame()?)?
+/// sheet.apply(root)?
+/// ```
+pub class WidgetLayout implements layout.Measure {
+    controls: Map<int, Widget>
+    next: int = 0
+
+    pub fn init() {
+        self.controls = {}
+    }
+
+    /// How many widgets this sheet is tracking.
+    pub fn count() -> int {
+        return self.controls.len()
+    }
+
+    /// A node for a control with no children.
+    ///
+    /// Registers `control` so the solver can ask it how big it wants to be —
+    /// the one question about a native control that cortado cannot answer from
+    /// arithmetic, because it depends on the platform's fonts.
+    pub fn leaf(name: string, control: Widget) -> layout.LayoutNode {
+        return layout.LayoutNode.leaf(name, self.register(control))
+    }
+
+    /// A node for a control that holds other controls.
+    ///
+    /// The container is registered too, so its frame is applied, but it is
+    /// never measured: a group's size comes from `arranger` and the children
+    /// inside it, and asking the platform as well would let a native minimum
+    /// override a layout the application asked for.
+    pub fn group(name: string, control: Widget,
+                 arranger: layout.Layout) -> layout.LayoutNode {
+        var node: layout.LayoutNode = layout.LayoutNode.group(name, arranger)
+        node.key = self.register(control)
+        return node
+    }
+
+    /// A node with no control behind it, for grouping that exists only in the
+    /// layout. Nothing is created on the platform, so a row of buttons inside
+    /// a column costs one native view, not two.
+    pub fn spacer(name: string, arranger: layout.Layout) -> layout.LayoutNode {
+        return layout.LayoutNode.group(name, arranger)
+    }
+
+    fn register(control: Widget) -> int {
+        let key: int = self.next
+        self.next = key + 1
+        self.controls.set(key, control)
+        return key
+    }
+
+    /// Asks the control itself. This is `layout.Measure`.
+    ///
+    /// A key with no control measures as zero rather than failing: a node may
+    /// legitimately stand for nothing, and the caller who wanted a control
+    /// there sees a zero-sized frame, which is visible. Refusing here would
+    /// fail the whole solve for one missing entry.
+    pub fn measure(key: int, available: geometry.Size) -> Result<geometry.Size> {
+        match self.controls.get(key) {
+            some(control) => { return control.measure(available) }
+            none => { return ok(geometry.Size.zero()) }
+        }
+    }
+
+    /// Writes every solved frame onto the control it belongs to, and answers
+    /// how many controls moved.
+    ///
+    /// Applied top down, parents before children, because a platform that
+    /// clips to its parent's bounds would otherwise place a child against a
+    /// frame its parent has not taken yet.
+    pub fn apply(root: layout.LayoutNode) -> Result<int> {
+        return self.apply_at(root, 0.0, 0.0)
+    }
+
+    /// The recursive half, carrying the offset contributed by layout-only
+    /// ancestors.
+    ///
+    /// The two trees do not have the same shape, and this is where that is
+    /// reconciled. A node's frame is relative to its parent *node*, but a
+    /// control's frame is relative to its parent *control* — and `spacer`
+    /// deliberately creates nodes with no control behind them, so a row of
+    /// buttons can be grouped in the layout without costing a native view.
+    /// Every such node sits between a control and its children, and its origin
+    /// has to be added to theirs or the whole group lands at the wrong place.
+    ///
+    /// A node that does have a control resets the offset to zero: the control
+    /// is a real view, and its children are positioned inside it.
+    fn apply_at(node: layout.LayoutNode, dx: f64, dy: f64) -> Result<int> {
+        var moved: int = 0
+        var next_x: f64 = dx + node.frame().x
+        var next_y: f64 = dy + node.frame().y
+        match self.controls.get(node.key) {
+            some(control) => {
+                let box: geometry.Rect = node.frame()
+                control.set_frame(geometry.Rect.of(box.x + dx, box.y + dy,
+                                                   box.width, box.height))?
+                moved = moved + 1
+                next_x = 0.0
+                next_y = 0.0
+            }
+            none => {}
+        }
+        for child: layout.LayoutNode in node.children() {
+            moved = moved + self.apply_at(child, next_x, next_y)?
+        }
+        return ok(moved)
+    }
+}

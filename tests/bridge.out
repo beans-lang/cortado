@@ -1,0 +1,13 @@
+placed 6 controls
+controls: 3
+stacked in order with 12pt gaps: true
+every control fills the content width: true
+every height came from a real measurement: true
+the kinds measured differently: true
+first control is Label, height in range: true
+solver and platform agree on every frame: true
+buttons row is below the labels: true
+buttons sit on the row, not at the top: true
+buttons are in reading order: true
+buttons end at the trailing edge: true
+page frame=0,0,400,300

@@ -62,7 +62,15 @@ skip() {
 legs=0
 pass() { legs=$((legs + 1)); }
 
-cases=(tree events)
+# Cases that need a platform host. Only macOS has one so far.
+cases=(tree events bridge)
+
+# Cases that need nothing but the language. These are the layout engine, which
+# is pure Beans with no foreign call in it at all, so they run on every
+# operating system cortado will ever target — including the ones whose host has
+# not been written. A layout bug is therefore found by any runner, not only by
+# a Mac.
+portable=(layout)
 
 # ---------------------------------------------------------- the boundary gates
 #
@@ -73,6 +81,19 @@ mkdir -p "$root/build"
 pass
 "$root/tools/check_constants.sh"
 pass
+
+# ----------------------------------------------------------- portable leg
+for name in "${portable[@]}"; do
+    golden="$root/tests/$name.out"
+    if [[ ! -f "$golden" ]]; then
+        echo "FAIL $name: tests/$name.out is missing — a case with no golden proves nothing" >&2
+        exit 1
+    fi
+    "$BEANSC" run "$root/tests/$name.b" >"$tmp/$name.interp" 2>&1
+    diff -u "$golden" "$tmp/$name.interp"
+    pass
+done
+echo "ok portable: ${#portable[@]} cases, $(grep -c '^== ' "$root/tests/layout.out") layout goldens, no display and no FFI"
 
 # ------------------------------------------------------------- interpreter leg
 if [[ $have_host -eq 0 ]]; then
@@ -113,16 +134,28 @@ fi
 # to reach, even before that platform's host exists. A type error that only
 # appears at the Windows port is a type error that was always there.
 for target in x86_64-pc-windows-gnu aarch64-unknown-linux-gnu; do
-    "$BEANSC" check "$root/tests/tree.b" --target "$target" >"$tmp/cross.out" 2>&1 || {
-        echo "FAIL cross-check $target:" >&2
-        cat "$tmp/cross.out" >&2
-        exit 1
-    }
+    for probe in tree layout; do
+        "$BEANSC" check "$root/tests/$probe.b" --target "$target" >"$tmp/cross.out" 2>&1 || {
+            echo "FAIL cross-check $probe for $target:" >&2
+            cat "$tmp/cross.out" >&2
+            exit 1
+        }
+    done
     pass
 done
 echo "ok cross-target check: windows-gnu, linux-gnu"
 
 # ------------------------------------------------------------------ native leg
+if [[ $native -eq 1 ]]; then
+    for name in "${portable[@]}"; do
+        "$BEANSC" build "$root/tests/$name.b" -o "$tmp/$name.bin" >/dev/null
+        "$tmp/$name.bin" >"$tmp/$name.native" 2>&1
+        diff -u "$root/tests/$name.out" "$tmp/$name.native"
+        pass
+    done
+    echo "ok native portable: ${#portable[@]} cases"
+fi
+
 if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     for name in "${cases[@]}"; do
         "$BEANSC" build "$root/tests/$name.b" -o "$tmp/$name.bin" >/dev/null
