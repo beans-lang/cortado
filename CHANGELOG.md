@@ -192,6 +192,28 @@ First working macOS host.
   design doing exactly what it was for. The component layer does not: it
   reaches `cortado.host`, and an Android host is JNI work that is not done.
 
+- **A GTK4 host.** `src/cortado_gtk4.c` is the third implementation of the same
+  61 entry points, and the first that is not an Apple object system: GObject
+  instead of Objective-C, signals instead of target/action, floating references
+  instead of retain/release. `tests/roles.out` is the same bytes through it.
+  GTK4 ships a macOS backend, so `tools/gtk4.sh` can build and run it here —
+  which is what makes it a host that has been run rather than one that has been
+  written. It says nothing about X11 or Wayland, and the leg says so.
+- Three GTK4 facts that would each be a wrong answer if copied from the AppKit
+  host: a new widget is **floating** until a container takes it, so the host
+  `g_object_ref_sink`s everything it creates, or the first `gtk_fixed_put`
+  claims the handle table's reference; `GtkCheckButton` carries `inconsistent`
+  as a real property, so the indeterminate state maps straight onto it rather
+  than through AppKit's `allowsMixedState`; and per-widget style providers are
+  deprecated in GTK4, so font size is a CSS class plus one provider on the
+  display.
+- `beansc pot add --system <pkg> [<selector>]` now writes a `cflags` row as
+  well as the `link` rows, and takes a platform selector. GTK4 needs twenty
+  include directories that differ on every machine, and `cflags` takes literal
+  words — so `beansc pot update --system gtk4 linux` generates them from
+  `pkg-config` on the machine that builds, between markers it rewrites in
+  place. A manifest that listed them by hand would name one computer.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump

@@ -48,8 +48,11 @@ for argument in "$@"; do
     esac
 done
 
-# cortado has one platform host so far. Everywhere else the Beans half still
-# type-checks — the cross-target leg below proves it — but nothing can run.
+# Which host `beansc` will pick for this machine. Three are written — AppKit,
+# UIKit and GTK4 — but the manifest chooses by target OS, so only the AppKit
+# one is reachable by a plain build here. The GTK4 leg below links its host by
+# hand; everywhere else the Beans half still type-checks, which the
+# cross-target leg proves, but nothing can run.
 host_os="$(uname -s)"
 have_host=0
 [[ "$host_os" == "Darwin" ]] && have_host=1
@@ -179,6 +182,28 @@ if [[ -n "${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}" ]]; then
             echo "ok android: the layout goldens are the same bytes on Android"
         fi
     fi
+fi
+
+# ---------------------------------------------------------------- the GTK4 leg
+#
+# The third implementation of the header, and the one that is not an Apple
+# object system: GObject rather than Objective-C, signals rather than
+# target/action, floating references rather than retain/release. GTK4 ships a
+# macOS backend, so it can be built and run here — which is the only way a
+# Linux host could be checked at all before anyone puts cortado on a Linux box.
+#
+# What it proves is that `tests/roles.out` is the same bytes through a host
+# that shares no line of code with the AppKit one. What it cannot prove is
+# anything about X11 or Wayland, which are not on this machine.
+#
+# beansc picks a host from the manifest by target OS, and on a Mac that is the
+# AppKit one, so `tools/gtk4.sh` asks beansc for the IR and links the GTK4 host
+# beside it by hand.
+if ! command -v pkg-config >/dev/null 2>&1 || ! pkg-config --exists gtk4 2>/dev/null; then
+    skip gtk4 "no gtk4 on pkg-config's path — 'brew install gtk4' or the distro package"
+else
+    bash "$root/tools/gtk4.sh" roles
+    pass
 fi
 
 # ----------------------------------------------------------------- the iOS leg

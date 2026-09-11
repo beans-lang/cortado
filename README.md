@@ -46,17 +46,17 @@ beansc build examples/hello.b -o build/hello && ./build/hello
 
 ## Status
 
-macOS works. Windows, Linux, iOS and Android are designed for and not yet
-built — the flat C ABI in `src/cortado_host.h` is what they plug into, and the
-Beans half already type-checks for all of them (`test.sh` proves it on every
-run).
+macOS, iOS and Linux have hosts. Windows and Android are designed for and not
+yet built — the flat C ABI in `src/cortado_host.h` is what they plug into, and
+the Beans half already type-checks for all of them (`test.sh` proves it on
+every run).
 
 | | |
 |---|---|
 | macOS | AppKit. Twelve controls, events, measurement, layout, components, markup, menus, dialogs, bundling |
 | iOS | UIKit. Twelve controls on screen in the Simulator, and the same `tests/roles.out` as macOS |
+| Linux | GTK4. The same `tests/roles.out` again, through GObject rather than an Apple object system |
 | Windows | host not written. Everything above the host runs and is tested here |
-| Linux | host not written. Everything above the host runs and is tested here |
 | Android | no host yet — but `cortado.layout` builds for it and runs on an emulator, printing the same 69 goldens |
 
 ## How it is put together
@@ -75,7 +75,8 @@ cortado.geometry    points, sizes, rectangles
 cortado.host        the flat C ABI, and the only package that names it
 cortado.annotations @view · @param · @inject · @window · @command · @platform
      │
-src/cortado_host.h  ── src/cortado_macos.m   (+ win32, gtk4, uikit, android)
+src/cortado_host.h  ── cortado_macos.m · cortado_uikit.m · cortado_gtk4.c
+                       (+ win32, android)
 ```
 
 Five rules hold the boundary, and each one is enforced by something that can
@@ -450,7 +451,7 @@ which part it did not.
 
 A port is one file: `src/cortado_<platform>.c`, implementing every entry point
 in `src/cortado_host.h`. Nothing above it changes — the Beans half already
-type-checks for Windows and Linux on every run, and `cortado.layout`,
+type-checks for Windows and Android on every run, and `cortado.layout`,
 `cortado.component` and `cortado.bx` have no foreign call in them at all.
 
 **`tests/roles.out` is the definition of done.** It holds cortado's own
@@ -469,11 +470,12 @@ is the real enforcement — add an entry point, forget a host, and that
 platform's build fails — but a link only happens where a toolchain does, so
 this does the same check on text and runs anywhere.
 
-**There are two hosts, and the second one is the proof.** `src/cortado_uikit.m`
-is UIKit — a different file, a different framework, the same header — and
-`./test.sh --native` builds `tests/roles.b` for `arm64-apple-ios-sim`, runs it
-in a booted simulator and diffs its output against the macOS run. Identical.
-Nothing above the host changed to make that true.
+**There are three hosts, and the second and third are the proof.**
+`src/cortado_uikit.m` is UIKit — a different file, a different framework, the
+same header — and `./test.sh --native` builds `tests/roles.b` for
+`arm64-apple-ios-sim`, runs it in a booted simulator and diffs its output
+against the macOS run. Identical. Nothing above the host changed to make that
+true.
 
 The port earned its keep immediately by contradicting the design twice:
 
@@ -507,9 +509,43 @@ every other platform uses and the order an application's own code reads in. A
 phone is the one platform where the application does not own its startup, which
 is why `ctd_app_run` was allowed not to return from the first commit.
 
-**No Windows or GTK4 host exists**, and neither is claimed. This machine has no
-mingw and no GTK4, so one written here could not be compiled, let alone run,
-and a host nobody has run is not a port.
+### The GTK4 host
+
+`src/cortado_gtk4.c` is the third implementation, and the first that is not an
+Apple object system: GObject instead of Objective-C, signals instead of
+target/action, floating references instead of retain/release. `tests/roles.out`
+is the same bytes through it.
+
+GTK4 ships a macOS backend, which is the only reason a Linux host could be
+checked here at all — `tools/gtk4.sh` builds it and runs a case, and `test.sh`
+makes that a leg. It proves the file implements the contract. It proves nothing
+about X11 or Wayland, which are not on this machine, and the leg says so.
+
+Three things GTK4 does differently, each of which would be a wrong answer if
+copied from the AppKit host:
+
+- **A new widget is floating.** `gtk_button_new()` hands back a reference
+  nobody owns yet, and a container takes it over when the widget is added.
+  cortado's handle table owns widgets before they are parented, so the host
+  calls `g_object_ref_sink` on every widget it creates — without it, the first
+  `gtk_fixed_put` would silently claim the table's reference.
+- **A check box has a real third state.** `GtkCheckButton` carries
+  `inconsistent` as a property of its own rather than as a drawing mode, so
+  `P_INDETERMINATE` maps straight onto it. AppKit gets there through
+  `allowsMixedState`, which also changes what clicking cycles through.
+- **Per-widget style providers are gone in GTK4.** Font size is set by adding
+  a CSS class and installing one provider on the display, not by attaching a
+  provider to the widget — `gtk_style_context_add_provider` is deprecated and
+  compiles to a warning that `-Wall -Wextra` turns into noise the build cannot
+  ignore.
+
+The Linux build needs GTK4's include paths, and there are twenty of them that
+differ on every machine. They are not written into `beans.pot` by hand — a
+manifest that listed them would name one computer. `beansc pot update --system
+gtk4 linux` generates the `cflags linux` and `link linux` rows from
+`pkg-config` between markers, and re-running it updates them in place.
+
+**No Windows host exists yet**, and none is claimed.
 
 ## Building
 

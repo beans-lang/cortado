@@ -21,3 +21,21 @@ link ios framework "Foundation"
 # CGRectZero and CGRectIsEmpty come from CoreGraphics, and UIKit does not pull
 # it in transitively when frameworks are named explicitly.
 link ios framework "CoreGraphics"
+
+# The Linux host, over GTK4. The same header again, and a third object system:
+# GObject rather than Objective-C, signals rather than target/action, floating
+# references rather than retain/release. `tests/roles.out` is the same bytes
+# through it — `tools/gtk4.sh` builds and runs it here, using GTK4's macOS
+# backend, because a third implementation that nobody could compile would prove
+# nothing.
+#
+# The include paths GTK4 needs are twenty directories that differ on every
+# machine, so they are not written here — they are generated, on the machine
+# that builds:
+#
+#     beansc pot update --system gtk4 linux
+#
+# That writes a `cflags linux` row and the `link linux` rows between markers
+# this file does not yet carry, and re-running it updates them in place. A
+# manifest that listed them by hand would name one computer.
+csrc linux "src/cortado_gtk4.c"
