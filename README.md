@@ -54,7 +54,7 @@ run).
 | | |
 |---|---|
 | macOS | AppKit. Twelve controls, events, measurement, layout, components, markup, menus, dialogs, bundling |
-| iOS | UIKit. Builds and runs in the Simulator; prints the same `tests/roles.out` as macOS |
+| iOS | UIKit. Builds and runs in the Simulator and prints the same `tests/roles.out` as macOS. Not yet visible on screen — see below |
 | Windows | host not written. Everything above the host runs and is tested here |
 | Linux | host not written. Everything above the host runs and is tested here |
 | Android | host not written, and Beans has no target triple for it yet |
@@ -488,6 +488,21 @@ The port earned its keep immediately by contradicting the design twice:
   view, so a check box's text has nowhere to go — except the accessibility
   label, which is exactly where that string belongs on that platform and is
   what VoiceOver reads.
+
+**What the iOS host does not do yet: put pixels on a screen.** Launched as a
+bundle, the application starts, the window is key, visible, unhidden, attached
+to a window scene and correctly sized; its root view controller's view is
+composited — its background is what the screen shows — and cortado's container
+sits inside it at the right frame with its children at theirs, none hidden. And
+nothing below that background draws.
+
+It is worth being exact about what that does and does not cast doubt on. The
+ABI, the layout solver, the widgets, the events and the component layer are all
+exercised by the headless run, which produces the correct tree and the same
+bytes as macOS. What is unfinished is the last step of `cortado_uikit.m`: how a
+view hierarchy built *before* `UIApplicationMain` gets composited by UIKit
+afterwards. A phone is the one platform where the application does not own its
+own startup, and that is the part still to solve.
 
 **No Windows or GTK4 host exists**, and neither is claimed. This machine has no
 mingw and no GTK4, so one written here could not be compiled, let alone run,

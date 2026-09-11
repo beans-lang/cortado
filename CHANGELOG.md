@@ -235,6 +235,15 @@ First working macOS host.
   proof — the iOS port needed no change above the host at all. But this machine
   has no mingw and no GTK4, so one written here could not be compiled, let
   alone run, and a host nobody has run is not a port.
+- **The iOS host does not draw yet.** Everything up to compositing works: the
+  application launches, the window is key, visible, scene-attached and
+  correctly sized, its root view controller's view is composited, and cortado's
+  container is inside it at the right frame with its children at theirs, none
+  hidden. Nothing below the background draws. The headless run produces the
+  correct tree and the same `roles.out` bytes as macOS, so the ABI, the layout,
+  the widgets and the component layer are not in question — what is unfinished
+  is how a hierarchy built before `UIApplicationMain` gets composited after it.
+  A phone is the one platform where the application does not own its startup.
 - **The iOS file dialog answers a cancel.** A document picker reports through a
   delegate rather than a completion block, and wiring one is a piece of work
   that has not been done. It answers rather than hanging, which is the contract

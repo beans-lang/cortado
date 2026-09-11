@@ -9,7 +9,7 @@
 
   <HFlex spacing={10}>
     <Label width={110}>Shots: $self.shots</Label>
-    <Slider grow={1} min={1} max={4} step={1} value={self.shots}
+    <Slider grow={1} min={1} max={4} value={self.shots}
             on:change={fn(e: UiEvent) { self.set_shots(e) }} />
   </HFlex>
 

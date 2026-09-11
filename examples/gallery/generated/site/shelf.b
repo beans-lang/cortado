@@ -85,7 +85,6 @@ partial class Shelf {
         b.number("grow", (1) as f64)
         b.number("min", (1) as f64)
         b.number("max", (4) as f64)
-        b.number("step", (1) as f64)
         b.number("value", (self.shots) as f64)
         b.on("change", fn(e: UiEvent) { self.set_shots(e) })
         b.close()

@@ -62,7 +62,10 @@ fn open(role: platform.AppRole, dumping: bool) -> Result<bool> {
     window.set_root(root)?
 
     var mount: component.Mount = new component.Mount(root, app.router)
-    mount.set_bounds(geometry.Size.of(460.0, 460.0))
+    // The surface's own size, not a constant. A desktop window is whatever was
+    // asked for; a phone's is the screen, and asking is the only thing that is
+    // right on both.
+    mount.set_bounds(window.content_size()?)
     mount.show(new Shelf())?
     fill_drinks(root)?
 

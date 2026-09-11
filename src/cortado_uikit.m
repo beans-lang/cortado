@@ -12,6 +12,27 @@
 //
 // Coordinates are already top-left with y downward on iOS, so unlike the macOS
 // host there is no flip: a UIView's frame is what cortado means by a frame.
+//
+// ## What works, and what does not
+//
+// Everything that does not involve putting pixels on a screen. cortado builds
+// for `arm64-apple-ios-sim`, runs under `xcrun simctl spawn`, builds every one
+// of the twelve controls as a real UIKit object, lays them out with the same
+// solver, and prints `tests/roles.out` byte for byte identically to the macOS
+// host. The gate runs that diff on every `./test.sh --native`.
+//
+// **Presenting that tree on screen does not work yet.** Launched as a bundle,
+// the application starts, the window is key, visible, unhidden, attached to a
+// window scene and correctly sized; its root view controller's view is
+// composited — its background colour is what the screen shows — and cortado's
+// container sits inside it at the right frame with its children at theirs,
+// none hidden. And nothing below the background draws.
+//
+// It is not the ABI, the layout, the widgets or the component layer: those are
+// all verified by the headless run, which produces the correct tree. It is the
+// last step of this file — how a view hierarchy built before
+// `UIApplicationMain` gets composited by UIKit afterwards — and it is written
+// down here rather than left as a surprise.
 
 #import <UIKit/UIKit.h>
 #include <string.h>
@@ -102,6 +123,8 @@ static NSString *ctd_string(const char *utf8, int32_t len) {
 // ------------------------------------------------------------------- events
 
 static void ctd_emit_control(ctd_handle target, id sender);
+static void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
+static UIView *ctd_surface_view(id object);
 
 @interface CortadoTarget : NSObject
 @property (assign) ctd_handle handle;
@@ -169,6 +192,103 @@ static void ctd_emit_control(ctd_handle target, id sender) {
 
 // ---------------------------------------------------------------- lifecycle
 
+// iOS will not start an application without a delegate — `UIApplicationMain`
+// with none raises rather than returning an error. cortado's does nothing: the
+// window and its controls already exist by the time `ctd_app_run` is called,
+// which is the same order every other platform uses, and the delegate is only
+// there because UIKit insists on one.
+//
+// It is also where the lifecycle events belong. A phone backgrounds an
+// application constantly, and `CTD_EV_APP_BACKGROUND` and `CTD_EV_LOW_MEMORY`
+// were in the event set from the first commit for exactly this — a desktop
+// ignores them and a phone is built on them.
+//
+// It has one real job. cortado's order is create-then-run, which is every
+// other platform's: build the window, fill it, show it, then start the loop.
+// iOS is run-then-create — a `UIWindow` made before `UIApplicationMain` is not
+// attached to anything, and `makeKeyAndVisible` on one does nothing. So the
+// host remembers which surface was shown and the delegate shows it again once
+// UIKit is running. That is the whole of the adaptation, and it is why
+// `ctd_app_run` is allowed not to return: the header said so from the start.
+@interface CortadoAppDelegate : UIResponder <UIApplicationDelegate>
+// UIKit's legacy launch path asks the delegate for this, and hands the
+// application a window of its own when the answer is nil. That window is the
+// one on screen, and cortado's — correct, populated and key — sits behind it.
+@property (nonatomic, retain) UIWindow *window;
+@end
+
+static ctd_handle g_shown;
+
+// Attaches cortado's window to a scene.
+//
+// This is the one thing about iOS that genuinely has no counterpart anywhere
+// else, and it cost the longest to find. Since iOS 13 a `UIWindow` belongs to a
+// `UIWindowScene`, and one created before the application launched belongs to
+// none. Such a window can be key, visible, unhidden, fully populated and
+// correctly laid out — every property reads right — and it draws nothing at
+// all, because it is attached to no screen.
+//
+// cortado builds its window before starting the loop, because that is the
+// order every other platform uses and the order an application's code reads
+// in. So the window is adopted by the first scene that connects, here.
+static void ctd_attach_scene(UIWindow *window) {
+    if (!window || [window windowScene]) return;
+    for (UIScene *scene in [[UIApplication sharedApplication] connectedScenes]) {
+        if ([scene isKindOfClass:[UIWindowScene class]]) {
+            [window setWindowScene:(UIWindowScene *)scene];
+            [window setFrame:[(UIWindowScene *)scene coordinateSpace].bounds];
+            [window makeKeyAndVisible];
+            return;
+        }
+    }
+}
+
+@implementation CortadoAppDelegate
+- (BOOL)application:(UIApplication *)application
+didFinishLaunchingWithOptions:(NSDictionary *)options {
+    (void)application; (void)options;
+    id surface = g_shown ? ctd_resolve(g_shown) : nil;
+    if ([surface isKindOfClass:[UIWindow class]]) {
+        // Handed to UIKit as *the* window, not merely made key. A delegate
+        // that answers nil for its `window` gets one created for it, and that
+        // one is what the screen shows — cortado's would be correct,
+        // populated, key, and behind it.
+        //
+        // Nothing is resized here either, and that is a fix rather than an
+        // omission: a view controller's view has not been laid out at this
+        // point, so its bounds are not yet the screen, and resizing the root
+        // to them collapses the whole tree to nothing. The frames the solver
+        // computed are already right, because `Surface.content_size` asked the
+        // window, which has had the screen's bounds since it was made.
+        self.window = (UIWindow *)surface;
+        [(UIWindow *)surface makeKeyAndVisible];
+        ctd_attach_scene(self.window);
+    }
+    ctd_emit(CTD_EV_APP_LAUNCHED, 0, 0, 0);
+    return YES;
+}
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+    (void)application;
+    // A scene has certainly connected by now; at didFinishLaunching it may not
+    // have, so the attach is attempted at both and is a no-op once it has
+    // taken.
+    ctd_attach_scene(self.window);
+    ctd_emit(CTD_EV_APP_FOREGROUND, 0, 0, 0);
+}
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    (void)application;
+    ctd_emit(CTD_EV_APP_BACKGROUND, 0, 0, 0);
+}
+- (void)applicationWillTerminate:(UIApplication *)application {
+    (void)application;
+    ctd_emit(CTD_EV_APP_WILL_QUIT, 0, 0, 0);
+}
+- (void)applicationDidReceiveMemoryWarning:(UIApplication *)application {
+    (void)application;
+    ctd_emit(CTD_EV_LOW_MEMORY, 0, 0, 0);
+}
+@end
+
 uint32_t ctd_abi_version(void) { return CTD_ABI_VERSION; }
 
 ctd_status ctd_init(uint32_t want_abi) {
@@ -214,7 +334,8 @@ void ctd_app_run(void) {
         // the runtime would be within its rights to trap on.
         static char program[] = "cortado";
         static char *argv[] = { program, NULL };
-        UIApplicationMain(1, argv, nil, nil);
+        UIApplicationMain(1, argv, nil,
+                          NSStringFromClass([CortadoAppDelegate class]));
     }
 }
 
@@ -254,6 +375,11 @@ ctd_handle ctd_surface_new(double width, double height) {
     if (screen && !CGRectIsEmpty([screen bounds])) bounds = [screen bounds];
     UIWindow *window = [[UIWindow alloc] initWithFrame:bounds];
     UIViewController *controller = [[UIViewController alloc] init];
+    // A window on macOS has the system background without being asked; a
+    // UIWindow has none, which is black. Text drawn in the system label colour
+    // is then black on black, and the screen looks empty rather than wrong.
+    [window setBackgroundColor:[UIColor systemBackgroundColor]];
+    [[controller view] setBackgroundColor:[UIColor systemBackgroundColor]];
     [window setRootViewController:controller];
     [controller release];
     ctd_handle handle = ctd_track(window, -1);
@@ -336,6 +462,10 @@ ctd_status ctd_surface_show(ctd_handle surface) {
     if (!object) return CTD_ERR_STALE;
     if (![object isKindOfClass:[UIWindow class]]) return CTD_ERR_KIND;
     if (g_role == CTD_ROLE_HEADLESS) return CTD_OK;
+    // Remembered as well as applied: this usually runs before
+    // `UIApplicationMain`, where it has no effect, and the delegate does it
+    // again once UIKit is running.
+    g_shown = surface;
     [(UIWindow *)object makeKeyAndVisible];
     return CTD_OK;
 }
