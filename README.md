@@ -513,7 +513,16 @@ and a host nobody has run is not a port.
 ```
 ./test.sh              # the interpreter leg, the gates, cross-target checks
 ./test.sh --native     # also build and run every case as a real binary
+./test.sh --sanitize   # also every headless case under ASan and UBSan
 ```
+
+The sanitizer leg is not about the Beans half — the compiler's own gate covers
+that. It is about the host: fifteen hundred lines of Objective-C with manual
+retain and release, a handle table indexed by arithmetic, and a string boundary
+that copies bytes both ways. `csrc` does not pass sanitizer flags to a
+manifest's C sources, so `tools/sanitize.sh` compiles the host itself with them
+and links by hand. It was checked by putting a one-past-the-end read into the
+handle table and watching UBSan name the line.
 
 `test.sh` finds the compiler as `$BEANSC`, then `$BEANS_ROOT/build/beansc`,
 then `../../beans/build/beansc`, then `PATH`.

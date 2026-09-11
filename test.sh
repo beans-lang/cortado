@@ -3,6 +3,7 @@
 #
 #     ./test.sh              the interpreter leg, plus cross-target checks
 #     ./test.sh --native     also build and run every case as a real binary
+#     ./test.sh --sanitize   also run every headless case under ASan and UBSan
 #
 # Every case prints a widget tree or an event log that was read back off live
 # platform objects, and both legs must match the committed golden byte for
@@ -38,7 +39,14 @@ if [[ -f "$beans_tree/runtime/beans_rt.c" ]]; then
 fi
 
 native=0
-[[ "${1:-}" == "--native" ]] && native=1
+sanitize=0
+for argument in "$@"; do
+    case "$argument" in
+        --native)   native=1 ;;
+        --sanitize) native=1; sanitize=1 ;;
+        *) echo "test.sh: unknown option $argument" >&2; exit 2 ;;
+    esac
+done
 
 # cortado has one platform host so far. Everywhere else the Beans half still
 # type-checks — the cross-target leg below proves it — but nothing can run.
@@ -344,6 +352,21 @@ elif [[ $native -eq 1 ]]; then
     echo "-- native leg not run: no host for $host_os"
 else
     echo "-- native leg not requested (pass --native)"
+fi
+
+# ------------------------------------------------------------------ sanitizers
+#
+# Slow, and not part of the default run. `BEANS_SANITIZE` instruments the Beans
+# half, which the compiler's own gate already covers; what this adds is the
+# host — fifteen hundred lines of Objective-C with manual retain and release, a
+# handle table indexed by arithmetic, and a string boundary that copies bytes
+# both ways. `csrc` does not pass sanitizer flags to a manifest's C sources, so
+# `tools/sanitize.sh` compiles the host itself with them and links by hand.
+if [[ $sanitize -eq 1 && $have_host -eq 1 ]]; then
+    "$root/tools/sanitize.sh"
+    pass
+elif [[ $sanitize -eq 1 ]]; then
+    skip sanitize "the only host written is macOS"
 fi
 
 # -------------------------------------------------------------------- verdict

@@ -169,6 +169,14 @@ First working macOS host.
   no-op. This is the first host to exercise the capability API, which is the
   reason it exists.
 
+- `./test.sh --sanitize` — every headless case under AddressSanitizer and
+  UndefinedBehaviorSanitizer, with the **host** instrumented. `BEANS_SANITIZE`
+  covers the Beans half, which the compiler's gate already does; `csrc` passes
+  no sanitizer flags to a manifest's C sources, so `tools/sanitize.sh` compiles
+  the host itself and links by hand. All eight cases are clean, and the gate
+  was checked by putting a one-past-the-end read into the handle table and
+  watching UBSan name the line.
+
 ### Found while building this
 
 - An `NSImageView` carries a private subview of AppKit's own. The tree dump
