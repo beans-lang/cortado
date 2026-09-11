@@ -114,7 +114,11 @@ for name in "${portable[@]}"; do
     diff -u "$golden" "$tmp/$name.interp"
     pass
 done
-echo "ok portable: ${#portable[@]} suites, $(cat "$root/tests/layout.out" "$root/tests/diff.out" | grep -c '^== ') goldens, no display and no FFI"
+# Counted from the two suites that record a case per section. `sweep` records
+# one line for four hundred generated pairs, so it is named separately rather
+# than folded into a number it contributes nothing to — a count that reads as
+# if it covered every suite is how a suite stops covering anything unnoticed.
+echo "ok portable: ${#portable[@]} suites, $(cat "$root/tests/layout.out" "$root/tests/diff.out" | grep -c '^== ') recorded cases and a $(grep -oE '^sweep: [0-9]+' "$root/tests/sweep.out" | grep -oE '[0-9]+')-case sweep, no display and no FFI"
 
 # ------------------------------------------------------------- interpreter leg
 if [[ $have_host -eq 0 ]]; then
