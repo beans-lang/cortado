@@ -61,6 +61,7 @@ pub class WidgetMaker {
             combo_box => { return ok(new widgets.ComboBox()) }
             scroll_view => { return ok(new widgets.ScrollView()) }
             radio_button => { return ok(new widgets.RadioButton()) }
+            canvas => { return ok(new widgets.Canvas()) }
         }
     }
 

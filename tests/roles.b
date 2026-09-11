@@ -96,6 +96,11 @@ fn build() -> Result<bool> {
     choice.select(1)?
     var picture: widgets.ImageView = new widgets.ImageView()
     picture.set_hidden(true)?
+    // A canvas is here for the same reason every other control is: it is a
+    // real control on all four hosts, laid out by the same solver and in the
+    // same tree, and this file is where that is checked. Nothing is drawn into
+    // it — that is `tests/canvas.b`'s job, and only two hosts can.
+    var plot: widgets.Canvas = new widgets.Canvas()
 
     var buttons: widgets.Container = new widgets.Container()
     var order: widgets.Button = widgets.Button.of("Order")?
@@ -114,6 +119,7 @@ fn build() -> Result<bool> {
     root.add(rule)?
     root.add(choice)?
     root.add(picture)?
+    root.add(plot)?
     root.add(buttons)?
 
     // Every size here is a constant, and that is the point: the frames below
@@ -136,6 +142,7 @@ fn build() -> Result<bool> {
     page.add(fixed(sheet, "rule", rule, 1.0))
     page.add(fixed(sheet, "choice", choice, 24.0))
     page.add(fixed(sheet, "picture", picture, 40.0))
+    page.add(fixed(sheet, "plot", plot, 32.0))
 
     var bar: layout.StackLayout = layout.StackLayout.row(8.0)
     bar.set_justify(layout.Justify.end)

@@ -10,6 +10,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_CONTAINER:
             view = [[CortadoView alloc] initWithFrame:NSZeroRect];
             break;
+        // A canvas is a plain view, and that is the whole of it here: the
+        // platform lays it out and shows it, and everything inside is the
+        // program's. `ctd_gpu_canvas_attach` is what gives it a layer to draw
+        // into, and until then it is an empty area rather than a broken one.
+        case CTD_W_CANVAS:
+            view = [[CortadoView alloc] initWithFrame:NSZeroRect];
+            break;
         case CTD_W_LABEL: {
             NSTextField *label = [[NSTextField alloc] initWithFrame:NSZeroRect];
             [label setBezeled:NO];

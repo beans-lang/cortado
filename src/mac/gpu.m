@@ -37,6 +37,7 @@
 
 #import "internal.h"
 #import <Metal/Metal.h>
+#import <QuartzCore/QuartzCore.h>
 
 // A device, and everything that belongs to one rather than to the process.
 //
@@ -64,10 +65,29 @@
 @interface CortadoCanvas : NSObject
 @property (retain) id<MTLTexture> texture;
 @property (retain) CortadoGpu *owner;
+// Set only for a frame that came from a widget's CAMetalLayer. It is what
+// `ctd_gpu_pass_present` hands to the compositor, and its absence is how a
+// pass knows it has nothing to present.
+@property (retain) id<CAMetalDrawable> frame;
 @end
 
 @implementation CortadoCanvas
-- (void)dealloc { [_texture release]; [_owner release]; [super dealloc]; }
+- (void)dealloc { [_texture release]; [_owner release]; [_frame release]; [super dealloc]; }
+@end
+
+// A CAMetalLayer that remembers the device it was attached to.
+//
+// `ctd_gpu_canvas_next` needs the command queue, and a layer can name its
+// `MTLDevice` but not cortado's wrapper around one. A subclass rather than a
+// slot table keyed by widget: the lifetime wanted is exactly the layer's, and
+// a table would need a hook in `ctd_give_back` to forget a recycled slot — one
+// more thing to get right for no gain.
+@interface CortadoMetalLayer : CAMetalLayer
+@property (retain) CortadoGpu *gpu;
+@end
+
+@implementation CortadoMetalLayer
+- (void)dealloc { [_gpu release]; [super dealloc]; }
 @end
 
 // A pipeline: a list of decisions while it is being built, one immutable
@@ -82,6 +102,7 @@
 @property (assign) int32_t blend;
 @property (assign) int32_t attrs;
 @property (assign) int32_t stride;
+@property (assign) int32_t pixels;
 @end
 
 @implementation CortadoPipeline
@@ -98,12 +119,13 @@
 @interface CortadoPass : NSObject
 @property (retain) id<MTLCommandBuffer> commands;
 @property (retain) id<MTLRenderCommandEncoder> encoder;
+@property (retain) CortadoCanvas *into;
 @property (assign) ctd_handle slot_handle;
 @property (assign) int ready;         // a pipeline has been set
 @end
 
 @implementation CortadoPass
-- (void)dealloc { [_commands release]; [_encoder release]; [super dealloc]; }
+- (void)dealloc { [_commands release]; [_encoder release]; [_into release]; [super dealloc]; }
 @end
 
 // ---------------------------------------------------------------- resolving
@@ -157,6 +179,19 @@ static int ctd_gpu_is_object(id object) {
         || [object isKindOfClass:[CortadoPass class]]
         || [object conformsToProtocol:@protocol(MTLBuffer)]
         || [object conformsToProtocol:@protocol(MTLLibrary)];
+}
+
+// The Metal format behind each of cortado's two answers.
+//
+// A canvas is BGRA because that is what CAMetalLayer shows; an off-screen
+// target is RGBA because that is what `ctd_gpu_target_read` promises to hand
+// back. Nothing in a shader changes between them — it writes red, green, blue
+// and alpha in that order either way, and the hardware puts them where they
+// go. What has to agree is the *pipeline* and its target, which is the whole
+// reason ctd_gpu_pipeline_pixels exists.
+static MTLPixelFormat ctd_gpu_format(int32_t pixels) {
+    return pixels == CTD_PIXELS_SCREEN ? MTLPixelFormatBGRA8Unorm
+                                       : MTLPixelFormatRGBA8Unorm;
 }
 
 // ------------------------------------------------------------------- device
@@ -306,7 +341,7 @@ ctd_handle ctd_gpu_target_new(ctd_handle device, int32_t width, int32_t height) 
     if (width <= 0 || height <= 0) return 0;
 
     MTLTextureDescriptor *plan =
-        [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+        [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:ctd_gpu_format(CTD_PIXELS_RGBA8)
                                                            width:(NSUInteger)width
                                                           height:(NSUInteger)height
                                                        mipmapped:NO];
@@ -352,6 +387,18 @@ int32_t ctd_gpu_target_read(ctd_handle target, double *out_size, char *out, int3
                 bytesPerRow:width * 4
                  fromRegion:MTLRegionMake2D(0, 0, width, height)
                 mipmapLevel:0];
+    // The header promises RGBA, and a canvas frame is BGRA because that is
+    // what the compositor shows. Swapping the two ends here is the whole of
+    // the difference: without it a canvas would read back with red and blue
+    // exchanged, which looks like a working program with an odd palette
+    // rather than like a bug.
+    if ([found.texture pixelFormat] == MTLPixelFormatBGRA8Unorm) {
+        for (int32_t at = 0; at + 3 < needed; at += 4) {
+            char blue = out[at];
+            out[at] = out[at + 2];
+            out[at + 2] = blue;
+        }
+    }
     return needed;
 }
 
@@ -480,6 +527,16 @@ ctd_status ctd_gpu_pipeline_blend(ctd_handle pipeline, int32_t blend) {
     return CTD_OK;
 }
 
+ctd_status ctd_gpu_pipeline_pixels(ctd_handle pipeline, int32_t pixels) {
+    ctd_status problem;
+    CortadoPipeline *found = ctd_gpu_pipeline_of(pipeline, &problem);
+    if (!found) return problem;
+    if (found.state) return CTD_ERR_STATE;
+    if (pixels != CTD_PIXELS_RGBA8 && pixels != CTD_PIXELS_SCREEN) return CTD_ERR_RANGE;
+    found.pixels = pixels;
+    return CTD_OK;
+}
+
 ctd_status ctd_gpu_pipeline_build(ctd_handle pipeline) {
     ctd_status problem;
     CortadoPipeline *found = ctd_gpu_pipeline_of(pipeline, &problem);
@@ -494,7 +551,7 @@ ctd_status ctd_gpu_pipeline_build(ctd_handle pipeline) {
     plan.vertexFunction = found.vertex;
     plan.fragmentFunction = found.fragment;
     plan.vertexDescriptor = found.layout;
-    plan.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
+    plan.colorAttachments[0].pixelFormat = ctd_gpu_format(found.pixels);
     if (found.blend != CTD_BLEND_REPLACE) {
         plan.colorAttachments[0].blendingEnabled = YES;
         if (found.blend == CTD_BLEND_ALPHA) {
@@ -541,6 +598,7 @@ ctd_handle ctd_gpu_pass_begin(ctd_handle target, double r, double g, double b, d
     CortadoPass *pass = [[CortadoPass alloc] init];
     pass.commands = commands;
     pass.encoder = encoder;
+    pass.into = found;
     ctd_handle handle = ctd_track(pass, -1);
     pass.slot_handle = handle;
     [pass release];
@@ -629,4 +687,101 @@ ctd_status ctd_gpu_pass_end(ctd_handle pass) {
     ctd_untrack(found.slot_handle);
     [found release];
     return outcome;
+}
+
+// ------------------------------------------------------------------- canvases
+
+// A widget's layer, if it is a canvas somebody attached a device to.
+static CortadoMetalLayer *ctd_gpu_layer_of(ctd_handle widget, ctd_status *problem) {
+    id object = ctd_resolve(widget);
+    if (!object || ![object isKindOfClass:[NSView class]]) { *problem = CTD_ERR_STALE; return nil; }
+    if (ctd_slot_kind(widget) != CTD_W_CANVAS) { *problem = CTD_ERR_KIND; return nil; }
+    CALayer *layer = [(NSView *)object layer];
+    // Not a canvas anybody attached a device to. CTD_ERR_STATE rather than
+    // CTD_ERR_KIND: it is the right widget, asked before it was ready.
+    if (![layer isKindOfClass:[CortadoMetalLayer class]]) { *problem = CTD_ERR_STATE; return nil; }
+    *problem = CTD_OK;
+    return (CortadoMetalLayer *)layer;
+}
+
+ctd_status ctd_gpu_canvas_attach(ctd_handle widget, ctd_handle device) {
+    id object = ctd_resolve(widget);
+    if (!object || ![object isKindOfClass:[NSView class]]) return CTD_ERR_STALE;
+    if (ctd_slot_kind(widget) != CTD_W_CANVAS) return CTD_ERR_KIND;
+    ctd_status problem;
+    CortadoGpu *found = ctd_gpu_of(device, &problem);
+    if (!found) return problem;
+
+    CortadoMetalLayer *layer = [CortadoMetalLayer layer];
+    layer.device = found.device;
+    layer.gpu = found;
+    layer.pixelFormat = ctd_gpu_format(CTD_PIXELS_SCREEN);
+    // So the CPU may read a frame back.
+    //
+    // It costs something real: with this YES the driver may keep a drawable in
+    // tile memory and compress it, and NO gives that up. It is off because
+    // cortado's claim about every other widget is that you can ask the
+    // platform what it painted, and a canvas is the one control whose contents
+    // no other call can see — `ctd_snapshot` on a layer-backed view with
+    // nothing on screen answers nothing. A canvas you cannot check is a canvas
+    // whose test is somebody looking at it. If the cost ever shows, the way
+    // out is a flag on attach, not a silently unreadable canvas.
+    layer.framebufferOnly = NO;
+    [(NSView *)object setWantsLayer:YES];
+    [(NSView *)object setLayer:layer];
+    return CTD_OK;
+}
+
+ctd_handle ctd_gpu_canvas_next(ctd_handle widget) {
+    ctd_status problem;
+    CortadoMetalLayer *layer = ctd_gpu_layer_of(widget, &problem);
+    if (!layer) return 0;
+
+    // The drawable is sized from the view every frame rather than when the
+    // canvas was attached, because a window is resized while it is running and
+    // a layer that kept its first size would quietly stretch.
+    NSView *view = (NSView *)ctd_resolve(widget);
+    NSRect bounds = [view bounds];
+    CGFloat scale = [[view window] backingScaleFactor];
+    if (scale <= 0.0) scale = 1.0;
+    NSUInteger wide = (NSUInteger)(bounds.size.width * scale);
+    NSUInteger tall = (NSUInteger)(bounds.size.height * scale);
+    if (wide == 0 || tall == 0) return 0;
+    layer.drawableSize = CGSizeMake((CGFloat)wide, (CGFloat)tall);
+
+    id<CAMetalDrawable> frame = [layer nextDrawable];
+    if (!frame) return 0;
+
+    CortadoCanvas *target = [[CortadoCanvas alloc] init];
+    target.texture = [frame texture];
+    target.owner = layer.gpu;
+    target.frame = frame;
+
+    ctd_handle handle = ctd_track(target, -1);
+    [target release];
+    return handle;
+}
+
+ctd_status ctd_gpu_pass_present(ctd_handle pass) {
+    ctd_status problem;
+    CortadoPass *found = ctd_gpu_pass_of(pass, &problem);
+    if (!found) return problem;
+    // A pass on an off-screen target has nothing to put on screen, and saying
+    // so is better than presenting nothing and looking like it worked.
+    if (!found.into || !found.into.frame) return CTD_ERR_STATE;
+
+    [found retain];
+    [found.encoder endEncoding];
+    // Presented, not waited for. The compositor takes it from here, and the
+    // thread that has to draw the next frame is free at once — which is the
+    // whole difference between this and ctd_gpu_pass_end.
+    [found.commands presentDrawable:found.into.frame];
+    [found.commands commit];
+    // The frame has been handed over; the target that named it keeps its
+    // texture so a caller may still read what was drawn, but there is nothing
+    // left to present twice.
+    found.into.frame = nil;
+    ctd_untrack(found.slot_handle);
+    [found release];
+    return CTD_OK;
 }

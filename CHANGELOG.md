@@ -683,6 +683,69 @@ First working macOS host.
   machines, which is a failure that reaches a user rather than a build. It is
   also the concrete reason the macOS and iOS GPU hosts are two files.
 
+- **`CTD_W_CANVAS` — a widget a program draws into itself**, and the first new
+  widget kind cortado has added. The solver lays it out, it is in the tree, it
+  has an accessibility role, and it is a row in `tests/roles.out` on all four
+  hosts. On a host with no GPU it is an empty area rather than a missing one,
+  which is the honest shape for a control whose contents were never the
+  platform's to draw.
+
+  Three calls a frame: ask the canvas for the frame it is about to show, draw
+  into it as into any other target, present. `examples/canvas.b` is a plasma
+  shader running at the display's rate between two ordinary AppKit labels.
+
+- **`ctd_gpu_pass_present` is a second way to end a pass, not a flag on the
+  first.** `ctd_gpu_pass_end` waits, because the caller is about to read the
+  pixels; a canvas never reads them and waiting there would stall the thread
+  that has to draw the next frame, sixty times a second, for nothing. Two calls
+  so a caller who got it the wrong way round hears about it: presenting an
+  off-screen pass is `wrong_moment`, and so is ending a canvas pass by waiting.
+
+- **`ctd_gpu_pipeline_pixels` — two answers, not a format zoo.** An off-screen
+  target is the 8-bit RGBA `ctd_gpu_target_read` hands back; a canvas is
+  whatever the platform's compositor wants, which on Metal is BGRA. A pipeline
+  carries the format it writes and drawing with one that disagrees with its
+  target is refused by the driver at draw time — a long way from the line that
+  got it wrong — so a pipeline says which it is for, once. Nothing changes in
+  the shader: it writes red, green, blue and alpha in that order either way.
+
+  `ctd_gpu_target_read` swizzles a BGRA frame back to RGBA, because the header
+  promises RGBA. Without it a canvas reads back with red and blue exchanged,
+  which looks like a working program with an odd palette rather than like a bug.
+
+- **A widget that is not a canvas is `wrong_widget` on every host, checked
+  before the host considers whether it has a GPU at all.** "This is not a
+  canvas" is the caller's bug and "this platform has no GPU" is not; a host
+  that answered the second to both would hide the first on three platforms out
+  of four. GTK4 and Win32 answered `unsupported` to both until `tests/canvas.b`
+  compared them against macOS — the `CTD_P_ENABLED` mistake, caught this time
+  by a cross-host golden instead of by a user.
+
+### Found while building the canvas
+
+- **A canvas draws headless, through the real on-screen path.** A
+  `CAMetalLayer` on a view in a window that was never ordered front hands back
+  a drawable, draws, reads back and presents without error — checked in a bare
+  Metal program before any of this was written. So `tests/canvas.out` is not
+  testing a stand-in, and it is the same bytes on a host with a GPU and one
+  without.
+
+- **`UIView.layer` is read-only, so the two Apple hosts attach differently.**
+  On macOS a view's layer can be replaced and a canvas *is* its CAMetalLayer.
+  On iOS the layer comes from `+layerClass` and is decided before the view
+  exists, so the metal layer is a sublayer kept the size of the view every
+  frame. The alternative was a UIView subclass in the widget factory, which
+  would put Metal into a file with no other reason to know about it. This is
+  the second concrete thing that would have had to be `#ifdef`-ed had the two
+  hosts shared a file.
+
+- **`StackLayout` ignores `grow`; only `FlexLayout` hands out leftover space.**
+  The canvas example asked for a stack and got a canvas of zero height, so
+  every frame asked for a drawable and was refused: `0 frames drawn · 60 per
+  second · 360 waited for a drawable`. The clock was fine and the GPU was fine.
+  Worth writing down because the failure named the drawable, and the bug was
+  four lines away in the layout.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

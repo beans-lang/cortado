@@ -94,6 +94,27 @@ pub class Pass {
         }
     }
 
+    /// Ends the pass by putting it on screen, rather than by waiting for it.
+    ///
+    /// `finish` waits, because the caller is about to read the pixels. A canvas
+    /// never reads them; it hands them to the compositor. Waiting there would
+    /// stall the thread that has to draw the next frame, sixty times a second,
+    /// for nothing.
+    ///
+    /// Refused with `wrong_moment` on a pass that is not drawing into a canvas
+    /// — two calls rather than a flag on one, so a caller who got it the wrong
+    /// way round hears about it.
+    pub fn present() -> Result<bool> {
+        if self.done {
+            return err("this pass has already run", "wrong_moment")
+        }
+        self.done = true
+        unsafe {
+            return host.check(host.ctd_gpu_pass_present(self.slot.raw) as int,
+                              "put a pass on screen")
+        }
+    }
+
     /// Throws the drawing away without running it.
     ///
     /// The only reason this exists: a pass that is begun and never finished

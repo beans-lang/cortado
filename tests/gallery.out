@@ -1,5 +1,5 @@
 Container CortadoView role=group "" frame=0,0,460,460 children=1
-  Container CortadoView role=group "" frame=0,0,460,460 children=9
+  Container CortadoView role=group "" frame=0,0,460,460 children=10
     Label NSTextField role=text "Every control" frame=20,20,420,21
     Separator NSBox role=separator "" frame=20,53,420,1
     Container CortadoView role=group "" frame=20,66,420,24 children=2
@@ -13,7 +13,8 @@ Container CortadoView role=group "" frame=0,0,460,460 children=1
       RadioButton NSButton role=radio "Eat in" frame=74,0,56,16
       RadioButton NSButton role=radio "Take away" frame=140,0,84,16
     ProgressBar NSProgressIndicator role=progressbar "" frame=20,158,420,12
-    TextArea NSScrollView role=textbox "no sugar" frame=20,182,420,70
-    Container CortadoView role=group "" frame=20,264,420,24 children=1
+    Canvas CortadoView role=group "" frame=20,182,420,40
+    TextArea NSScrollView role=textbox "no sugar" frame=20,234,420,70
+    Container CortadoView role=group "" frame=20,316,420,24 children=1
       Button NSButton role=button "Order" frame=361,0,59,24
-    Label NSTextField role=text "Nothing ordered yet" frame=20,300,420,16
+    Label NSTextField role=text "Nothing ordered yet" frame=20,352,420,16

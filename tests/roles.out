@@ -1,4 +1,4 @@
-Container role=group "" children=11
+Container role=group "" children=12
   Label role=text "Order a coffee"
   TextField role=textbox "flat white"
   TextArea role=textbox "no sugar"
@@ -9,6 +9,7 @@ Container role=group "" children=11
   Separator role=separator ""
   ComboBox role=combobox "espresso"
   ImageView role=image "" hidden
+  Canvas role=group ""
   Container role=group "" children=2
     Button role=button "Order"
     Button role=button "Cancel" disabled

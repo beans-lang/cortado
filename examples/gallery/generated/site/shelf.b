@@ -109,21 +109,24 @@ partial class Shelf {
         b.number("max", (4) as f64)
         b.number("value", (self.shots) as f64)
         b.close()
-        b.open("TextArea")  // shelf.bx:24
+        b.open("Canvas")  // shelf.bx:27
+        b.number("height", (40) as f64)
+        b.close()
+        b.open("TextArea")  // shelf.bx:29
         b.number("height", (70) as f64)
         b.on("commit", fn(_e: UiEvent) { self.note = _e.text })
         b.text("{self.note}")
         b.close()
-        b.open("HStack")  // shelf.bx:26
+        b.open("HStack")  // shelf.bx:31
         b.number("spacing", (10) as f64)
         b.word("justify", "end")
-        b.open("Button")  // shelf.bx:27
+        b.open("Button")  // shelf.bx:32
         b.flag("enabled", self.shots > 0)
         b.on("click", fn(e: UiEvent) { self.order() })
         b.text("Order")
         b.close()
         b.close()
-        b.open("Label")  // shelf.bx:30
+        b.open("Label")  // shelf.bx:35
         b.text("{self.status}")
         b.close()
         b.close()

@@ -89,6 +89,10 @@ pub extern "C" fn ctd_gpu_pass_vertices(pass: u64, buffer: u64) -> i32
 pub extern "C" fn ctd_gpu_pass_uniform(pass: u64, data: RawPtr<f32>, count: i32) -> i32
 pub extern "C" fn ctd_gpu_pass_draw(pass: u64, shape: i32, first: i32, count: i32) -> i32
 pub extern "C" fn ctd_gpu_pass_end(pass: u64) -> i32
+pub extern "C" fn ctd_gpu_canvas_attach(widget: u64, device: u64) -> i32
+pub extern "C" fn ctd_gpu_canvas_next(widget: u64) -> u64
+pub extern "C" fn ctd_gpu_pass_present(pass: u64) -> i32
+pub extern "C" fn ctd_gpu_pipeline_pixels(pipeline: u64, pixels: i32) -> i32
 pub extern "C" fn ctd_menu_new(title: RawPtr<i8>, len: i32) -> u64
 pub extern "C" fn ctd_menu_add_item(menu: u64, title: RawPtr<i8>, title_len: i32, key: RawPtr<i8>, key_len: i32, role: i32, token: i64) -> i32
 pub extern "C" fn ctd_menu_add_separator(menu: u64) -> i32

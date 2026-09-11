@@ -14,6 +14,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_CONTAINER:
             view = [[UIView alloc] initWithFrame:CGRectZero];
             break;
+        // A canvas is a plain view, and that is the whole of it here: the
+        // platform lays it out and shows it, and everything inside is the
+        // program's. On a host with no GPU nothing ever draws into it, and
+        // an empty area is the honest shape for that.
+        case CTD_W_CANVAS:
+            view = [[UIView alloc] initWithFrame:CGRectZero];
+            break;
         case CTD_W_LABEL: {
             UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
             [label setText:@""];

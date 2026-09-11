@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 5
+#define CTD_ABI_VERSION 6
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -263,6 +263,8 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 #define CTD_W_COMBO_BOX    10
 #define CTD_W_SCROLL_VIEW  11
 #define CTD_W_RADIO_BUTTON 12
+/* Somewhere a program draws for itself, with a shader. See "the GPU". */
+#define CTD_W_CANVAS       13
 
 ctd_handle ctd_widget_new(int32_t kind);
 int32_t    ctd_widget_kind(ctd_handle widget);   /* -1 when stale */
@@ -727,6 +729,69 @@ ctd_status ctd_gpu_pass_draw(ctd_handle pass, int32_t shape, int32_t first, int3
  * handle that outlived it would be a thing to remember to release on a path
  * that runs every frame. */
 ctd_status ctd_gpu_pass_end(ctd_handle pass);
+
+/* A widget you draw into yourself.
+ *
+ * `CTD_W_CANVAS` is an ordinary widget on every host: the solver lays it out,
+ * it is in the tree, it has an accessibility role, and `tests/roles.out` names
+ * it on all four. What differs is whether anything can be drawn into it —
+ * `ctd_gpu_canvas_attach` is where a host without a GPU refuses, and the
+ * control is then simply an empty area rather than a missing one.
+ *
+ * Every frame is three calls: ask the canvas for the frame it is about to
+ * show, draw into it as into any other target, and present. A canvas is
+ * driven from `CTD_EV_FRAME` — the frame clock is what tells you a frame is
+ * wanted, and drawing outside one is drawing the platform will not show.
+ *
+ * A widget that is not a canvas is CTD_ERR_KIND **on every host, before the
+ * host considers whether it has a GPU at all**. "This is not a canvas" is the
+ * caller's bug and "this platform has no GPU" is not; a host that answered the
+ * second to both would hide the first on three platforms out of four. */
+ctd_status ctd_gpu_canvas_attach(ctd_handle widget, ctd_handle device);
+
+/* The target for the frame this canvas is about to show.
+ *
+ * A target like any other, so the same pass, the same pipelines and the same
+ * `ctd_gpu_target_read` all work on it — which is what makes a canvas
+ * checkable rather than something you have to look at.
+ *
+ * It belongs to one frame. Release it when the frame is over (presenting does
+ * not release it, so the two lifetimes stay separate and visible), and ask
+ * again for the next. Zero when the canvas has nothing to give: no device
+ * attached, or a size of nothing. */
+ctd_handle ctd_gpu_canvas_next(ctd_handle widget);
+
+/* Ends a pass by putting it on screen rather than by waiting for it.
+ *
+ * `ctd_gpu_pass_end` waits, because the caller is about to read the pixels.
+ * A canvas never reads them; it hands them to the compositor. Waiting there
+ * would stall the thread that has to draw the next frame, sixty times a
+ * second, for no reason at all.
+ *
+ * Two calls rather than a flag on one, because a caller who got it wrong
+ * should hear about it: CTD_ERR_STATE when the pass is not drawing into a
+ * canvas, and again from `ctd_gpu_pass_end` when it is. The pass's handle is
+ * released either way. */
+ctd_status ctd_gpu_pass_present(ctd_handle pass);
+
+/* Which pixels a pipeline is built to write.
+ *
+ * Not a format zoo — two answers, because there are two questions. An
+ * off-screen target is the 8-bit RGBA `ctd_gpu_target_read` hands back, and
+ * every backend can make one. A canvas is whatever the platform's compositor
+ * wants, which on Metal is BGRA and on another backend may be something else
+ * again; the host knows and the caller does not have to.
+ *
+ * It matters because a pipeline carries the format it writes, and drawing with
+ * one that disagrees with its target is refused by the driver at draw time —
+ * far from the line that got it wrong. A pipeline says which it is for, once.
+ *
+ * Nothing changes in the shader: it writes red, green, blue and alpha in that
+ * order whichever this is, and the hardware puts them where they go. */
+#define CTD_PIXELS_RGBA8   0  /* what ctd_gpu_target_new makes, and reads back */
+#define CTD_PIXELS_SCREEN  1  /* whatever a canvas on this platform shows      */
+
+ctd_status ctd_gpu_pipeline_pixels(ctd_handle pipeline, int32_t pixels);
 
 /* ---- menus ------------------------------------------------------------- */
 

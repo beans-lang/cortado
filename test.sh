@@ -90,7 +90,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim gpu triangle)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled opacity clock frames anim gpu triangle canvas)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -132,7 +132,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled opacity clock anim gpu)
+cross_host=(roles events text applied leaks enabled opacity clock anim gpu canvas)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -365,6 +365,14 @@ fi
 # with a field the pipeline cannot honour. ASan sees none of that — the memory
 # is all valid, it is the *order* that is wrong.
 #
+# It earned this leg on the day it was added. A pipeline built for an
+# off-screen target and used on a canvas is a pixel-format mismatch, which
+# Metal on Apple silicon **silently tolerates** — the two formats are the same
+# bits with a swizzle the hardware does for free, every golden passed, and the
+# colours came back right. Under validation it is an assertion naming both
+# formats. Every other backend this ABI is shaped for would refuse it outright,
+# so a guard that looked untestable here is the one keeping cortado portable.
+#
 # What this leg does **not** prove is that `ctd_gpu_pass_end` waits for the GPU
 # before the pixels are read. Removing that wait passes at full speed, because
 # the readback happens to lose a race it should not be running at all, and it
@@ -373,14 +381,14 @@ fi
 # not having one. The wait stays because Metal's contract requires it, and that
 # is written beside it in src/mac/gpu.m.
 if [[ "$host_os" == "Darwin" && $have_host -eq 1 ]]; then
-    for name in gpu triangle; do
+    for name in gpu triangle canvas; do
         MTL_DEBUG_LAYER=1 MTL_DEBUG_LAYER_ERROR_MODE=assert \
             "$BEANSC" run "$root/tests/$name.b" 2>&1 \
             | grep -v 'Metal API Validation' >"$tmp/$name.validated"
         diff -u "$root/tests/$name.out" "$tmp/$name.validated"
         pass
     done
-    echo "ok metal: 2 cases clean under Metal API Validation"
+    echo "ok metal: 3 cases clean under Metal API Validation"
 fi
 
 # ------------------------------------------------------------- negative control
@@ -438,7 +446,7 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # display, and a gate must not need one. An example that is not built is an
     # example that goes stale, and the first person to find out is whoever
     # copied it.
-    for example in hello clock shader; do
+    for example in hello clock shader canvas; do
         "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
         pass
     done

@@ -146,3 +146,38 @@ ctd_status ctd_gpu_pass_end(ctd_handle pass) {
     (void)pass;
     return CTD_ERR_UNSUPPORTED;
 }
+
+// --------------------------------------------------------------- the canvas
+//
+// `CTD_W_CANVAS` is a real widget here: the solver lays it out, it is in the
+// tree, and it has an accessibility role like any other control. What it
+// cannot do is have anything drawn into it, so it is an empty area rather than
+// a missing one — which is the right shape for a control whose contents are a
+// program's own drawing.
+
+ctd_status ctd_gpu_canvas_attach(ctd_handle widget, ctd_handle device) {
+    (void)device;
+    // The kind is checked here, before the refusal, and that is not ceremony.
+    // "This is not a canvas" is the caller's bug and "this platform has no
+    // GPU" is not, and a host that answered the second to both would make the
+    // first invisible on three platforms out of four. It is the same mistake
+    // CTD_P_ENABLED cost four hosts once already.
+    if (!ctd_resolve(widget)) return CTD_ERR_STALE;
+    if (ctd_slot_kind(widget) != CTD_W_CANVAS) return CTD_ERR_KIND;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_handle ctd_gpu_canvas_next(ctd_handle widget) {
+    (void)widget;
+    return 0;
+}
+
+ctd_status ctd_gpu_pass_present(ctd_handle pass) {
+    (void)pass;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_gpu_pipeline_pixels(ctd_handle pipeline, int32_t pixels) {
+    (void)pipeline; (void)pixels;
+    return CTD_ERR_UNSUPPORTED;
+}

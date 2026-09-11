@@ -21,6 +21,11 @@
 
   <ProgressBar height={12} min={0} max={4} value={self.shots} />
 
+  <!-- A canvas is an ordinary control in markup too. Nothing draws into it
+       here: that needs a GPU device, which is Beans rather than markup, and
+       this file is about the tag reaching a real control. -->
+  <Canvas height={40} />
+
   <TextArea height={70} bind:value={self.note} />
 
   <HStack spacing={10} justify="end">

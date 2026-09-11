@@ -65,6 +65,19 @@ pub class Pipeline {
         }
     }
 
+    /// Which kind of place this pipeline draws into.
+    ///
+    /// `Pixels.offscreen` when nothing is said, because that is what
+    /// `Device.target` makes. A pipeline for a canvas has to say so, and one
+    /// that does not is refused by the driver at draw time rather than here —
+    /// which is exactly why this call exists.
+    pub fn pixels(kind: Pixels) -> Result<bool> {
+        unsafe {
+            return host.check(host.ctd_gpu_pipeline_pixels(self.slot.raw, kind.code() as i32) as int,
+                              "set which pixels a pipeline writes")
+        }
+    }
+
     /// Freezes it. Refused with `wrong_moment` when no attribute or no stride
     /// was given: a pipeline with no vertex layout could only be driven by a
     /// shader that indexes a raw buffer itself, which is a second way to write

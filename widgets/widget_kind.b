@@ -22,6 +22,12 @@ pub enum WidgetKind {
     combo_box
     scroll_view
     radio_button
+    /// Somewhere a program draws for itself, with a shader.
+    ///
+    /// A control on every host — laid out by the solver, in the tree, with an
+    /// accessibility role — and on the hosts with no GPU it is simply an empty
+    /// area rather than a missing one. `gpu.Device` is what fills it.
+    canvas
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -39,6 +45,7 @@ pub enum WidgetKind {
             combo_box => host.W_COMBO_BOX,
             scroll_view => host.W_SCROLL_VIEW,
             radio_button => host.W_RADIO_BUTTON,
+            canvas => host.W_CANVAS,
         }
     }
 
@@ -58,6 +65,7 @@ pub enum WidgetKind {
             combo_box => "ComboBox",
             scroll_view => "ScrollView",
             radio_button => "RadioButton",
+            canvas => "Canvas",
         }
     }
 
@@ -75,6 +83,7 @@ pub enum WidgetKind {
         if code == host.W_COMBO_BOX { return some(WidgetKind.combo_box) }
         if code == host.W_SCROLL_VIEW { return some(WidgetKind.scroll_view) }
         if code == host.W_RADIO_BUTTON { return some(WidgetKind.radio_button) }
+        if code == host.W_CANVAS { return some(WidgetKind.canvas) }
         return none
     }
 }

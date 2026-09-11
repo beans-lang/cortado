@@ -16,6 +16,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // computed every frame.
             widget = gtk_fixed_new();
             break;
+        // A canvas is a plain view, and that is the whole of it here: the
+        // platform lays it out and shows it, and everything inside is the
+        // program's. On a host with no GPU nothing ever draws into it, and
+        // an empty area is the honest shape for that.
+        case CTD_W_CANVAS:
+            widget = gtk_fixed_new();
+            break;
         case CTD_W_LABEL:
             widget = gtk_label_new("");
             gtk_label_set_xalign(GTK_LABEL(widget), 0.0f);

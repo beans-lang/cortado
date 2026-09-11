@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 5
+pub const ABI_VERSION: int = 6
 
 // ---- statuses ----
 
@@ -90,6 +90,7 @@ pub const W_TEXT_AREA: int = 9
 pub const W_COMBO_BOX: int = 10
 pub const W_SCROLL_VIEW: int = 11
 pub const W_RADIO_BUTTON: int = 12
+pub const W_CANVAS: int = 13
 
 // ---- property keys ----
 
@@ -174,3 +175,8 @@ pub const SHAPE_TRIANGLE_STRIP: int = 1
 pub const SHAPE_LINES: int = 2
 pub const SHAPE_LINE_STRIP: int = 3
 pub const SHAPE_POINTS: int = 4
+
+// Which pixels a pipeline writes: an off-screen target's 8-bit RGBA, or
+// whatever this platform's compositor shows a canvas in.
+pub const PIXELS_RGBA8: int = 0
+pub const PIXELS_SCREEN: int = 1

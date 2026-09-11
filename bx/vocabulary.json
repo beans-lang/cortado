@@ -41,7 +41,7 @@
   "reservedAttributes": [
     {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position."}
   ],
-  "controls": ["Box", "Button", "CheckBox", "ComboBox", "Container", "Grid", "HFlex", "HStack", "Image", "Label", "ProgressBar", "RadioButton", "ScrollView", "Separator", "Slider", "TextArea", "TextField", "VFlex", "VStack"],
+  "controls": ["Box", "Button", "Canvas", "CheckBox", "ComboBox", "Container", "Grid", "HFlex", "HStack", "Image", "Label", "ProgressBar", "RadioButton", "ScrollView", "Separator", "Slider", "TextArea", "TextField", "VFlex", "VStack"],
   "attributes": [
     {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
     {"name": "alignment", "detail": "number", "note": "text alignment inside the control"},

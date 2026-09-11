@@ -1,0 +1,14 @@
+-- the control --
+  it is a Canvas on every host: true
+  a screen reader calls it a group
+-- what happened, against what the capability promised --
+  a GPU attaches to a canvas: true
+  it hands back a frame: true
+  the frame is at least the size of the control: true
+  what the shader wrote is what reads back: true
+  and again the next frame: true
+  presenting an off-screen pass is refused: true
+-- refusals --
+  a GPU never gets attached to a button: true
+  and where there is one, it says which widget is wrong: true
+drove=true

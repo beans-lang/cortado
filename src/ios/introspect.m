@@ -31,6 +31,11 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_COMBO_BOX:    role = @"combobox";    break;
         case CTD_W_SCROLL_VIEW:  role = @"scrollarea";  break;
         case CTD_W_RADIO_BUTTON: role = @"radio";       break;
+        // The vocabulary has no word for "a program draws its own
+        // pixels here", and inventing one would be a word no screen
+        // reader knows. A group is what it is: an area with content, and
+        // a canvas that matters to a user gets a label beside it.
+        case CTD_W_CANVAS:       role = @"group";       break;
         default:                 role = @"group";       break;
     }
     return ctd_copy_out(role, out, cap);

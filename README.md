@@ -593,6 +593,52 @@ every backend has these three and means the same by them, and a factor pair is
 eight enums to combine correctly, unchecked, to arrive at one of these three
 anyway.
 
+### A canvas on screen
+
+A GPU target is an off-screen image. To put one in a window there is a widget:
+
+```beans
+var plot: widgets.Canvas = new widgets.Canvas()
+var paint: gpu.Canvas = gpu.Canvas.on(plot.handle(), card)?
+
+clock.start(1, fn(frame: motion.Frame) {
+    match paint.next() {                       // the frame it is about to show
+        ok(surface) => {
+            var draw: gpu.Pass = surface.begin(0.0, 0.0, 0.0, 1.0)?
+            draw.pipeline(line)?               // built for Pixels.screen
+            draw.vertices(quad)?
+            draw.uniform([frame.elapsed])?
+            draw.draw(gpu.Shape.triangles, 0, 6)?
+            draw.present()?                    // hands it over, does not wait
+        }
+        err(problem) => {}                     // no drawable free this instant
+    }
+})?
+```
+
+`examples/canvas.b` is this, with a plasma shader in it and a Quit button.
+
+**`Canvas` is an ordinary control.** The solver lays it out, it sits in the
+tree, it has an accessibility role, and it is a row in `tests/roles.out` on all
+four hosts. On a host with no GPU it is an empty area rather than a missing
+one, which is the honest shape for a control whose contents were never the
+platform's to draw. Attaching a GPU to something that is *not* a canvas is
+`wrong_widget` on every host, checked before the host considers whether it has
+a GPU at all — "this is not a canvas" is your bug and "this platform has no
+GPU" is not.
+
+**Three calls a frame, driven by the frame clock.** A canvas is shown when the
+display shows it; drawing outside a frame is drawing the platform will not put
+up. `present` hands the work to the compositor and returns — where `finish`
+would wait, which is right before a readback and wrong sixty times a second.
+
+**A canvas frame is a `Target` like any other**, so `read()` works on it. That
+is deliberate: it is the one control whose contents no other call can see, and
+a canvas you cannot read is a canvas whose test is somebody looking at it. It
+costs a little — the drawable gives up lossless compression to be readable —
+and if that ever shows, the way out is a flag on attach, not a silently
+unreadable canvas.
+
 ### What the tests can say
 
 `tests/gpu.out` is the same bytes through all four hosts, and the two sides run
