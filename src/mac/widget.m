@@ -34,6 +34,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_LINK:
         case CTD_W_SEGMENTED:
         case CTD_W_GROUP_BOX:
+        case CTD_W_DATE_PICKER:
+        case CTD_W_COLOR_WELL:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -215,6 +217,30 @@ ctd_handle ctd_widget_new(int32_t kind) {
             ctd_tag(content);
             [content release];
             view = group;
+            break;
+        }
+        case CTD_W_DATE_PICKER: {
+            NSDatePicker *picker = [[NSDatePicker alloc] initWithFrame:NSZeroRect];
+            // A day, not an instant — the rule stated beside CTD_W_DATE_PICKER
+            // in the header. AppKit would happily show hours and minutes;
+            // GtkCalendar has nowhere to put them, so cortado does not ask for
+            // them anywhere.
+            [picker setDatePickerElements:NSDatePickerElementFlagYearMonthDay];
+            [picker setDatePickerStyle:NSDatePickerStyleTextFieldAndStepper];
+            // UTC, so the number that crosses the ABI means the same day on a
+            // machine in Auckland and one in Los Angeles. A picker left in the
+            // local zone would read back a different day either side of
+            // midnight, on one host only.
+            [picker setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
+            [picker setCalendar:[NSCalendar calendarWithIdentifier:NSCalendarIdentifierGregorian]];
+            [picker setDateValue:[NSDate dateWithTimeIntervalSince1970:0.0]];
+            view = picker;
+            break;
+        }
+        case CTD_W_COLOR_WELL: {
+            NSColorWell *well = [[NSColorWell alloc] initWithFrame:NSZeroRect];
+            [well setColor:[NSColor colorWithSRGBRed:0.0 green:0.0 blue:0.0 alpha:1.0]];
+            view = well;
             break;
         }
         case CTD_W_LINK: {

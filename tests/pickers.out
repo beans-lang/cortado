@@ -1,0 +1,25 @@
+-- a date picker holds a day --
+  every platform cortado builds for has one: true
+  any instant in a day names that day: true
+  and what comes back is always a midnight: true
+  a second before the epoch is the day before it: true
+  10,000 consecutive days each read back the day written: true
+  a day the user picks raises value_changed: true
+  and the event carries the day, not the instant: true
+  a day the program writes raises nothing: true
+-- a colour well holds four bytes --
+  every platform cortado builds for has one: true
+  all 256 levels of every channel come back unchanged: true
+  red is red and not alpha: rgba(255,0,0,255)
+  and packs into the high byte: true
+  a partly transparent colour keeps its alpha: rgba(0,128,255,64)
+  a number above 0xFFFFFFFF is refused: true
+  and a negative one: true
+  a colour the user picks raises value_changed: true
+  and the event carries the packed colour: true
+  a colour the program writes raises nothing: true
+-- and no other control carries either --
+  every kind this platform builds was asked: true
+  only a date picker takes a day: true
+  only a colour well takes a colour: true
+drove=true

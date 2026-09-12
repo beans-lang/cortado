@@ -49,6 +49,14 @@ void ctd_emit_control(ctd_handle target, id sender) {
     } else if ([sender isKindOfClass:[UISwitch class]]) {
         kind = CTD_EV_VALUE_CHANGED;
         index = [(UISwitch *)sender isOn] ? 1 : 0;
+    } else if ([sender isKindOfClass:[UIDatePicker class]]) {
+        // The day, as the same whole number of seconds CTD_P_DATE carries.
+        kind = CTD_EV_VALUE_CHANGED;
+        index = (int64_t)ctd_date_floor(
+            [[(UIDatePicker *)sender date] timeIntervalSince1970]);
+    } else if ([sender isKindOfClass:[UIColorWell class]]) {
+        kind = CTD_EV_VALUE_CHANGED;
+        index = ctd_ui_color_packed([(UIColorWell *)sender selectedColor]);
     } else if ([sender isKindOfClass:[UITextField class]]) {
         kind = CTD_EV_TEXT_COMMIT;
         text = [(UITextField *)sender text];

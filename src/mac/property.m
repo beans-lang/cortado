@@ -174,6 +174,20 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             [(NSView *)object setHidden:value ? YES : NO];
             return CTD_OK;
+        case CTD_P_COLOR: {
+            if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            // sRGB by name. NSColor has a dozen colour spaces and the one a
+            // well is left in is the user's display profile, which is not the
+            // space 0xRRGGBBAA names — a byte written on a wide-gamut screen
+            // would come back as a different byte.
+            [(NSColorWell *)object setColor:
+                [NSColor colorWithSRGBRed:ctd_color_red(value)   / 255.0
+                                    green:ctd_color_green(value) / 255.0
+                                     blue:ctd_color_blue(value)  / 255.0
+                                    alpha:ctd_color_alpha(value) / 255.0]];
+            return CTD_OK;
+        }
         case CTD_P_CHECKED: {
             // By kind, not by class. AppKit makes a push button, a check box
             // and a radio out of one class, so asking the object said yes to
@@ -257,6 +271,17 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_HIDDEN:
             value = [(NSView *)object isHidden] ? 1 : 0;
             break;
+        case CTD_P_COLOR: {
+            if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSColor *shown = [[(NSColorWell *)object color]
+                colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+            if (!shown) return CTD_ERR_UNSUPPORTED;
+            value = ctd_color_pack(ctd_color_byte([shown redComponent]),
+                                   ctd_color_byte([shown greenComponent]),
+                                   ctd_color_byte([shown blueComponent]),
+                                   ctd_color_byte([shown alphaComponent]));
+            break;
+        }
         case CTD_P_CHECKED: {
             if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             // NSSwitch and NSButton both answer -state, and neither inherits
@@ -361,6 +386,12 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             [ranged setDoubleValue:value];
             return CTD_OK;
         }
+        case CTD_P_DATE: {
+            if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            [(NSDatePicker *)object
+                setDateValue:[NSDate dateWithTimeIntervalSince1970:ctd_date_floor(value)]];
+            return CTD_OK;
+        }
         case CTD_P_STEP: {
             if ([object isKindOfClass:[NSStepper class]]) {
                 // A stepper with no increment is two arrows that do nothing,
@@ -419,6 +450,14 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             value = [ranged doubleValue];
             break;
         }
+        case CTD_P_DATE:
+            if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            // Floored again on the way out, not trusted from the way in: a
+            // user who picks a day through the control writes it themselves,
+            // and this is the only place that answer is made to agree with the
+            // one a program wrote.
+            value = ctd_date_floor([[(NSDatePicker *)object dateValue] timeIntervalSince1970]);
+            break;
         case CTD_P_STEP:
             // Only a stepper reads one back. A slider's step is tick marks,
             // and a count of ticks is not the increment that was asked for —

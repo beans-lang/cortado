@@ -164,6 +164,8 @@ fn attribute_note(name: string) -> string {
     if name == "step" { return "the increment a slider's thumb lands on; 0 for continuous" }
     if name == "selected" { return "which item of a list is chosen, as an index; -1 for none" }
     if name == "indeterminate" { return "a progress bar with no known total" }
+    if name == "day" { return "the day a date picker shows, in seconds since 1970-01-01 UTC" }
+    if name == "color" { return "a colour well's colour, written #rgb, #rrggbb or #rrggbbaa" }
     return ""
 }
 

@@ -52,6 +52,11 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_LINK:         role = @"link";        break;
         case CTD_W_SEGMENTED:    role = @"radiogroup";   break;
         case CTD_W_GROUP_BOX:    role = @"group";        break;
+        // The same two words the Mac answers, and for the same reasons — see
+        // the note in src/mac/introspect.m. A role that differed per platform
+        // would make tests/roles.out a description of this machine.
+        case CTD_W_DATE_PICKER:  role = @"spinbutton";    break;
+        case CTD_W_COLOR_WELL:   role = @"button";        break;
         default:                 role = @"group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -111,7 +116,17 @@ ctd_status ctd_widget_activate(ctd_handle widget) {
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
-    if ([object isKindOfClass:[UIStepper class]]) {
+    if ([object isKindOfClass:[UIDatePicker class]]) {
+        [(UIDatePicker *)object
+            setDate:[NSDate dateWithTimeIntervalSince1970:ctd_date_floor(value)]];
+    } else if ([object isKindOfClass:[UIColorWell class]]) {
+        if (!ctd_color_in_range(index)) return CTD_ERR_RANGE;
+        [(UIColorWell *)object setSelectedColor:
+            [UIColor colorWithRed:ctd_color_red(index)   / 255.0
+                            green:ctd_color_green(index) / 255.0
+                             blue:ctd_color_blue(index)  / 255.0
+                            alpha:ctd_color_alpha(index) / 255.0]];
+    } else if ([object isKindOfClass:[UIStepper class]]) {
         [(UIStepper *)object setValue:value];
     } else if ([object isKindOfClass:[UISlider class]]) {
         [(UISlider *)object setValue:(float)value];

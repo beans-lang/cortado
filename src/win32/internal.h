@@ -168,6 +168,16 @@ int32_t ctd_link_words_out(ctd_handle widget, char *out, int32_t cap);
 const WCHAR *ctd_link_target(ctd_handle widget);
 void ctd_table_disp_info(NMLVDISPINFOW *info);
 void ctd_table_item_changed(NMLISTVIEW *info);
+
+// A day, both ways, between CTD_P_DATE's seconds and a SYSTEMTIME.
+//
+// Only the year, month and day cross, which is what makes the conversion
+// arithmetic rather than a time-zone question: SystemTimeToFileTime and its
+// relatives would put the machine's own offset into the number cortado
+// answers, and a date picker in Auckland would read back a different day from
+// one in Los Angeles for the same write.
+void ctd_date_to_system(double seconds, SYSTEMTIME *out);
+double ctd_date_from_system(const SYSTEMTIME *given);
 void ctd_emit_control(ctd_handle target);
 void ctd_give_back(uint32_t slot);
 // WM_TIMER on a surface, handed to the frame clock. Declared here because the

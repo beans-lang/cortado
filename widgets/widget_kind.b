@@ -58,6 +58,18 @@ pub enum WidgetKind {
     /// A titled box around a group of controls, and **not on every
     /// platform**: UIKit has nothing that means it.
     group_box
+    /// A day, picked from a calendar.
+    ///
+    /// A *day* and not an instant, which is cortado's decision rather than any
+    /// platform's: `NSDatePicker`, `UIDatePicker` and `SysDateTimePick32` can
+    /// all show a time and `GtkCalendar` is a grid of squares with nowhere to
+    /// put one. A kind whose value round-trips an afternoon on three platforms
+    /// and loses it on the fourth is found by a user rather than by a gate.
+    date_picker
+    /// A colour, and a way to pick another — and **not on every platform**:
+    /// the Win32 common controls have no colour well. `ChooseColor` is a
+    /// dialog, which is a different control.
+    color_well
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -86,6 +98,8 @@ pub enum WidgetKind {
             link => host.W_LINK,
             segmented => host.W_SEGMENTED,
             group_box => host.W_GROUP_BOX,
+            date_picker => host.W_DATE_PICKER,
+            color_well => host.W_COLOR_WELL,
         }
     }
 
@@ -116,6 +130,8 @@ pub enum WidgetKind {
             link => "Link",
             segmented => "Segmented",
             group_box => "GroupBox",
+            date_picker => "DatePicker",
+            color_well => "ColorWell",
         }
     }
 
@@ -164,6 +180,8 @@ pub enum WidgetKind {
             link => { return false }
             segmented => { return false }
             group_box => { return false }
+            date_picker => { return false }
+            color_well => { return false }
         }
     }
 
@@ -227,6 +245,8 @@ pub enum WidgetKind {
         every.push(WidgetKind.link)
         every.push(WidgetKind.segmented)
         every.push(WidgetKind.group_box)
+        every.push(WidgetKind.date_picker)
+        every.push(WidgetKind.color_well)
         return move every
     }
 
@@ -255,6 +275,8 @@ pub enum WidgetKind {
         if code == host.W_LINK { return some(WidgetKind.link) }
         if code == host.W_SEGMENTED { return some(WidgetKind.segmented) }
         if code == host.W_GROUP_BOX { return some(WidgetKind.group_box) }
+        if code == host.W_DATE_PICKER { return some(WidgetKind.date_picker) }
+        if code == host.W_COLOR_WELL { return some(WidgetKind.color_well) }
         return none
     }
 }

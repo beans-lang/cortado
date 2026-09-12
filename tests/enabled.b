@@ -57,6 +57,8 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         stepper => { return true }
         combo_box => { return true }
         segmented => { return true }
+        date_picker => { return true }
+        color_well => { return true }
         container => { return false }
         label => { return false }
         image_view => { return false }

@@ -84,6 +84,16 @@ int ctd_has_nul(const char *utf8, int32_t len);
 int32_t ctd_copy_out(NSString *text, char *out, int32_t cap);
 int32_t ctd_slot_kind(ctd_handle handle);
 void ctd_emit_control(ctd_handle target, id sender);
+
+// A UIColor as CTD_P_COLOR carries it, 0xRRGGBBAA.
+//
+// Here rather than beside the property because three files need it — the
+// setter, the getter and the event — and a colour unpacked three ways is the
+// sort of thing that looks right until somebody uses a colour that is not
+// grey. Extended sRGB, because a UIColor built from a P3 literal reports
+// components outside 0..1 and ctd_color_byte clamps them to the nearest sRGB
+// byte, which is the colour cortado promised to carry.
+int64_t ctd_ui_color_packed(UIColor *color);
 void ctd_give_back(uint32_t slot);
 // Forgets the clock a slot may have had, before the slot is handed out again.
 // Declared here rather than in the clock's own file because the handle table

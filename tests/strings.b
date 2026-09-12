@@ -26,6 +26,8 @@ fn goes_somewhere(kind: widgets.WidgetKind) -> bool {
         link => { return true }
         segmented => { return false }
         group_box => { return false }
+        date_picker => { return false }
+        color_well => { return false }
         text_field => { return false }
         secure_field => { return false }
         search_field => { return false }
@@ -82,6 +84,8 @@ fn shows_a_hint(kind: widgets.WidgetKind) -> bool {
         link => { return false }
         segmented => { return false }
         group_box => { return false }
+        date_picker => { return false }
+        color_well => { return false }
     }
 }
 

@@ -97,4 +97,14 @@ void ctd_on_signal(GtkWidget *widget, gpointer user);
 void ctd_on_notify(GObject *object, GParamSpec *pspec, gpointer user);
 void ctd_tag(GtkWidget *widget);
 
+// A GtkCalendar's day as CTD_P_DATE carries it, and the way back.
+//
+// Only the year, month and day cross: GtkCalendar's GDateTime is in the local
+// zone, and reading its seconds would make the number cortado answers depend
+// on where the machine is. Building a fresh UTC midnight from the three
+// numbers it does hold is the whole conversion, and it is the same day on
+// every machine.
+double ctd_calendar_seconds(GtkCalendar *calendar);
+void   ctd_calendar_set_seconds(GtkCalendar *calendar, double seconds);
+
 #endif

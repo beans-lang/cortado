@@ -81,6 +81,23 @@ void ctd_emit_control(ctd_handle target, id sender) {
         kind = CTD_EV_VALUE_CHANGED;
         index = (int64_t)[(NSPopUpButton *)sender indexOfSelectedItem];
         text = [(NSPopUpButton *)sender titleOfSelectedItem];
+    } else if ([sender isKindOfClass:[NSDatePicker class]]) {
+        // The day, as the same whole number of seconds CTD_P_DATE carries. A
+        // date is an integer there and an integer here, so a handler can read
+        // `index` without going back to the control — which matters, because
+        // by the time a handler runs the user may have moved it again.
+        kind = CTD_EV_VALUE_CHANGED;
+        index = (int64_t)ctd_date_floor(
+            [[(NSDatePicker *)sender dateValue] timeIntervalSince1970]);
+    } else if ([sender isKindOfClass:[NSColorWell class]]) {
+        kind = CTD_EV_VALUE_CHANGED;
+        NSColor *shown = [[(NSColorWell *)sender color]
+            colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+        index = shown ? ctd_color_pack(ctd_color_byte([shown redComponent]),
+                                       ctd_color_byte([shown greenComponent]),
+                                       ctd_color_byte([shown blueComponent]),
+                                       ctd_color_byte([shown alphaComponent]))
+                      : 0;
     } else if ([sender isKindOfClass:[NSTextField class]]) {
         kind = CTD_EV_TEXT_COMMIT;
         text = [(NSTextField *)sender stringValue];

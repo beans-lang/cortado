@@ -7,6 +7,54 @@
 
 #include "internal.h"
 
+// Declared in internal.h; the note there says why only y/m/d cross.
+//
+// The civil-date arithmetic is Howard Hinnant's, which is the one every
+// standard library uses: it is exact for every year a 64-bit day count can
+// name, and it is correct on both sides of the epoch — which matters here,
+// because a date picker set to 1969 is as valid as one set to 2026 and the
+// naive form of this conversion is off by a day for every date before 1970.
+static int64_t ctd_days_from_civil(int64_t y, unsigned m, unsigned d) {
+    y -= m <= 2;
+    int64_t era = (y >= 0 ? y : y - 399) / 400;
+    unsigned yoe = (unsigned)(y - era * 400);
+    unsigned doy = (153u * (m + (m > 2 ? -3u : 9u)) + 2u) / 5u + d - 1u;
+    unsigned doe = yoe * 365u + yoe / 4u - yoe / 100u + doy;
+    return era * 146097 + (int64_t)doe - 719468;
+}
+
+static void ctd_civil_from_days(int64_t z, int *year, unsigned *month, unsigned *day) {
+    z += 719468;
+    int64_t era = (z >= 0 ? z : z - 146096) / 146097;
+    unsigned doe = (unsigned)(z - era * 146097);
+    unsigned yoe = (doe - doe / 1460u + doe / 36524u - doe / 146096u) / 365u;
+    int64_t y = (int64_t)yoe + era * 400;
+    unsigned doy = doe - (365u * yoe + yoe / 4u - yoe / 100u);
+    unsigned mp = (5u * doy + 2u) / 153u;
+    unsigned d = doy - (153u * mp + 2u) / 5u + 1u;
+    unsigned m = mp + (mp < 10u ? 3u : (unsigned)-9);
+    *year = (int)(y + (m <= 2u));
+    *month = m;
+    *day = d;
+}
+
+void ctd_date_to_system(double seconds, SYSTEMTIME *out) {
+    int year = 1970;
+    unsigned month = 1, day = 1;
+    int64_t whole = (int64_t)ctd_date_floor(seconds) / 86400;
+    ctd_civil_from_days(whole, &year, &month, &day);
+    memset(out, 0, sizeof *out);
+    out->wYear = (WORD)year;
+    out->wMonth = (WORD)month;
+    out->wDay = (WORD)day;
+}
+
+double ctd_date_from_system(const SYSTEMTIME *given) {
+    return (double)ctd_days_from_civil((int64_t)given->wYear,
+                                       (unsigned)given->wMonth,
+                                       (unsigned)given->wDay) * 86400.0;
+}
+
 ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
     HWND view = ctd_window(widget);
     if (!view) return CTD_ERR_STALE;
@@ -296,6 +344,13 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             }
             if (kind == CTD_W_STEPPER) return ctd_stepper_set(view, slot, value);
             return CTD_ERR_KIND;
+        case CTD_P_DATE: {
+            if (!ctd_kind_has_date(kind)) return CTD_ERR_KIND;
+            SYSTEMTIME when;
+            ctd_date_to_system(value, &when);
+            SendMessageW(view, DTM_SETSYSTEMTIME, GDT_VALID, (LPARAM)&when);
+            return CTD_OK;
+        }
         case CTD_P_STEP:
             if (kind == CTD_W_STEPPER) {
                 if (value <= 0.0) return CTD_ERR_RANGE;
@@ -384,6 +439,14 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
                 value = ctd_stepper_value(view, slot);
             } else return CTD_ERR_KIND;
             break;
+        case CTD_P_DATE: {
+            if (!ctd_kind_has_date(kind)) return CTD_ERR_KIND;
+            SYSTEMTIME shown;
+            if (SendMessageW(view, DTM_GETSYSTEMTIME, 0, (LPARAM)&shown) != GDT_VALID)
+                return CTD_ERR_UNSUPPORTED;
+            value = ctd_date_from_system(&shown);
+            break;
+        }
         case CTD_P_STEP:
             // A stepper and nothing else — the paragraph beside CTD_P_STEP in
             // the header says why a slider's is write-only. This host *could*

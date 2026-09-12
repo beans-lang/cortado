@@ -37,6 +37,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SPINNER:
         case CTD_W_LINK:
         case CTD_W_SEGMENTED:
+        case CTD_W_DATE_PICKER:
+        case CTD_W_COLOR_WELL:
             return 1;
         case CTD_W_GROUP_BOX:
             // UIKit has nothing that means "a titled frame around a group".
@@ -125,6 +127,29 @@ ctd_handle ctd_widget_new(int32_t kind) {
                 [[UISegmentedControl alloc] initWithItems:@[]];
             [bar setFrame:CGRectZero];
             view = bar;
+            break;
+        }
+        case CTD_W_DATE_PICKER: {
+            UIDatePicker *picker = [[UIDatePicker alloc] initWithFrame:CGRectZero];
+            // A day, the rule beside CTD_W_DATE_PICKER in the header — and
+            // UTC, so the number that crosses means the same day wherever the
+            // phone is. A picker left in the device's zone reads back a
+            // different day either side of midnight.
+            [picker setDatePickerMode:UIDatePickerModeDate];
+            [picker setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
+            [picker setCalendar:[NSCalendar calendarWithIdentifier:NSCalendarIdentifierGregorian]];
+            // Compact rather than the wheel: an inline calendar is 320 points
+            // tall and would be the one control in cortado whose measured size
+            // ignores the space the solver gave it.
+            [picker setPreferredDatePickerStyle:UIDatePickerStyleCompact];
+            [picker setDate:[NSDate dateWithTimeIntervalSince1970:0.0]];
+            view = picker;
+            break;
+        }
+        case CTD_W_COLOR_WELL: {
+            UIColorWell *well = [[UIColorWell alloc] initWithFrame:CGRectZero];
+            [well setSelectedColor:[UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:1.0]];
+            view = well;
             break;
         }
         case CTD_W_LINK: {

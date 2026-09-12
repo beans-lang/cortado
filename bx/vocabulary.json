@@ -41,12 +41,14 @@
   "reservedAttributes": [
     {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position."}
   ],
-  "controls": ["Box", "Button", "Canvas", "CheckBox", "ComboBox", "Container", "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "Stepper", "Switch", "Table", "TextArea", "TextField", "VFlex", "VStack"],
+  "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "Stepper", "Switch", "Table", "TextArea", "TextField", "VFlex", "VStack"],
   "attributes": [
     {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
     {"name": "alignment", "detail": "number", "note": "text alignment inside the control"},
     {"name": "basis", "detail": "number", "note": "main-axis size to grow or shrink from"},
     {"name": "checked", "detail": "flag", "note": "a check box's state"},
+    {"name": "color", "detail": "word", "note": "a colour well's colour, written #rgb, #rrggbb or #rrggbbaa"},
+    {"name": "day", "detail": "number", "note": "the day a date picker shows, in seconds since 1970-01-01 UTC"},
     {"name": "editable", "detail": "flag", "note": "whether a field accepts typing"},
     {"name": "enabled", "detail": "flag", "note": "whether the control responds"},
     {"name": "font_size", "detail": "number", "note": "text size in points"},

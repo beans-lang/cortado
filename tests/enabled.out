@@ -22,6 +22,8 @@ Spinner has none
 Link has none
 Segmented has an enabled state
 GroupBox has none
+DatePicker has an enabled state
+ColorWell has an enabled state
 -- and what this platform does --
   every control it builds was asked: true
   and every one of them obeys the rule above: true

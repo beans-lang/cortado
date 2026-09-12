@@ -54,6 +54,8 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "Link" { return true }
     if tag == "Segmented" { return true }
     if tag == "GroupBox" { return true }
+    if tag == "DatePicker" { return true }
+    if tag == "ColorWell" { return true }
     return false
 }
 
@@ -120,7 +122,8 @@ pub fn attribute_call(name: string) -> string {
     if name == "text" { return "text" }
     if is_boolean_attribute(name) { return "flag" }
     if name == "min" || name == "max" || name == "value" ||
-       name == "font_size" || name == "step" || name == "opacity" {
+       name == "font_size" || name == "step" || name == "opacity" ||
+       name == "day" {
         return "number"
     }
     if name == "alignment" || name == "selected" { return "number" }
@@ -129,13 +132,18 @@ pub fn attribute_call(name: string) -> string {
        name == "width" || name == "height" {
         return "number"
     }
-    if name == "align" || name == "justify" { return "word" }
+    // A colour is a word here — `color="#ff8800"` — and a whole number by the
+    // time it reaches the ABI. `Builder.word` is where the one becomes the
+    // other, so the hex spelling is parsed in exactly one place and `#abc`
+    // means the same thing in markup as it does in a shader.
+    if name == "align" || name == "justify" || name == "color" { return "word" }
     return ""
 }
 
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
 pub fn attribute_names() -> List<string> {
-    return ["align", "alignment", "basis", "checked", "editable", "enabled",
+    return ["align", "alignment", "basis", "checked", "color", "day",
+            "editable", "enabled",
             "font_size", "grow", "height", "hidden", "indeterminate",
             "justify", "margin", "max", "min", "opacity", "padding",
             "selected", "shrink", "spacing", "step", "text", "value", "width"]
@@ -143,7 +151,8 @@ pub fn attribute_names() -> List<string> {
 
 /// Every control tag, for the same reason.
 pub fn widget_tags() -> List<string> {
-    return ["Box", "Button", "Canvas", "CheckBox", "ComboBox", "Container",
+    return ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox",
+            "Container", "DatePicker",
             "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label",
             "LevelIndicator", "Link",
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",

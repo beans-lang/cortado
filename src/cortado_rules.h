@@ -38,7 +38,9 @@ static inline int ctd_kind_has_enabled(int32_t kind) {
         || kind == CTD_W_SLIDER
         || kind == CTD_W_STEPPER
         || kind == CTD_W_COMBO_BOX
-        || kind == CTD_W_SEGMENTED;
+        || kind == CTD_W_SEGMENTED
+        || kind == CTD_W_DATE_PICKER
+        || kind == CTD_W_COLOR_WELL;
 }
 
 /* Whether a kind shows words while it is empty.
@@ -69,6 +71,77 @@ static inline int ctd_kind_has_range(int32_t kind) {
         || kind == CTD_W_STEPPER
         || kind == CTD_W_PROGRESS_BAR
         || kind == CTD_W_LEVEL_INDICATOR;
+}
+
+/* Whether a kind carries a day. Only a date picker. */
+static inline int ctd_kind_has_date(int32_t kind) {
+    return kind == CTD_W_DATE_PICKER;
+}
+
+/* Whether a kind carries a colour. Only a colour well.
+ *
+ * Not the same question as CTD_P_BG_COLOR would be, if it existed: a colour
+ * well's colour is its *value*, the thing the user changes, and every other
+ * control's colour would be its appearance. */
+static inline int ctd_kind_has_color(int32_t kind) {
+    return kind == CTD_W_COLOR_WELL;
+}
+
+/* Midnight UTC of the day `seconds` falls in.
+ *
+ * The rule stated beside CTD_W_DATE_PICKER: a date picker holds a day, so a
+ * host floors on the way in and every host answers the same number. Written
+ * here rather than four times because four floors is four chances to round the
+ * wrong way on a negative number — which is the case that bites, since
+ * truncating -1 toward zero gives 1969-12-31T00:00 the value of 1970-01-01 and
+ * loses a day. This one floors toward minus infinity, so the day before the
+ * epoch is the day before the epoch. */
+static inline double ctd_date_floor(double seconds) {
+    double day = 86400.0;
+    double days = seconds / day;
+    double whole = (double)(long long)days;
+    if (days < 0.0 && whole != days) whole -= 1.0;
+    return whole * day;
+}
+
+/* Whether `value` is a colour CTD_P_COLOR can hold: 0xRRGGBBAA and nothing
+ * above it. */
+static inline int ctd_color_in_range(int64_t value) {
+    return value >= 0 && value <= 0xFFFFFFFFLL;
+}
+
+/* The four channels of a packed colour, and the way back.
+ *
+ * Here rather than in four hosts because a shift written four times is four
+ * chances to spell the order differently, and a host that read alpha out of
+ * the top byte would look right in every test that used an opaque colour.
+ *
+ * `ctd_color_byte` rounds rather than truncates, and it is worth being precise
+ * about why, because the obvious reason is not true: a byte written as
+ * v/255.0 and read back comes out as v either way, through a float or a
+ * double, for all 256 values. Measured, not assumed.
+ *
+ * Rounding is for the colours cortado did not write. A colour the *user* picks
+ * out of the platform's chooser is an arbitrary triple — often in Display P3,
+ * converted into sRGB on the way out — and truncating one is a systematic
+ * half-a-level bias toward black on every channel of every such colour.
+ * Nothing in a headless suite can produce one, so this is a rule kept because
+ * it is right rather than because a golden would catch it. */
+static inline int32_t ctd_color_red(int64_t c)   { return (int32_t)((c >> 24) & 0xFF); }
+static inline int32_t ctd_color_green(int64_t c) { return (int32_t)((c >> 16) & 0xFF); }
+static inline int32_t ctd_color_blue(int64_t c)  { return (int32_t)((c >>  8) & 0xFF); }
+static inline int32_t ctd_color_alpha(int64_t c) { return (int32_t)( c        & 0xFF); }
+
+static inline int32_t ctd_color_byte(double unit) {
+    double scaled = unit * 255.0 + 0.5;
+    if (scaled <= 0.0) return 0;
+    if (scaled >= 255.0) return 255;
+    return (int32_t)scaled;
+}
+
+static inline int64_t ctd_color_pack(int32_t r, int32_t g, int32_t b, int32_t a) {
+    return ((int64_t)(r & 0xFF) << 24) | ((int64_t)(g & 0xFF) << 16)
+         | ((int64_t)(b & 0xFF) <<  8) |  (int64_t)(a & 0xFF);
 }
 
 /* Whether a kind carries somewhere to go. Only a link. */

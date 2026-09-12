@@ -14,6 +14,35 @@ GtkTextView *ctd_text_view(gpointer object) {
     return (inner && GTK_IS_TEXT_VIEW(inner)) ? GTK_TEXT_VIEW(inner) : NULL;
 }
 
+// Declared in internal.h; the note there says why only y/m/d cross.
+double ctd_calendar_seconds(GtkCalendar *calendar) {
+    GDateTime *shown = gtk_calendar_get_date(calendar);
+    if (!shown) return 0.0;
+    GDateTime *utc = g_date_time_new_utc(g_date_time_get_year(shown),
+                                         g_date_time_get_month(shown),
+                                         g_date_time_get_day_of_month(shown),
+                                         0, 0, 0.0);
+    double seconds = utc ? (double)g_date_time_to_unix(utc) : 0.0;
+    if (utc) g_date_time_unref(utc);
+    g_date_time_unref(shown);
+    return seconds;
+}
+
+void ctd_calendar_set_seconds(GtkCalendar *calendar, double seconds) {
+    GDateTime *day = g_date_time_new_from_unix_utc((gint64)ctd_date_floor(seconds));
+    if (!day) return;
+    // Renamed in 4.20 and deprecated under the old name. Both are the same
+    // call; the guard is here rather than a pragma because cortado's GTK
+    // version is whatever the machine that builds has, and silencing the
+    // warning would keep using the old name on a system that has the new one.
+#if GTK_CHECK_VERSION(4, 20, 0)
+    gtk_calendar_set_date(calendar, day);
+#else
+    gtk_calendar_select_day(calendar, day);
+#endif
+    g_date_time_unref(day);
+}
+
 ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
@@ -28,6 +57,16 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             gtk_widget_set_visible(GTK_WIDGET(object), value ? FALSE : TRUE);
             return CTD_OK;
+        case CTD_P_COLOR: {
+            if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            GdkRGBA want = { (float)(ctd_color_red(value)   / 255.0),
+                             (float)(ctd_color_green(value) / 255.0),
+                             (float)(ctd_color_blue(value)  / 255.0),
+                             (float)(ctd_color_alpha(value) / 255.0) };
+            gtk_color_dialog_button_set_rgba(GTK_COLOR_DIALOG_BUTTON(object), &want);
+            return CTD_OK;
+        }
         case CTD_P_CHECKED: {
             // By kind, not by class. A radio is a GtkCheckButton here, and a
             // GtkCheckButton has a real third state — so asking the object
@@ -118,6 +157,17 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_HIDDEN:
             value = gtk_widget_get_visible(GTK_WIDGET(object)) ? 0 : 1;
             break;
+        case CTD_P_COLOR: {
+            if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            const GdkRGBA *shown =
+                gtk_color_dialog_button_get_rgba(GTK_COLOR_DIALOG_BUTTON(object));
+            if (!shown) return CTD_ERR_UNSUPPORTED;
+            value = ctd_color_pack(ctd_color_byte(shown->red),
+                                   ctd_color_byte(shown->green),
+                                   ctd_color_byte(shown->blue),
+                                   ctd_color_byte(shown->alpha));
+            break;
+        }
         case CTD_P_CHECKED:
             if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (GTK_IS_SWITCH(object)) {
@@ -267,6 +317,10 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
                 return CTD_OK;
             }
             return CTD_ERR_KIND;
+        case CTD_P_DATE:
+            if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            ctd_calendar_set_seconds(GTK_CALENDAR(object), value);
+            return CTD_OK;
         case CTD_P_STEP:
             if (GTK_IS_SPIN_BUTTON(object)) {
                 if (value <= 0.0) return CTD_ERR_RANGE;
@@ -351,6 +405,10 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             } else if (GTK_IS_PROGRESS_BAR(object)) {
                 value = g_progress_value[slot];
             } else return CTD_ERR_KIND;
+            break;
+        case CTD_P_DATE:
+            if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = ctd_calendar_seconds(GTK_CALENDAR(object));
             break;
         case CTD_P_STEP: {
             // Only a stepper reads one back, and only the *step* half of the

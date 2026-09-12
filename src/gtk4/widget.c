@@ -33,6 +33,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SPINNER:
         case CTD_W_LINK:
         case CTD_W_GROUP_BOX:
+        case CTD_W_DATE_PICKER:
+        case CTD_W_COLOR_WELL:
             return 1;
         case CTD_W_SEGMENTED:
             // GTK has no segmented control. A row of toggle buttons with the
@@ -111,6 +113,25 @@ ctd_handle ctd_widget_new(int32_t kind) {
             ctd_tag(inside);
             gtk_frame_set_child(GTK_FRAME(frame), inside);
             widget = frame;
+            break;
+        }
+        case CTD_W_DATE_PICKER:
+            // A grid of days, and the reason CTD_W_DATE_PICKER carries a day
+            // rather than an instant: GtkCalendar has nowhere to put an hour.
+            // A kind that round-tripped an afternoon on three platforms and
+            // lost it on the fourth would be found by a user, not a gate.
+            widget = gtk_calendar_new();
+            break;
+        case CTD_W_COLOR_WELL: {
+            // GtkColorDialogButton rather than GtkColorButton: the older one
+            // is deprecated from 4.10 and carries its own modal loop, which a
+            // headless run has nowhere to put.
+            GtkColorDialog *chooser = gtk_color_dialog_new();
+            gtk_color_dialog_set_with_alpha(chooser, TRUE);
+            // The button takes the dialog; the reference here is handed over.
+            widget = gtk_color_dialog_button_new(chooser);
+            GdkRGBA black = { 0.0, 0.0, 0.0, 1.0 };
+            gtk_color_dialog_button_set_rgba(GTK_COLOR_DIALOG_BUTTON(widget), &black);
             break;
         }
         case CTD_W_LINK:
@@ -208,6 +229,18 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // event would carry the position it is leaving. The property
             // notification is after.
             g_signal_connect(widget, "notify::active",
+                             G_CALLBACK(ctd_on_notify),
+                             (gpointer)(uintptr_t)handle);
+            break;
+        case CTD_W_DATE_PICKER:
+            g_signal_connect(widget, "day-selected", G_CALLBACK(ctd_on_signal),
+                             (gpointer)(uintptr_t)handle);
+            break;
+        case CTD_W_COLOR_WELL:
+            // A colour is a property here too, the same as a drop-down's
+            // selection — and so it needs the three-argument callback for the
+            // same reason.
+            g_signal_connect(widget, "notify::rgba",
                              G_CALLBACK(ctd_on_notify),
                              (gpointer)(uintptr_t)handle);
             break;

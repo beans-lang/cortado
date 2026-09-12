@@ -56,6 +56,13 @@ void ctd_emit_control(ctd_handle target) {
             index = (int64_t)SendMessageW(window, CB_GETCURSEL, 0, 0);
             if (index == CB_ERR) index = -1;
             break;
+        case CTD_W_DATE_PICKER: {
+            kind = CTD_EV_VALUE_CHANGED;
+            SYSTEMTIME shown;
+            if (SendMessageW(window, DTM_GETSYSTEMTIME, 0, (LPARAM)&shown) == GDT_VALID)
+                index = (int64_t)ctd_date_from_system(&shown);
+            break;
+        }
         case CTD_W_TEXT_FIELD:
         case CTD_W_SECURE_FIELD:
         case CTD_W_SEARCH_FIELD:
@@ -167,6 +174,14 @@ static LRESULT ctd_common_message(HWND window, UINT message,
                     if (where && where[0] != L'\0') {
                         ShellExecuteW(NULL, L"open", where, NULL, NULL, SW_SHOWNORMAL);
                     }
+                    return 0;
+                }
+                break;
+            }
+            if (note->code == DTN_DATETIMECHANGE) {
+                ctd_handle picker = ctd_handle_of(note->hwndFrom);
+                if (picker && ctd_slot_kind(picker) == CTD_W_DATE_PICKER) {
+                    ctd_emit_control(picker);
                     return 0;
                 }
                 break;

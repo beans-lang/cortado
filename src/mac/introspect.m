@@ -63,6 +63,14 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // ARIA: a set of buttons where one is chosen, and a titled box.
         case CTD_W_SEGMENTED:    role = @"radiogroup";   break;
         case CTD_W_GROUP_BOX:    role = @"group";        break;
+        // ARIA has no date picker, and the honest reading of its table is that
+        // a day chosen from a calendar is a spin button with three fields.
+        // Every platform underneath agrees: AXDatePicker, ATSPI "date editor"
+        // and UIA's Calendar all report something steppable.
+        case CTD_W_DATE_PICKER:  role = @"spinbutton";    break;
+        // ARIA has no colour well either. "button" is what it is: a thing you
+        // press that opens a chooser.
+        case CTD_W_COLOR_WELL:   role = @"button";        break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);
@@ -71,7 +79,19 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
-    if ([object isKindOfClass:[NSStepper class]]) {
+    if ([object isKindOfClass:[NSDatePicker class]]) {
+        // Through the rule, the same as the setter: a user picks a day from a
+        // calendar and cannot pick a quarter past one.
+        [(NSDatePicker *)object
+            setDateValue:[NSDate dateWithTimeIntervalSince1970:ctd_date_floor(value)]];
+    } else if ([object isKindOfClass:[NSColorWell class]]) {
+        if (!ctd_color_in_range(index)) return CTD_ERR_RANGE;
+        [(NSColorWell *)object setColor:
+            [NSColor colorWithSRGBRed:ctd_color_red(index)   / 255.0
+                                green:ctd_color_green(index) / 255.0
+                                 blue:ctd_color_blue(index)  / 255.0
+                                alpha:ctd_color_alpha(index) / 255.0]];
+    } else if ([object isKindOfClass:[NSStepper class]]) {
         [(NSStepper *)object setDoubleValue:value];
     } else if ([object isKindOfClass:[NSSlider class]]) {
         [(NSSlider *)object setDoubleValue:value];

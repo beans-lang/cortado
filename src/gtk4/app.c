@@ -60,6 +60,21 @@ static void ctd_emit_control(ctd_handle target) {
             kind = CTD_EV_VALUE_CHANGED;
             index = gtk_switch_get_active(GTK_SWITCH(object)) ? 1 : 0;
             break;
+        case CTD_W_DATE_PICKER:
+            kind = CTD_EV_VALUE_CHANGED;
+            index = (int64_t)ctd_calendar_seconds(GTK_CALENDAR(object));
+            break;
+        case CTD_W_COLOR_WELL: {
+            kind = CTD_EV_VALUE_CHANGED;
+            const GdkRGBA *shown =
+                gtk_color_dialog_button_get_rgba(GTK_COLOR_DIALOG_BUTTON(object));
+            index = shown ? ctd_color_pack(ctd_color_byte(shown->red),
+                                           ctd_color_byte(shown->green),
+                                           ctd_color_byte(shown->blue),
+                                           ctd_color_byte(shown->alpha))
+                          : 0;
+            break;
+        }
         case CTD_W_TEXT_FIELD:
         case CTD_W_SECURE_FIELD:
         case CTD_W_SEARCH_FIELD:

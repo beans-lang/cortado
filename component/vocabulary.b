@@ -49,6 +49,8 @@ pub class Vocabulary {
         if tag == "Link" { return some(widgets.WidgetKind.link) }
         if tag == "Segmented" { return some(widgets.WidgetKind.segmented) }
         if tag == "GroupBox" { return some(widgets.WidgetKind.group_box) }
+        if tag == "DatePicker" { return some(widgets.WidgetKind.date_picker) }
+        if tag == "ColorWell" { return some(widgets.WidgetKind.color_well) }
         return none
     }
 
@@ -81,16 +83,24 @@ pub class Vocabulary {
         if name == "selected" { return host.P_SELECTED }
         if name == "indeterminate" { return host.P_INDETERMINATE }
         if name == "opacity" { return host.P_OPACITY }
+        if name == "day" { return host.P_DATE }
+        if name == "color" { return host.P_COLOR }
         return -1
     }
 
     /// How a property's value travels.
     pub static fn kind_of_property(name: string) -> AttributeKind {
         if name == "min" || name == "max" || name == "value" ||
-           name == "font_size" || name == "step" || name == "opacity" {
+           name == "font_size" || name == "step" || name == "opacity" ||
+           name == "day" {
             return AttributeKind.real
         }
-        if name == "checked" || name == "alignment" || name == "selected" {
+        // A colour travels as a whole number, packed 0xRRGGBBAA — the same
+        // integer the ABI carries and the same one a value_changed event
+        // hands back. It is written in markup as `#rrggbbaa`, and `Builder`
+        // is what turns the one into the other.
+        if name == "checked" || name == "alignment" || name == "selected" ||
+           name == "color" {
             return AttributeKind.whole
         }
         return AttributeKind.flag

@@ -45,6 +45,11 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_LINK:         role = "link";        break;
         case CTD_W_SEGMENTED:    role = "radiogroup";   break;
         case CTD_W_GROUP_BOX:    role = "group";        break;
+        // The same two words the Apple hosts answer — see the note in
+        // src/mac/introspect.m. A role that differed per platform would make
+        // tests/roles.out a description of this machine.
+        case CTD_W_DATE_PICKER:  role = "spinbutton";    break;
+        case CTD_W_COLOR_WELL:   role = "button";        break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -80,6 +85,21 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     // The setters below are the ordinary ones, and the signal they raise is
     // the platform's own — GTK notifies on a property change whoever made it,
     // which is exactly what "as a user would" means here.
+    if (GTK_IS_CALENDAR(object)) {
+        // Through the rule, the same as the setter: a user picks a day from a
+        // calendar and cannot pick a quarter past one.
+        ctd_calendar_set_seconds(GTK_CALENDAR(object), value);
+        return CTD_OK;
+    }
+    if (GTK_IS_COLOR_DIALOG_BUTTON(object)) {
+        if (!ctd_color_in_range(index)) return CTD_ERR_RANGE;
+        GdkRGBA want = { (float)(ctd_color_red(index)   / 255.0),
+                         (float)(ctd_color_green(index) / 255.0),
+                         (float)(ctd_color_blue(index)  / 255.0),
+                         (float)(ctd_color_alpha(index) / 255.0) };
+        gtk_color_dialog_button_set_rgba(GTK_COLOR_DIALOG_BUTTON(object), &want);
+        return CTD_OK;
+    }
     if (GTK_IS_SPIN_BUTTON(object)) {
         gtk_spin_button_set_value(GTK_SPIN_BUTTON(object), value);
         return CTD_OK;

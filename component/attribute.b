@@ -2,6 +2,7 @@
 package component
 
 import cortado.host
+import cortado.widgets
 
 /// A property a component asked for, as a value that can be compared.
 ///
@@ -93,7 +94,16 @@ pub struct Attribute {
         match self.kind {
             text => { return "text=\"{self.text}\"" }
             real => { return "{property_name(self.property)}={self.number}" }
-            whole => { return "{property_name(self.property)}={self.whole}" }
+            whole => {
+                // A packed colour is the one whole number a reader cannot
+                // read. These goldens exist to be read by people, and
+                // `color=4278190335` says nothing that `rgba(255,0,0,255)`
+                // does not say better.
+                if self.property == host.P_COLOR {
+                    return "color={widgets.ColorWell.unpack(self.whole).show()}"
+                }
+                return "{property_name(self.property)}={self.whole}"
+            }
             flag => { return "{property_name(self.property)}={self.is_on()}" }
         }
     }
@@ -114,5 +124,12 @@ pub fn property_name(property: int) -> string {
     if property == host.P_EDITABLE { return "editable" }
     if property == host.P_ALIGNMENT { return "alignment" }
     if property == host.P_FONT_SIZE { return "font_size" }
+    if property == host.P_STEP { return "step" }
+    if property == host.P_SELECTED { return "selected" }
+    if property == host.P_INDETERMINATE { return "indeterminate" }
+    if property == host.P_OPACITY { return "opacity" }
+    if property == host.P_ANIMATING { return "animating" }
+    if property == host.P_DATE { return "day" }
+    if property == host.P_COLOR { return "color" }
     return "p{property}"
 }

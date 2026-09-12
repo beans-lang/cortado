@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 14
+#define CTD_ABI_VERSION 15
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -303,6 +303,21 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 /* A titled box around a group of controls. Holds children; its text is the
  * title on the frame. Not on every platform: UIKit has nothing that means it. */
 #define CTD_W_GROUP_BOX    23
+/* A day. CTD_P_DATE is which one, in seconds since 1970-01-01 UTC.
+ *
+ * **A date and not an instant**, and that is a decision rather than a
+ * limitation of any one platform. NSDatePicker and UIDatePicker can show a
+ * time, SysDateTimePick32 can show a time, and GtkCalendar cannot — it is a
+ * grid of days and has nowhere to put an hour. A kind whose value round-trips
+ * on three platforms and loses its afternoon on the fourth is the sort of
+ * difference that is found by a user rather than by a gate, so every host
+ * floors what is written to midnight UTC of the day it names, and that is what
+ * comes back. See ctd_date_floor in cortado_rules.h. */
+#define CTD_W_DATE_PICKER  24
+/* A colour, and a way to pick another. CTD_P_COLOR is which, packed
+ * 0xRRGGBBAA. Not on every platform: the Win32 common controls have no colour
+ * well — ChooseColor is a dialog, which is a different control. */
+#define CTD_W_COLOR_WELL   25
 
 /* Whether this host can build a control of this kind.
  *
@@ -461,6 +476,24 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  * for hides it — but stopping it is still the honest way to say "done", and
  * every platform has a stop. */
 #define CTD_P_ANIMATING   14
+/* Which day a date picker is showing, in seconds since 1970-01-01 UTC.
+ *
+ * A real rather than an integer because it crosses as one: ctd_set_real and
+ * ctd_get_real already exist, and 2^53 seconds is longer than the universe has
+ * been running, so nothing is lost. Written through ctd_date_floor on every
+ * host, so what comes back names midnight UTC of the day that went in.
+ *
+ * Before 1970 is a negative number and is as valid as any other; a date picker
+ * that refused 1969 would be cortado inventing a limit no platform has. */
+#define CTD_P_DATE        15
+/* The colour a colour well is showing, packed 0xRRGGBBAA in the low 32 bits.
+ *
+ * Red in the high byte, alpha in the low one, which is the order a CSS colour
+ * is written in and the order widgets/rgba.b already spells. A value with
+ * anything above the low 32 bits set is CTD_ERR_RANGE rather than a mask: a
+ * caller who computed one has a bug, and quietly dropping their high bits
+ * hides it. */
+#define CTD_P_COLOR       16
 
 /* **Which widgets carry CTD_P_ENABLED**, because leaving it unsaid cost four
  * hosts four different answers.
@@ -479,7 +512,8 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  *
  * That is CTD_W_BUTTON, CTD_W_TEXT_FIELD, CTD_W_SECURE_FIELD,
  * CTD_W_SEARCH_FIELD, CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON, CTD_W_SWITCH,
- * CTD_W_SLIDER, CTD_W_STEPPER, CTD_W_COMBO_BOX and CTD_W_SEGMENTED. Every other kind answers CTD_ERR_KIND from both
+ * CTD_W_SLIDER, CTD_W_STEPPER, CTD_W_COMBO_BOX, CTD_W_SEGMENTED,
+ * CTD_W_DATE_PICKER and CTD_W_COLOR_WELL. Every other kind answers CTD_ERR_KIND from both
  * `ctd_set_int` and `ctd_get_int`, on every host.
  *
  * A label, an image, a separator and a progress bar take no input, so there is

@@ -51,6 +51,11 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_LINK:         role = "link";        break;
         case CTD_W_SEGMENTED:    role = "radiogroup";   break;
         case CTD_W_GROUP_BOX:    role = "group";        break;
+        // The same word the other three hosts answer — see the note in
+        // src/mac/introspect.m. A role that differed per platform would make
+        // tests/roles.out a description of this machine.
+        case CTD_W_DATE_PICKER:  role = "spinbutton";    break;
+        case CTD_W_COLOR_WELL:   role = "button";        break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -91,6 +96,16 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     if (!view) return CTD_ERR_STALE;
     ctd_handle target = widget;
     switch (ctd_slot_kind(widget)) {
+        case CTD_W_DATE_PICKER: {
+            SYSTEMTIME when;
+            ctd_date_to_system(value, &when);
+            SendMessageW(view, DTM_SETSYSTEMTIME, GDT_VALID, (LPARAM)&when);
+            // A picker set by a message does not notify its parent — only a
+            // user's edit does — so the notification that edit would have sent
+            // is sent here, on the control's behalf.
+            ctd_emit_control(widget);
+            return CTD_OK;
+        }
         case CTD_W_SLIDER:
             SendMessageW(view, TBM_SETPOS, TRUE, (LPARAM)(LONG)value);
             // A trackbar told to move by a message does not notify its parent —

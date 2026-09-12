@@ -32,6 +32,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SEARCH_FIELD:
         case CTD_W_LINK:
         case CTD_W_GROUP_BOX:
+        case CTD_W_DATE_PICKER:
             return 1;
         case CTD_W_SEGMENTED:
             // The common controls have no segmented control. A toolbar with
@@ -44,6 +45,13 @@ int32_t ctd_widget_supports(int32_t kind) {
             // a different shape, so this refuses rather than substituting one.
             return 0;
         case CTD_W_SWITCH:
+            return 0;
+        case CTD_W_COLOR_WELL:
+            // The common controls have no colour well. ChooseColor is a
+            // dialog — a modal chooser a program opens — and a control that is
+            // a swatch you can see and press is a different thing. An
+            // owner-drawn button would be cortado drawing a control, which is
+            // the substitution ctd_widget_supports exists to refuse.
             return 0;
         case CTD_W_LEVEL_INDICATOR:
             // The common controls have no meter. A marquee progress bar is a
@@ -164,6 +172,14 @@ ctd_handle ctd_widget_new(int32_t kind) {
             class_name = WC_COMBOBOXW;
             style |= CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP;
             break;
+        case CTD_W_DATE_PICKER:
+            // A day, and DTS_SHORTDATEFORMAT is what says so: the control
+            // shows no time at all, which is the rule stated beside
+            // CTD_W_DATE_PICKER in the header rather than a limitation of this
+            // platform — DTS_TIMEFORMAT exists and cortado does not ask for it.
+            class_name = DATETIMEPICK_CLASSW;
+            style |= DTS_SHORTDATEFORMAT | WS_TABSTOP;
+            break;
         case CTD_W_TABLE:
             // LVS_OWNERDATA is the whole design in one style bit: the control
             // holds no items, only a count, and asks the parent for the text
@@ -206,6 +222,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
     if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_SECURE_FIELD ||
         kind == CTD_W_SEARCH_FIELD) {
         SetWindowSubclass(window, ctd_edit_proc, 1, 0);
+    }
+    if (kind == CTD_W_DATE_PICKER) {
+        // The epoch, so a fresh picker reads the same day on every host
+        // rather than whatever today happens to be on this machine.
+        SYSTEMTIME epoch;
+        ctd_date_to_system(0.0, &epoch);
+        SendMessageW(window, DTM_SETSYSTEMTIME, GDT_VALID, (LPARAM)&epoch);
     }
     if (kind == CTD_W_PROGRESS_BAR) {
         // The control counts in whole numbers and cortado's range is real, so

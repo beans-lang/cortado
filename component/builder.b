@@ -2,6 +2,7 @@
 package component
 
 import cortado.widgets
+import cortado.host
 import cortado.events
 import cortado.layout
 import cortado.geometry
@@ -167,6 +168,21 @@ pub class Builder {
                     match Vocabulary.justify_of(value) {
                         none => { self.faults.push("justify=\"{value}\" is not a justification cortado knows") }
                         some(mode) => { self.set_justify(element, mode) }
+                    }
+                    return
+                }
+                // A colour, written the way a colour is written everywhere
+                // else in cortado. Parsed here rather than in the markup
+                // compiler so `#abc` means the same thing in `<ColorWell />`
+                // as it does in a shader — one parser, one set of rules, one
+                // refusal when the digits are wrong.
+                if name == "color" {
+                    match widgets.Rgba.of_hex(value) {
+                        err(problem) => { self.faults.push(problem.msg) }
+                        ok(shade) => {
+                            element.set(Attribute.of_whole(host.P_COLOR,
+                                                           widgets.ColorWell.pack(shade)))
+                        }
                     }
                     return
                 }

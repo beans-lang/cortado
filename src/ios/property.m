@@ -6,6 +6,16 @@
 
 #import "internal.h"
 
+// A UIColor as CTD_P_COLOR carries it. Declared in internal.h; see the note
+// there for why it is shared rather than written out three times.
+int64_t ctd_ui_color_packed(UIColor *color) {
+    CGFloat r = 0.0, g = 0.0, b = 0.0, a = 0.0;
+    if (!color) return 0;
+    if (![color getRed:&r green:&g blue:&b alpha:&a]) return 0;
+    return ctd_color_pack(ctd_color_byte((double)r), ctd_color_byte((double)g),
+                          ctd_color_byte((double)b), ctd_color_byte((double)a));
+}
+
 ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
@@ -17,6 +27,15 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             [(UIView *)object setHidden:value ? YES : NO];
+            return CTD_OK;
+        case CTD_P_COLOR:
+            if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            [(UIColorWell *)object setSelectedColor:
+                [UIColor colorWithRed:ctd_color_red(value)   / 255.0
+                                green:ctd_color_green(value) / 255.0
+                                 blue:ctd_color_blue(value)  / 255.0
+                                alpha:ctd_color_alpha(value) / 255.0]];
             return CTD_OK;
         case CTD_P_CHECKED: {
             // Which kinds have this property, and which of them have a third
@@ -134,6 +153,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_HIDDEN:
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             value = [(UIView *)object isHidden] ? 1 : 0;
+            break;
+        case CTD_P_COLOR:
+            if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = ctd_ui_color_packed([(UIColorWell *)object selectedColor]);
             break;
         case CTD_P_CHECKED:
             if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;
@@ -274,6 +297,11 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
                 return CTD_OK;
             }
             return CTD_ERR_KIND;
+        case CTD_P_DATE:
+            if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            [(UIDatePicker *)object
+                setDate:[NSDate dateWithTimeIntervalSince1970:ctd_date_floor(value)]];
+            return CTD_OK;
         case CTD_P_STEP: {
             if ([object isKindOfClass:[UIStepper class]]) {
                 if (value <= 0.0) return CTD_ERR_RANGE;
@@ -340,6 +368,10 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             } else if ([object isKindOfClass:[UIProgressView class]]) {
                 value = g_progress_value[slot];
             } else { return CTD_ERR_KIND; }
+            break;
+        case CTD_P_DATE:
+            if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = ctd_date_floor([[(UIDatePicker *)object date] timeIntervalSince1970]);
             break;
         case CTD_P_STEP:
             // Only a stepper has one. A UISlider is continuous and always was,
