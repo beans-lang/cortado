@@ -84,6 +84,15 @@ ctd_status ctd_permission_status(int32_t what, int32_t *out) {
             break;
         }
         case CTD_PERM_LOCATION: {
+            // Deprecated since macOS 11 and iOS 14 in favour of an *instance*
+            // property — which needs a CLLocationManager, and constructing one
+            // is the thing this file exists not to do. The class method is the
+            // only way to read the status without touching the framework, so
+            // the warning is turned off here rather than the call being
+            // changed: a build full of noise is a build whose real warnings
+            // nobody reads.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             switch ([CLLocationManager authorizationStatus]) {
                 case kCLAuthorizationStatusAuthorizedAlways:
                     answer = CTD_ALLOW_GRANTED;   break;
@@ -92,6 +101,7 @@ ctd_status ctd_permission_status(int32_t what, int32_t *out) {
                 default:
                     answer = CTD_ALLOW_DENIED;    break;
             }
+#pragma clang diagnostic pop
             break;
         }
         case CTD_PERM_SCREEN_CAPTURE:
