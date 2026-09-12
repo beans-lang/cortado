@@ -905,6 +905,63 @@ arithmetic, and the colours are asserted exactly — 64 green pixels of 64, 32 o
 64 for the top half, 16 for a quad the shader halved. It is the same bytes on
 this Mac's GPU and on the iOS Simulator's, which are different hardware.
 
+## Permission
+
+macOS does not refuse a program that touches a privacy-gated framework without
+a usage description. It **ends the process** — on a later turn of the run loop,
+in unrelated code, with nothing on stderr:
+
+```
+termination namespace TCC: "This app has crashed because it attempted to
+access privacy-sensitive data without a usage description."
+```
+
+There is no status to turn into a `Result`, because there is no process left to
+answer. So the whole of `cortado.device` is built on one rule: **never touch the
+framework to answer a question about it.**
+
+```beans
+match device.Permission.camera.status()? {
+    granted => { open_the_camera()? }
+    undecided => { device.Permission.camera.request(1)? }
+    denied => { explain_why_not() }
+    unavailable => { hide_the_feature() }
+}
+```
+
+Reading a status touches nothing. The host reads the Info.plist usage
+description the program declared and the framework's own *static* query —
+`[CBCentralManager authorization]`, `[AVCaptureDevice
+authorizationStatusForMediaType:]`, `[CLLocationManager authorizationStatus]`,
+`CGPreflightScreenCaptureAccess` — all of which are class methods that construct
+nothing. Constructing the manager or starting the session is what kills you,
+and cortado does neither until the service that needs it is asked for.
+
+**`unavailable` is what an unbundled program always gets, and that is not
+caution.** A bare binary has no privacy identity, so the system answers for
+whichever process is *responsible* for it. A probe read `microphone:
+authorized` from a program with no usage description of any kind, because
+Terminal.app holds that grant — and passing that number on would have been
+worse than passing nothing. Under `beansc run` the process is `beansc`, so this
+is always what the interpreter leg sees.
+
+**And `request` refuses rather than prompting** where a prompt cannot appear:
+no bundle, or no usage description. That refusal *is* the feature — asking
+without one is the death above, and the worst that happens now is a message.
+
+`tools/bundle.sh` writes the keys:
+
+```bash
+tools/bundle.sh build/app MyApp com.example.myapp '' \
+    NSCameraUsageDescription='to scan a receipt'
+```
+
+Proven on a real machine, three states in order: unbundled → `unavailable` and
+the request refused; bundled with the sentence → `undecided` and a prompt;
+after the user answers → `granted`. `tests/permission.out` is the first of
+those, and it is the same bytes on every host — because the shape of the
+contract is portable even where the answers are not.
+
 ## Why it stays smooth
 
 Four claims, each with a test behind it rather than an adjective.

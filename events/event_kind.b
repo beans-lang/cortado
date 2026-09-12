@@ -39,6 +39,8 @@ pub enum EventKind {
     command
     frame
     anim_done
+    /// The user answered a permission prompt. `token` echoes the request's.
+    permission
     unknown
 
     pub fn name() -> string {
@@ -67,6 +69,7 @@ pub enum EventKind {
             command => "command",
             frame => "frame",
             anim_done => "anim_done",
+            permission => "permission",
             unknown => "unknown",
         }
     }
@@ -99,6 +102,7 @@ pub enum EventKind {
             command => host.EV_COMMAND,
             frame => host.EV_FRAME,
             anim_done => host.EV_ANIM_DONE,
+            permission => host.EV_PERMISSION,
             unknown => 0,
         }
     }
@@ -131,6 +135,7 @@ pub enum EventKind {
         if code == host.EV_COMMAND { return EventKind.command }
         if code == host.EV_FRAME { return EventKind.frame }
         if code == host.EV_ANIM_DONE { return EventKind.anim_done }
+        if code == host.EV_PERMISSION { return EventKind.permission }
         return EventKind.unknown
     }
 }

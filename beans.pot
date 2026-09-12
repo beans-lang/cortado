@@ -26,6 +26,7 @@ csrc macos "src/mac/clock.m"
 csrc macos "src/mac/anim.m"
 csrc macos "src/mac/gpu.m"
 csrc macos "src/mac/table.m"
+csrc macos "src/mac/permission.m"
 
 link macos framework "AppKit"
 link macos framework "Foundation"
@@ -51,6 +52,13 @@ link macos framework "QuartzCore"
 # `tests/roles.out` like any other control; a widget kind cannot live anywhere
 # but here.
 link macos framework "Metal"
+# Privacy. Every call cortado makes into these three is a *static* one —
+# an authorization status, nothing constructed — because touching a gated
+# framework without a usage description does not fail, it ends the process.
+# See the note beside ctd_permission_status in src/cortado_host.h.
+link macos framework "AVFoundation"
+link macos framework "CoreBluetooth"
+link macos framework "CoreLocation"
 
 # The iOS host. Same header, same Beans above it — `tests/roles.out` is the
 # same bytes on both, which is the claim this file exists to make testable.
@@ -72,6 +80,7 @@ csrc ios "src/ios/clock.m"
 csrc ios "src/ios/anim.m"
 csrc ios "src/ios/gpu.m"
 csrc ios "src/ios/table.m"
+csrc ios "src/ios/permission.m"
 
 link ios framework "UIKit"
 link ios framework "Foundation"
@@ -86,6 +95,10 @@ link ios framework "CoreGraphics"
 # time, and a command queue is made. See src/ios/gpu.m for what the
 # Simulator answers differently from the machine it runs on.
 link ios framework "Metal"
+# Privacy, the same three and the same rule as the Mac.
+link ios framework "AVFoundation"
+link ios framework "CoreBluetooth"
+link ios framework "CoreLocation"
 
 # The Linux host, over GTK4. The same header again, and a third object system:
 # GObject rather than Objective-C, signals rather than target/action, floating
@@ -118,6 +131,7 @@ csrc linux "src/gtk4/clock.c"
 csrc linux "src/gtk4/anim.c"
 csrc linux "src/gtk4/gpu.c"
 csrc linux "src/gtk4/table.c"
+csrc linux "src/gtk4/permission.c"
 
 # The Windows host, over Win32 and common controls v6. A fourth object system,
 # or rather the absence of one: a control is an HWND, its state is set by
@@ -143,6 +157,7 @@ csrc windows "src/win32/clock.c"
 csrc windows "src/win32/anim.c"
 csrc windows "src/win32/gpu.c"
 csrc windows "src/win32/table.c"
+csrc windows "src/win32/permission.c"
 
 # Common controls carries the trackbar and the progress bar; comdlg32 the file
 # choosers; gdi32 the device contexts every measurement goes through. user32

@@ -125,6 +125,8 @@ pub extern "C" fn ctd_table_reload(table: u64) -> i32
 pub extern "C" fn ctd_table_cell(table: u64, row: i32, column: i32, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_table_selected(table: u64, out: RawPtr<i32>) -> i32
 pub extern "C" fn ctd_table_select(table: u64, row: i32) -> i32
+pub extern "C" fn ctd_permission_status(what: i32, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_permission_request(what: i32, token: i64) -> i32
 pub extern "C" fn ctd_native_class(widget: u64, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_a11y_role(widget: u64, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_snapshot(widget: u64, out_size: RawPtr<f64>, out: RawPtr<i8>, cap: i32) -> i32

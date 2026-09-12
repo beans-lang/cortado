@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 13
+#define CTD_ABI_VERSION 14
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -1205,6 +1205,76 @@ int32_t    ctd_table_cell(ctd_handle table, int32_t row, int32_t column,
 ctd_status ctd_table_selected(ctd_handle table, int32_t *out);
 /* -1 clears the selection. A row outside 0..rows-1 is CTD_ERR_RANGE. */
 ctd_status ctd_table_select(ctd_handle table, int32_t row);
+
+/* ---- permission -------------------------------------------------------- */
+
+/* What the operating system will let this program do, and how to ask.
+ *
+ * **This is the one part of cortado where getting it wrong kills the
+ * process.** Not an error, not a refusal — macOS's privacy layer terminates a
+ * program that touches a gated framework without the matching usage
+ * description in its Info.plist, on a *later* turn of the run loop, in
+ * unrelated code, with nothing on stderr:
+ *
+ *     termination namespace TCC: "This app has crashed because it attempted
+ *     to access privacy-sensitive data without a usage description."
+ *
+ * There is no status to turn into a ctd_status, because the process is gone.
+ * So the whole design here is one rule: **never touch the framework to answer
+ * a question about it.**
+ *
+ * ctd_permission_status reads two things, both of which a bare binary with no
+ * plist can read safely — proven, from a process with no bundle at all, across
+ * a turn of the run loop: the Info.plist usage-description key, and the
+ * framework's own *static* authorization query. `[CBCentralManager
+ * authorization]`, `[AVCaptureDevice authorizationStatusForMediaType:]`,
+ * `[CLLocationManager authorizationStatus]` and `CGPreflightScreenCaptureAccess`
+ * are class methods and answer without constructing anything. Constructing the
+ * manager or starting the session is what kills you, and nothing here does it.
+ *
+ * **Screen capture has no usage-description key at all** — it is a preflight
+ * call and nothing else — so the guard is per permission rather than one
+ * lookup with a table of key names.
+ *
+ * **Outside a bundle, the answer is CTD_ALLOW_UNAVAILABLE, and that is not a
+ * limitation cortado could lift.** TCC answers for the *responsible* process:
+ * a bare binary run from a terminal reads the terminal's grants. The probe
+ * that shaped this read "microphone: authorized" from a program with no usage
+ * description of any kind, because Terminal.app holds that grant. A number
+ * like that is not this program's status and reporting it would be worse than
+ * reporting nothing — so an unbundled process is told, plainly, that there is
+ * no answer to be had. Under `beansc run` the process is `beansc`, so this is
+ * always what the interpreter leg sees.
+ *
+ * ctd_permission_request is the other half, and it prompts. It refuses outright
+ * where a prompt cannot appear — no bundle, no usage description — because the
+ * alternative is the death above. The answer arrives as CTD_EV_PERMISSION with
+ * the token that was passed and CTD_ALLOW_* in `index`. */
+
+#define CTD_PERM_BLUETOOTH       1
+#define CTD_PERM_LOCATION        2
+#define CTD_PERM_CAMERA          3
+#define CTD_PERM_MICROPHONE      4
+#define CTD_PERM_SCREEN_CAPTURE  5
+#define CTD_PERM_PHOTOS          6
+#define CTD_PERM_MOTION          7
+
+/* There is no answer to be had: this platform has no such thing, or the
+ * process has no bundle and so no privacy identity of its own. */
+#define CTD_ALLOW_UNAVAILABLE    0
+#define CTD_ALLOW_GRANTED        1
+#define CTD_ALLOW_DENIED         2
+/* Nobody has been asked yet. ctd_permission_request is how one asks. */
+#define CTD_ALLOW_UNDECIDED      3
+
+#define CTD_EV_PERMISSION       25  /* index is CTD_ALLOW_*; token echoes    */
+
+ctd_status ctd_permission_status(int32_t what, int32_t *out);
+/* Asks the user. CTD_ERR_UNSUPPORTED where a prompt cannot appear — which is
+ * every platform but macOS and iOS today, and on those, any process without a
+ * bundle or without the usage description this permission needs.
+ * CTD_ERR_RANGE for a number that is not a permission. */
+ctd_status ctd_permission_request(int32_t what, int64_t token);
 
 /* ---- introspection ----------------------------------------------------- */
 

@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 13
+pub const ABI_VERSION: int = 14
 
 // ---- statuses ----
 
@@ -101,6 +101,18 @@ pub const W_SPINNER: int = 20
 pub const W_LINK: int = 21
 pub const W_SEGMENTED: int = 22
 pub const W_GROUP_BOX: int = 23
+pub const PERM_BLUETOOTH: int = 1
+pub const PERM_LOCATION: int = 2
+pub const PERM_CAMERA: int = 3
+pub const PERM_MICROPHONE: int = 4
+pub const PERM_SCREEN_CAPTURE: int = 5
+pub const PERM_PHOTOS: int = 6
+pub const PERM_MOTION: int = 7
+pub const ALLOW_UNAVAILABLE: int = 0
+pub const ALLOW_GRANTED: int = 1
+pub const ALLOW_DENIED: int = 2
+pub const ALLOW_UNDECIDED: int = 3
+pub const EV_PERMISSION: int = 25
 
 // ---- property keys ----
 

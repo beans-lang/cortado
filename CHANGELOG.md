@@ -1219,6 +1219,50 @@ First working macOS host.
   have had a content view and taken children. The same shape as every other
   rule in `cortado_rules.h`: the classes do not line up with the contract.
 
+- **`cortado.device` — one permission model, before any service that needs
+  one.** macOS does not refuse a program that touches a privacy-gated framework
+  without a usage description; it ends the process, on a later turn of the run
+  loop, with nothing on stderr. There is no status to turn into a `Result`
+  because there is no process left. So the whole design is one rule: never
+  touch the framework to answer a question about it.
+
+  `ctd_permission_status` reads the Info.plist key and the framework's own
+  *static* query, both proven safe from a bare binary across a run-loop turn.
+  A probe settled the last open question the plan had: `[CLLocationManager
+  authorizationStatus]` is a class method and is safe too, so location joins
+  camera, microphone, bluetooth and screen capture on the list.
+
+- **`unavailable` outside a bundle, and it is not caution.** A bare binary has
+  no privacy identity, so TCC answers for whichever process is *responsible*
+  for it. The probe read `microphone: authorized` from a program with no usage
+  description of any kind, because Terminal.app holds that grant. Passing that
+  number on would be worse than passing nothing. Removing the check makes an
+  unbundled process read `screen_capture: granted` — the terminal's — and
+  **start a prompt**, which is the exact path that ends the process.
+
+- **`tools/bundle.sh` takes usage descriptions, and checks it wrote them.** The
+  first version emitted them after `</plist>`, and `plutil -lint` called the
+  file **OK** — a plist parser stops at the closing tag and never sees what
+  follows. The app launched, the bundle was recognised, and every usage
+  description was silently missing; the camera answered `unavailable` from a
+  bundle that looked correct in every way a person would check. The keys go
+  inside the dict now, and the script reads each one back with
+  `plutil -extract` rather than trusting the file it just wrote.
+
+- **Proven on a real machine, three states in order.** Unbundled →
+  `unavailable`, request refused. Bundled with the sentence → `undecided`, and
+  the request prompts. After the user answers → `granted`. And a bundle with no
+  usage description at all → `unavailable` for the camera while screen capture,
+  which needs no key, answers `granted` — which is the usage-description guard
+  doing its job in the one situation it guards.
+
+- **What the gate can and cannot see.** `tests/permission.out` is the first
+  state, and it is the same bytes on every host: every permission answers one
+  of four words, every one answers `unavailable`, and every request is refused
+  rather than prompting. The other two states need a signed bundle and somebody
+  to click a prompt, so they are not in the gate and this entry is the record
+  that they were run by hand.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

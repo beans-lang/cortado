@@ -1,0 +1,11 @@
+-- the shape of the contract --
+  cortado names this many permissions: 7
+  every one of them was asked: true
+  and answered one of the four words: true
+-- outside a bundle --
+  every one answers that there is no answer to be had: true
+  and asking is refused rather than prompting: true
+-- the four words --
+  there are this many: 4
+  and a number the host has no word for reads as unavailable: true
+drove=true
