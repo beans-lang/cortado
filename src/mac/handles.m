@@ -6,6 +6,34 @@
 
 #import "internal.h"
 
+// The other direction: the handle for an object cortado is holding.
+//
+// Input needs it and nothing else does. An event arrives naming a *view* —
+// AppKit hit-tests, GTK hands the controller its widget — and cortado has to
+// answer with the handle a program knows the control by. A scan of the slot
+// table would answer correctly and would run once per mouse move, which on a
+// pointer that reports a thousand times a second is a thousand scans of every
+// control in the window. So the reverse is kept as it is built.
+//
+// Opaque personality on both sides: the keys are compared by pointer, never by
+// -isEqual:, because two NSButtons with the same title are two controls. Weak
+// keys, so an object that goes releases its row without ctd_untrack having to
+// find it.
+static NSMapTable *g_reverse = nil;
+
+static NSMapTable *ctd_reverse_table(void) {
+    if (!g_reverse) {
+        g_reverse = [[NSMapTable alloc]
+            initWithKeyOptions:(NSPointerFunctionsWeakMemory |
+                                NSPointerFunctionsOpaquePersonality)
+                  valueOptions:(NSPointerFunctionsOpaqueMemory |
+                                NSPointerFunctionsIntegerPersonality)
+                      capacity:64];
+    }
+    return g_reverse;
+}
+
+
 // ---------------------------------------------------------------- the table
 
 id       g_object[CTD_SLOTS];
@@ -64,6 +92,10 @@ void ctd_untrack(ctd_handle handle) {
     if (slot == 0 || slot > g_used) return;
     if (g_generation[slot] != (uint32_t)(handle >> 32)) return;
     id object = g_object[slot];
+    // Out of the reverse table before the slot is cleared. The keys are weak,
+    // so a released object would drop its own row — but a *recycled* slot
+    // would not, and a stale row would answer an old handle for a live view.
+    if (object) NSMapRemove(ctd_reverse_table(), (const void *)object);
     g_object[slot] = nil;
     g_kind[slot] = -1;
     g_icon[slot] = CTD_ICON_NONE;
@@ -80,7 +112,31 @@ ctd_handle ctd_track(id object, int32_t kind) {
     g_kind[slot] = kind;
     g_icon[slot] = CTD_ICON_NONE;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
-    return ((uint64_t)g_generation[slot] << 32) | slot;
+    ctd_handle handle = ((uint64_t)g_generation[slot] << 32) | slot;
+    NSMapInsert(ctd_reverse_table(), (const void *)object,
+                (void *)(uintptr_t)handle);
+    return handle;
+}
+
+ctd_handle ctd_handle_for(id object) {
+    if (!object) return 0;
+    void *kept = NSMapGet(ctd_reverse_table(), (const void *)object);
+    return (ctd_handle)(uintptr_t)kept;
+}
+
+// The nearest ancestor cortado knows, starting with the view itself.
+//
+// AppKit builds private subviews of its own — a click inside an NSButton can
+// hit-test to a cell's backing view whose class is not API — so the view an
+// event names is not always one cortado made. Walking up stops at the first
+// one it did, which is the control a person would say was clicked.
+ctd_handle ctd_handle_for_view(NSView *view) {
+    while (view) {
+        ctd_handle found = ctd_handle_for(view);
+        if (found) return found;
+        view = [view superview];
+    }
+    return 0;
 }
 
 id ctd_resolve(ctd_handle handle) {

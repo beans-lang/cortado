@@ -47,7 +47,7 @@ fi
 leaked=""
 while IFS= read -r file; do
     if sed 's://.*::' "$file" \
-        | grep -qE 'objc_|msgSend|sel_registerName|NSString|NSView|NSWindow|HWND|LPCWSTR|g_object_|GtkWidget|UIView|MTL[A-Z]|CAMetalLayer|CBCentral|CBPeripheral|CLLocation|AVCapture|AVMediaType'; then
+        | grep -qE 'objc_|msgSend|sel_registerName|NSString|NSView|NSWindow|HWND|LPCWSTR|g_object_|GtkWidget|UIView|MTL[A-Z]|CAMetalLayer|CBCentral|CBPeripheral|CLLocation|AVCapture|AVMediaType|NSEvent|NSResponder|GdkEvent|GtkEventController|GtkGesture|UIGestureRecognizer|UIEvent|WM_[A-Z]|VK_[A-Z]'; then
         leaked="$leaked$file"$'\n'
     fi
 done < <(find "$root" -name '*.b' -not -path "$root/host/*" -not -path "$root/build/*")

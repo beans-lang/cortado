@@ -2,10 +2,48 @@
 
 #import "internal.h"
 
+@implementation CortadoWindow
+// Every way the keyboard moves goes through here — a program calling this, a
+// user clicking a field, a user pressing Tab — so this is where blur and focus
+// are raised. Asked *after* AppKit has decided, because a control may refuse
+// to take it and a program told that focus moved when it did not would draw a
+// caret in the wrong place.
+//
+// **Only the outermost call reports.** AppKit re-enters this method on its own
+// and more than once: making a text field first responder resigns whatever had
+// the keyboard, hands it to the window, and then installs the shared field
+// editor, each step a nested call of its own. Reporting each one hands a
+// program a blur and a focus for a move that never happened — measured, on
+// this file's first version: one `focus()` on a field that already had the
+// keyboard raised two blurs and no focus. So the responder is remembered on
+// the way in at depth zero and compared once on the way out, which reports the
+// move a person would describe and not the steps AppKit took to make it.
+- (BOOL)makeFirstResponder:(NSResponder *)responder {
+    static int depth = 0;
+    static ctd_handle started_from = 0;
+    // The *handle*, not the responder, and resolved on the way in. A field
+    // editor is found again through its delegate — and by the time the call
+    // returns it has been resigned, its delegate is nil and it is no longer a
+    // subview of the field it was editing. Asking afterwards answers nothing,
+    // which is a blur that never arrives for the control that just lost the
+    // keyboard.
+    if (depth == 0) started_from = ctd_focus_handle([self firstResponder]);
+    depth = depth + 1;
+    BOOL took = [super makeFirstResponder:responder];
+    depth = depth - 1;
+    if (depth == 0) {
+        ctd_handle was = started_from;
+        started_from = 0;
+        ctd_focus_moved(was, ctd_focus_handle([self firstResponder]));
+    }
+    return took;
+}
+@end
+
 // ------------------------------------------------------------------- surfaces
 
 ctd_handle ctd_surface_new(double width, double height) {
-    NSWindow *window = [[NSWindow alloc]
+    NSWindow *window = [[CortadoWindow alloc]
         initWithContentRect:NSMakeRect(0, 0, width, height)
                   styleMask:(NSWindowStyleMaskTitled |
                              NSWindowStyleMaskClosable |

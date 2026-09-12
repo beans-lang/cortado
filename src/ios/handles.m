@@ -78,7 +78,12 @@ ctd_handle ctd_track(id object, int32_t kind) {
     g_kind[slot] = kind;
     g_icon[slot] = CTD_ICON_NONE;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
-    return ((uint64_t)g_generation[slot] << 32) | slot;
+    ctd_handle handle = ((uint64_t)g_generation[slot] << 32) | slot;
+    // UIKit has no application-wide hook for input: a recognizer belongs to a
+    // view. So every control gets one here, which is the one place every
+    // control passes through.
+    ctd_input_attach(object, handle);
+    return handle;
 }
 
 id ctd_resolve(ctd_handle handle) {

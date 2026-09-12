@@ -97,7 +97,12 @@ ctd_handle ctd_track(void *object, int32_t type, int32_t kind) {
     g_kind[slot] = kind;
     g_icon[slot] = CTD_ICON_NONE;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
-    return ((uint64_t)g_generation[slot] << 32) | slot;
+    ctd_handle handle = ((uint64_t)g_generation[slot] << 32) | slot;
+    // A control's input is reported to the control, not to its parent — the
+    // parent hears the *notification* that follows — so every control is
+    // subclassed here, which is the one place every control passes through.
+    ctd_input_attach(object, type, handle);
+    return handle;
 }
 
 uint32_t ctd_slot(ctd_handle handle) {

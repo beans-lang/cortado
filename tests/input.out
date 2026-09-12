@@ -1,0 +1,27 @@
+-- the names --
+  every key has its own word, and no two share one: true
+  and there is one for every key the header names: true
+-- the pointer --
+  a click is heard, down and up: true
+  and says where, in the control's own space: true
+  and which button it was: true
+  a right button is carried across, or this pointer has one: true
+  a move is heard too: true
+  and a control nobody clicked heard nothing: true
+  a kind that is not a pointer event is refused: true
+-- the keyboard --
+  a key that types nothing says which key it was: true
+  a key that types says what it typed: true
+  and the modifiers that were held: true
+  both were heard: true
+-- focus --
+  the keyboard moves from one field to another: true
+  and back: true
+  the one that took it is told: true
+  and the one that lost it is told: true
+  a button takes it, or says it cannot: true
+  a label cannot, on any platform: true
+-- what nobody asked for --
+  a host is told which kinds are wanted: true
+  and told again when the last handler goes: true
+drove=true

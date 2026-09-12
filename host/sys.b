@@ -168,3 +168,9 @@ pub extern "C" fn ctd_snapshot(widget: u64, out_size: RawPtr<f64>, out: RawPtr<i
 pub extern "C" fn ctd_widget_activate(widget: u64) -> i32
 pub extern "C" fn ctd_widget_synth_value(widget: u64, index: i64, value: f64) -> i32
 pub extern "C" fn ctd_widget_synth_text(widget: u64, utf8: RawPtr<i8>, len: i32) -> i32
+pub extern "C" fn ctd_key_name(key: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_widget_focus(widget: u64) -> i32
+pub extern "C" fn ctd_widget_focused(widget: u64) -> i32
+pub extern "C" fn ctd_widget_synth_pointer(widget: u64, what: i32, x: f64, y: f64, button: i32) -> i32
+pub extern "C" fn ctd_widget_synth_key(widget: u64, what: i32, key: i32, text: RawPtr<i8>, len: i32, modifiers: u32) -> i32
+pub extern "C" fn ctd_listen(kind: i32, on: i32) -> i32

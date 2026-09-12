@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 23
+pub const ABI_VERSION: int = 24
 
 // ---- statuses ----
 
@@ -51,6 +51,9 @@ pub const EV_LOW_MEMORY: int = 21
 pub const EV_COMMAND: int = 22
 pub const EV_FRAME: int = 23
 pub const EV_ANIM_DONE: int = 24
+
+/// One past the last kind, so a table with a row per kind can be sized.
+pub const EV_COUNT: int = 32
 
 // ---- modifier bits ----
 
@@ -269,3 +272,50 @@ pub const EDGE_MIN_X: int = 0
 pub const EDGE_MIN_Y: int = 1
 pub const EDGE_MAX_X: int = 2
 pub const EDGE_MAX_Y: int = 3
+
+// ---- input ----
+
+// Which pointer button, in an event's `index`. A trackpad's tap is left and
+// its two-finger tap is right on every platform here, because that is what
+// each platform already calls them.
+pub const BTN_LEFT: int = 1
+pub const BTN_RIGHT: int = 2
+pub const BTN_MIDDLE: int = 3
+
+// Which key, in an event's `index`.
+//
+// There is no code for a letter, a digit or a punctuation mark, and that is
+// the design: a code per character is a keyboard layout written into an ABI —
+// the key that types "z" on one keyboard types "y" on another — so every key
+// that types something is `CHARACTER` and what it typed is the event's text,
+// already composed and already through the input method. What is enumerated
+// is the keys that type nothing and mean the same thing everywhere.
+pub const KEY_UNKNOWN: int = 0
+pub const KEY_CHARACTER: int = 1
+pub const KEY_ESCAPE: int = 2
+pub const KEY_TAB: int = 3
+pub const KEY_RETURN: int = 4
+pub const KEY_SPACE: int = 5
+pub const KEY_BACKSPACE: int = 6
+pub const KEY_DELETE: int = 7
+pub const KEY_LEFT: int = 8
+pub const KEY_RIGHT: int = 9
+pub const KEY_UP: int = 10
+pub const KEY_DOWN: int = 11
+pub const KEY_HOME: int = 12
+pub const KEY_END: int = 13
+pub const KEY_PAGE_UP: int = 14
+pub const KEY_PAGE_DOWN: int = 15
+pub const KEY_F1: int = 16
+pub const KEY_F2: int = 17
+pub const KEY_F3: int = 18
+pub const KEY_F4: int = 19
+pub const KEY_F5: int = 20
+pub const KEY_F6: int = 21
+pub const KEY_F7: int = 22
+pub const KEY_F8: int = 23
+pub const KEY_F9: int = 24
+pub const KEY_F10: int = 25
+pub const KEY_F11: int = 26
+pub const KEY_F12: int = 27
+pub const KEY_COUNT: int = 28

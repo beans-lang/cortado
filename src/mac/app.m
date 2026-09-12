@@ -140,6 +140,12 @@ ctd_status ctd_init(uint32_t want_abi) {
     [NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
     g_targets = [[NSMutableArray alloc] init];
     g_commands = [[CortadoCommand alloc] init];
+    // One local event monitor for the whole application. It is installed
+    // whether or not anything is listening, because installing it is cheap and
+    // installing it *later* is not: -addLocalMonitor... from inside a monitor
+    // callback is a mutation of the list AppKit is walking. What ctd_listen
+    // turns on and off is the work behind it, not the hook itself.
+    ctd_input_start();
     g_started = 1;
     return CTD_OK;
 }
@@ -164,6 +170,7 @@ ctd_status ctd_set_event_sink(ctd_event_fn sink, void *context) {
 }
 
 void ctd_shutdown(void) {
+    ctd_input_stop();
     g_sink = NULL;
     g_sink_context = NULL;
 }

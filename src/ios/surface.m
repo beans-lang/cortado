@@ -19,6 +19,20 @@ ctd_handle ctd_surface_new(double width, double height) {
     [window setBackgroundColor:[UIColor systemBackgroundColor]];
     [[controller view] setBackgroundColor:[UIColor systemBackgroundColor]];
     [window setRootViewController:controller];
+    // And into the window by hand, which UIKit would otherwise only do when
+    // the window stops being hidden.
+    //
+    // Until it is in one, a control has no `window` — and without one nothing
+    // can take the keyboard: -becomeFirstResponder answers NO for a view that
+    // is not in a window, so every focus call in a headless run would be
+    // refused for a reason that has nothing to do with the control. Proven
+    // both ways in a bare simulator process: a field under an unattached root
+    // controller refuses, and the same field after this line takes the
+    // keyboard with the window still hidden.
+    //
+    // Nothing is shown by this. The window is hidden until ctd_surface_show
+    // makes it key and visible, which is what that call is for.
+    if (![[controller view] superview]) [window addSubview:[controller view]];
     [controller release];
     ctd_handle handle = ctd_track(window, -1);
     [window release];

@@ -81,6 +81,18 @@ GtkColumnView *ctd_outline_view(gpointer object);
 void           ctd_outline_attach(ctd_handle outline, GtkWidget *scroller);
 int32_t ctd_slot_kind(ctd_handle handle);
 void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
+
+// ------------------------------------------------------------------- input.c
+
+// Gives a widget the controllers input arrives through, and records the handle
+// it was tracked under. Called from ctd_track for every control there is.
+void ctd_input_attach(gpointer object, ctd_handle handle);
+// The handle for the nearest ancestor of a widget that cortado built, starting
+// with the widget itself. 0 for anything cortado did not build.
+ctd_handle ctd_handle_for_widget(GtkWidget *widget);
+// Whether anything asked for this kind. The header calls ctd_listen advice
+// rather than permission; this is what the advice becomes on the hot path.
+int ctd_listening(uint32_t kind);
 void ctd_give_back(uint32_t slot);
 // Forgets the clock a slot may have had, before the slot is handed out again.
 void ctd_clock_forget(uint32_t slot);

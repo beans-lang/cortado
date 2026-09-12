@@ -20,6 +20,25 @@ pub class WidgetSubscriptions {
         self.by_kind.remove(kind_code)
     }
 
+    /// Whether this widget already has a handler for the kind.
+    ///
+    /// The router needs it to keep a count per kind honest: `set` replaces a
+    /// handler as often as it adds one, and a count that rose on a replacement
+    /// would never fall back to zero.
+    pub fn has(kind_code: int) -> bool {
+        return self.by_kind.contains_key(kind_code)
+    }
+
+    /// Every kind this widget has a handler for, so `forget` can take them all
+    /// out of the router's per-kind count.
+    pub fn kinds() -> List<int> {
+        var every: List<int> = []
+        for code: int in self.by_kind.keys() {
+            every.push(code)
+        }
+        return move every
+    }
+
     pub fn count() -> int {
         return self.by_kind.len()
     }

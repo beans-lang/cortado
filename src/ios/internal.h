@@ -125,6 +125,25 @@ void ctd_tag(id object);
 // One event, raised by the host itself rather than by a control's action.
 // Shared rather than static in app.m: table.m raises a selection too.
 void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
+
+// ------------------------------------------------------------------- input.m
+
+// A recognizer that watches every touch and never claims one, so the control
+// under it behaves exactly as it would with nothing attached.
+@interface CortadoTouches : UIGestureRecognizer
+@end
+
+// Gives a view the recognizer touches arrive through, and records the handle it
+// was tracked under. Called from ctd_track for every control there is.
+void ctd_input_attach(id object, ctd_handle handle);
+// The handle for the nearest ancestor of a view that cortado built, starting
+// with the view itself. 0 for anything cortado did not build.
+ctd_handle ctd_handle_for_view(UIView *view);
+// Records that a control took the keyboard, raising blur on whatever had it.
+// UIKit never tells the view that lost it, so cortado remembers.
+void ctd_focus_moved(ctd_handle took);
+// Whether anything asked for this kind.
+int ctd_listening(uint32_t kind);
 UITableView *ctd_table_view(id object);
 
 // ------------------------------------------------------------------- pane.m

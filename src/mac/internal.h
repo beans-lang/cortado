@@ -40,6 +40,17 @@ enum { CTD_SLOTS = 8192 };
 // AppKit's target/action wants an object with a selector. One of these sits
 // between a control and the sink, carrying the handle the event belongs to.
 // The control holds its target weakly, so `g_targets` keeps it alive.
+// The window cortado makes, and the one thing it overrides.
+//
+// AppKit has no notification for the first responder changing. There is no
+// delegate method, the property is not KVO-compliant, and every route into it
+// — a program calling -makeFirstResponder:, a user clicking a field, a user
+// pressing Tab — goes through that one method. So it is the hook: overriding
+// it catches all three, which is what makes a program moving focus and a user
+// moving it look the same to a handler.
+@interface CortadoWindow : NSWindow
+@end
+
 @interface CortadoTarget : NSObject
 @property (assign) ctd_handle handle;
 @end
@@ -135,6 +146,11 @@ extern CortadoCommand *g_commands;      // app.m — the one menu-item target
 
 ctd_handle  ctd_track(id object, int32_t kind);
 id          ctd_resolve(ctd_handle handle);
+// The handle for an object cortado is holding, and the handle for the nearest
+// ancestor of a view that it is. Input needs both: an event names a view and a
+// program knows a handle. 0 for anything cortado did not build.
+ctd_handle  ctd_handle_for(id object);
+ctd_handle  ctd_handle_for_view(NSView *view);
 void        ctd_give_back(uint32_t slot);
 void        ctd_untrack(ctd_handle handle);
 int32_t     ctd_slot_kind(ctd_handle handle);
@@ -216,5 +232,26 @@ double       ctd_split_position(NSSplitView *split);
 
 NSView *ctd_web_new(void);
 void    ctd_web_attach(ctd_handle handle, NSView *view);
+
+
+// --------------------------------------------------------------------- input.m
+
+// The one local event monitor, up at application start and down at shutdown.
+void        ctd_input_start(void);
+void        ctd_input_stop(void);
+// Whether anything asked for this kind. The header calls ctd_listen advice
+// rather than permission; this is what the advice becomes on the hot path.
+int         ctd_listening(uint32_t kind);
+// CTD_MOD_* for a set of AppKit flags, shared with anything else that reports
+// which keys were held.
+uint32_t    ctd_modifiers_of(NSEventModifierFlags flags);
+// The control a responder belongs to, as a handle. Asked while the responder
+// is still installed: a field editor that has been resigned can no longer be
+// traced back to the field it was editing.
+ctd_handle  ctd_focus_handle(NSResponder *who);
+// Raises blur on what had the keyboard and focus on what took it. Called from
+// CortadoWindow once per first-responder change, so that a program moving
+// focus and a user tabbing look the same to a handler.
+void        ctd_focus_moved(ctd_handle left, ctd_handle took);
 
 #endif

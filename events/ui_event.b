@@ -62,6 +62,22 @@ pub class UiEvent {
         return (self.modifiers & bit) != 0
     }
 
+    /// Which key, for a key event.
+    ///
+    /// `Key.character` means the key typed something and `text` is what — a
+    /// letter, a digit, an accented vowel, a whole Japanese syllable. Every
+    /// other member is a key that types nothing and means the same thing on
+    /// every keyboard there is.
+    pub fn key() -> Key {
+        return Key.of(self.index)
+    }
+
+    /// Which button, for a pointer event. Always `left` on a phone, where a
+    /// finger has no buttons.
+    pub fn button() -> PointerButton {
+        return PointerButton.of(self.index)
+    }
+
     /// The line the event goldens carry. Only the fields a given kind actually
     /// uses appear, so adding a field to the record does not churn every
     /// golden in the suite.
@@ -74,12 +90,17 @@ pub class UiEvent {
             // how busy the machine was.
             frame => { return "frame #{self.index}" }
             surface_resized => { return "surface_resized {self.size.show()}" }
-            pointer_down => { return "pointer_down {self.target.show()} {self.position.show()}" }
-            pointer_up => { return "pointer_up {self.target.show()} {self.position.show()}" }
+            pointer_down => { return "pointer_down {self.target.show()} {self.position.show()} {self.button().name()}" }
+            pointer_up => { return "pointer_up {self.target.show()} {self.position.show()} {self.button().name()}" }
             pointer_move => { return "pointer_move {self.target.show()} {self.position.show()}" }
             selection => { return "selection {self.target.show()} index={self.index}" }
-            key_down => { return "key_down {self.target.show()} key={self.index}" }
-            key_up => { return "key_up {self.target.show()} key={self.index}" }
+            // The key's name and not its number, because the number is an ABI
+            // detail and the name is the same word on every host — which is
+            // what makes one golden stand for four of them.
+            key_down => { return "key_down {self.target.show()} key={self.key().name()} typed=\"{self.text}\"" }
+            key_up => { return "key_up {self.target.show()} key={self.key().name()}" }
+            focus => { return "focus {self.target.show()}" }
+            blur => { return "blur {self.target.show()}" }
             _ => { return "{self.kind.name()} {self.target.show()}" }
         }
     }

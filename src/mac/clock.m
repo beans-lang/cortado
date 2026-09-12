@@ -125,6 +125,18 @@ ctd_status ctd_clock_start(ctd_handle surface, int64_t token) {
         // that has never been shown is on no display at all, and a clock that
         // refused to start until something was on screen could not be used to
         // drive the first frame of what is about to appear.
+        //
+        // **A sleeping screen has no active display and so no display link.**
+        // CGGetActiveDisplayList answers zero, CVDisplayLinkCreateWith-
+        // ActiveCGDisplays answers -6661, and this refuses — which is correct
+        // and reads exactly like a bug in the clock. It cost twenty minutes
+        // once: a gate that had been green went red three cases at a time
+        // while the Mac running it sat with its screen off. So the two are
+        // told apart here, and the machine's state is reported as the
+        // machine's state.
+        uint32_t awake = 0;
+        CGGetActiveDisplayList(0, NULL, &awake);
+        if (awake == 0) return CTD_ERR_STATE;
         if (CVDisplayLinkCreateWithActiveCGDisplays(&clock->link) != kCVReturnSuccess ||
             !clock->link) {
             return CTD_ERR_PLATFORM;

@@ -32,6 +32,7 @@ csrc macos "src/mac/table.m"
 csrc macos "src/mac/outline.m"
 csrc macos "src/mac/icon.m"
 csrc macos "src/mac/permission.m"
+csrc macos "src/mac/input.m"
 
 link macos framework "AppKit"
 link macos framework "Foundation"
@@ -94,6 +95,7 @@ csrc ios "src/ios/table.m"
 csrc ios "src/ios/outline.m"
 csrc ios "src/ios/icon.m"
 csrc ios "src/ios/permission.m"
+csrc ios "src/ios/input.m"
 
 link ios framework "UIKit"
 link ios framework "Foundation"
@@ -151,6 +153,7 @@ csrc linux "src/gtk4/table.c"
 csrc linux "src/gtk4/outline.c"
 csrc linux "src/gtk4/icon.c"
 csrc linux "src/gtk4/permission.c"
+csrc linux "src/gtk4/input.c"
 
 # The Windows host, over Win32 and common controls v6. A fourth object system,
 # or rather the absence of one: a control is an HWND, its state is set by
@@ -182,6 +185,7 @@ csrc windows "src/win32/table.c"
 csrc windows "src/win32/outline.c"
 csrc windows "src/win32/icon.c"
 csrc windows "src/win32/permission.c"
+csrc windows "src/win32/input.c"
 
 # Common controls carries the trackbar and the progress bar; comdlg32 the file
 # choosers; gdi32 the device contexts every measurement goes through. user32

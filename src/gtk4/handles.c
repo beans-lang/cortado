@@ -85,7 +85,14 @@ ctd_handle ctd_track(gpointer object, int32_t kind) {
     g_kind[slot] = kind;
     g_icon[slot] = CTD_ICON_NONE;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
-    return ((uint64_t)g_generation[slot] << 32) | slot;
+    ctd_handle handle = ((uint64_t)g_generation[slot] << 32) | slot;
+    // GTK4 has no application-wide hook for input: a controller belongs to a
+    // widget. So every control gets its set here, which is the one place every
+    // control passes through — and the handle goes on the widget first, so a
+    // signal that arrives while the window is still being built already has
+    // something to report.
+    ctd_input_attach(object, handle);
+    return handle;
 }
 
 gpointer ctd_resolve(ctd_handle handle) {

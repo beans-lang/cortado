@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 23
+#define CTD_ABI_VERSION 24
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -1774,6 +1774,10 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row);
 #define CTD_EV_WEB_FAILED       29  /* index the serial, token the error     */
 #define CTD_EV_WEB_MESSAGE      30  /* token keys the text; ctd_web_take     */
 #define CTD_EV_WEB_RESULT       31  /* token echoes the eval's               */
+/* One past the last kind. It exists so a host can keep an array per kind —
+ * `ctd_listen` is exactly that — and so adding a kind without widening the
+ * array is a compile error rather than a write off the end of one. */
+#define CTD_EV_COUNT            32
 
 ctd_status ctd_permission_status(int32_t what, int32_t *out);
 /* Asks the user. CTD_ERR_UNSUPPORTED where a prompt cannot appear — which is
@@ -1836,5 +1840,169 @@ ctd_status ctd_widget_activate(ctd_handle widget);
  * sets the position of a slider. */
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value);
 ctd_status ctd_widget_synth_text(ctd_handle widget, const char *utf8, int32_t len);
+
+/* ---- input -------------------------------------------------------------- */
+
+/* The pointer, the keyboard, and where the keys go.
+ *
+ * Every kind below was declared in this header from the first version and
+ * emitted by nobody: `CTD_EV_POINTER_DOWN`, `CTD_EV_KEY_DOWN` and
+ * `CTD_EV_FOCUS` appeared in the header and in no host, no binding and no
+ * test. A control could be clicked and would raise `CTD_EV_ACTIVATE`; nothing
+ * could say *where* it was clicked, what was typed into it, or which control
+ * the keyboard was pointing at. This section is what closes that.
+ *
+ * **No two of these platforms deliver input the same way, and one of them has
+ * no way to fake it at all.**
+ *
+ *   * AppKit routes everything through -[NSApplication sendEvent:], and a
+ *     local event monitor sees every event before any control does. One hook
+ *     for the whole application — which is the shape cortado wants anyway,
+ *     because the rule here is one sink and a route on an integer.
+ *   * GTK4 has no global hook: a GtkEventController is attached to a widget,
+ *     so the host attaches one set per control as it builds it.
+ *   * Win32 sends WM_LBUTTONDOWN and WM_KEYDOWN to the control, which forwards
+ *     to its parent — which is the shape the host already uses for everything
+ *     else.
+ *   * UIKit is GTK4's shape again, a recognizer per control.
+ *
+ * **Synthesising input is how this is tested, and the two families differ in
+ * what that proves.** AppKit and Win32 take a real event: cortado builds an
+ * NSEvent and posts it, or sends a WM_ message, and it travels the path a
+ * mouse travels. GTK4 cannot — GdkEvent has public getters and no public
+ * constructor, so no program outside GTK can build one — and UIKit will not
+ * let a gesture recognizer be fired from outside either. On those two the
+ * synthesised call emits the controller's own signal, which is the same
+ * handler a real event reaches and one step short of the platform's dispatch.
+ * That difference is written here rather than hidden, because a test that
+ * proved less than it looked like it proved would be worse than no test. */
+
+/* Which pointer button, in `index` of a pointer event. A trackpad's tap is
+ * CTD_BTN_LEFT everywhere, and a two-finger tap is CTD_BTN_RIGHT everywhere,
+ * because that is what each platform already calls them. */
+#define CTD_BTN_LEFT     1
+#define CTD_BTN_RIGHT    2
+#define CTD_BTN_MIDDLE   3
+
+/* Which key, in `index` of a key event.
+ *
+ * **There is no code here for a letter, a digit or a punctuation mark, and
+ * that is the design rather than an omission.** A code per character is a
+ * keyboard layout written into an ABI: the key to the left of "1" is a
+ * different character on a US, a German and a French keyboard, and the key
+ * that types "z" on one types "y" on another. What a program wants to know
+ * about those keys is what was *typed*, which arrives as `text` — already
+ * composed, already through the input method, correct for a Japanese keyboard
+ * and for a dead-key accent. So every such key is CTD_KEY_CHARACTER and the
+ * news is in `text`.
+ *
+ * What is enumerated is the keys that type nothing and mean the same thing on
+ * every keyboard there is. A program listening for Escape, or for the arrow
+ * that moves a selection, is asking about the key and not about a character —
+ * and those are the same keys everywhere. */
+/* **A control character is not text.** Every platform here reports Escape as
+ * U+001B, Tab as U+0009 and Return as U+000D — X11 keysyms carry the ASCII
+ * control code and -[NSEvent characters] answers the same — so a host that
+ * passed the character through would report that Escape "typed" something,
+ * and a field appending what it hears would fill up with control codes. So a
+ * key event's `text` is empty for everything below U+0020 and for U+007F, and
+ * a key that types nothing says so by saying nothing. Space is U+0020 and is
+ * text, which is why the bound is where it is. */
+#define CTD_KEY_UNKNOWN     0
+#define CTD_KEY_CHARACTER   1  /* the news is in `text`                       */
+#define CTD_KEY_ESCAPE      2
+#define CTD_KEY_TAB         3
+#define CTD_KEY_RETURN      4
+#define CTD_KEY_SPACE       5  /* types " ", and is also a button's key       */
+#define CTD_KEY_BACKSPACE   6
+#define CTD_KEY_DELETE      7
+#define CTD_KEY_LEFT        8
+#define CTD_KEY_RIGHT       9
+#define CTD_KEY_UP         10
+#define CTD_KEY_DOWN       11
+#define CTD_KEY_HOME       12
+#define CTD_KEY_END        13
+#define CTD_KEY_PAGE_UP    14
+#define CTD_KEY_PAGE_DOWN  15
+#define CTD_KEY_F1         16
+#define CTD_KEY_F2         17
+#define CTD_KEY_F3         18
+#define CTD_KEY_F4         19
+#define CTD_KEY_F5         20
+#define CTD_KEY_F6         21
+#define CTD_KEY_F7         22
+#define CTD_KEY_F8         23
+#define CTD_KEY_F9         24
+#define CTD_KEY_F10        25
+#define CTD_KEY_F11        26
+#define CTD_KEY_F12        27
+#define CTD_KEY_COUNT      28
+
+/* cortado's own name for a key — "escape", "page_up", "f7". One word per key
+ * and the same word on every platform, which is what a golden can compare and
+ * what a `.bx` attribute can spell.
+ *
+ * It exists for the same reason `ctd_icon_name` does: a table of names is
+ * exactly the kind of thing that ends up with two rows sharing a word and
+ * nobody noticing, and the only way a suite can check that is to be able to
+ * ask. CTD_ERR_RANGE for a number that is not a key. */
+int32_t    ctd_key_name(int32_t key, char *out, int32_t cap);
+
+/* Where the keyboard is pointing.
+ *
+ * A program moves it: a form that opens with the cursor in the first field, a
+ * dialog that puts it on the text rather than the button. Doing so raises
+ * CTD_EV_BLUR on whatever had it and CTD_EV_FOCUS on what takes it — and
+ * unlike every other write in this header **that is not silent**, because
+ * focus is not a control's private state. It is one thing the whole window
+ * shares, and a program that moved it has by definition changed what every
+ * other control shows.
+ *
+ * CTD_ERR_UNSUPPORTED for a control that cannot take the keyboard at all — a
+ * label, an image, a progress bar. */
+ctd_status ctd_widget_focus(ctd_handle widget);
+/* 1 where this control has the keyboard, 0 where it does not or cannot. */
+int32_t    ctd_widget_focused(ctd_handle widget);
+
+/* Clicks and types the way a user would, and raises the events that follow.
+ *
+ * The pointer pair to `ctd_widget_synth_value`, and the same argument: a
+ * program that sets a value should not hear its own write, so a test needs a
+ * way in that is not a write. `x` and `y` are in the widget's own space, the
+ * same space `ctd_view_set_frame` uses, so a caller that knows where a control
+ * is knows where to click it.
+ *
+ * `what` is CTD_EV_POINTER_DOWN, _UP or _MOVE; anything else is CTD_ERR_RANGE,
+ * as is a button that is not a CTD_BTN_*. A move ignores `button`.
+ *
+ * **A button a platform's pointer does not have is CTD_ERR_UNSUPPORTED.** A
+ * finger has one and only one, and there is no gesture on a phone that means
+ * "right click" — a long press is a long press, and what it is for is the
+ * application's decision. Answering with a left click instead would hand a
+ * program an event it did not ask for and cannot tell from a real one. */
+ctd_status ctd_widget_synth_pointer(ctd_handle widget, int32_t what,
+                                    double x, double y, int32_t button);
+/* `what` is CTD_EV_KEY_DOWN or _UP. `key` is a CTD_KEY_*; `text` is what the
+ * key typed, which is empty for every key that types nothing and is the whole
+ * news for CTD_KEY_CHARACTER. `modifiers` is a CTD_MOD_* mask. */
+ctd_status ctd_widget_synth_key(ctd_handle widget, int32_t what, int32_t key,
+                                const char *text, int32_t len,
+                                uint32_t modifiers);
+
+/* Whether anything is listening for a kind of event.
+ *
+ * The one call in this header that exists for a cost rather than for a
+ * capability, and the cost is real: AppKit does not generate mouse-moved
+ * events for a window until it is told to want them, and a pointer that
+ * reports a thousand times a second is a thousand crossings into the program
+ * per second for something nobody asked about. So the binding tells the host
+ * when the first handler for a kind arrives and when the last one goes, and a
+ * host asks its platform for only the work somebody wants.
+ *
+ * It is advice, not permission: a host that cannot turn a kind off answers
+ * CTD_OK and keeps delivering, and the binding drops what nobody wants. What
+ * it must never do is deliver a kind it was never asked for *and* charge the
+ * platform for it. CTD_ERR_RANGE for a number that is not an event kind. */
+ctd_status ctd_listen(int32_t kind, int32_t on);
 
 #endif /* CORTADO_HOST_H */

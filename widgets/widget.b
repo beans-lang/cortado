@@ -3,6 +3,7 @@ package widgets
 
 import cortado.host
 import cortado.geometry
+import cortado.events
 
 /// A control's text with its line breaks and tabs escaped, so one widget
 /// occupies exactly one line of a dump.
@@ -549,6 +550,93 @@ pub abstract class Widget {
                 host.ctd_widget_synth_text(self.slot.raw, host.HostText.pointer(buffer),
                                            buffer.len() as i32) as int,
                 "type into a {self.kind_value.name()}")
+        }
+    }
+
+    // ---- the keyboard ----
+
+    /// Points the keyboard at this control.
+    ///
+    /// Unlike every other write in cortado this one is **not silent**, and the
+    /// reason is that focus is not a control's private state: it is one thing
+    /// the whole window shares, so a program that moved it has by definition
+    /// changed what every other control shows. Whatever had it hears `blur`
+    /// and this one hears `focus`.
+    ///
+    /// Refused as `unsupported` by a control that cannot take the keyboard at
+    /// all, and **which controls those are is a real platform difference, not
+    /// a gap**: a label refuses everywhere, and a button takes it on a desktop
+    /// and refuses on a phone, where there is no Tab key to reach it with and
+    /// no focus ring to show it. A program asks rather than assuming.
+    pub fn focus() -> Result<bool> {
+        unsafe {
+            return host.check(host.ctd_widget_focus(self.slot.raw) as int,
+                              "point the keyboard at a {self.kind_value.name()}")
+        }
+    }
+
+    /// Whether this is the control its window would type into.
+    ///
+    /// Not "the control the user is typing into": the second needs the window
+    /// to be on screen and in front, which makes it a fact about the desktop
+    /// rather than about the program — and unanswerable in a headless run.
+    pub fn focused() -> bool {
+        unsafe {
+            return host.ctd_widget_focused(self.slot.raw) != 0
+        }
+    }
+
+    // ---- driving it the way a user would ----
+
+    /// Clicks, releases or moves the pointer over this control.
+    ///
+    /// `where` is in the control's own space — the same space `set_frame` uses
+    /// — so a caller that knows where a control is knows where to click it.
+    ///
+    /// **What this proves differs by platform, and the difference is worth
+    /// knowing before writing a test around it.** On macOS and Windows it is a
+    /// real event through the platform's own dispatch, the same road a mouse
+    /// travels. GTK4 and UIKit have no public way to build an event at all, so
+    /// there it runs cortado's own handler — one step short of the platform.
+    pub fn point_as_user(kind: events.EventKind, where: geometry.Point,
+                         button: events.PointerButton) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_widget_synth_pointer(self.slot.raw, kind.name_code() as i32,
+                                              where.x, where.y,
+                                              button.code() as i32) as int,
+                "drive the pointer over a {self.kind_value.name()}")
+        }
+    }
+
+    /// A press and a release in the same place, which is what a click is.
+    pub fn click_as_user(where: geometry.Point) -> Result<bool> {
+        self.point_as_user(events.EventKind.pointer_down, where,
+                           events.PointerButton.left)?
+        return self.point_as_user(events.EventKind.pointer_up, where,
+                                  events.PointerButton.left)
+    }
+
+    /// Presses or releases a key at this control.
+    ///
+    /// The control is given the keyboard first if it does not have it, and the
+    /// call is refused the same way `focus` would be if it cannot take it —
+    /// because driving a key at a control the keyboard is not pointing at is
+    /// testing something a user could not do.
+    ///
+    /// `typed` is what the key produced, which is empty for every key that
+    /// produces nothing and is the whole news for `Key.character`.
+    pub fn key_as_user(kind: events.EventKind, key: events.Key, typed: string,
+                       modifiers: int) -> Result<bool> {
+        let buffer: Bytes = host.HostText.encode(typed, "type at a {self.kind_value.name()}")?
+        unsafe {
+            return host.check(
+                host.ctd_widget_synth_key(self.slot.raw, kind.name_code() as i32,
+                                          key.code() as i32,
+                                          host.HostText.pointer(buffer),
+                                          buffer.len() as i32,
+                                          modifiers as u32) as int,
+                "type at a {self.kind_value.name()}")
         }
     }
 

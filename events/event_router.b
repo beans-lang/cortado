@@ -18,6 +18,16 @@ import cortado.host
 /// slot never inherits the previous widget's handlers.
 pub class EventRouter {
     handlers: Map<u64, WidgetSubscriptions> = {}
+    /// How many widgets have a handler for each kind.
+    ///
+    /// The host is told when a count leaves zero and when it reaches it again,
+    /// and that is not bookkeeping for its own sake: AppKit generates no
+    /// mouse-moved events for a window until it is told to want them, and a
+    /// pointer that reports a thousand times a second is a thousand crossings
+    /// per second into a program that was not listening. Everything else in
+    /// cortado is told what to do; this is the one place it says what it
+    /// *wants*, so a host can decline to do work nobody reads.
+    listeners: Map<int, int> = {}
     /// Events that arrived while a handler was already running. Delivering one
     /// immediately would re-enter Beans from inside a platform callback, which
     /// is how a resize provoked by a click handler becomes a recursion with no
@@ -33,20 +43,32 @@ pub class EventRouter {
     /// Registers `handler` for one kind of event on one widget, replacing any
     /// handler already registered for that pair.
     pub fn on(target: host.Handle, kind: EventKind, handler: fn(UiEvent)) {
+        let code: int = kind.name_code()
+        var replaced: bool = false
         match self.handlers.get(target.raw) {
-            some(existing) => { existing.set(kind.name_code(), handler) }
+            some(existing) => {
+                // Replacing rather than adding, which the count must not see:
+                // one that rose on every `on` would never fall back to zero
+                // and the host would be told to keep working forever.
+                replaced = existing.has(code)
+                existing.set(code, handler)
+            }
             none => {
                 var fresh: WidgetSubscriptions = new WidgetSubscriptions()
-                fresh.set(kind.name_code(), handler)
+                fresh.set(code, handler)
                 self.handlers[target.raw] = fresh
             }
         }
+        if !replaced { self.took_up(code) }
     }
 
     pub fn off(target: host.Handle, kind: EventKind) {
+        let code: int = kind.name_code()
         match self.handlers.get(target.raw) {
             some(existing) => {
-                existing.clear(kind.name_code())
+                if !existing.has(code) { return }
+                existing.clear(code)
+                self.let_go(code)
                 if existing.count() == 0 {
                     self.handlers.remove(target.raw)
                 }
@@ -58,7 +80,51 @@ pub class EventRouter {
     /// Drops every handler for a widget. Called when the widget goes, so the
     /// map does not grow for the life of the program.
     pub fn forget(target: host.Handle) {
+        match self.handlers.get(target.raw) {
+            some(existing) => {
+                for code: int in existing.kinds() {
+                    self.let_go(code)
+                }
+            }
+            none => {}
+        }
         self.handlers.remove(target.raw)
+    }
+
+    /// One more widget wants this kind. The host hears about the first.
+    fn took_up(code: int) {
+        let before: int = self.listeners.get(code).or(0)
+        self.listeners[code] = before + 1
+        if before == 0 { self.tell_host(code, true) }
+    }
+
+    /// One fewer. The host hears about the last.
+    fn let_go(code: int) {
+        let before: int = self.listeners.get(code).or(0)
+        if before <= 1 {
+            self.listeners.remove(code)
+            self.tell_host(code, false)
+            return
+        }
+        self.listeners[code] = before - 1
+    }
+
+    /// The answer is deliberately thrown away. The header calls this advice
+    /// rather than permission: a host that cannot turn a kind off says so and
+    /// keeps delivering, and this map drops what nobody wants. There is
+    /// nothing a program could usefully do about either answer.
+    fn tell_host(code: int, on: bool) {
+        var flag: int = 0
+        if on { flag = 1 }
+        unsafe {
+            host.ctd_listen(code as i32, flag as i32)
+        }
+    }
+
+    /// How many kinds the host has been asked for. The input suite reads it:
+    /// a count that never falls is the bug this bookkeeping exists to avoid.
+    pub fn listening() -> int {
+        return self.listeners.len()
     }
 
     /// How many handlers are registered, across every widget. The teardown

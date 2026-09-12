@@ -193,6 +193,18 @@ int32_t ctd_slot_kind(ctd_handle handle);
 int32_t ctd_window_text_out(HWND window, char *out, int32_t cap);
 uint32_t ctd_slot(ctd_handle handle);
 void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
+
+// ------------------------------------------------------------------- input.c
+
+// Subclasses a control so its own input messages are seen, and records the
+// handle it was tracked under. Called from ctd_track for every control.
+void ctd_input_attach(void *object, int32_t type, ctd_handle handle);
+// The handle for the nearest ancestor of a window that cortado built, starting
+// with the window itself. 0 for anything cortado did not build.
+ctd_handle ctd_handle_for_window(HWND window);
+// Whether anything asked for this kind. The header calls ctd_listen advice
+// rather than permission; this is what the advice becomes on the hot path.
+int ctd_listening(uint32_t kind);
 // A list view asking for a cell it is about to paint, and a selection that
 // moved. Both arrive as WM_NOTIFY on the *parent*, which is where every Win32
 // control reports, so app.c routes them here.
