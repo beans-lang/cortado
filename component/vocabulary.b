@@ -54,6 +54,7 @@ pub class Vocabulary {
         if tag == "Disclosure" { return some(widgets.WidgetKind.disclosure) }
         if tag == "TabView" { return some(widgets.WidgetKind.tab_view) }
         if tag == "SplitView" { return some(widgets.WidgetKind.split_view) }
+        if tag == "WebView" { return some(widgets.WidgetKind.web_view) }
         return none
     }
 
@@ -68,6 +69,20 @@ pub class Vocabulary {
         if tag == "HFlex" { return some(layout.FlexLayout.row(0.0)) }
         if tag == "Box" { return some(new layout.AbsoluteLayout()) }
         if tag == "Grid" { return some(layout.GridLayout.uniform(1, 0.0)) }
+        // The containers that hold a subtree and have nothing to say about
+        // where it goes. Without an arranger a node is a leaf, and a leaf
+        // places none of its children — so before this line every control
+        // inside a `<GroupBox>` in markup came out at 0,0,0,0, laid out
+        // correctly by a layout that had decided there was nothing to lay out.
+        //
+        // `Container` and `Canvas` are deliberately not here. A bare
+        // `<Container />` is a box a program fills itself, and a canvas is
+        // drawn rather than filled; giving either one children that fill it
+        // would change what those two tags have always meant.
+        if tag == "GroupBox" || tag == "Disclosure" || tag == "ScrollView" ||
+           tag == "TabView" || tag == "SplitView" {
+            return some(new layout.FillLayout())
+        }
         return none
     }
 
@@ -89,6 +104,7 @@ pub class Vocabulary {
         if name == "day" { return host.P_DATE }
         if name == "color" { return host.P_COLOR }
         if name == "open" { return host.P_EXPANDED }
+        if name == "animating" { return host.P_ANIMATING }
         return -1
     }
 
@@ -107,7 +123,7 @@ pub class Vocabulary {
            name == "color" {
             return AttributeKind.whole
         }
-        if name == "open" { return AttributeKind.flag }
+        if name == "open" || name == "animating" { return AttributeKind.flag }
         return AttributeKind.flag
     }
 

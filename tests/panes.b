@@ -41,6 +41,7 @@ fn holds_children(kind: widgets.WidgetKind) -> bool {
         scroll_view => { return true }
         tab_view => { return true }
         split_view => { return true }
+        web_view => { return true }
         group_box => { return true }
         disclosure => { return true }
         canvas => { return true }

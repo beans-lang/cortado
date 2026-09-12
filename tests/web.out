@@ -1,0 +1,8 @@
+-- a web view --
+  the capability and the kind agree: true
+  a fresh one is nowhere and has been nowhere: true
+  a string that is not a URL is refused: true
+  nowhere to go back to is refused, not ignored: true
+  a token nobody filled in collects nothing: true
+  every other control refuses a web call by kind: true
+drove=true

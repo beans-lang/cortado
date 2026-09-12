@@ -35,6 +35,12 @@ pub enum Capability {
     /// UIKit's is a presentation that becomes a full-screen sheet on a phone,
     /// which is a different control with a different dismissal.
     popover
+    /// A browser engine in a rectangle.
+    ///
+    /// The widest gap cortado has. WKWebView is part of the system on macOS
+    /// and iOS; GTK's engine is WebKitGTK, a separate library, and Windows' is
+    /// WebView2, a redistributable the user has to have installed.
+    web
 
     fn code() -> int {
         return match self {
@@ -47,6 +53,7 @@ pub enum Capability {
             gpu => host.CAP_GPU,
             toolbar => host.CAP_TOOLBAR,
             popover => host.CAP_POPOVER,
+            web => host.CAP_WEB,
         }
     }
 
@@ -61,6 +68,7 @@ pub enum Capability {
             gpu => "gpu",
             toolbar => "toolbar",
             popover => "popover",
+            web => "web",
         }
     }
 

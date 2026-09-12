@@ -77,6 +77,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_TAB_VIEW:     role = @"tablist";       break;
         // ARIA's word for two panes with a draggable handle between them.
         case CTD_W_SPLIT_VIEW:   role = @"separator";     break;
+        // ARIA's word for a region holding a whole document of its own.
+        case CTD_W_WEB_VIEW:     role = @"document";      break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);

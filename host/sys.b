@@ -116,6 +116,17 @@ pub extern "C" fn ctd_popover_show(popover: u64, anchor: u64, edge: i32) -> i32
 pub extern "C" fn ctd_popover_close(popover: u64) -> i32
 pub extern "C" fn ctd_popover_shown(popover: u64, out: RawPtr<i32>) -> i32
 pub extern "C" fn ctd_popover_release(popover: u64) -> i32
+pub extern "C" fn ctd_web_load(widget: u64, url: RawPtr<i8>, len: i32) -> i32
+pub extern "C" fn ctd_web_load_html(widget: u64, html: RawPtr<i8>, html_len: i32, base: RawPtr<i8>, base_len: i32) -> i32
+pub extern "C" fn ctd_web_eval(widget: u64, source: RawPtr<i8>, len: i32, token: i64) -> i32
+pub extern "C" fn ctd_web_listen(widget: u64, name: RawPtr<i8>, len: i32) -> i32
+pub extern "C" fn ctd_web_take(widget: u64, token: i64, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_web_url(widget: u64, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_web_title(widget: u64, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_web_can_go(widget: u64, back: i32, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_web_go(widget: u64, back: i32) -> i32
+pub extern "C" fn ctd_web_reload(widget: u64) -> i32
+pub extern "C" fn ctd_web_stop(widget: u64) -> i32
 pub extern "C" fn ctd_dialog_open(parent: u64, kind: i32, title: RawPtr<i8>, title_len: i32, body: RawPtr<i8>, body_len: i32, token: i64) -> i32
 pub extern "C" fn ctd_appearance() -> i32
 pub extern "C" fn ctd_surface_scale(surface: u64, out: RawPtr<f64>) -> i32

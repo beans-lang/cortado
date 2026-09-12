@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 19
+pub const ABI_VERSION: int = 20
 
 // ---- statuses ----
 
@@ -76,6 +76,7 @@ pub const CAP_SNAPSHOT: int = 6
 pub const CAP_GPU: int = 7
 pub const CAP_TOOLBAR: int = 8
 pub const CAP_POPOVER: int = 9
+pub const CAP_WEB: int = 10
 
 // ---- widget kinds ----
 
@@ -108,6 +109,7 @@ pub const W_COLOR_WELL: int = 25
 pub const W_DISCLOSURE: int = 26
 pub const W_TAB_VIEW: int = 27
 pub const W_SPLIT_VIEW: int = 28
+pub const W_WEB_VIEW: int = 29
 pub const PERM_BLUETOOTH: int = 1
 pub const PERM_LOCATION: int = 2
 pub const PERM_CAMERA: int = 3
@@ -121,6 +123,11 @@ pub const ALLOW_DENIED: int = 2
 pub const ALLOW_UNDECIDED: int = 3
 pub const EV_PERMISSION: int = 25
 pub const EV_DISMISS: int = 26
+pub const EV_WEB_STARTED: int = 27
+pub const EV_WEB_FINISHED: int = 28
+pub const EV_WEB_FAILED: int = 29
+pub const EV_WEB_MESSAGE: int = 30
+pub const EV_WEB_RESULT: int = 31
 
 // ---- property keys ----
 

@@ -167,6 +167,7 @@ fn attribute_note(name: string) -> string {
     if name == "day" { return "the day a date picker shows, in seconds since 1970-01-01 UTC" }
     if name == "color" { return "a colour well's colour, written #rgb, #rrggbb or #rrggbbaa" }
     if name == "open" { return "whether a disclosure is showing what is under it" }
+    if name == "animating" { return "whether a spinner is turning" }
     return ""
 }
 

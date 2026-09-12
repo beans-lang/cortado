@@ -125,4 +125,9 @@ UIView *ctd_disclosure_new(void);
 void    ctd_disclosure_attach(ctd_handle handle, UIView *view);
 void    ctd_chrome_of(id object, double *out);
 
+// -------------------------------------------------------------------- web.m
+
+UIView *ctd_web_new(void);
+void    ctd_web_attach(ctd_handle handle, UIView *view);
+
 #endif

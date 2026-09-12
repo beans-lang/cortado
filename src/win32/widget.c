@@ -47,6 +47,10 @@ int32_t ctd_widget_supports(int32_t kind) {
             return 0;
         case CTD_W_SWITCH:
             return 0;
+        case CTD_W_WEB_VIEW:
+            // See src/win32/web.c: WebView2 is a redistributable the user has
+            // to have installed.
+            return 0;
         case CTD_W_SPLIT_VIEW:
             // The common controls have no splitter. Every Windows application
             // that has one draws it — a thin window with a resize cursor and

@@ -44,6 +44,16 @@ pub enum EventKind {
     /// A popover went away, whether the program closed it or the user clicked
     /// elsewhere. `target` is the popover.
     dismiss
+    /// A web view began a load. `index` is a serial number.
+    web_started
+    /// It finished. `index` is the same serial.
+    web_finished
+    /// It did not. `index` is the serial, `token` the platform's error code.
+    web_failed
+    /// The page sent something. `token` keys the text; `WebView.collect` reads it.
+    web_message
+    /// A script answered. `token` echoes the call's; `WebView.collect` reads it.
+    web_result
     unknown
 
     pub fn name() -> string {
@@ -74,6 +84,11 @@ pub enum EventKind {
             anim_done => "anim_done",
             permission => "permission",
             dismiss => "dismiss",
+            web_started => "web_started",
+            web_finished => "web_finished",
+            web_failed => "web_failed",
+            web_message => "web_message",
+            web_result => "web_result",
             unknown => "unknown",
         }
     }
@@ -108,6 +123,11 @@ pub enum EventKind {
             anim_done => host.EV_ANIM_DONE,
             permission => host.EV_PERMISSION,
             dismiss => host.EV_DISMISS,
+            web_started => host.EV_WEB_STARTED,
+            web_finished => host.EV_WEB_FINISHED,
+            web_failed => host.EV_WEB_FAILED,
+            web_message => host.EV_WEB_MESSAGE,
+            web_result => host.EV_WEB_RESULT,
             unknown => 0,
         }
     }
@@ -142,6 +162,11 @@ pub enum EventKind {
         if code == host.EV_ANIM_DONE { return EventKind.anim_done }
         if code == host.EV_PERMISSION { return EventKind.permission }
         if code == host.EV_DISMISS { return EventKind.dismiss }
+        if code == host.EV_WEB_STARTED { return EventKind.web_started }
+        if code == host.EV_WEB_FINISHED { return EventKind.web_finished }
+        if code == host.EV_WEB_FAILED { return EventKind.web_failed }
+        if code == host.EV_WEB_MESSAGE { return EventKind.web_message }
+        if code == host.EV_WEB_RESULT { return EventKind.web_result }
         return EventKind.unknown
     }
 }

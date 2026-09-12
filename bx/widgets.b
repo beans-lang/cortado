@@ -59,6 +59,7 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "Disclosure" { return true }
     if tag == "TabView" { return true }
     if tag == "SplitView" { return true }
+    if tag == "WebView" { return true }
     return false
 }
 
@@ -97,6 +98,7 @@ pub fn is_boolean_attribute(name: string) -> bool {
     if name == "editable" { return true }
     if name == "indeterminate" { return true }
     if name == "open" { return true }
+    if name == "animating" { return true }
     return false
 }
 
@@ -146,7 +148,7 @@ pub fn attribute_call(name: string) -> string {
 
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
 pub fn attribute_names() -> List<string> {
-    return ["align", "alignment", "basis", "checked", "color", "day",
+    return ["align", "alignment", "animating", "basis", "checked", "color", "day",
             "editable", "enabled",
             "font_size", "grow", "height", "hidden", "indeterminate",
             "justify", "margin", "max", "min", "opacity", "open", "padding",
@@ -161,7 +163,8 @@ pub fn widget_tags() -> List<string> {
             "LevelIndicator", "Link",
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",
             "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper",
-            "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack"]
+            "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack",
+            "WebView"]
 }
 
 /// Whether a tag is spelled like an identifier.

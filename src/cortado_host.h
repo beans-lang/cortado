@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 19
+#define CTD_ABI_VERSION 20
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -166,6 +166,7 @@ void       ctd_post(int64_t token);
 #define CTD_CAP_GPU             7  /* can draw with shaders; see "the GPU"   */
 #define CTD_CAP_TOOLBAR         8  /* a row of commands attached to a window */
 #define CTD_CAP_POPOVER         9  /* a small window anchored to a control   */
+#define CTD_CAP_WEB            10  /* a browser engine in a rectangle        */
 
 int32_t    ctd_capability(int32_t capability);
 
@@ -366,6 +367,20 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
  * every Windows application draws its own — and UIKit's split view is a view
  * *controller* that owns the screen rather than a control in a layout. */
 #define CTD_W_SPLIT_VIEW   28
+/* A browser engine in a rectangle.
+ *
+ * The one control here that is a whole other system rather than a widget, and
+ * it gets a sub-ABI of its own — ctd_web_* below — for the same reason a table
+ * did: navigation, script and messages are not properties, and squeezing them
+ * into the property bag would make every one of them a special case.
+ *
+ * Not on every platform, and this is the widest gap in the header. macOS and
+ * iOS have WKWebView, which is part of the system. GTK's is WebKitGTK, a
+ * separate library that a machine may or may not have, and Windows' is
+ * WebView2, a redistributable the user has to have installed. A control that
+ * silently became an empty grey box on two platforms would be worse than one
+ * that says it is not there, so both refuse. */
+#define CTD_W_WEB_VIEW     29
 
 /* Whether this host can build a control of this kind.
  *
@@ -1237,6 +1252,61 @@ ctd_status ctd_popover_close(ctd_handle popover);
 ctd_status ctd_popover_shown(ctd_handle popover, int32_t *out);
 ctd_status ctd_popover_release(ctd_handle popover);
 
+/* ---- web views --------------------------------------------------------- */
+
+/* A browser engine's controls. Every one of them refuses with CTD_ERR_KIND on
+ * a handle that is not a CTD_W_WEB_VIEW, and with CTD_ERR_UNSUPPORTED on a
+ * platform where ctd_capability(CTD_CAP_WEB) answers 0 — where the kind itself
+ * cannot be built, so the first refusal a program meets is the honest one from
+ * ctd_widget_new.
+ *
+ * **Everything here is asynchronous and says so.** A page load, a script and a
+ * navigation all finish later, on the main thread, as events:
+ *
+ *   CTD_EV_WEB_STARTED   a load began.    `index` is a serial number.
+ *   CTD_EV_WEB_FINISHED  a load finished. `index` is the same serial.
+ *   CTD_EV_WEB_FAILED    it did not.      `index` is the serial, `token` the
+ *                                         platform's error code.
+ *   CTD_EV_WEB_MESSAGE   the page sent something. `token` keys the text.
+ *   CTD_EV_WEB_RESULT    a script answered. `token` echoes the call's.
+ *
+ * The text of a message or a result is read with ctd_web_take, keyed by the
+ * token the event carried, and is held until it is read — which is the
+ * difference between this and a control's text. A control moves on and its
+ * text has to come with the event; a result does not exist until it is ready
+ * and cannot be overwritten by anything else. The two-call shape, and then it
+ * is gone: reading twice answers empty, because a buffer nobody clears is a
+ * leak with a name.
+ *
+ * **A page cannot reach the program except by saying so.** ctd_web_listen names
+ * a channel the page can post to (`window.webkit.messageHandlers.<name>` on
+ * WebKit); a page that posts to an unnamed channel is ignored. A web view with
+ * no channel named is a viewer, not a bridge, and that is the default. */
+ctd_status ctd_web_load(ctd_handle widget, const char *url, int32_t len);
+/* Loads markup directly. `base` is the URL relative links resolve against, and
+ * may be empty for none. */
+ctd_status ctd_web_load_html(ctd_handle widget, const char *html, int32_t html_len,
+                             const char *base, int32_t base_len);
+/* Runs script in the page. The answer arrives as CTD_EV_WEB_RESULT carrying
+ * `token`, and is read with ctd_web_take. */
+ctd_status ctd_web_eval(ctd_handle widget, const char *source, int32_t len,
+                        int64_t token);
+/* Opens a channel the page can post to by name. Empty closes every channel. */
+ctd_status ctd_web_listen(ctd_handle widget, const char *name, int32_t len);
+/* The text an event's token names, once. Writes at most `cap` bytes and
+ * answers the byte length it needs — the two-call shape. Reading twice answers
+ * empty; see the note above. */
+int32_t    ctd_web_take(ctd_handle widget, int64_t token, char *out, int32_t cap);
+/* Where the view is now, and what the page calls itself. Both are the
+ * platform's answer and may be empty before a load finishes. */
+int32_t    ctd_web_url(ctd_handle widget, char *out, int32_t cap);
+int32_t    ctd_web_title(ctd_handle widget, char *out, int32_t cap);
+/* 1 or 0 into `out`. */
+ctd_status ctd_web_can_go(ctd_handle widget, int32_t back, int32_t *out);
+ctd_status ctd_web_go(ctd_handle widget, int32_t back);
+ctd_status ctd_web_reload(ctd_handle widget);
+ctd_status ctd_web_stop(ctd_handle widget);
+
 /* ---- dialogs ----------------------------------------------------------- */
 
 /* Dialogs are **asynchronous**, on every platform, and that is not a style
@@ -1466,6 +1536,11 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row);
 /* A popover went away, whether the program closed it or the user clicked
  * elsewhere. `target` is the popover. */
 #define CTD_EV_DISMISS          26
+#define CTD_EV_WEB_STARTED      27  /* index is the load's serial            */
+#define CTD_EV_WEB_FINISHED     28  /* index is the same serial              */
+#define CTD_EV_WEB_FAILED       29  /* index the serial, token the error     */
+#define CTD_EV_WEB_MESSAGE      30  /* token keys the text; ctd_web_take     */
+#define CTD_EV_WEB_RESULT       31  /* token echoes the eval's               */
 
 ctd_status ctd_permission_status(int32_t what, int32_t *out);
 /* Asks the user. CTD_ERR_UNSUPPORTED where a prompt cannot appear — which is

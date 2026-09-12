@@ -47,4 +47,18 @@ pub class SecureField extends Widget {
     pub fn is_editable() -> Result<bool> {
         return self.read_flag(host.P_EDITABLE, "read whether a secure field is editable")
     }
+
+    /// What the field shows while it is empty.
+    ///
+    /// Every single-line field carries one — `ctd_kind_has_hint` in
+    /// `src/cortado_rules.h` names exactly the three — and this wrapper was
+    /// missing for two of them, so the property was reachable through
+    /// `set_string` and through no method.
+    pub fn set_hint(hint: string) -> Result<bool> {
+        return self.set_string(host.S_HINT, hint, "set a secure field's hint")
+    }
+
+    pub fn hint() -> Result<string> {
+        return self.string_at(host.S_HINT, "read a secure field's hint")
+    }
 }

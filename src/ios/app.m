@@ -340,6 +340,8 @@ int32_t ctd_capability(int32_t capability) {
         // is a presentation that becomes a full-screen sheet on a phone.
         case CTD_CAP_TOOLBAR:       return 0;
         case CTD_CAP_POPOVER:       return 0;
+        // WKWebView is part of the system here, the same as on the Mac.
+        case CTD_CAP_WEB:           return 1;
         default:                    return 0;
     }
 }

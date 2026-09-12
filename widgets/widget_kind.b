@@ -81,6 +81,10 @@ pub enum WidgetKind {
     /// the Win32 common controls have no splitter, and UIKit's is a view
     /// controller rather than a control.
     split_view
+    /// A browser engine in a rectangle — and **the widest platform gap cortado
+    /// has**: WKWebView is part of the system on macOS and iOS, GTK's engine
+    /// is a separate library and Windows' is a redistributable.
+    web_view
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -114,6 +118,7 @@ pub enum WidgetKind {
             disclosure => host.W_DISCLOSURE,
             tab_view => host.W_TAB_VIEW,
             split_view => host.W_SPLIT_VIEW,
+            web_view => host.W_WEB_VIEW,
         }
     }
 
@@ -149,6 +154,7 @@ pub enum WidgetKind {
             disclosure => "Disclosure",
             tab_view => "TabView",
             split_view => "SplitView",
+            web_view => "WebView",
         }
     }
 
@@ -202,6 +208,7 @@ pub enum WidgetKind {
             disclosure => { return false }
             tab_view => { return false }
             split_view => { return false }
+            web_view => { return false }
         }
     }
 
@@ -270,6 +277,7 @@ pub enum WidgetKind {
         every.push(WidgetKind.disclosure)
         every.push(WidgetKind.tab_view)
         every.push(WidgetKind.split_view)
+        every.push(WidgetKind.web_view)
         return move every
     }
 
@@ -303,6 +311,7 @@ pub enum WidgetKind {
         if code == host.W_DISCLOSURE { return some(WidgetKind.disclosure) }
         if code == host.W_TAB_VIEW { return some(WidgetKind.tab_view) }
         if code == host.W_SPLIT_VIEW { return some(WidgetKind.split_view) }
+        if code == host.W_WEB_VIEW { return some(WidgetKind.web_view) }
         return none
     }
 }

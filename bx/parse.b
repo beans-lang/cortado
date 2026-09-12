@@ -631,10 +631,19 @@ pub class Parser {
             self.report(at, "bind:{rest}=\{{code}\} is not a field to write back to — a binding needs a place, such as bind:{rest}=\{self.note\}")
             return none
         }
-        let tag: string = node.tag.to_lower()
+        // Which controls a binding works on, in cortado's own vocabulary.
+        //
+        // This check was written in HTML's — `input`, `textarea`, `select` —
+        // and had been since the parser was adapted from latte's. It matched
+        // `<TextArea>` by accident, because lowercasing the tag happens to
+        // spell HTML's name for it, and refused every other cortado field
+        // there is. The rule is cortado's: a value binds to a control that
+        // holds text a user edits, and a state binds to a control whose being
+        // ticked is what it *is*.
+        let tag: string = node.tag
         if target == "checked" {
-            if tag != "input" {
-                self.report(at, "bind:checked works on an <input>, and this is a <{node.tag}>")
+            if !binds_a_state(tag) {
+                self.report(at, "bind:checked works on a <CheckBox>, a <RadioButton> and a <Switch>, and this is a <{tag}>")
                 return none
             }
             if modifier != "" {
@@ -644,21 +653,21 @@ pub class Parser {
             return some(BindAttr.of("checked", "", code, at))
         }
         if target != "value" {
-            self.report(at, "bind:{target} is not a binding latte has — the two are bind:value and bind:checked")
+            self.report(at, "bind:{target} is not a binding cortado has — the two are bind:value and bind:checked")
             return none
         }
         if modifier != "" && modifier != "int" && modifier != "float" && modifier != "bool" {
-            self.report(at, "bind:value.{modifier} is not a conversion latte has — the three are .int, .float and .bool")
+            self.report(at, "bind:value.{modifier} is not a conversion cortado has — the three are .int, .float and .bool")
             return none
         }
-        if tag == "input" || tag == "textarea" {
+        if binds_a_value(tag) {
             return some(BindAttr.of("value", modifier, code, at))
         }
-        if tag == "select" {
-            self.report(at, "bind:value on a <select> cannot set the initial selection: a select's value is not an attribute, it is which <option> carries selected. Write selected=\{...\} on the option and on:change=\{...\} for the write-back")
+        if tag == "ComboBox" || tag == "Segmented" || tag == "TabView" {
+            self.report(at, "bind:value on a <{tag}> would bind the words, and what one of these holds is an index. Write selected=\{...\} and on:change=\{...\} for the write-back")
             return none
         }
-        self.report(at, "bind:value works on an <input> and a <textarea>, and this is a <{node.tag}>")
+        self.report(at, "bind:value works on the controls that hold text a user edits — <TextField>, <SecureField>, <SearchField> and <TextArea> — and this is a <{tag}>")
         return none
     }
 
@@ -1176,4 +1185,22 @@ fn family_or_event(event: string) -> string {
     let family: string = event_family(event)
     if family == "" { return "UiEvent" }
     return family
+}
+
+/// Which controls hold text a user edits, and so can bind a value.
+///
+/// Exactly the kinds `ctd_kind_has_hint` names plus the text area — which is
+/// not a coincidence: a hint is what a field shows while it is empty, and a
+/// control that can be empty of text is a control that holds text.
+fn binds_a_value(tag: string) -> bool {
+    return tag == "TextField" || tag == "SecureField" ||
+           tag == "SearchField" || tag == "TextArea"
+}
+
+/// Which controls being ticked is what they *are*, and so can bind a state.
+///
+/// The same three `ctd_kind_has_checked` names in `src/cortado_rules.h`. A
+/// push button is not one: it is a command, and a command has no state to bind.
+fn binds_a_state(tag: string) -> bool {
+    return tag == "CheckBox" || tag == "RadioButton" || tag == "Switch"
 }

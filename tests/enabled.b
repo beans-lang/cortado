@@ -75,6 +75,7 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         disclosure => { return false }
         tab_view => { return false }
         split_view => { return false }
+        web_view => { return false }
     }
 }
 

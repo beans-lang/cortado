@@ -555,6 +555,7 @@ int32_t ctd_capability(int32_t capability) {
         // top-level window, gives it a shadow and captures the mouse to
         // dismiss it — which is cortado drawing a control.
         case CTD_CAP_POPOVER:       return 0;
+        case CTD_CAP_WEB:           return 0;
         default:                    return 0;
     }
 }

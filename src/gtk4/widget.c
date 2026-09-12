@@ -39,6 +39,10 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_TAB_VIEW:
         case CTD_W_SPLIT_VIEW:
             return 1;
+        case CTD_W_WEB_VIEW:
+            // See src/gtk4/web.c: WebKitGTK is a separate library and not on
+            // every machine that has GTK.
+            return 0;
         case CTD_W_SEGMENTED:
             // GTK has no segmented control. A row of toggle buttons with the
             // "linked" style class looks like one and is not one: nothing

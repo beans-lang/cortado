@@ -60,6 +60,7 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_DISCLOSURE:   role = @"group";         break;
         case CTD_W_TAB_VIEW:     role = @"tablist";       break;
         case CTD_W_SPLIT_VIEW:   role = @"separator";     break;
+        case CTD_W_WEB_VIEW:     role = @"document";      break;
         default:                 role = @"group";       break;
     }
     return ctd_copy_out(role, out, cap);

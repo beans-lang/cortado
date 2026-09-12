@@ -92,6 +92,7 @@ pub class WidgetMaker {
             disclosure => { return ok(new widgets.Disclosure()) }
             tab_view => { return ok(new widgets.TabView()) }
             split_view => { return ok(new widgets.SplitView()) }
+            web_view => { return ok(new widgets.WebView()) }
         }
     }
 

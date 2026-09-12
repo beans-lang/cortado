@@ -40,6 +40,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_DATE_PICKER:
         case CTD_W_COLOR_WELL:
         case CTD_W_DISCLOSURE:
+        case CTD_W_WEB_VIEW:
             return 1;
         case CTD_W_SPLIT_VIEW:
             // UIKit's split view is a view *controller* as well, and one that
@@ -145,6 +146,9 @@ ctd_handle ctd_widget_new(int32_t kind) {
         }
         case CTD_W_DISCLOSURE:
             view = ctd_disclosure_new();
+            break;
+        case CTD_W_WEB_VIEW:
+            view = ctd_web_new();
             break;
         case CTD_W_DATE_PICKER: {
             UIDatePicker *picker = [[UIDatePicker alloc] initWithFrame:CGRectZero];
@@ -281,6 +285,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
         [source release];
     }
     if (kind == CTD_W_DISCLOSURE) ctd_disclosure_attach(handle, view);
+    if (kind == CTD_W_WEB_VIEW) ctd_web_attach(handle, view);
     if ([view isKindOfClass:[UIControl class]]) {
         CortadoTarget *forwarder = [[CortadoTarget alloc] init];
         [forwarder setHandle:handle];

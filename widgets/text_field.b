@@ -40,4 +40,18 @@ pub class TextField extends Widget {
     pub override fn display_text() -> Result<string> {
         return self.value()
     }
+
+    /// What the field shows while it is empty.
+    ///
+    /// Every single-line field carries one — `ctd_kind_has_hint` in
+    /// `src/cortado_rules.h` names exactly the three — and this wrapper was
+    /// missing for two of them, so the property was reachable through
+    /// `set_string` and through no method.
+    pub fn set_hint(hint: string) -> Result<bool> {
+        return self.set_string(host.S_HINT, hint, "set a text field's hint")
+    }
+
+    pub fn hint() -> Result<string> {
+        return self.string_at(host.S_HINT, "read a text field's hint")
+    }
 }

@@ -168,4 +168,9 @@ NSView      *ctd_split_new(void);
 void         ctd_split_attach(ctd_handle handle, NSView *view);
 double       ctd_split_position(NSSplitView *split);
 
+// -------------------------------------------------------------------- web.m
+
+NSView *ctd_web_new(void);
+void    ctd_web_attach(ctd_handle handle, NSView *view);
+
 #endif

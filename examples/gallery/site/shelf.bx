@@ -1,35 +1,188 @@
-<VStack spacing={12} padding={20} align="stretch">
-  <Label font_size={18} text="Every control" />
+<VStack spacing={10} padding={16} align="stretch">
+  <Label font_size={18} text="Every control cortado has" />
+  <Label>$self.inventory</Label>
   <Separator />
 
-  <HFlex spacing={10}>
-    <Label width={110} text="Drink" />
-    <ComboBox grow={1} on:change={fn(e: UiEvent) { self.pick(e.index) }} />
-  </HFlex>
+  <!-- Words. Everything here is on every platform. -->
+  <Disclosure text="Words" open={self.words}
+              on:change={fn(e: UiEvent) { self.toggle_words(e) }}>
+    <VStack spacing={8} padding={8} align="stretch">
+      <HFlex spacing={10}>
+        <Label width={110} text="Name" />
+        <TextField grow={1} bind:value={self.name} />
+      </HFlex>
+      <HFlex spacing={10}>
+        <Label width={110} text="Passphrase" />
+        <SecureField grow={1} />
+      </HFlex>
+      <HFlex spacing={10}>
+        <Label width={110} text="Search" />
+        <SearchField grow={1} />
+      </HFlex>
+      <TextArea height={56} bind:value={self.note} />
+      <Link text="Read the manual" />
+    </VStack>
+  </Disclosure>
 
-  <HFlex spacing={10}>
-    <Label width={110}>Shots: $self.shots</Label>
-    <Slider grow={1} min={1} max={4} value={self.shots}
-            on:change={fn(e: UiEvent) { self.set_shots(e) }} />
-  </HFlex>
+  <!-- Choices. Three of these are not on every platform, and each says so. -->
+  <Disclosure text="Choices" open={self.choices}
+              on:change={fn(e: UiEvent) { self.toggle_choices(e) }}>
+    <VStack spacing={8} padding={8} align="stretch">
+      <HFlex spacing={10}>
+        <Label width={110} text="Drink" />
+        <ComboBox grow={1} on:change={fn(e: UiEvent) { self.pick(e.index) }} />
+      </HFlex>
+      <HStack spacing={10}>
+        <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>Rush it</CheckBox>
+        <RadioButton>Eat in</RadioButton>
+        <RadioButton>Take away</RadioButton>
+      </HStack>
+      $if self.has_switch {
+        <HFlex spacing={10}>
+          <Label width={110} text="Keep warm" />
+          <Switch checked={self.warm} on:change={fn(e: UiEvent) { self.toggle_warm(e) }} />
+        </HFlex>
+      }
+      $if !self.has_switch {
+        <Label text="no toggle switch on this platform" />
+      }
+      $if self.has_segmented {
+        <Segmented />
+      }
+      $if !self.has_segmented {
+        <Label text="no segmented control on this platform" />
+      }
+    </VStack>
+  </Disclosure>
 
-  <HStack spacing={10}>
-    <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>Rush it</CheckBox>
-    <RadioButton>Eat in</RadioButton>
-    <RadioButton>Take away</RadioButton>
-  </HStack>
+  <!-- Numbers. A gauge is not on every platform; the rest are. -->
+  <Disclosure text="Numbers" open={self.numbers}
+              on:change={fn(e: UiEvent) { self.toggle_numbers(e) }}>
+    <VStack spacing={8} padding={8} align="stretch">
+      <HFlex spacing={10}>
+        <Label width={110}>Shots: $self.shots</Label>
+        <Slider grow={1} min={1} max={4} value={self.shots}
+                on:change={fn(e: UiEvent) { self.set_shots(e) }} />
+      </HFlex>
+      <HFlex spacing={10}>
+        <Label width={110} text="Exactly" />
+        <Stepper min={1} max={4} step={1} value={self.shots}
+                 on:change={fn(e: UiEvent) { self.set_shots(e) }} />
+      </HFlex>
+      <ProgressBar height={12} min={0} max={4} value={self.shots} />
+      $if self.has_level {
+        <LevelIndicator height={16} min={0} max={4} value={self.shots} />
+      }
+      $if !self.has_level {
+        <Label text="no level indicator on this platform" />
+      }
+      $if self.has_spinner {
+        <Spinner height={20} animating={self.busy} />
+      }
+      $if !self.has_spinner {
+        <Label text="no spinner on this platform" />
+      }
+    </VStack>
+  </Disclosure>
 
-  <ProgressBar height={12} min={0} max={4} value={self.shots} />
+  <!-- A day and a colour: the two values that are neither text nor a number. -->
+  <Disclosure text="A day and a colour" open={self.values}
+              on:change={fn(e: UiEvent) { self.toggle_values(e) }}>
+    <VStack spacing={8} padding={8} align="stretch">
+      <HFlex spacing={10}>
+        <Label width={110} text="When" />
+        <DatePicker grow={1} day={self.day}
+                    on:change={fn(e: UiEvent) { self.set_day(e) }} />
+      </HFlex>
+      $if self.has_color {
+        <HFlex spacing={10}>
+          <Label width={110} text="Marker" />
+          <ColorWell width={60} height={24} color="#3b82f6"
+                     on:change={fn(e: UiEvent) { self.set_color(e) }} />
+        </HFlex>
+      }
+      $if !self.has_color {
+        <Label text="no colour well on this platform" />
+      }
+      <Label>$self.chosen</Label>
+    </VStack>
+  </Disclosure>
 
-  <!-- A bare canvas: an ordinary control, which a program fills itself. -->
-  <Canvas height={24} />
+  <!-- Boxes and pictures. -->
+  <Disclosure text="Boxes and pictures" open={self.boxes}
+              on:change={fn(e: UiEvent) { self.toggle_boxes(e) }}>
+    <VStack spacing={8} padding={8} align="stretch">
+      $if self.has_group {
+        <GroupBox text="Brewing">
+          <VStack spacing={6} padding={10} align="stretch">
+            <CheckBox>Grind fresh</CheckBox>
+            <CheckBox>Filtered water</CheckBox>
+          </VStack>
+        </GroupBox>
+      }
+      $if !self.has_group {
+        <Label text="no group box on this platform" />
+      }
+      <Image height={20} />
+      <!-- A bare canvas: an ordinary control a program fills itself. -->
+      <Canvas height={20} />
+      <!-- And the easy road: no shader code at all. The effect is named and
+           cortado writes the shader, the pipeline, the quad and the clock. -->
+      <ShaderCanvas height={44} effect="ripple" color="#4088bf" color_to="#0d1b2a" detail={26} />
+    </VStack>
+  </Disclosure>
 
-  <!-- And the easy road: no shader code at all. The effect is named and the
-       attributes tune it — cortado writes the shader, and supplies the device,
-       the pipeline, the quad and the frame clock. -->
-  <ShaderCanvas height={44} effect="ripple" color="#4088bf" color_to="#0d1b2a" detail={26} />
+  <!-- Rows, and a window onto something bigger. A table is filled by *asking*
+       rather than by building — its rows are a data source, which `main.b`
+       gives it — and a scroll view holds whatever is too big for its frame. -->
+  <Disclosure text="Rows" open={self.rows}
+              on:change={fn(e: UiEvent) { self.toggle_rows(e) }}>
+    <VStack spacing={8} padding={8} align="stretch">
+      <Table height={80} />
+      <ScrollView height={60}>
+        <VStack spacing={4} padding={4} align="stretch">
+          <Label text="More than fits" />
+          <Label text="so the rest scrolls" />
+          <Label text="and nothing is clipped away" />
+        </VStack>
+      </ScrollView>
+    </VStack>
+  </Disclosure>
 
-  <TextArea height={70} bind:value={self.note} />
+  <!-- The three that are whole systems rather than controls. Each is missing
+       on at least one platform, and none of them can be fully described in
+       markup: a tab's labels, a divider's position and a page's HTML are data.
+       `main.b` fills those in after the mount, the same way it fills the combo
+       box — which is the same rule, not a special case. -->
+  <Disclosure text="Pages, panes and a browser" open={self.systems}
+              on:change={fn(e: UiEvent) { self.toggle_systems(e) }}>
+    <VStack spacing={8} padding={8} align="stretch">
+      $if self.has_tabs {
+        <TabView height={90}>
+          <Container />
+          <Container />
+        </TabView>
+      }
+      $if !self.has_tabs {
+        <Label text="no tab view on this platform" />
+      }
+      $if self.has_split {
+        <SplitView height={70}>
+          <Container />
+          <Container />
+        </SplitView>
+      }
+      $if !self.has_split {
+        <Label text="no split view on this platform" />
+      }
+      $if self.has_web {
+        <WebView height={90} />
+      }
+      $if !self.has_web {
+        <Label text="no browser engine on this platform" />
+      }
+    </VStack>
+  </Disclosure>
 
   <HStack spacing={10} justify="end">
     <Button enabled={self.shots > 0} on:click={fn(e: UiEvent) { self.order() }}>Order</Button>
@@ -42,19 +195,77 @@ package site
 
 import cortado.component
 import cortado.events
+import cortado.widgets
 import {ShaderCanvas} from cortado.gpu
 import {view} from cortado.annotations
 
 /// The order screen, showing one of every control cortado has.
+///
+/// **Nine of the thirty are not on every platform**, and every one of them is
+/// wrapped in a `$if` here with a sentence for the other branch. That is the
+/// shape a real screen takes: a control cortado will not substitute for you is
+/// a control you decide about, and deciding once at the top of `init` is
+/// cheaper than asking again in every branch.
+///
+/// Three of them are whole systems rather than controls — a tab view, a split
+/// view and a browser engine — and none can be fully described in markup: a
+/// tab's labels, a divider's position and a page's HTML are data. `main.b`
+/// fills those in after the mount, the same way it fills the combo box, which
+/// is the same rule rather than a special case.
 @view
 pub partial class Shelf extends component.Component {
     pub drink: string = "flat white"
+    pub name: string = "Ada"
     pub shots: int = 2
     pub rush: bool = false
+    pub warm: bool = false
+    pub busy: bool = true
+    pub day: f64 = 1767225600.0
     pub note: string = "no sugar"
     pub status: string = "Nothing ordered yet"
+    pub chosen: string = "2026-01-01, marker #3b82f6"
 
-    pub fn init() { super.init() }
+    /// Which sections are open. A shut disclosure still takes the room its
+    /// children asked for unless the program stops describing them — which in
+    /// markup is exactly this `$if`, and is why these are fields.
+    pub words: bool = true
+    pub choices: bool = true
+    pub numbers: bool = false
+    pub values: bool = false
+    pub boxes: bool = false
+    pub rows: bool = false
+    pub systems: bool = false
+
+    /// What this platform has. Asked once, at the top, rather than in every
+    /// branch below.
+    pub has_switch: bool = false
+    pub has_segmented: bool = false
+    pub has_level: bool = false
+    pub has_spinner: bool = false
+    pub has_color: bool = false
+    pub has_group: bool = false
+    pub has_tabs: bool = false
+    pub has_split: bool = false
+    pub has_web: bool = false
+    pub inventory: string = ""
+
+    pub fn init() {
+        super.init()
+        self.has_switch = widgets.WidgetKind.switch.available()
+        self.has_segmented = widgets.WidgetKind.segmented.available()
+        self.has_level = widgets.WidgetKind.level_indicator.available()
+        self.has_spinner = widgets.WidgetKind.spinner.available()
+        self.has_color = widgets.WidgetKind.color_well.available()
+        self.has_group = widgets.WidgetKind.group_box.available()
+        self.has_tabs = widgets.WidgetKind.tab_view.available()
+        self.has_split = widgets.WidgetKind.split_view.available()
+        self.has_web = widgets.WidgetKind.web_view.available()
+        var here: int = 0
+        for kind: widgets.WidgetKind in widgets.WidgetKind.all() {
+            if kind.available() { here = here + 1 }
+        }
+        self.inventory = "{here} of {widgets.WidgetKind.all().len()} kinds on this platform"
+    }
 
     pub fn pick(index: int) {
         if index == 1 { self.drink = "espresso" }
@@ -68,8 +279,60 @@ pub partial class Shelf extends component.Component {
         self.request_render()
     }
 
+    pub fn set_day(event: events.UiEvent) {
+        self.day = event.index as f64
+        self.chosen = "day {event.index / 86400}, marker unchanged"
+        self.request_render()
+    }
+
+    pub fn set_color(event: events.UiEvent) {
+        let picked: widgets.Rgba = widgets.ColorWell.unpack(event.index)
+        self.chosen = "marker {picked.show()}"
+        self.request_render()
+    }
+
     pub fn toggle_rush() {
         self.rush = !self.rush
+        self.request_render()
+    }
+
+    pub fn toggle_warm(event: events.UiEvent) {
+        self.warm = event.index == 1
+        self.request_render()
+    }
+
+    pub fn toggle_words(event: events.UiEvent) {
+        self.words = event.index == 1
+        self.request_render()
+    }
+
+    pub fn toggle_choices(event: events.UiEvent) {
+        self.choices = event.index == 1
+        self.request_render()
+    }
+
+    pub fn toggle_numbers(event: events.UiEvent) {
+        self.numbers = event.index == 1
+        self.request_render()
+    }
+
+    pub fn toggle_values(event: events.UiEvent) {
+        self.values = event.index == 1
+        self.request_render()
+    }
+
+    pub fn toggle_boxes(event: events.UiEvent) {
+        self.boxes = event.index == 1
+        self.request_render()
+    }
+
+    pub fn toggle_rows(event: events.UiEvent) {
+        self.rows = event.index == 1
+        self.request_render()
+    }
+
+    pub fn toggle_systems(event: events.UiEvent) {
+        self.systems = event.index == 1
         self.request_render()
     }
 

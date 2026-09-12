@@ -39,6 +39,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_DISCLOSURE:
         case CTD_W_TAB_VIEW:
         case CTD_W_SPLIT_VIEW:
+        case CTD_W_WEB_VIEW:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -216,6 +217,9 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_SPLIT_VIEW:
             view = ctd_split_new();
             break;
+        case CTD_W_WEB_VIEW:
+            view = ctd_web_new();
+            break;
         case CTD_W_GROUP_BOX: {
             NSBox *group = [[NSBox alloc] initWithFrame:NSZeroRect];
             [group setBoxType:NSBoxPrimary];
@@ -346,6 +350,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
     if (kind == CTD_W_DISCLOSURE) ctd_disclosure_attach(handle, view);
     if (kind == CTD_W_TAB_VIEW) ctd_tabs_attach(handle, view);
     if (kind == CTD_W_SPLIT_VIEW) ctd_split_attach(handle, view);
+    if (kind == CTD_W_WEB_VIEW) ctd_web_attach(handle, view);
     if ([view isKindOfClass:[NSControl class]]) {
         CortadoTarget *forwarder = [[CortadoTarget alloc] init];
         [forwarder setHandle:handle];
