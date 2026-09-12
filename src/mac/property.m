@@ -134,6 +134,9 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
         return CTD_OK;
     }
     if (inner)                                           [inner setString:text];
+    // A group box's text is the title on its frame. A separator is also an
+    // NSBox and has none, which the kind decides rather than the class.
+    else if (ctd_slot_kind(widget) == CTD_W_GROUP_BOX)   [(NSBox *)object setTitle:text];
     else if ([object isKindOfClass:[NSButton class]])    [(NSButton *)object setTitle:text];
     else if ([object isKindOfClass:[NSTextField class]]) [(NSTextField *)object setStringValue:text];
     else return CTD_ERR_KIND;
@@ -149,6 +152,8 @@ int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
     NSTextView *inner = ctd_text_view(object);
     if (inner)
         return ctd_copy_out([inner string], out, cap);
+    if (ctd_slot_kind(widget) == CTD_W_GROUP_BOX)
+        return ctd_copy_out([(NSBox *)object title], out, cap);
     if ([object isKindOfClass:[NSButton class]])
         return ctd_copy_out([(NSButton *)object title], out, cap);
     if ([object isKindOfClass:[NSTextField class]])
@@ -200,6 +205,13 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_OK;
         }
         case CTD_P_SELECTED: {
+            if ([object isKindOfClass:[NSSegmentedControl class]]) {
+                NSSegmentedControl *bar = (NSSegmentedControl *)object;
+                if (value < 0) { [bar setSelectedSegment:-1]; return CTD_OK; }
+                if (value >= (int64_t)[bar segmentCount]) return CTD_ERR_RANGE;
+                [bar setSelectedSegment:(NSInteger)value];
+                return CTD_OK;
+            }
             if (![object isKindOfClass:[NSPopUpButton class]]) return CTD_ERR_KIND;
             NSPopUpButton *menu = (NSPopUpButton *)object;
             if (value < 0) { [menu selectItem:nil]; return CTD_OK; }
@@ -261,6 +273,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = [(NSTextField *)object isEditable] ? 1 : 0;
             break;
         case CTD_P_SELECTED:
+            if ([object isKindOfClass:[NSSegmentedControl class]]) {
+                value = (int64_t)[(NSSegmentedControl *)object selectedSegment];
+                break;
+            }
             if (![object isKindOfClass:[NSPopUpButton class]]) return CTD_ERR_KIND;
             value = (int64_t)[(NSPopUpButton *)object indexOfSelectedItem];
             break;

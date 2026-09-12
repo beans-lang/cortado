@@ -73,6 +73,10 @@ void ctd_emit_control(ctd_handle target, id sender) {
     } else if ([sender isKindOfClass:[NSSlider class]]) {
         kind = CTD_EV_VALUE_CHANGED;
         index = (int64_t)[(NSSlider *)sender doubleValue];
+    } else if ([sender isKindOfClass:[NSSegmentedControl class]]) {
+        kind = CTD_EV_VALUE_CHANGED;
+        index = (int64_t)[(NSSegmentedControl *)sender selectedSegment];
+        text = [(NSSegmentedControl *)sender labelForSegment:index];
     } else if ([sender isKindOfClass:[NSPopUpButton class]]) {
         kind = CTD_EV_VALUE_CHANGED;
         index = (int64_t)[(NSPopUpButton *)sender indexOfSelectedItem];

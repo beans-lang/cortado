@@ -161,7 +161,7 @@ pub class Mount implements Composer {
                 none => {}
             }
         }
-        match self.root as? widgets.Container {
+        match self.root as? widgets.ChildHolder {
             none => {}
             some(box) => {
                 var back: int = box.count() - 1
@@ -485,7 +485,7 @@ pub class Mount implements Composer {
             some(arranger) => { node = self.sheet.group(element.tag, control, arranger) }
         }
         node.spec = element.spec
-        match control as? widgets.Container {
+        match control as? widgets.ChildHolder {
             none => { return node }
             some(box) => {
                 var index: int = 0

@@ -1189,6 +1189,36 @@ First working macOS host.
   read its target back as `""`. Reverting the one-line fix turns that golden
   line to `false`.
 
+- **`CTD_W_SEGMENTED` and `CTD_W_GROUP_BOX`, and neither is everywhere.**
+  `NSSegmentedControl` and `UISegmentedControl` are real; GTK and the Win32
+  common controls have none, and a row of linked toggle buttons is not one —
+  nothing keeps exactly one of them down, so it can be all-off or all-on and a
+  program that relied on "one is always chosen" would be wrong in a way the
+  user can see. `NSBox`, `GtkFrame` and `BS_GROUPBOX` are real; UIKit has
+  nothing that means a titled frame, because on a phone the shape is a grouped
+  table section.
+
+  A segmented control carries the same item list a combo box does, because "a
+  list of choices" is one idea and a caller should not have to know which
+  control it landed in.
+
+- **Everything that holds children is one class now.** `GroupBox` holds
+  children exactly the way `Container` does, and Beans has no constructor
+  overloading and no non-literal parameter default — so `Container.init()`
+  could not grow a kind without changing every call site. `ChildHolder` is the
+  abstract base that owns the list, the ordering, the platform calls and the
+  lifetime; `Container` and `GroupBox` are two lines each. The reconciler
+  downcasts to it rather than to `Container`, so the next kind that holds
+  children needs nothing from the applier.
+
+  (`Box` was the first name and is a Beans builtin — `type name 'Box' already
+  taken`, and `builtin type 'Box' cannot be extended` right after it.)
+
+- **A separator is an `NSBox` too.** The rule that lets a group box hold
+  children had to ask the box *type*, not the class, or a horizontal rule would
+  have had a content view and taken children. The same shape as every other
+  rule in `cortado_rules.h`: the classes do not line up with the contract.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

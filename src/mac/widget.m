@@ -32,6 +32,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SEARCH_FIELD:
         case CTD_W_SPINNER:
         case CTD_W_LINK:
+        case CTD_W_SEGMENTED:
+        case CTD_W_GROUP_BOX:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -192,6 +194,29 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // find a search box in.
             view = [[NSSearchField alloc] initWithFrame:NSZeroRect];
             break;
+        case CTD_W_SEGMENTED: {
+            NSSegmentedControl *bar =
+                [[NSSegmentedControl alloc] initWithFrame:NSZeroRect];
+            [bar setSegmentCount:0];
+            [bar setTrackingMode:NSSegmentSwitchTrackingSelectOne];
+            view = bar;
+            break;
+        }
+        case CTD_W_GROUP_BOX: {
+            NSBox *group = [[NSBox alloc] initWithFrame:NSZeroRect];
+            [group setBoxType:NSBoxPrimary];
+            [group setTitle:@""];
+            // A flipped content view, so children inside a group box are
+            // placed the same way children anywhere else are. AppKit's own is
+            // not flipped, and a box whose children ran the other way up would
+            // be the one place in cortado where y grows downward.
+            CortadoView *content = [[CortadoView alloc] initWithFrame:NSZeroRect];
+            [group setContentView:content];
+            ctd_tag(content);
+            [content release];
+            view = group;
+            break;
+        }
         case CTD_W_LINK: {
             // AppKit has no link control, and the native affordance is not a
             // button: it is an NSTextField holding an attributed string with

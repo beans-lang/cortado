@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 12
+#define CTD_ABI_VERSION 13
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -296,6 +296,13 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 #define CTD_W_SPINNER      20
 /* Words that go somewhere. CTD_S_URL is where. */
 #define CTD_W_LINK         21
+/* One of a few choices, all of them on screen at once. The choices are the
+ * item list — the same ctd_items_* a combo box uses — and CTD_P_SELECTED is
+ * which. Not on every platform: GTK has no segmented control. */
+#define CTD_W_SEGMENTED    22
+/* A titled box around a group of controls. Holds children; its text is the
+ * title on the frame. Not on every platform: UIKit has nothing that means it. */
+#define CTD_W_GROUP_BOX    23
 
 /* Whether this host can build a control of this kind.
  *
@@ -472,14 +479,14 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  *
  * That is CTD_W_BUTTON, CTD_W_TEXT_FIELD, CTD_W_SECURE_FIELD,
  * CTD_W_SEARCH_FIELD, CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON, CTD_W_SWITCH,
- * CTD_W_SLIDER, CTD_W_STEPPER and CTD_W_COMBO_BOX. Every other kind answers CTD_ERR_KIND from both
+ * CTD_W_SLIDER, CTD_W_STEPPER, CTD_W_COMBO_BOX and CTD_W_SEGMENTED. Every other kind answers CTD_ERR_KIND from both
  * `ctd_set_int` and `ctd_get_int`, on every host.
  *
  * A label, an image, a separator and a progress bar take no input, so there is
  * nothing for "disabled" to turn off; what a caller actually wants for one of
  * those is a dimmed *look*, which is CTD_P_OPACITY and a different question. A
- * container, a scroll view and a table are refused for a second reason as
- * well: they exist to hold content, and answering for the box would be
+ * container, a scroll view, a group box and a table are refused for a second
+ * reason as well: they exist to hold content, and answering for the box would be
  * answering for everything inside it.
  *
  * A table is the one kind where "accepts input" and "has an enabled state"

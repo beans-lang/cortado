@@ -18,6 +18,14 @@
 // child to one is a different question, and `ctd_can_hold` is where that lives.
 static NSView *ctd_container_of(id object) {
     if ([object isKindOfClass:[NSWindow class]]) return [(NSWindow *)object contentView];
+    // A box holds its children in a content view of its own, so the frame it
+    // draws stays outside them — unless it is a separator, which is also an
+    // NSBox and holds nothing. A rule that forgot that would let a horizontal
+    // rule have children.
+    if ([object isKindOfClass:[NSBox class]]) {
+        if ([(NSBox *)object boxType] == NSBoxSeparator) return (NSView *)object;
+        return [(NSBox *)object contentView];
+    }
     if ([object isKindOfClass:[NSScrollView class]]) {
         id inner = [(NSScrollView *)object documentView];
         if ([inner isKindOfClass:[NSView class]]) return (NSView *)inner;

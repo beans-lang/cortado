@@ -14,6 +14,13 @@ static GtkFixed *ctd_container_of(gpointer object) {
         if (inner && GTK_IS_FIXED(inner)) return GTK_FIXED(inner);
         return NULL;
     }
+    // A frame takes one child, and cortado's boxes take many — so the one
+    // child is a GtkFixed and the children go in there.
+    if (GTK_IS_FRAME(object)) {
+        GtkWidget *inner = gtk_frame_get_child(GTK_FRAME(object));
+        if (inner && GTK_IS_FIXED(inner)) return GTK_FIXED(inner);
+        return NULL;
+    }
     if (GTK_IS_WINDOW(object)) {
         GtkWidget *child = gtk_window_get_child(GTK_WINDOW(object));
         if (child && GTK_IS_FIXED(child)) return GTK_FIXED(child);

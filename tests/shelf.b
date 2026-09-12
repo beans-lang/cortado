@@ -103,6 +103,14 @@ fn build() -> Result<bool> {
     drink.select(2)?
     root.add(drink)?
 
+    var sizes: widgets.Segmented = widgets.Segmented.of(["Small", "Regular", "Large"])?
+    sizes.select(1)?
+    root.add(sizes)?
+
+    var options: widgets.GroupBox = widgets.GroupBox.of("Options")?
+    options.add(widgets.CheckBox.of("Oat milk")?)?
+    root.add(options)?
+
     var manual: widgets.Link = widgets.Link.of("Read the manual", "https://beans-lang.org")?
     root.add(manual)?
 
@@ -137,6 +145,8 @@ fn build() -> Result<bool> {
     io.println("combo item 0=\"{drink.item_at(0).or("?")}\" item 2=\"{drink.item_at(2).or("?")}\"")
     io.println("radio chosen={pick.is_chosen().or(false)}")
     io.println("switch on={remember.is_on().or(false)}")
+    io.println("segments={sizes.count().or(-1)} chosen={sizes.selected().or(-9)} text=\"{sizes.display_text().or("?")}\"")
+    io.println("group title=\"{options.title().or("?")}\" children={options.count()}")
     io.println("link words=\"{manual.words().or("?")}\" url=\"{manual.url().or("?")}\"")
     io.println("search hint=\"{find.hint().or("?")}\" spinner turning={busy.is_turning().or(false)}")
     io.println("stepper value={shots.value().or(-1.0)} step={shots.step().or(-1.0)} low={shots.low().or(-1.0)} high={shots.high().or(-1.0)}")

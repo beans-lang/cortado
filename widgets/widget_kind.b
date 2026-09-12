@@ -52,6 +52,12 @@ pub enum WidgetKind {
     spinner
     /// Words that go somewhere.
     link
+    /// A few choices, all of them on screen — and **not on every platform**:
+    /// GTK and the Win32 common controls have none.
+    segmented
+    /// A titled box around a group of controls, and **not on every
+    /// platform**: UIKit has nothing that means it.
+    group_box
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -78,6 +84,8 @@ pub enum WidgetKind {
             search_field => host.W_SEARCH_FIELD,
             spinner => host.W_SPINNER,
             link => host.W_LINK,
+            segmented => host.W_SEGMENTED,
+            group_box => host.W_GROUP_BOX,
         }
     }
 
@@ -106,6 +114,8 @@ pub enum WidgetKind {
             search_field => "SearchField",
             spinner => "Spinner",
             link => "Link",
+            segmented => "Segmented",
+            group_box => "GroupBox",
         }
     }
 
@@ -152,6 +162,8 @@ pub enum WidgetKind {
             search_field => { return false }
             spinner => { return false }
             link => { return false }
+            segmented => { return false }
+            group_box => { return false }
         }
     }
 
@@ -213,6 +225,8 @@ pub enum WidgetKind {
         every.push(WidgetKind.search_field)
         every.push(WidgetKind.spinner)
         every.push(WidgetKind.link)
+        every.push(WidgetKind.segmented)
+        every.push(WidgetKind.group_box)
         return move every
     }
 
@@ -239,6 +253,8 @@ pub enum WidgetKind {
         if code == host.W_SEARCH_FIELD { return some(WidgetKind.search_field) }
         if code == host.W_SPINNER { return some(WidgetKind.spinner) }
         if code == host.W_LINK { return some(WidgetKind.link) }
+        if code == host.W_SEGMENTED { return some(WidgetKind.segmented) }
+        if code == host.W_GROUP_BOX { return some(WidgetKind.group_box) }
         return none
     }
 }

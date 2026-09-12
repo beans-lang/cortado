@@ -60,6 +60,9 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_SEARCH_FIELD: role = @"searchbox";   break;
         case CTD_W_SPINNER:      role = @"progressbar"; break;
         case CTD_W_LINK:         role = @"link";        break;
+        // ARIA: a set of buttons where one is chosen, and a titled box.
+        case CTD_W_SEGMENTED:    role = @"radiogroup";   break;
+        case CTD_W_GROUP_BOX:    role = @"group";        break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);

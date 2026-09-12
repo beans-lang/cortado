@@ -55,6 +55,8 @@ fn should_have_it(kind: widgets.WidgetKind) -> bool {
         search_field => { return false }
         spinner => { return false }
         link => { return false }
+        segmented => { return false }
+        group_box => { return false }
         secure_field => { return false }
         stepper => { return false }
         level_indicator => { return false }
@@ -85,6 +87,8 @@ fn should_have_mixed(kind: widgets.WidgetKind) -> bool {
         search_field => { return false }
         spinner => { return false }
         link => { return false }
+        segmented => { return false }
+        group_box => { return false }
         secure_field => { return false }
         stepper => { return false }
         level_indicator => { return false }

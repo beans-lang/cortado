@@ -32,7 +32,14 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SEARCH_FIELD:
         case CTD_W_SPINNER:
         case CTD_W_LINK:
+        case CTD_W_GROUP_BOX:
             return 1;
+        case CTD_W_SEGMENTED:
+            // GTK has no segmented control. A row of toggle buttons with the
+            // "linked" style class looks like one and is not one: nothing
+            // keeps exactly one of them down, and a caller asking for a
+            // segmented control would get a row that can be all-off or all-on.
+            return 0;
         default:
             return CTD_ERR_RANGE;
     }
@@ -95,6 +102,17 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_SPINNER:
             widget = gtk_spinner_new();
             break;
+        case CTD_W_GROUP_BOX: {
+            // A GtkFrame takes one child, and cortado's boxes take many — so
+            // the one child is a GtkFixed, the same container every other
+            // cortado box uses, and children go in there.
+            GtkWidget *frame = gtk_frame_new(NULL);
+            GtkWidget *inside = gtk_fixed_new();
+            ctd_tag(inside);
+            gtk_frame_set_child(GTK_FRAME(frame), inside);
+            widget = frame;
+            break;
+        }
         case CTD_W_LINK:
             // GTK has a real one, and it opens the URI itself through the
             // portal or the user's own handler — which is what the note beside

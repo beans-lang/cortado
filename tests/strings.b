@@ -24,6 +24,8 @@ import std.io
 fn goes_somewhere(kind: widgets.WidgetKind) -> bool {
     match kind {
         link => { return true }
+        segmented => { return false }
+        group_box => { return false }
         text_field => { return false }
         secure_field => { return false }
         search_field => { return false }
@@ -78,6 +80,8 @@ fn shows_a_hint(kind: widgets.WidgetKind) -> bool {
         table => { return false }
         spinner => { return false }
         link => { return false }
+        segmented => { return false }
+        group_box => { return false }
     }
 }
 

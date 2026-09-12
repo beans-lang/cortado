@@ -425,6 +425,9 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     GtkTextView *view = ctd_text_view(object);
     if (view) {
         gtk_text_buffer_set_text(gtk_text_view_get_buffer(view), text, -1);
+    } else if (GTK_IS_FRAME(object)) {
+        // A group box's text is the title on its frame.
+        gtk_frame_set_label(GTK_FRAME(object), text[0] ? text : NULL);
     } else if (GTK_IS_LABEL(object)) {
         gtk_label_set_text(GTK_LABEL(object), text);
     } else if (GTK_IS_BUTTON(object) && !GTK_IS_CHECK_BUTTON(object)) {
@@ -452,6 +455,10 @@ int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
         int32_t needed = ctd_copy_out(text, out, cap);
         g_free(text);
         return needed;
+    }
+    if (GTK_IS_FRAME(object)) {
+        const char *title = gtk_frame_get_label(GTK_FRAME(object));
+        return ctd_copy_out(title ? title : "", out, cap);
     }
     if (GTK_IS_LABEL(object))
         return ctd_copy_out(gtk_label_get_text(GTK_LABEL(object)), out, cap);

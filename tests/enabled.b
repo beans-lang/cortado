@@ -56,6 +56,7 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         slider => { return true }
         stepper => { return true }
         combo_box => { return true }
+        segmented => { return true }
         container => { return false }
         label => { return false }
         image_view => { return false }
@@ -68,6 +69,7 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         table => { return false }
         spinner => { return false }
         link => { return false }
+        group_box => { return false }
     }
 }
 

@@ -79,6 +79,16 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_ERR_KIND;
         }
         case CTD_P_SELECTED: {
+            if (ctd_slot_kind(widget) == CTD_W_SEGMENTED) {
+                UISegmentedControl *bar = (UISegmentedControl *)object;
+                if (value < 0) {
+                    [bar setSelectedSegmentIndex:UISegmentedControlNoSegment];
+                    return CTD_OK;
+                }
+                if (value >= (int64_t)[bar numberOfSegments]) return CTD_ERR_RANGE;
+                [bar setSelectedSegmentIndex:(NSInteger)value];
+                return CTD_OK;
+            }
             if (ctd_slot_kind(widget) != CTD_W_COMBO_BOX) return CTD_ERR_KIND;
             UIButton *menu = (UIButton *)object;
             UIMenu *items = [menu menu];
@@ -143,6 +153,11 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             }
             break;
         case CTD_P_SELECTED:
+            if (ctd_slot_kind(widget) == CTD_W_SEGMENTED) {
+                NSInteger at = [(UISegmentedControl *)object selectedSegmentIndex];
+                value = at == UISegmentedControlNoSegment ? -1 : (int64_t)at;
+                break;
+            }
             if (ctd_slot_kind(widget) != CTD_W_COMBO_BOX) return CTD_ERR_KIND;
             value = (int64_t)[(UIButton *)object tag];
             break;

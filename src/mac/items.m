@@ -15,9 +15,23 @@ static NSPopUpButton *ctd_item_list(id object) {
     return nil;
 }
 
+// A segmented control holds the same list and keeps it in a different place:
+// AppKit has no menu behind it, only a segment count and a label per segment.
+// Both answer ctd_items_*, because "a list of choices" is one idea and a
+// caller should not have to know which control it landed in.
+static NSSegmentedControl *ctd_item_bar(id object) {
+    if ([object isKindOfClass:[NSSegmentedControl class]]) {
+        return (NSSegmentedControl *)object;
+    }
+    return nil;
+}
+
 ctd_status ctd_items_clear(ctd_handle widget) {
-    NSPopUpButton *menu = ctd_item_list(ctd_resolve(widget));
-    if (!ctd_resolve(widget)) return CTD_ERR_STALE;
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    NSSegmentedControl *bar = ctd_item_bar(object);
+    if (bar) { [bar setSegmentCount:0]; return CTD_OK; }
+    NSPopUpButton *menu = ctd_item_list(object);
     if (!menu) return CTD_ERR_KIND;
     [menu removeAllItems];
     return CTD_OK;
@@ -27,9 +41,16 @@ ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    NSSegmentedControl *bar = ctd_item_bar(object);
+    if (len < 0) return CTD_ERR_RANGE;
+    if (bar) {
+        NSInteger at = [bar segmentCount];
+        [bar setSegmentCount:at + 1];
+        [bar setLabel:ctd_string(utf8, len) forSegment:at];
+        return CTD_OK;
+    }
     NSPopUpButton *menu = ctd_item_list(object);
     if (!menu) return CTD_ERR_KIND;
-    if (len < 0) return CTD_ERR_RANGE;
     NSString *text = ctd_string(utf8, len);
     // NSPopUpButton drops a duplicate title, which would silently renumber
     // every later index and make a selection point at the wrong row. Adding
@@ -45,6 +66,11 @@ ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
 ctd_status ctd_items_count(ctd_handle widget, int32_t *out) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    NSSegmentedControl *bar = ctd_item_bar(object);
+    if (bar) {
+        if (out) *out = (int32_t)[bar segmentCount];
+        return CTD_OK;
+    }
     NSPopUpButton *menu = ctd_item_list(object);
     if (!menu) return CTD_ERR_KIND;
     if (out) *out = (int32_t)[menu numberOfItems];
@@ -54,6 +80,12 @@ ctd_status ctd_items_count(ctd_handle widget, int32_t *out) {
 int32_t ctd_items_at(ctd_handle widget, int32_t index, char *out, int32_t cap) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    NSSegmentedControl *bar = ctd_item_bar(object);
+    if (bar) {
+        if (index < 0 || index >= (int32_t)[bar segmentCount]) return CTD_ERR_RANGE;
+        NSString *label = [bar labelForSegment:index];
+        return ctd_copy_out(label ? label : @"", out, cap);
+    }
     NSPopUpButton *menu = ctd_item_list(object);
     if (!menu) return CTD_ERR_KIND;
     if (index < 0 || index >= (int32_t)[menu numberOfItems]) return CTD_ERR_RANGE;

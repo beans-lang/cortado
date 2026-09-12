@@ -31,7 +31,13 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_TABLE:
         case CTD_W_SEARCH_FIELD:
         case CTD_W_LINK:
+        case CTD_W_GROUP_BOX:
             return 1;
+        case CTD_W_SEGMENTED:
+            // The common controls have no segmented control. A toolbar with
+            // check groups is the nearest thing and is a different control
+            // with different behaviour, so this refuses rather than
+            // substituting one.
         case CTD_W_SPINNER:
             // The common controls have no spinner. A marquee progress bar is
             // the nearest thing Windows has and it is a different control with
@@ -89,6 +95,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // a spin *field* and a different control.
             class_name = UPDOWN_CLASSW;
             style |= UDS_ARROWKEYS | UDS_ALIGNRIGHT | WS_TABSTOP;
+            break;
+        case CTD_W_GROUP_BOX:
+            // BS_GROUPBOX: the frame and the title Windows draws for a group.
+            // Children are real child windows of it, which is unusual for the
+            // dialog manager and correct for a tree that owns its children.
+            class_name = WC_BUTTONW;
+            style |= BS_GROUPBOX | WS_CLIPCHILDREN;
             break;
         case CTD_W_LINK:
             // SysLink, the real one — it draws the blue underline and the

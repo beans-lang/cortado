@@ -1,5 +1,5 @@
 -- what this platform can build --
-  cortado has this many kinds: 22
+  cortado has this many kinds: 24
   every one of them answers yes or no: true
   a control is alive exactly where the kind is offered: true
   and refused before it is built exactly where it is not: true
@@ -8,7 +8,7 @@
   each has an accessibility role, and none is empty: true
   each has the platform's own class name, and none is empty: true
 -- the same question through markup --
-  this many kinds are reachable by their own name as a tag: 21
+  this many kinds are reachable by their own name as a tag: 23
   and each builds exactly where its kind is offered: true
 -- moving a control, and writing to one --
   this many kinds are a state: 3

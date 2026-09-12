@@ -47,6 +47,8 @@ pub class Vocabulary {
         if tag == "SearchField" { return some(widgets.WidgetKind.search_field) }
         if tag == "Spinner" { return some(widgets.WidgetKind.spinner) }
         if tag == "Link" { return some(widgets.WidgetKind.link) }
+        if tag == "Segmented" { return some(widgets.WidgetKind.segmented) }
+        if tag == "GroupBox" { return some(widgets.WidgetKind.group_box) }
         return none
     }
 

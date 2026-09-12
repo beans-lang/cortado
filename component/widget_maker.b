@@ -23,7 +23,7 @@ pub class WidgetMaker {
         if element.count() == 0 {
             return ok(control)
         }
-        match control as? widgets.Container {
+        match control as? widgets.ChildHolder {
             some(box) => {
                 for child: Element in element.children() {
                     box.add(WidgetMaker.make(child)?)?
@@ -85,6 +85,8 @@ pub class WidgetMaker {
             search_field => { return ok(new widgets.SearchField()) }
             spinner => { return ok(new widgets.Spinner()) }
             link => { return ok(new widgets.Link()) }
+            segmented => { return ok(new widgets.Segmented()) }
+            group_box => { return ok(new widgets.GroupBox()) }
         }
     }
 

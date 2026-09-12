@@ -35,7 +35,12 @@ void ctd_emit_control(ctd_handle target, id sender) {
     NSString *text = nil;
 
     int32_t made_as = ctd_slot_kind(target);
-    if ([sender isKindOfClass:[UIStepper class]]) {
+    if ([sender isKindOfClass:[UISegmentedControl class]]) {
+        UISegmentedControl *bar = (UISegmentedControl *)sender;
+        kind = CTD_EV_VALUE_CHANGED;
+        index = (int64_t)[bar selectedSegmentIndex];
+        if (index >= 0) text = [bar titleForSegmentAtIndex:(NSUInteger)index];
+    } else if ([sender isKindOfClass:[UIStepper class]]) {
         kind = CTD_EV_VALUE_CHANGED;
         index = (int64_t)[(UIStepper *)sender value];
     } else if ([sender isKindOfClass:[UISlider class]]) {

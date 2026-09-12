@@ -20,6 +20,8 @@ Table has none
 SearchField has an enabled state
 Spinner has none
 Link has none
+Segmented has an enabled state
+GroupBox has none
 -- and what this platform does --
   every control it builds was asked: true
   and every one of them obeys the rule above: true

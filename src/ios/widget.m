@@ -36,7 +36,14 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SEARCH_FIELD:
         case CTD_W_SPINNER:
         case CTD_W_LINK:
+        case CTD_W_SEGMENTED:
             return 1;
+        case CTD_W_GROUP_BOX:
+            // UIKit has nothing that means "a titled frame around a group".
+            // A UIView with a border and a label on top would be cortado
+            // drawing a control, which is the substitution ctd_widget_supports
+            // exists to refuse.
+            return 0;
         case CTD_W_LEVEL_INDICATOR:
             // UIKit has no level indicator. A UIProgressView is a progress
             // bar — work being done, with a beginning and an end — and a level
@@ -111,6 +118,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
             UISearchTextField *field =
                 [[UISearchTextField alloc] initWithFrame:CGRectZero];
             view = field;
+            break;
+        }
+        case CTD_W_SEGMENTED: {
+            UISegmentedControl *bar =
+                [[UISegmentedControl alloc] initWithItems:@[]];
+            [bar setFrame:CGRectZero];
+            view = bar;
             break;
         }
         case CTD_W_LINK: {

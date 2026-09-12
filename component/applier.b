@@ -127,7 +127,7 @@ pub class Applier {
         if element.count() == 0 {
             return ok(true)
         }
-        match control as? widgets.Container {
+        match control as? widgets.ChildHolder {
             none => {
                 return err("<{element.tag}> has children but its control holds none", "tree_drift")
             }
@@ -173,7 +173,7 @@ pub class Applier {
     /// A `Holder` is the interface both answer, so the applier does not care
     /// which it has.
     fn container(target: widgets.Widget, change: Change) -> Result<widgets.Holder> {
-        match target as? widgets.Container {
+        match target as? widgets.ChildHolder {
             some(box) => { return ok(box) }
             none => {}
         }
@@ -228,7 +228,7 @@ pub class Applier {
 
     /// The control the element tree's root became.
     pub fn face() -> Result<widgets.Widget> {
-        match self.root as? widgets.Container {
+        match self.root as? widgets.ChildHolder {
             none => { return err("a mount needs a container to fill", "not_a_container") }
             some(box) => {
                 match box.child_at(0) {
@@ -244,7 +244,7 @@ pub class Applier {
         if element.count() == 0 {
             return ok(true)
         }
-        match control as? widgets.Container {
+        match control as? widgets.ChildHolder {
             none => {
                 return err("<{element.tag}> has {element.count()} children but its control holds none",
                            "tree_drift")
