@@ -48,7 +48,7 @@ enum { CTD_SLOTS = 8192 };
 // pressing Tab — goes through that one method. So it is the hook: overriding
 // it catches all three, which is what makes a program moving focus and a user
 // moving it look the same to a handler.
-@interface CortadoWindow : NSWindow
+@interface CortadoWindow : NSWindow <NSWindowDelegate>
 @end
 
 @interface CortadoTarget : NSObject
@@ -253,5 +253,13 @@ ctd_handle  ctd_focus_handle(NSResponder *who);
 // CortadoWindow once per first-responder change, so that a program moving
 // focus and a user tabbing look the same to a handler.
 void        ctd_focus_moved(ctd_handle left, ctd_handle took);
+
+// ----------------------------------------------------------------- surface.m
+
+// Raises one of the four things that happen to a surface, if anything asked
+// for it. `a` and `b` are the width and height for a resize, the new value for
+// an appearance or a scale, and ignored for a close.
+void        ctd_surface_event(uint32_t kind, ctd_handle surface,
+                              double a, double b);
 
 #endif

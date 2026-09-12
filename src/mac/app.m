@@ -11,6 +11,20 @@
 
 @implementation CortadoView
 - (BOOL)isFlipped { return YES; }
+
+// The one route AppKit offers for "the system went dark".
+//
+// There is no notification and no delegate method for it: NSApplication's
+// effectiveAppearance is KVO-observable and an observer is a second lifetime to
+// get wrong, while every view is simply *told*. A surface's content view is a
+// CortadoView, so the window hears it from here.
+- (void)viewDidChangeEffectiveAppearance {
+    [super viewDidChangeEffectiveAppearance];
+    id window = [self window];
+    if ([window respondsToSelector:@selector(ctdAppearanceChanged)]) {
+        [window performSelector:@selector(ctdAppearanceChanged)];
+    }
+}
 @end
 
 // ------------------------------------------------------------ action forwarding

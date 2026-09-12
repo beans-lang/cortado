@@ -143,6 +143,59 @@ ctd_status ctd_surface_show(ctd_handle surface) {
     return CTD_OK;
 }
 
+// One of the four things that happen to a surface.
+void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b) {
+    if (!g_sink || !surface) return;
+    if (!ctd_listening(kind)) return;
+    ctd_event out;
+    memset(&out, 0, sizeof out);
+    out.kind = kind;
+    out.target = surface;
+    if (kind == CTD_EV_SURFACE_RESIZED) {
+        out.width = a;
+        out.height = b;
+    } else if (kind == CTD_EV_APPEARANCE || kind == CTD_EV_SCALE_CHANGED) {
+        out.index = (int64_t)a;
+        out.x = a;
+    }
+    g_sink(g_sink_context, &out);
+}
+
+ctd_status ctd_surface_synth(ctd_handle surface, int32_t what,
+                             double a, double b) {
+    id object = ctd_resolve(surface);
+    if (!object) return CTD_ERR_STALE;
+    if (![object isKindOfClass:[UIWindow class]]) return CTD_ERR_KIND;
+    UIWindow *window = (UIWindow *)object;
+    switch (what) {
+        case CTD_EV_SURFACE_RESIZED: {
+            if (!(a >= 0.0) || !(b >= 0.0)) return CTD_ERR_RANGE;
+            // A real resize, and on a phone that is what a rotation or a
+            // split-screen drag does: the window's frame changes and the
+            // controller's view is laid out again. There is no notification to
+            // wait for, so the event is raised beside the change.
+            [window setFrame:CGRectMake(0, 0, a, b)];
+            [[window rootViewController] view].frame = [window bounds];
+            ctd_surface_event(CTD_EV_SURFACE_RESIZED, surface, a, b);
+            return CTD_OK;
+        }
+        case CTD_EV_SURFACE_CLOSE:
+            // **A phone has no window to close.** There is no title bar, no
+            // close button and no gesture that means it: a person leaves an
+            // application, which is CTD_EV_APP_BACKGROUND and a different
+            // thing entirely — the application is still running and comes back
+            // where it was. Answering CTD_OK here would let a test pass on a
+            // platform where the event it is testing cannot happen.
+            return CTD_ERR_UNSUPPORTED;
+        case CTD_EV_APPEARANCE:
+        case CTD_EV_SCALE_CHANGED:
+            ctd_surface_event((uint32_t)what, surface, a, b);
+            return CTD_OK;
+        default:
+            return CTD_ERR_RANGE;
+    }
+}
+
 ctd_status ctd_surface_close(ctd_handle surface) {
     id object = ctd_resolve(surface);
     if (!object) return CTD_ERR_STALE;

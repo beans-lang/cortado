@@ -2,6 +2,32 @@
 
 #import "internal.h"
 
+// One of the four things that happen to a surface.
+//
+// Guarded on ctd_listening for the same reason every input event is: a window
+// being dragged by its corner reports a resize on every frame of the drag, and
+// a program that is not listening should not be crossed into sixty times a
+// second to be told something it does not want.
+void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b) {
+    if (!g_sink || !surface) return;
+    if (!ctd_listening(kind)) return;
+    ctd_event out;
+    memset(&out, 0, sizeof out);
+    out.kind = kind;
+    out.target = surface;
+    if (kind == CTD_EV_SURFACE_RESIZED) {
+        out.width = a;
+        out.height = b;
+    } else if (kind == CTD_EV_APPEARANCE || kind == CTD_EV_SCALE_CHANGED) {
+        // `index` for the appearance, which is a whole number; `x` for the
+        // scale, which is not — a Retina display is 2 and a scaled one is not
+        // a whole number at all.
+        out.index = (int64_t)a;
+        out.x = a;
+    }
+    g_sink(g_sink_context, &out);
+}
+
 @implementation CortadoWindow
 // Every way the keyboard moves goes through here — a program calling this, a
 // user clicking a field, a user pressing Tab — so this is where blur and focus
@@ -38,6 +64,49 @@
     }
     return took;
 }
+
+// ---- the four things that happen to a window ----
+//
+// A delegate on itself. AppKit wants an object for each of these and cortado
+// has exactly one window class, so the window is its own delegate — which also
+// means a program cannot take the delegate away by accident, because there is
+// no property for it in this ABI.
+
+- (void)windowDidResize:(NSNotification *)note {
+    (void)note;
+    // The header's rule: a write is silent. A window the *program* resized
+    // re-solves its own layout on the way out of that call, and a layout that
+    // also re-solved on the notification would re-solve for ever.
+    if (g_writing) return;
+    NSRect content = [[self contentView] frame];
+    ctd_surface_event(CTD_EV_SURFACE_RESIZED, ctd_handle_for(self),
+                      content.size.width, content.size.height);
+}
+
+- (BOOL)windowShouldClose:(NSWindow *)sender {
+    (void)sender;
+    ctd_surface_event(CTD_EV_SURFACE_CLOSE, ctd_handle_for(self), 0, 0);
+    // A program with a close handler keeps its window and decides; one
+    // without gets what every platform does on its own. A handler cannot
+    // answer back, so the question is settled by the only thing the host
+    // already knows — see the note beside ctd_surface_synth.
+    return ctd_listening(CTD_EV_SURFACE_CLOSE) ? NO : YES;
+}
+
+- (void)windowDidChangeBackingProperties:(NSNotification *)note {
+    (void)note;
+    ctd_surface_event(CTD_EV_SCALE_CHANGED, ctd_handle_for(self),
+                      [self backingScaleFactor], 0);
+}
+
+// The appearance is the *application's*, not one window's — every window
+// changes together — but it reaches a program through a window because that is
+// what a program has a handle to. AppKit tells a view, so the flipped content
+// view passes it on.
+- (void)ctdAppearanceChanged {
+    ctd_surface_event(CTD_EV_APPEARANCE, ctd_handle_for(self),
+                      (double)ctd_appearance(), 0);
+}
 @end
 
 // ------------------------------------------------------------------- surfaces
@@ -52,6 +121,7 @@ ctd_handle ctd_surface_new(double width, double height) {
                     backing:NSBackingStoreBuffered
                       defer:NO];
     [window setReleasedWhenClosed:NO];
+    [window setDelegate:(id<NSWindowDelegate>)window];
     // The default content view is not flipped, so every surface gets one that
     // is. This is the only place the flip has to be installed.
     CortadoView *content = [[CortadoView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
@@ -128,6 +198,36 @@ ctd_status ctd_surface_show(ctd_handle surface) {
     [window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
     return CTD_OK;
+}
+
+ctd_status ctd_surface_synth(ctd_handle surface, int32_t what,
+                             double a, double b) {
+    NSWindow *window = (NSWindow *)ctd_resolve(surface);
+    if (!window) return CTD_ERR_STALE;
+    switch (what) {
+        case CTD_EV_SURFACE_RESIZED: {
+            if (!(a >= 0.0) || !(b >= 0.0)) return CTD_ERR_RANGE;
+            // A real resize, so the platform's own notification is what
+            // arrives — and outside g_writing, because this is standing in for
+            // the *user* dragging the corner and not for the program.
+            [window setContentSize:NSMakeSize(a, b)];
+            return CTD_OK;
+        }
+        case CTD_EV_SURFACE_CLOSE:
+            // -performClose: is the close button, not -close: it asks the
+            // delegate first, which is the road a real click takes.
+            [window performClose:nil];
+            return CTD_OK;
+        case CTD_EV_APPEARANCE:
+        case CTD_EV_SCALE_CHANGED:
+            // No program can change the system's appearance or a display's
+            // scale, so there is no real road to take here and the event is
+            // raised directly. See the note beside ctd_surface_synth.
+            ctd_surface_event((uint32_t)what, surface, a, b);
+            return CTD_OK;
+        default:
+            return CTD_ERR_RANGE;
+    }
 }
 
 ctd_status ctd_surface_close(ctd_handle surface) {

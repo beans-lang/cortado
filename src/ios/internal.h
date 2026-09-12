@@ -144,6 +144,11 @@ ctd_handle ctd_handle_for_view(UIView *view);
 void ctd_focus_moved(ctd_handle took);
 // Whether anything asked for this kind.
 int ctd_listening(uint32_t kind);
+
+// ----------------------------------------------------------------- surface.m
+
+// Raises one of the four things that happen to a surface, if anything asked.
+void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b);
 UITableView *ctd_table_view(id object);
 
 // ------------------------------------------------------------------- pane.m

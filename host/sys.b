@@ -174,3 +174,4 @@ pub extern "C" fn ctd_widget_focused(widget: u64) -> i32
 pub extern "C" fn ctd_widget_synth_pointer(widget: u64, what: i32, x: f64, y: f64, button: i32) -> i32
 pub extern "C" fn ctd_widget_synth_key(widget: u64, what: i32, key: i32, text: RawPtr<i8>, len: i32, modifiers: u32) -> i32
 pub extern "C" fn ctd_listen(kind: i32, on: i32) -> i32
+pub extern "C" fn ctd_surface_synth(surface: u64, what: i32, a: f64, b: f64) -> i32

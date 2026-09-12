@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 24
+#define CTD_ABI_VERSION 25
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -2004,5 +2004,58 @@ ctd_status ctd_widget_synth_key(ctd_handle widget, int32_t what, int32_t key,
  * it must never do is deliver a kind it was never asked for *and* charge the
  * platform for it. CTD_ERR_RANGE for a number that is not an event kind. */
 ctd_status ctd_listen(int32_t kind, int32_t on);
+
+/* ---- what happens to a surface ------------------------------------------ */
+
+/* Four things a window is told and, until now, told nobody.
+ *
+ * CTD_EV_SURFACE_RESIZED, CTD_EV_SURFACE_CLOSE, CTD_EV_APPEARANCE and
+ * CTD_EV_SCALE_CHANGED were declared at the top of this header from its first
+ * version. Win32 raised all four; macOS and GTK4 raised none and iOS raised
+ * one. A program could not save the size its window was left at, could not ask
+ * "are you sure?" before it closed, and could not redraw what it had drawn
+ * itself when the system went dark — which `platform/appearance.b` has been
+ * promising in a doc comment the whole time.
+ *
+ * **A resize is the user's, and the program's own is silent.** Every other
+ * write in this header is silent for the same reason, and a window is the
+ * control where hearing your own write costs the most: a layout that re-solves
+ * on a resize it caused re-solves for ever.
+ *
+ * **CTD_EV_SURFACE_CLOSE is a veto, and what decides it is whether anyone is
+ * listening.** A handler cannot answer back — the one callback edge in this
+ * ABI has no return value that could carry a yes or a no — so the question is
+ * settled before the event is raised, by the only thing the host already
+ * knows: `ctd_listen`.
+ *
+ * A program with no close handler gets the window closed, which is what every
+ * platform does on its own and what a user pressing the button expects. A
+ * program *with* one gets the event and a window that is still there, and
+ * closes it with `ctd_surface_close` when it is ready — after asking "save
+ * your changes?", or never. Nothing is lost either way and neither case needs
+ * a program to know which platform it is on.
+ *
+ * The three hosts that can close a window disagreed about this before it was
+ * written down: AppKit and GTK4 closed it and Win32 did not. */
+
+/* Drives one of the four the way the platform would, for a test and for a
+ * program replaying a session.
+ *
+ * **Two of these take the real road and two cannot, and the difference is
+ * worth knowing before writing a test around it.** A resize really resizes the
+ * window, so the platform's own notification is what arrives; a close really
+ * asks the window to close. Neither is a shortcut. But no program can change
+ * the system's appearance or the scale of a display — those are the system's,
+ * and a call that really did it would be a call that reached outside the
+ * program — so for those two this raises the event directly. What that proves
+ * is everything above the platform: the listen gate, the routing and the
+ * payload; what it cannot prove is that the platform calls cortado when a
+ * person moves the slider in System Settings.
+ *
+ * `what` is one of the four kinds; anything else is CTD_ERR_RANGE. `a` and `b`
+ * are the new width and height for a resize, `a` is 0 for light and 1 for dark, or the
+ * new scale for those two, and both are ignored for a close. */
+ctd_status ctd_surface_synth(ctd_handle surface, int32_t what,
+                             double a, double b);
 
 #endif /* CORTADO_HOST_H */

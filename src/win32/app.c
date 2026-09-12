@@ -321,16 +321,12 @@ static LRESULT CALLBACK ctd_surface_proc(HWND window, UINT message,
     if (handled) return answer;
     switch (message) {
         case WM_SIZE: {
-            ctd_handle surface = ctd_handle_of(window);
-            if (surface && g_sink) {
-                ctd_event event;
-                memset(&event, 0, sizeof event);
-                event.kind = CTD_EV_SURFACE_RESIZED;
-                event.target = surface;
-                event.width = (double)LOWORD(lparam);
-                event.height = (double)HIWORD(lparam);
-                g_sink(g_sink_context, &event);
-            }
+            // The header's rule: a write is silent. A window the *program*
+            // resized re-solves its own layout on the way out of that call,
+            // and a layout that also re-solved here would re-solve for ever.
+            if (g_writing) return 0;
+            ctd_surface_event(CTD_EV_SURFACE_RESIZED, ctd_handle_of(window),
+                              (double)LOWORD(lparam), (double)HIWORD(lparam));
             return 0;
         }
         case WM_TIMER:
@@ -342,11 +338,14 @@ static LRESULT CALLBACK ctd_surface_proc(HWND window, UINT message,
             }
             break;
         case WM_CLOSE:
-            ctd_emit(CTD_EV_SURFACE_CLOSE, ctd_handle_of(window), 0, 0);
-            // The application decides whether a close request closes anything.
-            // Destroying the window here would take the decision away, and the
-            // handle would go stale under a program that meant to refuse.
-            return 0;
+            ctd_surface_event(CTD_EV_SURFACE_CLOSE, ctd_handle_of(window), 0, 0);
+            // A program with a close handler keeps its window and decides; one
+            // without gets what Windows does on its own. This host used to
+            // keep the window either way, which made it the one of the four
+            // where a close button did nothing — see the note beside
+            // ctd_surface_synth.
+            if (ctd_listening(CTD_EV_SURFACE_CLOSE)) return 0;
+            break;
         case WM_DPICHANGED: {
             ctd_handle surface = ctd_handle_of(window);
             const RECT *suggested = (const RECT *)lparam;
@@ -354,14 +353,8 @@ static LRESULT CALLBACK ctd_surface_proc(HWND window, UINT message,
                          suggested->right - suggested->left,
                          suggested->bottom - suggested->top,
                          SWP_NOZORDER | SWP_NOACTIVATE);
-            if (g_sink) {
-                ctd_event event;
-                memset(&event, 0, sizeof event);
-                event.kind = CTD_EV_SCALE_CHANGED;
-                event.target = surface;
-                event.x = (double)LOWORD(wparam) / 96.0;
-                g_sink(g_sink_context, &event);
-            }
+            ctd_surface_event(CTD_EV_SCALE_CHANGED, surface,
+                              (double)LOWORD(wparam) / 96.0, 0);
             return 0;
         }
         case WM_SETTINGCHANGE:
@@ -369,7 +362,8 @@ static LRESULT CALLBACK ctd_surface_proc(HWND window, UINT message,
             // that says one changed. Windows names the key rather than the
             // thing, so the value is read back rather than taken from here.
             if (lparam && wcscmp((const WCHAR *)lparam, L"ImmersiveColorSet") == 0)
-                ctd_emit(CTD_EV_APPEARANCE, 0, ctd_appearance(), 0);
+                ctd_surface_event(CTD_EV_APPEARANCE, ctd_handle_of(window),
+                                  (double)ctd_appearance(), 0);
             return 0;
         default: break;
     }

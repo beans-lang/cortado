@@ -93,6 +93,11 @@ ctd_handle ctd_handle_for_widget(GtkWidget *widget);
 // Whether anything asked for this kind. The header calls ctd_listen advice
 // rather than permission; this is what the advice becomes on the hot path.
 int ctd_listening(uint32_t kind);
+
+// ----------------------------------------------------------------- surface.c
+
+// Raises one of the four things that happen to a surface, if anything asked.
+void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b);
 void ctd_give_back(uint32_t slot);
 // Forgets the clock a slot may have had, before the slot is handed out again.
 void ctd_clock_forget(uint32_t slot);

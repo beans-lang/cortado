@@ -205,6 +205,11 @@ ctd_handle ctd_handle_for_window(HWND window);
 // Whether anything asked for this kind. The header calls ctd_listen advice
 // rather than permission; this is what the advice becomes on the hot path.
 int ctd_listening(uint32_t kind);
+
+// ----------------------------------------------------------------- surface.c
+
+// Raises one of the four things that happen to a surface, if anything asked.
+void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b);
 // A list view asking for a cell it is about to paint, and a selection that
 // moved. Both arrive as WM_NOTIFY on the *parent*, which is where every Win32
 // control reports, so app.c routes them here.

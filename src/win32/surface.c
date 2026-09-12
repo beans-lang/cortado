@@ -94,6 +94,60 @@ ctd_status ctd_surface_show(ctd_handle surface) {
     return CTD_OK;
 }
 
+// One of the four things that happen to a surface.
+//
+// Guarded on ctd_listening for the same reason every input event is: a window
+// being dragged by its corner sends WM_SIZE on every frame of the drag, and a
+// program that is not listening should not be crossed into sixty times a
+// second to be told something it does not want.
+void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b) {
+    if (!g_sink || !surface) return;
+    if (!ctd_listening(kind)) return;
+    ctd_event out;
+    memset(&out, 0, sizeof out);
+    out.kind = kind;
+    out.target = surface;
+    if (kind == CTD_EV_SURFACE_RESIZED) {
+        out.width = a;
+        out.height = b;
+    } else if (kind == CTD_EV_APPEARANCE || kind == CTD_EV_SCALE_CHANGED) {
+        out.index = (int64_t)a;
+        out.x = a;
+    }
+    g_sink(g_sink_context, &out);
+}
+
+ctd_status ctd_surface_synth(ctd_handle surface, int32_t what,
+                             double a, double b) {
+    HWND window = ctd_window(surface);
+    if (!window || !IsWindow(window)) return CTD_ERR_STALE;
+    switch (what) {
+        case CTD_EV_SURFACE_RESIZED: {
+            if (!(a >= 0.0) || !(b >= 0.0)) return CTD_ERR_RANGE;
+            // A real resize, so WM_SIZE is what arrives — and outside
+            // g_writing, because this stands in for the user dragging the
+            // corner and not for the program.
+            RECT want = { 0, 0, (LONG)a, (LONG)b };
+            AdjustWindowRect(&want, (DWORD)GetWindowLongPtrW(window, GWL_STYLE), FALSE);
+            SetWindowPos(window, NULL, 0, 0,
+                         want.right - want.left, want.bottom - want.top,
+                         SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+            return CTD_OK;
+        }
+        case CTD_EV_SURFACE_CLOSE:
+            // WM_CLOSE is the title bar's button, which is the road a real
+            // click takes.
+            SendMessageW(window, WM_CLOSE, 0, 0);
+            return CTD_OK;
+        case CTD_EV_APPEARANCE:
+        case CTD_EV_SCALE_CHANGED:
+            ctd_surface_event((uint32_t)what, surface, a, b);
+            return CTD_OK;
+        default:
+            return CTD_ERR_RANGE;
+    }
+}
+
 ctd_status ctd_surface_close(ctd_handle surface) {
     ctd_status problem;
     HWND window = ctd_surface_window(surface, &problem);

@@ -1,0 +1,15 @@
+-- nobody is listening --
+  a resize nobody asked for is not delivered: true
+-- a resize --
+  the user dragging the corner is reported: true
+  and it says how big the window is now: true
+  a negative size is refused: true
+-- the system --
+  the system going dark reaches a handler: true
+  and so does a display that changed scale: true
+  a kind that does not happen to a surface is refused: true
+-- a close --
+  a window nobody is watching closes itself: true
+  a watched one is told and stays, or this platform has no close: true
+  and a headless window was never on screen anyway: true
+drove=true
