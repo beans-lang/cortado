@@ -96,6 +96,9 @@ void ctd_untrack(ctd_handle handle) {
     // so a released object would drop its own row — but a *recycled* slot
     // would not, and a stale row would answer an old handle for a live view.
     if (object) NSMapRemove(ctd_reverse_table(), (const void *)object);
+    // And what it said it wanted to be, or the next control in this slot would
+    // lay out at the old one's size.
+    ctd_forget_size(handle);
     g_object[slot] = nil;
     g_kind[slot] = -1;
     g_icon[slot] = CTD_ICON_NONE;

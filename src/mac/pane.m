@@ -196,8 +196,10 @@ ctd_status ctd_tab_add_page(NSTabView *tabs, NSView *page, int32_t index) {
     return CTD_OK;
 }
 
+// A tab's label is text on the strip, and a longer one makes the strip wider.
 ctd_status ctd_tab_set_label(ctd_handle widget, int32_t index,
                              const char *utf8, int32_t len) {
+    ctd_forget_size(widget);
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     NSTabView *tabs = ctd_tab_view(ctd_resolve(widget));
     if (!tabs) return ctd_resolve(widget) ? CTD_ERR_KIND : CTD_ERR_STALE;

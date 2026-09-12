@@ -29,6 +29,9 @@ static NSSegmentedControl *ctd_item_bar(id object) {
 ctd_status ctd_items_clear(ctd_handle widget) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    // A list is not a property and does not come through ctd_set_*, and a
+    // segmented control with three segments is wider than one with none.
+    ctd_forget_size(widget);
     NSSegmentedControl *bar = ctd_item_bar(object);
     if (bar) { [bar setSegmentCount:0]; return CTD_OK; }
     NSPopUpButton *menu = ctd_item_list(object);
@@ -41,6 +44,7 @@ ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    ctd_forget_size(widget);
     NSSegmentedControl *bar = ctd_item_bar(object);
     if (len < 0) return CTD_ERR_RANGE;
     if (bar) {

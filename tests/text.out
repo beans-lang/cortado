@@ -10,3 +10,5 @@ decomposed bytes: 6
 precomposed bytes: 5
 nul string bytes: 12
 label nul: refused (text_has_nul)
+more words is more width: true
+and fewer is fewer again: true

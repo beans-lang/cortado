@@ -307,6 +307,18 @@ ctd_status ctd_view_frame(ctd_handle widget, double *out_frame) {
     return CTD_OK;
 }
 
+// **The size cache the macOS host keeps is deliberately not here**, and the
+// reason is one line below: `gtk_widget_measure` takes a `for_size`, and the
+// height is asked for the width just decided. That is height-for-width working
+// correctly — a wrapping label is shorter when it is wider — and it means the
+// answer belongs to the pair and not to the widget, so a cache keyed on the
+// widget alone would hand back the height for somebody else's width.
+//
+// It is also not needed. Measured, on this host, with `examples/bench.b`:
+// asking a control how big it wants to be is under a microsecond here and a
+// two-hundred-control solve takes 62 us, because GTK4 keeps a size-request
+// cache of its own. AppKit keeps none, which is why the Mac has one and this
+// does not.
 ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_height,
                             double *out_size) {
     gpointer view = ctd_resolve(widget);

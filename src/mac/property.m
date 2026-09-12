@@ -78,6 +78,13 @@ ctd_status ctd_set_string(ctd_handle widget, int32_t key,
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    // Anything written to a control can change how big it wants to be — a
+    // longer title, a bigger font, a different image. Forgotten here rather
+    // than at each of the dozens of cases below, because this is the door
+    // every write comes through and a case that forgot would be a control
+    // that laid out at its old size for ever.
+    ctd_forget_size(widget);
+
     switch (key) {
         case CTD_S_HINT:
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
@@ -120,6 +127,9 @@ int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
 
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
+    // The door most writes come through, and the one that matters most for a
+    // remembered size: a label given more words is wider.
+    ctd_forget_size(widget);
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     NSString *text = ctd_string(utf8, len);
@@ -176,6 +186,7 @@ int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
 ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    ctd_forget_size(widget);
     switch (key) {
         case CTD_P_ENABLED:
             if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
@@ -445,6 +456,7 @@ static id<CortadoRanged> ctd_ranged(ctd_handle widget, id object) {
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    ctd_forget_size(widget);
     switch (key) {
         case CTD_P_OPACITY:
             if (value < 0.0 || value > 1.0) return CTD_ERR_RANGE;

@@ -104,6 +104,10 @@ void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b) {
 // what a program has a handle to. AppKit tells a view, so the flipped content
 // view passes it on.
 - (void)ctdAppearanceChanged {
+    // CTD_EV_APPEARANCE is light and dark *and text size* — see the note
+    // beside it in the header — and a text size change makes every remembered
+    // control size wrong at once while writing to none of them.
+    ctd_forget_all_sizes();
     ctd_surface_event(CTD_EV_APPEARANCE, ctd_handle_for(self),
                       (double)ctd_appearance(), 0);
 }

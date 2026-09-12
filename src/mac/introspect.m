@@ -177,6 +177,9 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
 }
 
 ctd_status ctd_widget_synth_text(ctd_handle widget, const char *utf8, int32_t len) {
+    // Typing into a field changes its text and so how big it wants to be,
+    // exactly as a program writing the text does.
+    ctd_forget_size(widget);
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     NSString *text = ctd_string(utf8, len);

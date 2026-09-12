@@ -143,6 +143,17 @@ ctd_status ctd_view_frame(ctd_handle widget, double *out_frame) {
     return CTD_OK;
 }
 
+// **The size cache the macOS host keeps is deliberately not here.**
+// `-sizeThatFits:` takes the offered size and uses it — that is what makes it
+// the right call for a phone, where a label wraps to the width it is given —
+// so the answer belongs to the pair and not to the view. A cache keyed on the
+// view alone would hand back the size for a different offer.
+//
+// It is also not needed. Measured, on the Simulator, with `examples/bench.b`:
+// asking is under a microsecond and a two-hundred-control solve takes 227 us,
+// which is 2.7% of a 120 Hz frame. AppKit's -fittingSize takes no argument at
+// all and costs eleven microseconds, which is why the Mac has a cache and this
+// does not.
 ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_height,
                             double *out_size) {
     UIView *view = (UIView *)ctd_resolve(widget);

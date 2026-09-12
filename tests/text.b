@@ -27,6 +27,7 @@ package main
 import cortado.platform
 import cortado.surface
 import cortado.widgets
+import cortado.geometry
 import std.io
 
 /// The byte count, said in the one unit the ABI uses. `string.len()` is not
@@ -105,6 +106,29 @@ fn build() -> Result<bool> {
     let split: string = "before\u{0}after"
     io.println("nul string bytes: {bytes_of(split)}")
     round_trip("label nul", label, split)
+
+    // **And the size that text implies changes with it.**
+    //
+    // A host is free to remember how big a control said it wanted to be —
+    // asking is expensive on one of the four, where it was 78% of a layout
+    // solve — and the macOS host does. What it must not do is remember it
+    // across a write: a label given a longer word is wider, and one that laid
+    // out at its old width would clip its own text for ever.
+    //
+    // There is nothing platform-specific to assert here. Every host has real
+    // text metrics, so on every one of them more words is more width — and
+    // this is the line that fails if an invalidation is ever dropped, which
+    // until it was written nothing did.
+    var ruler: widgets.Label = widgets.Label.of("i")?
+    let narrow: geometry.Size = ruler.measure(geometry.Size.unbounded())?
+    ruler.set_text("a much longer piece of text than the one before it")?
+    let wide: geometry.Size = ruler.measure(geometry.Size.unbounded())?
+    io.println("more words is more width: {wide.width > narrow.width}")
+    // And back the other way, so the line above cannot pass on a host that
+    // only ever grows its answer.
+    ruler.set_text("i")?
+    let narrow_again: geometry.Size = ruler.measure(geometry.Size.unbounded())?
+    io.println("and fewer is fewer again: {narrow_again.width == narrow.width}")
 
     app.shutdown()
     return ok(true)

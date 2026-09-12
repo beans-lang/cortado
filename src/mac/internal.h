@@ -273,6 +273,15 @@ void        ctd_surface_event(uint32_t kind, ctd_handle surface,
 // the three, and it touches no framework to decide. See the note beside it.
 ctd_status  ctd_gated(int32_t what);
 
+// ----------------------------------------------------------------- view.m
+
+// Drops what a control said it wanted to be, so the next measure asks again.
+// Called from every property write — see the note beside g_wanted.
+void        ctd_forget_size(ctd_handle widget);
+// All of them, for the one thing that changes every control at once and writes
+// to none of them: the system font.
+void        ctd_forget_all_sizes(void);
+
 // --------------------------------------------------------------- machine.m
 
 void        ctd_net_start(void);
