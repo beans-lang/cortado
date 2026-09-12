@@ -25,6 +25,7 @@ csrc macos "src/mac/introspect.m"
 csrc macos "src/mac/clock.m"
 csrc macos "src/mac/anim.m"
 csrc macos "src/mac/gpu.m"
+csrc macos "src/mac/table.m"
 
 link macos framework "AppKit"
 link macos framework "Foundation"
@@ -70,6 +71,7 @@ csrc ios "src/ios/introspect.m"
 csrc ios "src/ios/clock.m"
 csrc ios "src/ios/anim.m"
 csrc ios "src/ios/gpu.m"
+csrc ios "src/ios/table.m"
 
 link ios framework "UIKit"
 link ios framework "Foundation"
@@ -115,6 +117,7 @@ csrc linux "src/gtk4/introspect.c"
 csrc linux "src/gtk4/clock.c"
 csrc linux "src/gtk4/anim.c"
 csrc linux "src/gtk4/gpu.c"
+csrc linux "src/gtk4/table.c"
 
 # The Windows host, over Win32 and common controls v6. A fourth object system,
 # or rather the absence of one: a control is an HWND, its state is set by
@@ -139,6 +142,7 @@ csrc windows "src/win32/introspect.c"
 csrc windows "src/win32/clock.c"
 csrc windows "src/win32/anim.c"
 csrc windows "src/win32/gpu.c"
+csrc windows "src/win32/table.c"
 
 # Common controls carries the trackbar and the progress bar; comdlg32 the file
 # choosers; gdi32 the device contexts every measurement goes through. user32

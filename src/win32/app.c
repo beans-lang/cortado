@@ -145,6 +145,22 @@ static LRESULT ctd_common_message(HWND window, UINT message,
             }
             break;
 
+        case WM_NOTIFY: {
+            // A list view reports through WM_NOTIFY rather than WM_COMMAND,
+            // and an owner-data one asks for its text the same way.
+            NMHDR *note = (NMHDR *)lparam;
+            if (!note) break;
+            if (note->code == LVN_GETDISPINFOW) {
+                ctd_table_disp_info((NMLVDISPINFOW *)lparam);
+                return 0;
+            }
+            if (note->code == LVN_ITEMCHANGED) {
+                ctd_table_item_changed((NMLISTVIEW *)lparam);
+                return 0;
+            }
+            break;
+        }
+
         case WM_HSCROLL:
         case WM_VSCROLL:
             // A trackbar reports through the scroll messages rather than

@@ -1,0 +1,19 @@
+-- what this platform has --
+  a table is a control here exactly where the kind says so: true
+  it has the columns it was given: true
+-- the round trip --
+  the platform answers what the source says: true
+  and a row past the end is refused: true
+  as is a column that is not there: true
+-- a second column --
+  a second column is given, or refused as unsupported: true
+-- selection --
+  a selected row reads back: true
+  and -1 clears it: true
+  a row past the end is refused: true
+-- a thousand rows, then a hundred thousand --
+  a hundred times the rows asked for no more cells: true
+  and the two really were 1,000 and 100,000 rows: true
+  a cell out of the middle still answers: true
+  which cost two asks, once to size and once to fill: true
+drove=true

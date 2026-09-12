@@ -85,6 +85,11 @@ void ctd_untrack(ctd_handle handle);
 // caller that wants one: ctd_widget_synth_value moves a control the way a user
 // would, and the event is the whole point of it.
 ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value);
+// A table: the scrolled window a handle stands for, and the control inside
+// it. Made after the handle exists, because a row object carries the handle
+// it belongs to.
+void ctd_table_attach(ctd_handle table, GtkWidget *scroller);
+GtkColumnView *ctd_table_view(gpointer object);
 void ctd_on_signal(GtkWidget *widget, gpointer user);
 // A property notification, which hands a callback three arguments rather than
 // two: the object, the pspec that changed, and the user data. Connecting

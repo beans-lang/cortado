@@ -43,6 +43,7 @@ pub class Vocabulary {
         if tag == "SecureField" { return some(widgets.WidgetKind.secure_field) }
         if tag == "Stepper" { return some(widgets.WidgetKind.stepper) }
         if tag == "LevelIndicator" { return some(widgets.WidgetKind.level_indicator) }
+        if tag == "Table" { return some(widgets.WidgetKind.table) }
         return none
     }
 

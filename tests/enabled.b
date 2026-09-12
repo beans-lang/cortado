@@ -64,6 +64,7 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         text_area => { return false }
         scroll_view => { return false }
         canvas => { return false }
+        table => { return false }
     }
 }
 

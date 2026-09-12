@@ -17,6 +17,18 @@ import std.io
 
 // The step property belongs to a slider. Asking a text field for it is the
 // check below, and naming it here keeps the test readable.
+/// Three rows, made up on demand. A table asks rather than holds, so this is
+/// the whole of its contents.
+class Prices implements widgets.TableRows {
+    pub fn init() {}
+    pub fn row_count() -> int { return 3 }
+    pub fn cell(row: int, column: int) -> string {
+        let names: List<string> = ["flat white", "espresso", "cortado"]
+        if column == 0 { return names[row] }
+        return "{(row + 1) * 120}p"
+    }
+}
+
 fn host_step() -> int {
     return host.P_STEP
 }
@@ -88,6 +100,10 @@ fn build() -> Result<bool> {
     var picture: widgets.ImageView = new widgets.ImageView()
     root.add(picture)?
 
+    var ledger: widgets.Table = widgets.Table.of(["Drink", "Price"])?
+    ledger.set_source(new Prices())?
+    root.add(ledger)?
+
     var scroller: widgets.ScrollView = new widgets.ScrollView()
     scroller.add(widgets.Label.of("inside the scroller")?)?
     root.add(scroller)?
@@ -114,6 +130,7 @@ fn build() -> Result<bool> {
     io.println("switch on={remember.is_on().or(false)}")
     io.println("stepper value={shots.value().or(-1.0)} step={shots.step().or(-1.0)} low={shots.low().or(-1.0)} high={shots.high().or(-1.0)}")
     io.println("level {battery.level().or(-1.0)} of {battery.high().or(-1.0)}")
+    io.println("table columns={ledger.column_count()} cell(1,0)=\"{ledger.native_cell(1, 0).or("?")}\" cell(2,1)=\"{ledger.native_cell(2, 1).or("?")}\"")
     // Read back on purpose: a secure field keeps its text from the screen, not
     // from the program that owns it.
     io.println("secure value=\"{secret.value().or("?")}\" shown=\"{secret.display_text().or("?")}\"")

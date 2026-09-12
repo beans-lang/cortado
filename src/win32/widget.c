@@ -28,6 +28,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_CANVAS:
         case CTD_W_SECURE_FIELD:
         case CTD_W_STEPPER:
+        case CTD_W_TABLE:
             return 1;
         case CTD_W_SWITCH:
             return 0;
@@ -125,6 +126,15 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_COMBO_BOX:
             class_name = WC_COMBOBOXW;
             style |= CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP;
+            break;
+        case CTD_W_TABLE:
+            // LVS_OWNERDATA is the whole design in one style bit: the control
+            // holds no items, only a count, and asks the parent for the text
+            // of a cell it is about to paint.
+            class_name = WC_LISTVIEWW;
+            style |= LVS_REPORT | LVS_OWNERDATA | LVS_SINGLESEL
+                   | LVS_SHOWSELALWAYS | WS_TABSTOP;
+            extended = WS_EX_CLIENTEDGE;
             break;
         case CTD_W_SCROLL_VIEW:
             class_name = CTD_CLASS_VIEW;

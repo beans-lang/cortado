@@ -28,6 +28,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SECURE_FIELD:
         case CTD_W_STEPPER:
         case CTD_W_LEVEL_INDICATOR:
+        case CTD_W_TABLE:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -76,6 +77,12 @@ ctd_handle ctd_widget_new(int32_t kind) {
             break;
         case CTD_W_LEVEL_INDICATOR:
             widget = gtk_level_bar_new_for_interval(0.0, 1.0);
+            break;
+        case CTD_W_TABLE:
+            // The scroller only. What goes inside needs the handle, which does
+            // not exist until this widget is tracked, so ctd_table_attach
+            // fills it in below.
+            widget = gtk_scrolled_window_new();
             break;
         case CTD_W_SECURE_FIELD:
             widget = gtk_entry_new();
@@ -133,6 +140,10 @@ ctd_handle ctd_widget_new(int32_t kind) {
     }
     ctd_tag(widget);
     ctd_handle handle = ctd_track(widget, kind);
+    // A table is built after tracking, because its rows carry the handle they
+    // belong to and the model is what hands those out. The placeholder made in
+    // the switch above is replaced by the real control here.
+    if (kind == CTD_W_TABLE) ctd_table_attach(handle, widget);
 
     // One signal per kind, chosen so the event the control raises is the one
     // it actually is.

@@ -40,6 +40,14 @@
 
 enum { CTD_SLOTS = 8192 };
 
+// A table's data source and delegate. UIKit holds both weakly, so `g_targets`
+// keeps it alive — the same arrangement as the target/action forwarder below.
+@interface CortadoTableSource : NSObject <UITableViewDataSource, UITableViewDelegate>
+@property (assign) ctd_handle handle;
+@property (assign) NSInteger rows;
+@property (retain) NSString *title;
+@end
+
 @interface CortadoTarget : NSObject
 @property (assign) ctd_handle handle;
 - (void)fire:(id)sender;
@@ -75,5 +83,11 @@ void ctd_give_back(uint32_t slot);
 // is what calls it, and the table must not have to include QuartzCore to.
 void ctd_clock_forget(uint32_t slot);
 void ctd_tag(id object);
+
+// The UITableView a CTD_W_TABLE handle stands for; nil for anything else.
+// One event, raised by the host itself rather than by a control's action.
+// Shared rather than static in app.m: table.m raises a selection too.
+void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
+UITableView *ctd_table_view(id object);
 
 #endif

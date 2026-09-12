@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 9
+#define CTD_ABI_VERSION 10
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -286,6 +286,8 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
  * which does run them — so `tests/controls.out` now has a host that takes the
  * refusing branch and still prints the same bytes as one that does not. */
 #define CTD_W_LEVEL_INDICATOR 17
+/* Rows and columns, filled by asking rather than by building. See "a table". */
+#define CTD_W_TABLE        18
 
 /* Whether this host can build a control of this kind.
  *
@@ -463,9 +465,15 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  * A label, an image, a separator and a progress bar take no input, so there is
  * nothing for "disabled" to turn off; what a caller actually wants for one of
  * those is a dimmed *look*, which is CTD_P_OPACITY and a different question. A
- * container and a scroll view are refused for a second reason as well: they
- * exist to hold children, and answering for the box would be answering for
- * everything inside it.
+ * container, a scroll view and a table are refused for a second reason as
+ * well: they exist to hold content, and answering for the box would be
+ * answering for everything inside it.
+ *
+ * A table is the one kind where "accepts input" and "has an enabled state"
+ * come apart — a row can be selected — and the holding wins. Two of the four
+ * hosts track a table as its scroll view, which is not a control on either of
+ * them, so there would be nothing there to answer even if the rule said
+ * otherwise.
  *
  * `tests/enabled.out` is this paragraph as a golden, one line per kind, and it
  * is a cross-host file — so a host that guesses again prints different bytes.
@@ -1061,6 +1069,87 @@ ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len);
 ctd_status ctd_items_count(ctd_handle widget, int32_t *out);
 /* Same contract as ctd_get_text: answers the byte length, writes at most cap. */
 int32_t    ctd_items_at(ctd_handle widget, int32_t index, char *out, int32_t cap);
+
+/* ---- a table ----------------------------------------------------------- */
+
+/* A table is the one control cortado does not build out of widgets, and the
+ * reason is the only one that matters: **a list long enough to need a table is
+ * long enough that building it shows.**
+ *
+ * Everywhere else in this header a control is an object the program makes and
+ * keeps. Ten thousand rows of four columns is forty thousand objects, forty
+ * thousand frames for the solver to place, and a reconciler pass over all of
+ * them every time one cell changes — for a screen that has thirty rows on it.
+ * Every native toolkit solves this the same way and has for thirty years: the
+ * control asks for the cells it is about to draw, and asks again when it
+ * scrolls. NSTableView calls it a data source, Win32 calls it LVS_OWNERDATA,
+ * GTK4 calls it a list model, UIKit calls it a table view data source. cortado
+ * calls it the same thing all four do.
+ *
+ * So this is the one place where the platform calls *into* Beans rather than
+ * the other way round, and the shape is the same one the event sink uses: one
+ * function pointer for the whole process, registered once, routed on the
+ * table's handle. Not one per table — the hazard at the top of this file
+ * applies here exactly as it does to events, and a stored callback per control
+ * is a leak by construction.
+ *
+ * The cell function answers text the way ctd_get_text does: write at most
+ * `cap` bytes, answer the number of bytes the cell needs. The host calls with
+ * `cap` 0 first when it wants to size a buffer, and a caller must handle that
+ * by answering the length and writing nothing. A negative answer is a status.
+ *
+ * **What must not happen inside it.** It runs while the platform is drawing,
+ * on the UI thread, and it must return: no waiting, no joining, no work that
+ * can block. A cell is a lookup in something the program already has. */
+typedef int32_t (*ctd_table_fn)(void *context, ctd_handle table,
+                                int32_t row, int32_t column,
+                                char *out, int32_t cap);
+
+/* One source for the process, like the event sink. */
+ctd_status ctd_set_table_source(ctd_table_fn source, void *context);
+
+/* How many columns, and what each is called. Columns are set before rows:
+ * a table with no columns has nothing to draw a row into, and every host
+ * treats setting them as the structural change it is.
+ *
+ * **One platform has no second column.** A UITableView is a list — the cell
+ * styles that look like two columns are a label and a detail label, not
+ * columns you can size, title, or sort. Asking for more than one on iOS is
+ * CTD_ERR_UNSUPPORTED rather than four columns quietly collapsed into one,
+ * because a program that laid out a spreadsheet and got a list back should be
+ * told while it can still do something about it. */
+ctd_status ctd_table_columns(ctd_handle table, int32_t count);
+ctd_status ctd_table_column_title(ctd_handle table, int32_t column,
+                                  const char *utf8, int32_t len);
+ctd_status ctd_table_column_width(ctd_handle table, int32_t column, double points);
+
+/* How many rows there are. Pushed rather than pulled, because it is one
+ * integer the program already knows and asking for it during a draw would be
+ * a call per frame for a number that changes when the program says so. */
+ctd_status ctd_table_rows(ctd_handle table, int32_t count);
+
+/* Ask again. The contents changed; the shape did not. */
+ctd_status ctd_table_reload(ctd_handle table);
+
+/* What the *platform* has for one cell, asked through its own data source.
+ *
+ * Same two-call shape as ctd_get_text: answer the byte count, write at most
+ * `cap`. It exists for the reason ctd_view_child_count exists — cortado knows
+ * what it told the table, and bookkeeping that is never checked against the
+ * thing it describes is how a table ends up correct on paper and wrong on
+ * screen. This is the round trip: out through ctd_table_fn, into the
+ * platform's data source, and back.
+ *
+ * It is also the only way to check the path at all without a display. A table
+ * asks for cells when it draws, and a headless window never draws. */
+int32_t    ctd_table_cell(ctd_handle table, int32_t row, int32_t column,
+                          char *out, int32_t cap);
+
+/* The selected row, or -1 for none. A status and a row in one return value is
+ * how -1 ends up being read as an index, so the row goes in `out`. */
+ctd_status ctd_table_selected(ctd_handle table, int32_t *out);
+/* -1 clears the selection. A row outside 0..rows-1 is CTD_ERR_RANGE. */
+ctd_status ctd_table_select(ctd_handle table, int32_t row);
 
 /* ---- introspection ----------------------------------------------------- */
 

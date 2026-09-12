@@ -362,8 +362,8 @@ mistake.
 `VFlex`, `HFlex`, `Grid`, `Box`, `Container` and `ScrollView`; controls are
 `Label`, `Button`, `TextField`, `SecureField`, `TextArea`, `CheckBox`,
 `RadioButton`, `Switch`, `Slider`, `Stepper`, `ProgressBar`,
-`LevelIndicator`, `ComboBox`, `Separator`, `Image` and `Canvas`. A closed set,
-and
+`LevelIndicator`, `ComboBox`, `Table`, `Separator`, `Image` and `Canvas`. A
+closed set, and
 any other capitalised tag is a component. There is no `<div>`, no entity table,
 no escaping and no `$html`: the output is a tree of native objects, and there
 is nothing to inject into.
@@ -417,6 +417,7 @@ ran.
 | `ComboBox` | `NSPopUpButton` | one of a list |
 | `Separator` | `NSBox` | a rule between groups |
 | `Image` | `NSImageView` | a picture |
+| `Table` | `NSTableView` | rows and columns, filled by asking |
 | `Container` | `CortadoView` | holds children |
 | `ScrollView` | `NSScrollView` | holds children, and scrolls them |
 
@@ -452,6 +453,41 @@ platform that has one and a platform that has not: every line asks whether what
 happened agrees with what the platform promised, so a host that quietly
 substituted something would print different bytes even though it built a
 control.
+
+**A table asks for its cells; it does not hold them.** This is the one control
+cortado does not build out of widgets, and the reason is the only one that
+matters: a list long enough to need a table is long enough that building it
+shows. Ten thousand rows of four columns is forty thousand controls, forty
+thousand frames for the solver, and a reconciler pass over all of them every
+time one cell changes — for a screen with thirty rows on it.
+
+```beans
+class Book implements widgets.TableRows {
+    pub fn row_count() -> int { return 50000 }
+    pub fn cell(row: int, column: int) -> string { ... }
+}
+
+var orders: widgets.Table = widgets.Table.of(["#", "Drink", "Shots", "Price"])?
+orders.set_source(new Book())?
+```
+
+`NSTableView` calls that a data source, Win32 calls it `LVS_OWNERDATA`, GTK4 a
+list model, UIKit a table view data source; cortado calls it the same thing all
+four do. It is the one place the platform calls **into** Beans, and the shape
+is the event sink's: one function pointer for the whole process, registered
+once, routed on the table's handle. Not one per table — a stored callback per
+control is a leak by construction.
+
+The one rule `cell` has to keep is that it **returns**. It runs on the UI
+thread while the platform is drawing: no waiting, no joining, no fetching. If
+the data is not there yet, answer what you have and call `reload()` when it
+arrives.
+
+`tests/table.out` is where "it does not hold them" stops being a claim. The
+source counts how many times it is asked, and a table of 100,000 rows asks for
+no more cells than one of 1,000 — on AppKit and UIKit that number is zero until
+something draws, on GTK it is one screenful. `examples/ledger.b` is fifty
+thousand rows in a window.
 
 **A slider's increment is write-only, and a stepper's is not.** AppKit has no
 increment on a slider: a stepped `NSSlider` is one with tick marks it has to
@@ -824,6 +860,41 @@ excuse: every quad in `triangle.b` lands on a pixel boundary, so coverage is
 arithmetic, and the colours are asserted exactly — 64 green pixels of 64, 32 of
 64 for the top half, 16 for a quad the shader halved. It is the same bytes on
 this Mac's GPU and on the iOS Simulator's, which are different hardware.
+
+## Why it stays smooth
+
+Four claims, each with a test behind it rather than an adjective.
+
+**One change makes one edit.** `tests/diff.out` is the reconciler's arithmetic
+written down: a render where the text changed prints `set root text="after"`,
+and a render where nothing changed prints `(nothing changed)`. Not "few edits"
+— the exact list, as a golden, on every host. A reconciler that rebuilt a
+subtree to change a label would print a different file.
+
+**A hundred times the rows is not a hundred times the work.** A table asks for
+the cells it is about to draw and holds none, so `tests/table.out` can build one
+of 1,000 rows and one of 100,000 and assert the second asked for no more cells
+than the first. `examples/ledger.b` is fifty thousand rows in a window that
+opens instantly, and the rows in it do not exist — every cell is arithmetic,
+computed when something is about to draw it.
+
+**No Beans code runs per animation frame.** An animation is *described* in
+Beans and *executed* by the platform: on macOS and iOS a `CABasicAnimation`
+runs on the render server, which keeps going at the display's rate while the
+main thread is busy. `tests/anim.out` is the same bytes through Core Animation
+and through the fallback that walks the curve itself, which is the strongest
+thing the suite says — two completely different executions of one description.
+
+**The frame clock is the display's, not a timer's.** `CVDisplayLink` on macOS,
+`CADisplayLink` on iOS, `gtk_widget_add_tick_callback` on GTK. A timer at
+1/60 of a second is a guess that is wrong on every 120 Hz screen and drifts on
+all of them; `tests/clock.out` checks the numbering and the elapsed time, and
+it can run headless because the host can raise a frame on demand.
+
+What cortado does **not** claim: that it is faster than the platform. Every
+control here is the platform's own, drawn by the platform's own code. The work
+cortado can add is the work between the program and that control, and the four
+files above are where that work is counted.
 
 ## Shipping
 

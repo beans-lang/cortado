@@ -48,6 +48,7 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "SecureField" { return true }
     if tag == "Stepper" { return true }
     if tag == "LevelIndicator" { return true }
+    if tag == "Table" { return true }
     return false
 }
 
@@ -140,8 +141,8 @@ pub fn widget_tags() -> List<string> {
     return ["Box", "Button", "Canvas", "CheckBox", "ComboBox", "Container",
             "Grid", "HFlex", "HStack", "Image", "Label", "LevelIndicator",
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",
-            "Separator", "Slider", "Stepper", "Switch", "TextArea",
-            "TextField", "VFlex", "VStack"]
+            "Separator", "Slider", "Stepper", "Switch", "Table",
+            "TextArea", "TextField", "VFlex", "VStack"]
 }
 
 /// Whether a tag is spelled like an identifier.

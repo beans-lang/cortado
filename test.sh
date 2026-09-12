@@ -4,6 +4,15 @@
 #     ./test.sh              the interpreter leg, plus cross-target checks
 #     ./test.sh --native     also build and run every case as a real binary
 #     ./test.sh --sanitize   also run every headless case under ASan and UBSan
+#     ./test.sh --case roles  the gates plus one case, on every host that runs it
+#
+# `--case` exists because the full run has grown to the better part of an hour
+# and almost all of it is one leg: the interpreter runs each case as its own
+# program, and each program relinks the platform host — sixty C files now. A
+# change that touches one control needs one case, so that is the loop while
+# writing, and the full run is what goes with a commit. It is not a shortcut
+# past anything: all four gates still run, and the named case is run on every
+# host that can run it, exactly as the full suite runs it.
 #
 # Every case prints a widget tree or an event log that was read back off live
 # platform objects, and both legs must match the committed golden byte for
@@ -40,13 +49,32 @@ fi
 
 native=0
 sanitize=0
+only=""
+expect_case=0
 for argument in "$@"; do
+    if [[ $expect_case -eq 1 ]]; then
+        only="$argument"
+        expect_case=0
+        continue
+    fi
     case "$argument" in
         --native)   native=1 ;;
         --sanitize) native=1; sanitize=1 ;;
+        --case)     expect_case=1 ;;
         *) echo "test.sh: unknown option $argument" >&2; exit 2 ;;
     esac
 done
+if [[ $expect_case -eq 1 ]]; then
+    echo "test.sh: --case needs the name of a case after it" >&2
+    exit 2
+fi
+# A name that is not a case is refused rather than run as an empty list. A
+# typo that quietly checked nothing and printed "ok" is the exact failure the
+# skip lines in a green run are read for.
+if [[ -n "$only" && ! -f "$root/tests/$only.b" ]]; then
+    echo "test.sh: there is no tests/$only.b" >&2
+    exit 2
+fi
 
 # ------------------------------------------------------------- keep the screen
 #
@@ -90,7 +118,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers opacity clock frames anim gpu triangle canvas shader)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers table opacity clock frames anim gpu triangle canvas shader)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -155,7 +183,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled checked controls numbers opacity clock anim gpu canvas shader)
+cross_host=(roles events text applied leaks enabled checked controls numbers table opacity clock anim gpu canvas shader)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -203,6 +231,53 @@ ios_builds_only=(anim)
 # visible rather than quietly green.
 portable=(layout diff sweep)
 
+# `--case` narrows every list to the one name, and leaves the lists it is not
+# in empty — so a case that is macOS-only runs on macOS and the GTK4 loop runs
+# zero times, which is what it would have done anyway. The line it prints says
+# which lists the case was in, because a leg that ran nothing and printed `ok`
+# is the silent green this suite is built to avoid.
+#
+# Written as four plain loops rather than `mapfile`, which macOS's own bash 3.2
+# does not have, and without `printf '%s\n' "${empty[@]}"`, which prints one
+# empty line that reads back as a one-element array holding "" — a leg then
+# runs `tests/.b` and says so in a way that takes a minute to understand.
+if [[ -n "$only" ]]; then
+    in_lists=""
+    kept=()
+    for name in "${portable[@]}"; do
+        if [[ "$name" == "$only" ]]; then kept+=("$name"); fi
+    done
+    portable=("${kept[@]+"${kept[@]}"}")
+    if [[ ${#portable[@]} -gt 0 ]]; then in_lists="$in_lists portable"; fi
+
+    kept=()
+    for name in "${cases[@]}"; do
+        if [[ "$name" == "$only" ]]; then kept+=("$name"); fi
+    done
+    cases=("${kept[@]+"${kept[@]}"}")
+    if [[ ${#cases[@]} -gt 0 ]]; then in_lists="$in_lists interpreter"; fi
+
+    kept=()
+    for name in "${cross_host[@]}"; do
+        if [[ "$name" == "$only" ]]; then kept+=("$name"); fi
+    done
+    cross_host=("${kept[@]+"${kept[@]}"}")
+    if [[ ${#cross_host[@]} -gt 0 ]]; then in_lists="$in_lists gtk4 ios"; fi
+
+    kept=()
+    for name in "${apple_only[@]}"; do
+        if [[ "$name" == "$only" ]]; then kept+=("$name"); fi
+    done
+    apple_only=("${kept[@]+"${kept[@]}"}")
+    if [[ ${#apple_only[@]} -gt 0 ]]; then in_lists="$in_lists apple"; fi
+
+    if [[ -z "$in_lists" ]]; then
+        echo "test.sh: tests/$only.b exists but is in no list — add it to cases" >&2
+        exit 2
+    fi
+    echo "-- only tests/$only.b:$in_lists (the gates and the build legs still run)"
+fi
+
 # ---------------------------------------------------------- the boundary gates
 #
 # These run first because they are cheap and because everything below them is
@@ -232,7 +307,11 @@ done
 # one line for four hundred generated pairs, so it is named separately rather
 # than folded into a number it contributes nothing to — a count that reads as
 # if it covered every suite is how a suite stops covering anything unnoticed.
-echo "ok portable: ${#portable[@]} suites, $(cat "$root/tests/layout.out" "$root/tests/diff.out" | grep -c '^== ') recorded cases and a $(grep -oE '^sweep: [0-9]+' "$root/tests/sweep.out" | grep -oE '[0-9]+')-case sweep, no display and no FFI"
+if [[ ${#portable[@]} -eq 0 ]]; then
+    echo "-- no portable suite in this run"
+else
+    echo "ok portable: ${#portable[@]} suites, $(cat "$root/tests/layout.out" "$root/tests/diff.out" | grep -c '^== ') recorded cases and a $(grep -oE '^sweep: [0-9]+' "$root/tests/sweep.out" | grep -oE '[0-9]+')-case sweep, no display and no FFI"
+fi
 
 # ------------------------------------------------------------- interpreter leg
 if [[ $have_host -eq 0 ]]; then
@@ -249,7 +328,11 @@ for name in "${cases[@]}"; do
     diff -u "$golden" "$tmp/$name.interp"
     pass
 done
-echo "ok interpreter: ${#cases[@]} cases"
+if [[ ${#cases[@]} -eq 0 ]]; then
+    echo "-- no host case in this run"
+else
+    echo "ok interpreter: ${#cases[@]} cases"
+fi
 
 # ------------------------------------------------------- the portable golden
 #
@@ -469,7 +552,7 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # display, and a gate must not need one. An example that is not built is an
     # example that goes stale, and the first person to find out is whoever
     # copied it.
-    for example in hello clock shader canvas signin brew; do
+    for example in hello clock shader canvas signin brew ledger; do
         "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
         pass
     done

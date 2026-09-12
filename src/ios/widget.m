@@ -32,6 +32,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SWITCH:
         case CTD_W_SECURE_FIELD:
         case CTD_W_STEPPER:
+        case CTD_W_TABLE:
             return 1;
         case CTD_W_LEVEL_INDICATOR:
             // UIKit has no level indicator. A UIProgressView is a progress
@@ -148,6 +149,12 @@ ctd_handle ctd_widget_new(int32_t kind) {
             view = [menu retain];
             break;
         }
+        case CTD_W_TABLE: {
+            UITableView *rows = [[UITableView alloc]
+                initWithFrame:CGRectZero style:UITableViewStylePlain];
+            view = rows;
+            break;
+        }
         case CTD_W_SCROLL_VIEW: {
             UIScrollView *scroller = [[UIScrollView alloc] initWithFrame:CGRectZero];
             view = scroller;
@@ -164,6 +171,16 @@ ctd_handle ctd_widget_new(int32_t kind) {
     }
     ctd_tag(view);
     ctd_handle handle = ctd_track(view, kind);
+    if (kind == CTD_W_TABLE) {
+        UITableView *rows = ctd_table_view(view);
+        CortadoTableSource *source = [[CortadoTableSource alloc] init];
+        [source setHandle:handle];
+        [source setRows:0];
+        [rows setDataSource:source];
+        [rows setDelegate:source];
+        [g_targets addObject:source];
+        [source release];
+    }
     if ([view isKindOfClass:[UIControl class]]) {
         CortadoTarget *forwarder = [[CortadoTarget alloc] init];
         [forwarder setHandle:handle];

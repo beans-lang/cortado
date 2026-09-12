@@ -6,7 +6,6 @@
 
 #import "internal.h"
 
-static void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 
 NSMutableArray *g_targets;
 
@@ -16,7 +15,7 @@ NSMutableArray *g_targets;
 }
 @end
 
-static void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token) {
+void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token) {
     if (!g_sink) return;
     ctd_event event;
     memset(&event, 0, sizeof event);

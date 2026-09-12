@@ -44,6 +44,14 @@ enum { CTD_SLOTS = 8192 };
 @property (assign) ctd_handle handle;
 @end
 
+// A table's data source and delegate. AppKit holds both weakly, so `g_targets`
+// keeps it alive — the same arrangement, and for the same reason, as the
+// target/action forwarder above.
+@interface CortadoTableSource : NSObject <NSTableViewDataSource, NSTableViewDelegate>
+@property (assign) ctd_handle handle;
+@property (assign) NSInteger rows;
+@end
+
 // One target object for every menu item cortado owns. `ctd_init` makes it and
 // `menu.m` implements it.
 @interface CortadoCommand : NSObject
@@ -103,5 +111,8 @@ void        ctd_clock_forget(uint32_t slot);
 
 NSString   *ctd_string(const char *utf8, int32_t len);
 NSTextView *ctd_text_view(id object);
+
+// The NSTableView a CTD_W_TABLE handle stands for; nil for anything else.
+NSTableView *ctd_table_view(id object);
 
 #endif

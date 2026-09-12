@@ -43,6 +43,8 @@ pub enum WidgetKind {
     /// every platform**: `NSLevelIndicator` and `GtkLevelBar` exist, UIKit
     /// and the Win32 common controls have nothing that means it.
     level_indicator
+    /// Rows and columns, filled by asking rather than by building.
+    table
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -65,6 +67,7 @@ pub enum WidgetKind {
             secure_field => host.W_SECURE_FIELD,
             stepper => host.W_STEPPER,
             level_indicator => host.W_LEVEL_INDICATOR,
+            table => host.W_TABLE,
         }
     }
 
@@ -89,6 +92,7 @@ pub enum WidgetKind {
             secure_field => "SecureField",
             stepper => "Stepper",
             level_indicator => "LevelIndicator",
+            table => "Table",
         }
     }
 
@@ -131,6 +135,7 @@ pub enum WidgetKind {
             secure_field => { return false }
             stepper => { return false }
             level_indicator => { return false }
+            table => { return false }
         }
     }
 
@@ -188,6 +193,7 @@ pub enum WidgetKind {
         every.push(WidgetKind.secure_field)
         every.push(WidgetKind.stepper)
         every.push(WidgetKind.level_indicator)
+        every.push(WidgetKind.table)
         return move every
     }
 
@@ -210,6 +216,7 @@ pub enum WidgetKind {
         if code == host.W_SECURE_FIELD { return some(WidgetKind.secure_field) }
         if code == host.W_STEPPER { return some(WidgetKind.stepper) }
         if code == host.W_LEVEL_INDICATOR { return some(WidgetKind.level_indicator) }
+        if code == host.W_TABLE { return some(WidgetKind.table) }
         return none
     }
 }

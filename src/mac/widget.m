@@ -28,6 +28,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SECURE_FIELD:
         case CTD_W_STEPPER:
         case CTD_W_LEVEL_INDICATOR:
+        case CTD_W_TABLE:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -158,6 +159,23 @@ ctd_handle ctd_widget_new(int32_t kind) {
             view = radio;
             break;
         }
+        case CTD_W_TABLE: {
+            // Tracked as the scroll view, like a text area: that is the thing
+            // with a frame, and a table that cannot scroll is a table with a
+            // hidden bottom. Everything in table.m reaches through it.
+            NSScrollView *scroller =
+                [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 200, 120)];
+            NSTableView *rows =
+                [[NSTableView alloc] initWithFrame:NSMakeRect(0, 0, 200, 120)];
+            [rows setUsesAlternatingRowBackgroundColors:YES];
+            [rows setColumnAutoresizingStyle:NSTableViewUniformColumnAutoresizingStyle];
+            [scroller setDocumentView:rows];
+            [scroller setHasVerticalScroller:YES];
+            [scroller setBorderType:NSBezelBorder];
+            [rows release];
+            view = scroller;
+            break;
+        }
         case CTD_W_SWITCH:
             // NSSwitch, not an NSButton with a switch button type. The two are
             // different controls: the button type draws a check box, and what
@@ -206,6 +224,19 @@ ctd_handle ctd_widget_new(int32_t kind) {
     }
     ctd_tag(view);
     ctd_handle handle = ctd_track(view, kind);
+    // A table's data source needs the handle, so it is made after tracking.
+    // AppKit holds a data source weakly; g_targets is what keeps it alive, the
+    // same arrangement the target/action forwarder below uses.
+    if (kind == CTD_W_TABLE) {
+        NSTableView *rows = ctd_table_view(view);
+        CortadoTableSource *source = [[CortadoTableSource alloc] init];
+        [source setHandle:handle];
+        [source setRows:0];
+        [rows setDataSource:source];
+        [rows setDelegate:source];
+        [g_targets addObject:source];
+        [source release];
+    }
     // Controls report their own actions from birth; a widget with no handler
     // registered simply reaches a sink that does nothing with it.
     if ([view isKindOfClass:[NSControl class]]) {

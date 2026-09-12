@@ -81,6 +81,7 @@ pub class WidgetMaker {
             secure_field => { return ok(new widgets.SecureField()) }
             stepper => { return ok(new widgets.Stepper()) }
             level_indicator => { return ok(new widgets.LevelIndicator()) }
+            table => { return ok(new widgets.Table()) }
         }
     }
 

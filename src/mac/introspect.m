@@ -50,6 +50,10 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // "can I change this", and these two are on opposite sides of it.
         case CTD_W_STEPPER:      role = @"spinbutton";  break;
         case CTD_W_LEVEL_INDICATOR: role = @"meter";    break;
+        // ARIA's word for rows and columns with a header. A `grid` is the
+        // interactive one — cells you can move through — which is what every
+        // one of these controls is.
+        case CTD_W_TABLE:        role = @"grid";        break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);

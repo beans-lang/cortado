@@ -1070,6 +1070,59 @@ First working macOS host.
   is only as good as the list it iterates, and the list is not what a person
   hands the tool.
 
+- **`CTD_W_TABLE` — the one control cortado does not build out of widgets.**
+  Ten thousand rows of four columns is forty thousand controls, forty thousand
+  frames for the solver, and a reconciler pass over all of them every time one
+  cell changes, for a screen with thirty rows on it. Every native toolkit has
+  solved this the same way for thirty years: the control asks for the cells it
+  is about to draw. `NSTableView` calls it a data source, Win32 `LVS_OWNERDATA`,
+  GTK4 a list model, UIKit a table view data source.
+
+  So this is the one place the platform calls **into** Beans, and the shape is
+  the event sink's: `ctd_set_table_source` takes one function pointer for the
+  whole process, registered once and routed on the table's handle. Not one per
+  table — the stored-callback hazard at the top of the header applies here
+  exactly as it does to events.
+
+- **A callback C *stores* needs `LocalStoredCallback`, and a borrowed `fn`
+  segfaults.** Proven before any of this was written, in a twenty-line probe:
+  passing a plain `fn` to something that keeps it crashes on the first call
+  back. Two other things the probe settled — six parameters is the cap and
+  `(context, table, row, column, out, cap)` is exactly six, and the closure
+  cannot capture a field (`move self.x` into one is refused) so the registry
+  lives in a plain object the closure captures as a local.
+
+- **`ctd_table_cell` — the round trip, and the only way to check the path with
+  no display.** A table asks for cells when it draws, and a headless window
+  never draws. This asks the *platform's* data source for a cell, so what comes
+  back went out through `ctd_table_fn` and came back through
+  `NSTableView`'s dataSource, a `GListModel` bind, `LVN_GETDISPINFO`, or
+  `cellForRowAtIndexPath:`. Bookkeeping that is never checked against the thing
+  it describes is how a table ends up correct on paper and wrong on screen —
+  the same argument `ctd_view_child_count` already makes.
+
+- **The performance claim is a comparison, not a count.** `tests/table.out`
+  builds a table of 1,000 rows and one of 100,000 and asserts the second asked
+  for *no more cells than the first*. A count would name a platform: AppKit and
+  UIKit ask for nothing until they draw and answer 0, GTK realises a screenful
+  when the model changes and answers a few hundred. Both are right, and both
+  say the one thing worth saying — a hundred times the rows is not a hundred
+  times the work. A table that built its rows would answer a hundred times the
+  first number.
+
+- **A `UITableView` has one column, and says so.** The cell styles that look
+  like two columns are a label and a detail label, not columns anything can
+  size, title or sort. Asking for a second on iOS is `CTD_ERR_UNSUPPORTED`
+  rather than four columns quietly collapsed into one.
+
+- **A column's cross-axis default caught the layout out a second time.** A
+  `FlexLayout.column` hands a child the width it *measures* unless told to
+  stretch, and a table measures to nothing because its width is whatever room
+  it is given. The first `examples/ledger.b` was a correctly laid out table
+  0 points wide. The canvas hit the same thing in the GPU work; the difference
+  is that a canvas now says `no_size`, and a table cannot, because the layout
+  may legitimately run after the source is set.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

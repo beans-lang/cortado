@@ -103,6 +103,9 @@ fn build() -> Result<bool> {
     // Win32 common controls have no toggle switch. This file is the golden
     // every platform must print, so it holds only what every platform has.
     var secret: widgets.SecureField = widgets.SecureField.of("hunter2")?
+    // One column, because that is what every host has — a UITableView is a
+    // list. `tests/table.out` is where the second column's answer lives.
+    var orders: widgets.Table = widgets.Table.of(["Order"])?
     var picture: widgets.ImageView = new widgets.ImageView()
     picture.set_hidden(true)?
     // A canvas is here for the same reason every other control is: it is a
@@ -129,6 +132,7 @@ fn build() -> Result<bool> {
     root.add(rule)?
     root.add(choice)?
     root.add(secret)?
+    root.add(orders)?
     root.add(picture)?
     root.add(plot)?
     root.add(buttons)?
@@ -154,6 +158,7 @@ fn build() -> Result<bool> {
     page.add(fixed(sheet, "rule", rule, 1.0))
     page.add(fixed(sheet, "choice", choice, 24.0))
     page.add(fixed(sheet, "secret", secret, 24.0))
+    page.add(fixed(sheet, "orders", orders, 40.0))
     page.add(fixed(sheet, "picture", picture, 40.0))
     page.add(fixed(sheet, "plot", plot, 32.0))
 

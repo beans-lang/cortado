@@ -55,6 +55,7 @@ fn carries_a_number(kind: widgets.WidgetKind) -> bool {
         combo_box => { return false }
         scroll_view => { return false }
         canvas => { return false }
+        table => { return false }
     }
 }
 
@@ -80,6 +81,7 @@ fn takes_a_step(kind: widgets.WidgetKind) -> bool {
         combo_box => { return false }
         scroll_view => { return false }
         canvas => { return false }
+        table => { return false }
     }
 }
 
@@ -103,6 +105,7 @@ fn reads_its_step(kind: widgets.WidgetKind) -> bool {
         combo_box => { return false }
         scroll_view => { return false }
         canvas => { return false }
+        table => { return false }
     }
 }
 
@@ -129,6 +132,7 @@ fn moved_by_a_user(kind: widgets.WidgetKind) -> bool {
         combo_box => { return false }
         scroll_view => { return false }
         canvas => { return false }
+        table => { return false }
     }
 }
 

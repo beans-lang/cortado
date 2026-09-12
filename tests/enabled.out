@@ -16,6 +16,7 @@ Switch has an enabled state
 SecureField has an enabled state
 Stepper has an enabled state
 LevelIndicator has none
+Table has none
 -- and what this platform does --
   every control it builds was asked: true
   and every one of them obeys the rule above: true

@@ -155,6 +155,11 @@ int32_t ctd_slot_kind(ctd_handle handle);
 int32_t ctd_window_text_out(HWND window, char *out, int32_t cap);
 uint32_t ctd_slot(ctd_handle handle);
 void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
+// A list view asking for a cell it is about to paint, and a selection that
+// moved. Both arrive as WM_NOTIFY on the *parent*, which is where every Win32
+// control reports, so app.c routes them here.
+void ctd_table_disp_info(NMLVDISPINFOW *info);
+void ctd_table_item_changed(NMLISTVIEW *info);
 void ctd_emit_control(ctd_handle target);
 void ctd_give_back(uint32_t slot);
 // WM_TIMER on a surface, handed to the frame clock. Declared here because the
