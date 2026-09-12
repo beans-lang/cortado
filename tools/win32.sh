@@ -144,6 +144,25 @@ echo "ok win32: tests/$name.b links a PE32+ executable against the Win32 host"
 # When none of them is here the leg says so and names what is missing. A
 # golden that was never printed proves nothing, and a port nobody has run is
 # not a port.
+#
+# **Two things about the container leg were learned the expensive way, and both
+# are load-bearing.**
+#
+# `xvfb-run` hangs here. It starts the X server, the program runs and exits,
+# and the wrapper never returns: `docker ps` showed nine containers, the oldest
+# two hours old, each holding a live `xvfb-run` and an `Xvfb` with no Wine
+# process left under it. The same executable run against an `Xvfb` started by
+# hand finishes in seconds and prints its golden. So the server is started
+# here, `DISPLAY` is exported, and the wrapper is not used.
+#
+# And a display is genuinely needed: with none, `CreateWindowExW` fails and the
+# host answers `stale_handle: could not set a surface title`. Running Wine bare
+# is not an option, only running it without that wrapper.
+#
+# `CORTADO_WINE_TIMEOUT` seconds, because a leg that hangs is worse than one
+# that fails: a failure names itself and a hang looks exactly like slow. It is
+# generous — Wine under amd64 emulation on an Apple Silicon Mac is not fast —
+# and the number is a cliff, not a budget.
 run_exe() {
     if [[ -n "${CORTADO_WINE:-}" ]]; then
         $CORTADO_WINE "$1"
@@ -152,18 +171,41 @@ run_exe() {
     local wine
     wine="$(command -v wine64 || command -v wine || true)"
     if [[ -n "$wine" ]]; then
-        if command -v xvfb-run >/dev/null 2>&1; then
-            xvfb-run -a "$wine" "$1"
-        else
-            "$wine" "$1"
+        if command -v Xvfb >/dev/null 2>&1; then
+            Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp >/dev/null 2>&1 &
+            local server=$!
+            local waited=0
+            while [[ ! -e /tmp/.X11-unix/X99 && $waited -lt 40 ]]; do
+                sleep 0.25
+                waited=$(( waited + 1 ))
+            done
+            DISPLAY=:99 timeout "$wine_timeout" "$wine" "$1"
+            local answer=$?
+            kill "$server" 2>/dev/null || true
+            return $answer
         fi
+        timeout "$wine_timeout" "$wine" "$1"
         return
     fi
     docker run --rm --platform linux/amd64 -v "$out":/w -w /w "$image" \
-        bash -lc "xvfb-run -a /usr/lib/wine/wine64 /w/$(basename "$1")"
+        bash -lc '
+            Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp >/dev/null 2>&1 &
+            server=$!
+            waited=0
+            while [ ! -e /tmp/.X11-unix/X99 ] && [ $waited -lt 40 ]; do
+                sleep 0.25
+                waited=$(( waited + 1 ))
+            done
+            DISPLAY=:99 WINEDEBUG=-all timeout '"$wine_timeout"' \
+                /usr/lib/wine/wine64 /w/'"$(basename "$1")"'
+            answer=$?
+            kill $server 2>/dev/null || true
+            exit $answer
+        '
 }
 
 image="${CORTADO_WINE_IMAGE:-cortado-wine}"
+wine_timeout="${CORTADO_WINE_TIMEOUT:-300}"
 if [[ -z "${CORTADO_WINE:-}" ]] && ! command -v wine64 >/dev/null 2>&1 \
         && ! command -v wine >/dev/null 2>&1; then
     if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
@@ -182,11 +224,28 @@ fi
 
 # Wine writes its own diagnostics to stderr and the X server writes its
 # shutdown to the same place, so only stdout is the answer.
-run_exe "$out/$name.exe" 2>"$out/$name.stderr" | tr -d '\r' >"$out/$name.stdout" || {
-    echo "FAIL win32 $name: exited non-zero" >&2
+# `PIPESTATUS[0]` is Wine's own exit code rather than the pipeline's, which is
+# what lets 124 — the timeout — say so by name instead of arriving as one more
+# "exited non-zero".
+#
+# `set +e` around it rather than a trailing `|| true`, and the difference is
+# not style: `||` runs a second command, and a simple command *replaces*
+# PIPESTATUS with its own status. The `true` would answer for Wine, and every
+# failure would read as a pass.
+set +e
+run_exe "$out/$name.exe" 2>"$out/$name.stderr" | tr -d '\r' >"$out/$name.stdout"
+answer=${PIPESTATUS[0]}
+set -e
+if [[ $answer -eq 124 ]]; then
+    echo "FAIL win32 $name: still running after ${wine_timeout}s — raise CORTADO_WINE_TIMEOUT if this machine is really that slow" >&2
     head -10 "$out/$name.stderr" >&2
     exit 1
-}
+fi
+if [[ $answer -ne 0 ]]; then
+    echo "FAIL win32 $name: exited $answer" >&2
+    head -10 "$out/$name.stderr" >&2
+    exit 1
+fi
 if ! diff -u "$root/tests/$name.out" "$out/$name.stdout"; then
     echo "FAIL win32 $name: the Win32 host prints something else" >&2
     exit 1

@@ -123,16 +123,25 @@ fn drive() -> Result<bool> {
     io.println("  a role outside the list is refused: {both_refused}")
 
     io.println("-- on a command --")
-    var commands: surface.Menu = surface.Menu.of("File")?
-    commands.add("Open", "mod+o", surface.CommandRole.none, 7)?
-    var on_command: string = refusal(commands.set_icon(7, first))
-    var wrong_token: string = refusal(commands.set_icon(99, first))
-    // A host with no menus refuses both the same way, which is the shape this
-    // line is written to keep identical there.
-    let took: bool = on_command == "" || on_command == "unsupported"
-    let refused: bool = wrong_token == "out_of_range" || wrong_token == "unsupported"
+    // A phone has no menu bar, and it says so one step earlier than this
+    // section was first written for: `ctd_menu_new` answers nothing, so there
+    // is no menu to refuse an icon. Both lines are written to be true either
+    // way — where there are menus, a command takes an icon and a token nobody
+    // added is refused; where there are none, there is nothing to be untrue.
+    var took: bool = true
+    var bad_token: bool = true
+    if platform.Capability.menu_bar.available() {
+        var commands: surface.Menu = surface.Menu.of("File")?
+        commands.add("Open", "mod+o", surface.CommandRole.none, 7)?
+        let on_command: string = refusal(commands.set_icon(7, first))
+        let wrong_token: string = refusal(commands.set_icon(99, first))
+        // A host with menus but no icons on them refuses both the same way,
+        // which is why "unsupported" is an accepted answer to each.
+        took = on_command == "" || on_command == "unsupported"
+        bad_token = wrong_token == "out_of_range" || wrong_token == "unsupported"
+    }
     io.println("  a command takes one, or the platform has no menus: {took}")
-    io.println("  a token the menu does not have is refused: {refused}")
+    io.println("  a token the menu does not have is refused: {bad_token}")
 
     app.shutdown()
     return ok(true)

@@ -618,14 +618,22 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # the status line because a person wants to see it, and pinning it in a
     # golden would mean this suite goes red the next time the sqlite package
     # updates, which is news about a different repository.
-    if [[ -f "$root/../../sqlite/beans.pot" ]]; then
+    #
+    # `../sqlite`, a sibling of this repository — which is where the workspace
+    # puts it and where `examples/cask/beans.pot` looks for it. The guard first
+    # written here said `../../sqlite`, one directory too far up, so it matched
+    # nothing and this leg skipped on every run it has ever had. That is the
+    # shape a dead guard takes: it never fails, it never runs, and everything
+    # stays green. The suite refuses an undeclared skip, which is the only
+    # reason it was ever noticed.
+    if [[ -f "$root/../sqlite/beans.pot" ]]; then
         "$BEANSC" build "$root/examples/cask/main.b" -o "$tmp/cask.bin" >/dev/null
         "$tmp/cask.bin" --dump 2>&1 | sed -E 's/SQLite [0-9]+\.[0-9]+\.[0-9]+/SQLite x.y.z/g' >"$tmp/cask.out"
         diff -u "$root/tests/cask.out" "$tmp/cask.out"
         pass
         echo "ok native: the database browser builds, opens a database and lays itself out"
     else
-        skip cask_example "the sqlite package is not checked out at ../../sqlite, so the database browser cannot be built"
+        skip cask_example "the sqlite package is not checked out beside this one at ../sqlite, so the database browser cannot be built"
     fi
 fi
 
