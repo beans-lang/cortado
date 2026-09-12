@@ -162,4 +162,27 @@ pub abstract class Surface {
         }
         return ok(count as int)
     }
+
+    /// What item `index` says.
+    ///
+    /// The count on its own does not tell you a toolbar is right, which is
+    /// not a hypothetical: cortado shipped one where every item carried the
+    /// first command's words and the first command's token — four buttons,
+    /// all of them Reload — and the suite was green, because what it checked
+    /// was that there were four of them. This is the smallest fact that tells
+    /// item 2 from item 0.
+    ///
+    /// A separator has no label and answers the empty string. Refused with
+    /// `out_of_range` for an index the toolbar does not have and for a
+    /// surface with no toolbar, and with `unsupported` where
+    /// `Capability.toolbar` answers no.
+    pub fn toolbar_label(index: int) -> Result<string> {
+        unsafe {
+            return host.HostText.read("read toolbar item {index}",
+                fn(out: RawPtr<i8>, cap: i32) -> i32 {
+                    return host.ctd_toolbar_label(self.handle().raw, index as i32,
+                                                  out, cap)
+                })
+        }
+    }
 }

@@ -1,5 +1,5 @@
 -- which controls are a state --
-  cortado has this many kinds: 30
+  cortado has this many kinds: 31
   every kind this platform builds was asked: true
   exactly the kinds that are a state carry the property: true
   this many of them are a state: 3

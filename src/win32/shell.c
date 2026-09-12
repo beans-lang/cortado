@@ -60,6 +60,18 @@ ctd_status ctd_toolbar_set(ctd_handle surface, ctd_handle menu_handle) {
     SendMessageW(bar, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
     SendMessageW(bar, WM_SETFONT, (WPARAM)g_ui_font, TRUE);
 
+    // The common controls' own image list, added once and indexed by STD_*.
+    // TB_ADDBITMAP answers where this bitmap's images start, and every
+    // iBitmap below is that plus the role's STD_ index — the images are
+    // appended to whatever the toolbar already had, so the offset is not
+    // always zero and cannot be assumed.
+    TBADDBITMAP standard;
+    standard.hInst = HINST_COMMCTRL;
+    standard.nID = IDB_STD_SMALL_COLOR;
+    int standard_first =
+        (int)SendMessageW(bar, TB_ADDBITMAP, 0, (LPARAM)&standard);
+    if (standard_first < 0) standard_first = 0;
+
     int shown = 0;
     for (int32_t at = 0; at < count; at++) {
         const CtdCommand *command = ctd_menu_command_at(menu_handle, at);
@@ -80,7 +92,12 @@ ctd_status ctd_toolbar_set(ctd_handle surface, ctd_handle menu_handle) {
             button.fsStyle = BTNS_AUTOSIZE | BTNS_SHOWTEXT;
             button.fsState = command->enabled ? TBSTATE_ENABLED : 0;
             button.iString = (INT_PTR)words;
-            button.iBitmap = I_IMAGENONE;
+            // The standard bitmap's own index where the role has one, and no
+            // image otherwise — the words stay either way, which is what
+            // BTNS_SHOWTEXT is for and why a role Windows has no picture for
+            // still gives a usable button.
+            int std = ctd_icon_std_index(command->icon);
+            button.iBitmap = std >= 0 ? (std + standard_first) : I_IMAGENONE;
         }
         SendMessageW(bar, TB_ADDBUTTONSW, 1, (LPARAM)&button);
         free(words);
@@ -101,6 +118,30 @@ ctd_status ctd_toolbar_count(ctd_handle surface, int32_t *out) {
     if (!ctd_window(surface)) return CTD_ERR_STALE;
     if (out) *out = ctd_toolbar_items(surface);
     return CTD_OK;
+}
+
+int32_t ctd_toolbar_label(ctd_handle surface, int32_t index, char *out,
+                          int32_t cap) {
+    if (!ctd_window(surface)) return CTD_ERR_STALE;
+    HWND bar = ctd_toolbar_bar(surface);
+    if (!bar) return CTD_ERR_RANGE;
+    if (index < 0 || index >= ctd_toolbar_items(surface)) return CTD_ERR_RANGE;
+    // The control's own copy of the words, asked for by the button's command
+    // id rather than by position — TB_GETBUTTONTEXT is keyed by id, and the
+    // id is the token the application chose, which is why the button has to
+    // be read for it first. A separator has no id and no text, and answers
+    // the empty string.
+    TBBUTTON button;
+    memset(&button, 0, sizeof button);
+    if (!SendMessageW(bar, TB_GETBUTTON, (WPARAM)index, (LPARAM)&button))
+        return CTD_ERR_RANGE;
+    if (button.fsStyle & BTNS_SEP) return ctd_copy_wide_out(L"", out, cap);
+    WCHAR words[512];
+    words[0] = L'\0';
+    LRESULT wrote = SendMessageW(bar, TB_GETBUTTONTEXTW,
+                                 (WPARAM)button.idCommand, (LPARAM)words);
+    if (wrote < 0 || wrote >= 512) words[0] = L'\0';
+    return ctd_copy_wide_out(words, out, cap);
 }
 
 // ----------------------------------------------------------------- popovers

@@ -89,6 +89,10 @@ typedef struct {
     int     separator;
     int     enabled;
     UINT    id;         // the 16-bit WM_COMMAND id, 0 for a separator
+    // A CTD_ICON_* role, or CTD_ICON_NONE. Kept on the command rather than on
+    // the button, because a toolbar is built from the command list and the
+    // list is what outlives it.
+    int32_t icon;
 } CtdCommand;
 
 struct CtdMenu {
@@ -106,6 +110,20 @@ typedef struct {
     ctd_handle menu;
     int64_t    token;
 } CtdMenuId;
+
+// Non-zero while cortado is writing on the program's behalf.
+//
+// The header is explicit that a write changes a control *silently*: a program
+// that heard about its own writes would feed itself for as long as it ran.
+// Most of this host is quiet by construction — BM_SETCHECK sends no
+// BN_CLICKED, TBM_SETPOS sends no notification — but LVM_SETITEMSTATE sends
+// LVN_ITEMCHANGED to the parent exactly as a click does, so selecting a row
+// from a program would arrive as a row the user picked.
+//
+// The same counter, under the same name and for the same reason, is in
+// src/gtk4/internal.h and src/mac/internal.h. A counter rather than a flag
+// because a setter can reach another setter.
+extern int g_writing;
 
 extern HACCEL g_accelerators;
 extern HFONT g_ui_font;
@@ -133,6 +151,7 @@ extern double g_progress_min[CTD_SLOTS];
 extern int g_running;
 extern int g_started;
 extern int32_t g_kind[CTD_SLOTS];
+extern int32_t g_icon[CTD_SLOTS];  // CTD_P_ICON, per slot
 extern int32_t g_role;
 extern int32_t g_type[CTD_SLOTS];
 extern uint32_t g_generation[CTD_SLOTS];
@@ -152,6 +171,19 @@ ctd_handle ctd_track(void *object, int32_t type, int32_t kind);
 int ctd_dispatch_editing(int32_t role);
 int ctd_has_nul(const char *utf8, int32_t len);
 int32_t ctd_copy_out(const char *text, char *out, int32_t cap);
+
+// The STD_* index into IDB_STD_SMALL_COLOR for a CTD_ICON_* role, or -1 when
+// the standard toolbar bitmap has no image for it. See src/win32/icon.c.
+// The tree view's three notifications, routed from the window procedure.
+// See src/win32/outline.c.
+void ctd_outline_expanding(NMTREEVIEWW *info);
+void ctd_outline_disp_info(NMTVDISPINFOW *info);
+void ctd_outline_sel_changed(NMTREEVIEWW *info);
+
+int  ctd_icon_std_index(int32_t icon);
+// An HICON from the shell's stock set, or NULL. The caller owns it and must
+// DestroyIcon it.
+HICON ctd_icon_handle(int32_t icon);
 int32_t ctd_copy_wide_out(const WCHAR *text, char *out, int32_t cap);
 // cortado's own children of a container window, in z-order, skipping anything
 // Windows put there itself.

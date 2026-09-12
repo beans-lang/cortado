@@ -118,7 +118,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table pickers panes shell web page permission opacity clock frames anim gpu triangle canvas shader)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline pickers panes shell web page permission icons opacity clock frames anim gpu triangle canvas shader)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -183,7 +183,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled checked controls numbers strings table pickers panes shell web permission opacity clock anim gpu canvas shader)
+cross_host=(roles events text applied leaks enabled checked controls numbers strings table outline pickers panes shell web permission icons opacity clock anim gpu canvas shader)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -599,6 +599,33 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     else
         skip counter_example "barista is not checked out at ../barista, so the dependency-injection example cannot be built"
         echo "ok native: ${#cases[@]} cases, and every example but the barista one links"
+    fi
+
+    # The database browser. A separate module, because it names a second
+    # library — and the only example here that is a whole application rather
+    # than one control in a window. It is *run*, not merely built: `--dump`
+    # opens a database, reads its catalogue, lays the window out headlessly
+    # and prints the tree, so the thing being checked is that a real program
+    # against this control set still works, not that it still compiles.
+    #
+    # Its golden names this platform's classes, like the gallery's does, and
+    # for the same reason: it is the macOS native leg that runs it. What it is
+    # for is the layout — five tab pages, two split views and a tree, all
+    # solved against a real window — which is where every bug this example
+    # found showed up.
+    #
+    # The vendored SQLite's version is rewritten out before the diff. It is in
+    # the status line because a person wants to see it, and pinning it in a
+    # golden would mean this suite goes red the next time the sqlite package
+    # updates, which is news about a different repository.
+    if [[ -f "$root/../../sqlite/beans.pot" ]]; then
+        "$BEANSC" build "$root/examples/cask/main.b" -o "$tmp/cask.bin" >/dev/null
+        "$tmp/cask.bin" --dump 2>&1 | sed -E 's/SQLite [0-9]+\.[0-9]+\.[0-9]+/SQLite x.y.z/g' >"$tmp/cask.out"
+        diff -u "$root/tests/cask.out" "$tmp/cask.out"
+        pass
+        echo "ok native: the database browser builds, opens a database and lays itself out"
+    else
+        skip cask_example "the sqlite package is not checked out at ../../sqlite, so the database browser cannot be built"
     fi
 fi
 

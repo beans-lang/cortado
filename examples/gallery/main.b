@@ -86,6 +86,42 @@ class Prices implements widgets.TableRows {
     }
 }
 
+/// Two drinks with what goes in them, as a tree.
+///
+/// The smallest thing that shows what an outline is for: a node is asked for
+/// its children only when it is opened, so the second drink's ingredients are
+/// never read while it is shut. Nodes are numbered rather than stored — 1 and
+/// 2 are the drinks, and a child's number says which drink it belongs to.
+class Menu implements widgets.OutlineNodes {
+    priv parts: List<string> = []
+
+    pub fn init() {
+        self.parts = ["espresso", "steamed milk", "a little foam", "hot water"]
+    }
+
+    pub fn child_count(node: int) -> int {
+        if node == 0 { return 2 }
+        if node == 1 { return 3 }
+        if node == 2 { return 2 }
+        return 0
+    }
+
+    pub fn child_at(node: int, index: int) -> int {
+        if node == 0 { return index + 1 }
+        return node * 10 + index
+    }
+
+    pub fn expandable(node: int) -> bool {
+        return node == 0 || node == 1 || node == 2
+    }
+
+    pub fn cell(node: int, column: int) -> string {
+        if node == 1 { return "flat white" }
+        if node == 2 { return "long black" }
+        return self.parts[(node % 10) % self.parts.len()]
+    }
+}
+
 fn fill_systems(root: widgets.Widget) -> Result<bool> {
     match find(root, widgets.WidgetKind.table) {
         none => {}
@@ -99,6 +135,27 @@ fn fill_systems(root: widgets.Widget) -> Result<bool> {
                     rows.set_column_width(0, 200.0)?
                     rows.set_column_width(1, 80.0)?
                     rows.set_source(new Prices())?
+                }
+            }
+        }
+    }
+    match find(root, widgets.WidgetKind.outline_view) {
+        none => {}
+        some(control) => {
+            match control as? widgets.OutlineView {
+                none => {}
+                some(tree) => {
+                    // A control built from markup has no columns yet, the
+                    // same as a table does not: `<OutlineView />` describes
+                    // the control, and what is in it is the program's.
+                    tree.set_columns(1)?
+                    tree.set_column_title(0, "Menu")?
+                    tree.set_column_width(0, 260.0)?
+                    tree.set_source(new Menu())?
+                    // Opened so the gallery shows a tree rather than a row.
+                    // One level at a time, because a node inside a shut
+                    // parent is not one the control has.
+                    tree.expand(1)?
                 }
             }
         }

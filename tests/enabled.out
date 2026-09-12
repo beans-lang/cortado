@@ -28,6 +28,7 @@ Disclosure has none
 TabView has none
 SplitView has none
 WebView has none
+OutlineView has none
 -- and what this platform does --
   every control it builds was asked: true
   and every one of them obeys the rule above: true

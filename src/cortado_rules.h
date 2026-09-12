@@ -86,6 +86,20 @@ static inline int ctd_kind_has_range(int32_t kind) {
 }
 
 /* Whether a kind carries a day. Only a date picker. */
+/* Which widgets carry CTD_P_ICON.
+ *
+ * A button and an image view, and nothing else. A label is text — a platform
+ * that draws a picture beside it is drawing a different control, and cortado
+ * naming that "a label with an icon" would make one word mean two things on
+ * four platforms. A menu item is not a widget and has its own call,
+ * ctd_menu_set_icon, which is also how a toolbar gets icons.
+ *
+ * Here rather than in each host for the reason every rule in this file is
+ * here: four hosts deciding separately is four answers. */
+static inline int ctd_kind_has_icon(int32_t kind) {
+    return kind == CTD_W_BUTTON || kind == CTD_W_IMAGE_VIEW;
+}
+
 static inline int ctd_kind_has_date(int32_t kind) {
     return kind == CTD_W_DATE_PICKER;
 }

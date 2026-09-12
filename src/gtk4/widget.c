@@ -38,6 +38,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_DISCLOSURE:
         case CTD_W_TAB_VIEW:
         case CTD_W_SPLIT_VIEW:
+        case CTD_W_OUTLINE_VIEW:
             return 1;
         case CTD_W_WEB_VIEW:
             // See src/gtk4/web.c: WebKitGTK is a separate library and not on
@@ -98,9 +99,10 @@ ctd_handle ctd_widget_new(int32_t kind) {
             widget = gtk_level_bar_new_for_interval(0.0, 1.0);
             break;
         case CTD_W_TABLE:
+        case CTD_W_OUTLINE_VIEW:
             // The scroller only. What goes inside needs the handle, which does
-            // not exist until this widget is tracked, so ctd_table_attach
-            // fills it in below.
+            // not exist until this widget is tracked, so ctd_table_attach and
+            // ctd_outline_attach fill it in below.
             widget = gtk_scrolled_window_new();
             break;
         case CTD_W_SEARCH_FIELD:
@@ -226,6 +228,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
     // belong to and the model is what hands those out. The placeholder made in
     // the switch above is replaced by the real control here.
     if (kind == CTD_W_TABLE) ctd_table_attach(handle, widget);
+    if (kind == CTD_W_OUTLINE_VIEW) ctd_outline_attach(handle, widget);
 
     // One signal per kind, chosen so the event the control raises is the one
     // it actually is.

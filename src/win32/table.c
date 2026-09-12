@@ -49,6 +49,8 @@ void ctd_table_disp_info(NMLVDISPINFOW *info) {
 // ones that are not a selection arriving are dropped.
 void ctd_table_item_changed(NMLISTVIEW *info) {
     if (!info) return;
+    // Not when the program did it — see g_writing in internal.h.
+    if (g_writing) return;
     if (!(info->uChanged & LVIF_STATE)) return;
     if (!(info->uNewState & LVIS_SELECTED)) return;
     if (info->uOldState & LVIS_SELECTED) return;
@@ -193,12 +195,16 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row) {
     item.stateMask = LVIS_SELECTED | LVIS_FOCUSED;
     if (row < 0) {
         item.state = 0;
+        g_writing++;
         SendMessageW(view, LVM_SETITEMSTATE, (WPARAM)-1, (LPARAM)&item);
+        g_writing--;
         return CTD_OK;
     }
     int rows = (int)SendMessageW(view, LVM_GETITEMCOUNT, 0, 0);
     if (row >= rows) return CTD_ERR_RANGE;
     item.state = LVIS_SELECTED | LVIS_FOCUSED;
+    g_writing++;
     SendMessageW(view, LVM_SETITEMSTATE, (WPARAM)row, (LPARAM)&item);
+    g_writing--;
     return CTD_OK;
 }

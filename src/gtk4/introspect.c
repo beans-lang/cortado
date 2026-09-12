@@ -40,6 +40,10 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_STEPPER:      role = "spinbutton";  break;
         case CTD_W_LEVEL_INDICATOR: role = "meter";    break;
         case CTD_W_TABLE:        role = "grid";        break;
+        // ARIA's word for a tree with columns. A `tree` is one
+        // column of nodes; this is rows and columns where the
+        // rows nest, which is what an outline view is.
+        case CTD_W_OUTLINE_VIEW: role = "treegrid";    break;
         case CTD_W_SEARCH_FIELD: role = "searchbox";   break;
         case CTD_W_SPINNER:      role = "progressbar"; break;
         case CTD_W_LINK:         role = "link";        break;
@@ -89,6 +93,21 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     // The setters below are the ordinary ones, and the signal they raise is
     // the platform's own — GTK notifies on a property change whoever made it,
     // which is exactly what "as a user would" means here.
+    {
+        // A table, selected the way a click selects: without the g_writing
+        // guard ctd_table_select uses, so GtkSingleSelection's own
+        // "selection-changed" fires and the event travels a click's path.
+        GtkColumnView *rows = ctd_table_view(object);
+        if (rows) {
+            GtkSelectionModel *selection = gtk_column_view_get_model(rows);
+            if (!selection) return CTD_ERR_STATE;
+            guint count = g_list_model_get_n_items(G_LIST_MODEL(selection));
+            if (index < 0 || index >= (int64_t)count) return CTD_ERR_RANGE;
+            gtk_single_selection_set_selected(GTK_SINGLE_SELECTION(selection),
+                                              (guint)index);
+            return CTD_OK;
+        }
+    }
     if (GTK_IS_PANED(object)) {
         // The ordinary setter, and the property notification GTK raises is
         // the same one a drag raises.

@@ -14,6 +14,12 @@
 
 // ----------------------------------------------------------------- toolbars
 
+// What every cortado toolbar item's identifier starts with, before the menu
+// row it stands for. Named once so the two places that build it and read it
+// back cannot disagree about how long it is — which is exactly how they did
+// disagree.
+#define CTD_TOOLBAR_PREFIX @"ctd-"
+
 // The delegate. NSToolbar asks it for an item every time one appears, so the
 // menu a toolbar was built from has to stay reachable — `menu` is the handle
 // and not the NSMenu, so a menu released behind the toolbar's back leaves a
@@ -47,13 +53,25 @@
     if (at == NSNotFound) return nil;
     // The identifier carries the menu index, so an item that moved in the menu
     // is a different item here rather than the same one with new words.
-    NSInteger row = [[identifier substringFromIndex:5] integerValue];
+    //
+    // The prefix is measured rather than counted by hand. It was counted by
+    // hand once — five, for a four-character prefix — and every item in the
+    // toolbar came back as menu row 0: four buttons, all labelled with the
+    // first command's words, all firing the first command's token. Nothing
+    // caught it, because what the suite checked was how many items there
+    // were.
+    if (![identifier hasPrefix:CTD_TOOLBAR_PREFIX]) return nil;
+    NSInteger row =
+        [[identifier substringFromIndex:[CTD_TOOLBAR_PREFIX length]] integerValue];
     if (row < 0 || row >= [menu numberOfItems]) return nil;
     NSMenuItem *source = [menu itemAtIndex:row];
     NSToolbarItem *item =
         [[[NSToolbarItem alloc] initWithItemIdentifier:identifier] autorelease];
     [item setLabel:[source title]];
     [item setPaletteLabel:[source title]];
+    // The icon comes off the menu item, because ctd_menu_set_icon put it
+    // there. One description of a command; the toolbar is a view of it.
+    if ([source image]) [item setImage:[source image]];
     [item setTarget:g_commands];
     [item setAction:@selector(chose:)];
     [item setTag:[source tag]];
@@ -95,7 +113,8 @@ ctd_status ctd_toolbar_set(ctd_handle surface, ctd_handle menu_handle) {
             continue;
         }
         if ([item hasSubmenu]) continue;
-        [ids addObject:[NSString stringWithFormat:@"ctd-%ld", (long)row]];
+        [ids addObject:[NSString stringWithFormat:@"%@%ld",
+                                                  CTD_TOOLBAR_PREFIX, (long)row]];
     }
     [delegate setIds:ids];
 
@@ -132,6 +151,26 @@ ctd_status ctd_toolbar_count(ctd_handle surface, int32_t *out) {
              ? (int32_t)[[(CortadoToolbar *)delegate ids] count] : 0;
     }
     return CTD_OK;
+}
+
+int32_t ctd_toolbar_label(ctd_handle surface, int32_t index, char *out, int32_t cap) {
+    NSWindow *window = (NSWindow *)ctd_resolve(surface);
+    if (!window) return CTD_ERR_STALE;
+    if (![window isKindOfClass:[NSWindow class]]) return CTD_ERR_KIND;
+    NSToolbar *bar = [window toolbar];
+    id delegate = bar ? [bar delegate] : nil;
+    if (![delegate isKindOfClass:[CortadoToolbar class]]) return CTD_ERR_RANGE;
+    NSMutableArray *ids = [(CortadoToolbar *)delegate ids];
+    if (index < 0 || index >= (int32_t)[ids count]) return CTD_ERR_RANGE;
+    NSString *identifier = [ids objectAtIndex:(NSUInteger)index];
+    // Asked of the delegate rather than of -items, for the reason
+    // ctd_toolbar_count gives: AppKit fills -items in when the toolbar is
+    // shown, and a headless window never shows one. What comes back is what
+    // the toolbar will build, which is the thing worth checking.
+    NSToolbarItem *item = [(CortadoToolbar *)delegate toolbar:bar
+                                       itemForItemIdentifier:identifier
+                                   willBeInsertedIntoToolbar:NO];
+    return ctd_copy_out(item ? [item label] : @"", out, cap);
 }
 
 // ----------------------------------------------------------------- popovers

@@ -155,7 +155,7 @@ fn build() -> Result<bool> {
     // Read back on purpose: a secure field keeps its text from the screen, not
     // from the program that owns it.
     io.println("secure value=\"{secret.value().or("?")}\" shown=\"{secret.display_text().or("?")}\"")
-    io.println("text area text=\"{note.text().or("?").replace("\n", "\\n")}\"")
+    io.println("text area text=\"{note.value().or("?").replace("\n", "\\n")}\"")
     io.println("scroller children={scroller.count()}")
 
     // A control asked for a property it does not have must say so, not answer

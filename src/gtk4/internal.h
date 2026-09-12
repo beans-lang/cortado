@@ -45,6 +45,7 @@ extern ctd_event_fn g_sink;
 extern int g_started;
 extern int32_t g_role;
 extern int32_t g_kind[CTD_SLOTS];
+extern int32_t g_icon[CTD_SLOTS];  // CTD_P_ICON, per slot
 extern uint32_t g_generation[CTD_SLOTS];
 extern uint32_t g_used;
 extern void *g_sink_context;
@@ -68,6 +69,16 @@ gboolean ctd_is_ours(GtkWidget *widget);
 gpointer ctd_resolve(ctd_handle handle);
 int ctd_has_nul(const char *utf8, int32_t len);
 int32_t ctd_copy_out(const char *text, char *out, int32_t cap);
+
+// The icon theme's name for a CTD_ICON_* role, or NULL when the installed
+// theme does not have it. See src/gtk4/icon.c.
+const char *ctd_icon_theme_name(int32_t icon);
+
+// The outline's half of the table's idea, in src/gtk4/outline.c. A
+// GtkColumnView is both a table and an outline here, so the tag on the widget
+// is what tells them apart.
+GtkColumnView *ctd_outline_view(gpointer object);
+void           ctd_outline_attach(ctd_handle outline, GtkWidget *scroller);
 int32_t ctd_slot_kind(ctd_handle handle);
 void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 void ctd_give_back(uint32_t slot);
@@ -114,6 +125,10 @@ typedef struct {
     char   *key;
     int     separator;
     int     enabled;
+    // A CTD_ICON_* role, or CTD_ICON_NONE. Kept on the command rather than on
+    // the button, because a toolbar is built from the command list and the
+    // list is what outlives it.
+    int32_t icon;
 } CtdCommand;
 
 // The items a menu holds. NULL for a handle that is not a menu.

@@ -85,6 +85,10 @@ pub enum WidgetKind {
     /// has**: WKWebView is part of the system on macOS and iOS, GTK's engine
     /// is a separate library and Windows' is a redistributable.
     web_view
+    /// A table whose rows are a tree: it asks for a node's *children* rather
+    /// than for row *n*. Every desktop platform has one; UIKit does not, and
+    /// says so rather than substituting an indented list.
+    outline_view
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -119,6 +123,7 @@ pub enum WidgetKind {
             tab_view => host.W_TAB_VIEW,
             split_view => host.W_SPLIT_VIEW,
             web_view => host.W_WEB_VIEW,
+            outline_view => host.W_OUTLINE_VIEW,
         }
     }
 
@@ -155,6 +160,7 @@ pub enum WidgetKind {
             tab_view => "TabView",
             split_view => "SplitView",
             web_view => "WebView",
+            outline_view => "OutlineView",
         }
     }
 
@@ -209,6 +215,8 @@ pub enum WidgetKind {
             tab_view => { return false }
             split_view => { return false }
             web_view => { return false }
+            outline_view => { return false }
+            outline_view => { return false }
         }
     }
 
@@ -278,6 +286,7 @@ pub enum WidgetKind {
         every.push(WidgetKind.tab_view)
         every.push(WidgetKind.split_view)
         every.push(WidgetKind.web_view)
+        every.push(WidgetKind.outline_view)
         return move every
     }
 
@@ -312,6 +321,7 @@ pub enum WidgetKind {
         if code == host.W_TAB_VIEW { return some(WidgetKind.tab_view) }
         if code == host.W_SPLIT_VIEW { return some(WidgetKind.split_view) }
         if code == host.W_WEB_VIEW { return some(WidgetKind.web_view) }
+        if code == host.W_OUTLINE_VIEW { return some(WidgetKind.outline_view) }
         return none
     }
 }

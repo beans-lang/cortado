@@ -205,6 +205,20 @@ static LRESULT ctd_common_message(HWND window, UINT message,
                 ctd_table_item_changed((NMLISTVIEW *)lparam);
                 return 0;
             }
+            // A tree view's three: fill children when one opens, hand over the
+            // words when one draws, report a selection when one moves.
+            if (note->code == TVN_ITEMEXPANDINGW) {
+                ctd_outline_expanding((NMTREEVIEWW *)lparam);
+                return 0;
+            }
+            if (note->code == TVN_GETDISPINFOW) {
+                ctd_outline_disp_info((NMTVDISPINFOW *)lparam);
+                return 0;
+            }
+            if (note->code == TVN_SELCHANGEDW) {
+                ctd_outline_sel_changed((NMTREEVIEWW *)lparam);
+                return 0;
+            }
             break;
         }
 
@@ -555,6 +569,7 @@ int32_t ctd_capability(int32_t capability) {
         // top-level window, gives it a shadow and captures the mouse to
         // dismiss it — which is cortado drawing a control.
         case CTD_CAP_POPOVER:       return 0;
+        case CTD_CAP_ICONS:         return 1;  /* the standard toolbar bitmap and the shell stock icons — a subset of the roles, and ctd_icon_name says which */
         case CTD_CAP_WEB:           return 0;
         default:                    return 0;
     }

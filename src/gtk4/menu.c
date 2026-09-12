@@ -203,6 +203,22 @@ ctd_status ctd_menu_set_enabled(ctd_handle handle, int64_t token, int32_t on) {
     return CTD_OK;
 }
 
+ctd_status ctd_menu_set_icon(ctd_handle handle, int64_t token, int32_t icon) {
+    CtdMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    CtdCommand *command = ctd_find_command(menu, token);
+    if (!command) return CTD_ERR_RANGE;
+    if (icon == CTD_ICON_NONE) {
+        command->icon = CTD_ICON_NONE;
+        return CTD_OK;
+    }
+    // Refused rather than remembered, so a theme without the icon is an
+    // answer at the call and not a blank button later.
+    if (!ctd_icon_theme_name(icon)) return CTD_ERR_RANGE;
+    command->icon = icon;
+    return CTD_OK;
+}
+
 ctd_status ctd_menu_invoke(ctd_handle handle, int64_t token) {
     CtdMenu *menu = ctd_menu_of(handle);
     if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;

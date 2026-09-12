@@ -256,10 +256,23 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
     // belongs to the parent's layout and size is a request the child makes.
     // The request is a *minimum* — GTK will not allocate a widget smaller than
     // it says it needs — which is why `tests/roles.out` carries no frames.
-    // A split view's panes are the platform's to place: GtkPaned lays both out
-    // from the divider's position, and a size request on one would fight it.
+    // A pane and a page are both the platform's to place, and for the same
+    // reason: the control owns where its child goes. GtkPaned lays both panes
+    // out from the divider's position, and GtkNotebook allocates a page to
+    // the area under the tab strip — a size request on either fights the
+    // control and wins only until the next allocation, which is the worst of
+    // both: the number cortado reads back is not the number GTK draws.
     GtkWidget *owner_widget = gtk_widget_get_parent(GTK_WIDGET(view));
     if (owner_widget && GTK_IS_PANED(owner_widget)) return CTD_OK;
+    // A page is not the notebook's direct child — GTK4 puts a stack between
+    // them — so the question has to be asked of the notebook rather than of
+    // the parent: gtk_notebook_page_num answers -1 for a widget that is not
+    // one of its pages, which also keeps this from catching everything that
+    // merely *sits inside* a page.
+    GtkWidget *book = gtk_widget_get_ancestor(GTK_WIDGET(view), GTK_TYPE_NOTEBOOK);
+    if (book && gtk_notebook_page_num(GTK_NOTEBOOK(book), GTK_WIDGET(view)) >= 0) {
+        return CTD_OK;
+    }
     gtk_widget_set_size_request(GTK_WIDGET(view), (int)width, (int)height);
     GtkWidget *parent = gtk_widget_get_parent(GTK_WIDGET(view));
     if (parent && GTK_IS_FIXED(parent)) {

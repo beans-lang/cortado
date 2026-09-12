@@ -192,6 +192,31 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             [(NSSplitView *)object setVertical:value == 0 ? YES : NO];
             return CTD_OK;
         }
+        case CTD_P_ICON: {
+            if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value >= CTD_ICON_COUNT) return CTD_ERR_RANGE;
+            NSImage *picture = value == CTD_ICON_NONE
+                             ? nil : ctd_icon_image((int32_t)value);
+            // Refused rather than cleared, so a role this system has no
+            // symbol for is an answer at the call and not a blank control
+            // three screens later.
+            if (value != CTD_ICON_NONE && !picture) return CTD_ERR_RANGE;
+            if ([object isKindOfClass:[NSButton class]]) {
+                [(NSButton *)object setImage:picture];
+                // Beside the words where there are words, and on its own
+                // where there are not — which is what a toolbar-shaped button
+                // and a labelled one each want, without the caller saying.
+                [(NSButton *)object setImagePosition:
+                    [[(NSButton *)object title] length] ? NSImageLeading
+                                                        : NSImageOnly];
+            } else if ([object isKindOfClass:[NSImageView class]]) {
+                [(NSImageView *)object setImage:picture];
+            } else {
+                return CTD_ERR_KIND;
+            }
+            g_icon[(uint32_t)(widget & 0xffffffffu)] = (int32_t)value;
+            return CTD_OK;
+        }
         case CTD_P_EXPANDED: {
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -311,6 +336,13 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_AXIS:
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = [(NSSplitView *)object isVertical] ? 0 : 1;
+            break;
+        case CTD_P_ICON:
+            if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            // Kept beside the handle rather than read back off the control:
+            // AppKit hands out an NSImage and there is no way from one to the
+            // role that asked for it.
+            value = g_icon[(uint32_t)(widget & 0xffffffffu)];
             break;
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
@@ -447,7 +479,16 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             NSRect own = [split bounds];
             double along = [split isVertical] ? own.size.width : own.size.height;
             if (value < 0.0 || value > along) return CTD_ERR_RANGE;
+            // Marked, because AppKit tells the delegate a divider moved
+            // whether a person dragged it or the program wrote it — and this
+            // is the only control on this host that does. Writing a
+            // checkbox, a slider or a tab raises nothing; without this line,
+            // writing a divider raises a value change, and a program that
+            // keeps what it hears would store the number it just set and
+            // call that news. See CortadoSplit in pane.m.
+            g_writing = g_writing + 1;
             [split setPosition:value ofDividerAtIndex:0];
+            g_writing = g_writing - 1;
             return CTD_OK;
         }
         case CTD_P_DATE: {

@@ -60,6 +60,30 @@ pub struct LayoutSpec {
                             shrink: 0.0 }
     }
 
+    /// A child pinned to one height, with no opinion about its width.
+    ///
+    /// This exists because the obvious way to ask for it does not work and
+    /// does not say so. `fixed(0.0, 96.0)` reads like "96 tall, whatever
+    /// wide"; `-1.0` is what means *no opinion* here, so what it actually
+    /// asks for is a box zero points across, and `Align.stretch` does not
+    /// override it — a spec's bounds are folded into the constraint before
+    /// the run ever places anything. The control then lays out, reports no
+    /// error, and is invisible. `examples/panes.b` shipped that way.
+    ///
+    /// A text area, a toolbar strip, a status row: every one of them is a
+    /// height and a shrug, and that is common enough to name.
+    pub static fn tall(height: f64) -> LayoutSpec {
+        return LayoutSpec { min_height: height, max_height: height,
+                            shrink: 0.0 }
+    }
+
+    /// A child pinned to one width, with no opinion about its height — a
+    /// sidebar, a gutter, a column of buttons. The mirror of `tall`.
+    pub static fn wide(width: f64) -> LayoutSpec {
+        return LayoutSpec { min_width: width, max_width: width,
+                            shrink: 0.0 }
+    }
+
     /// A child placed at an explicit offset, for `AbsoluteLayout`.
     pub static fn at(x: f64, y: f64) -> LayoutSpec {
         return LayoutSpec { x: x, y: y }

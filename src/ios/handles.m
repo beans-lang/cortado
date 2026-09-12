@@ -11,6 +11,7 @@
 id       g_object[CTD_SLOTS];
 uint32_t g_generation[CTD_SLOTS];
 static int32_t  g_kind[CTD_SLOTS];
+static int32_t  g_icon[CTD_SLOTS];  // CTD_P_ICON, per slot; see icon.*
 uint32_t g_used;
 
 ctd_event_fn g_sink;
@@ -63,6 +64,7 @@ void ctd_untrack(ctd_handle handle) {
     id object = g_object[slot];
     g_object[slot] = nil;
     g_kind[slot] = -1;
+    g_icon[slot] = CTD_ICON_NONE;
     g_generation[slot] = g_generation[slot] + 1;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     ctd_give_back(slot);
@@ -74,6 +76,7 @@ ctd_handle ctd_track(id object, int32_t kind) {
     if (slot == 0) return 0;
     g_object[slot] = [object retain];
     g_kind[slot] = kind;
+    g_icon[slot] = CTD_ICON_NONE;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     return ((uint64_t)g_generation[slot] << 32) | slot;
 }
@@ -89,6 +92,19 @@ id ctd_resolve(ctd_handle handle) {
 int32_t ctd_slot_kind(ctd_handle handle) {
     if (!ctd_resolve(handle)) return -1;
     return g_kind[(uint32_t)(handle & 0xffffffffu)];
+}
+
+// Which CTD_ICON_* a widget is showing. Kept beside the handle rather than
+// read back off the control, because UIKit hands out a UIImage and there is
+// no way from one to the role that asked for it.
+int32_t ctd_slot_icon(ctd_handle handle) {
+    if (!ctd_resolve(handle)) return CTD_ICON_NONE;
+    return g_icon[(uint32_t)(handle & 0xffffffffu)];
+}
+
+void ctd_set_slot_icon(ctd_handle handle, int32_t icon) {
+    if (!ctd_resolve(handle)) return;
+    g_icon[(uint32_t)(handle & 0xffffffffu)] = icon;
 }
 
 // Only views cortado made are part of cortado's tree. UIKit installs private

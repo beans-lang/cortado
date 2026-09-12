@@ -361,6 +361,103 @@ First working macOS host.
   would have refused. Taking the check out of the GTK host makes
   `tests/anim.out` fail, which is how it is known to be doing something.
 
+### An outline view
+
+- `CTD_W_OUTLINE_VIEW` and `cortado.widgets.OutlineView` — `NSOutlineView`, a
+  `GtkColumnView` over a `GtkTreeListModel`, a `SysTreeView32`. The table's
+  data source with **identity** added: a node is an int64 the application
+  chooses, and the control asks how many children it has, which is child *i*,
+  and whether it can be opened at all.
+- **Two callbacks, not one.** Structure answers an integer and text answers
+  bytes, because a single function would need seven parameters and a C
+  callback here may have six. Each gets its own context — a binding that
+  reaches a managed language passes a trampoline plus the context it looks its
+  closure up in, so two functions sharing one context is two closures with one
+  address.
+- `expandable` is asked separately from the child count, and that is the
+  difference that makes a tree cheap: a folder nobody has read yet has no
+  children to report and must still draw a twisty. `tests/outline.b` opens one
+  node of a 400,004-node tree and asserts the source was asked under a
+  thousand questions.
+- **UIKit has no outline view**, and says so rather than substituting an
+  indented list: a phone's tree is a collection-view *layout* with section
+  snapshots, a different control with a different data source and lifetime.
+  **A SysTreeView32 has no columns**, so a second column on Windows is
+  `unsupported`.
+- `examples/cask`'s navigator was a tree flattened into a one-column table by
+  hand — indentation as spaces, a twisty as a character, one click meaning
+  both select and open. It is now a data source with four methods. That
+  example is why this control exists.
+
+### The system's own icons
+
+- `widgets.SystemIcon` — twenty-seven icon **roles**, each host drawing its
+  own picture: SF Symbols on macOS and iOS, the freedesktop theme on GTK4, the
+  standard toolbar bitmap and the shell's stock icons on Win32. `CTD_P_ICON` on
+  a button and an image view, `ctd_menu_set_icon` on a command — which is how a
+  toolbar gets icons, because a toolbar is a menu.
+- `ctd_icon_name` answers what *this* host calls a role. It is for reading, not
+  for passing back: it makes the mapping testable — `tests/icons.b` asserts
+  every role a host claims has its own name and that no two share one, which is
+  the failure a table of names invites and nobody sees — and it makes a
+  misdrawn toolbar diagnosable without a screenshot.
+- **A role a host cannot draw is refused, not blanked.** Windows' standard
+  toolbar bitmap has fifteen images and no "run" or "database" among them, so
+  `SystemIcon.run.available()` is false there. A program asks first and shows
+  a word; `examples/cask` does exactly that, so its toolbar is icons on a Mac
+  and words on Windows without saying so twice.
+
+### A database browser, and the four bugs it found
+
+`examples/cask` is a SQLite browser with DBeaver's shape — a navigator tree, an
+editor with tabs, a SQL editor split above its results, a status bar — written
+against a driver interface that names no database. It is the first example here
+that is an application rather than one control in a window, and it is in the
+gate: `--dump` opens a database, reads its catalogue, lays the window out
+headlessly and prints both.
+
+Four bugs, each invisible until a real program ran into it, each now with a
+test that fails when the fix is reverted:
+
+- **Every toolbar item carried the first command's words and token.** The item
+  identifier is `ctd-%ld` — four characters — and the parser read
+  `substringFromIndex:5`, so every item resolved to menu row 0. Four buttons,
+  all of them Reload. The suite was green because `ctd_toolbar_count` could say
+  how many items a toolbar had and not which; there is now
+  `ctd_toolbar_label`, and `tests/shell.b` asserts each item carries its own
+  command's words in the menu's order.
+- **A tab page was given a frame AppKit owns.** A page *is* the
+  `NSTabViewItem`'s view, sized to the rectangle under the strip — so every
+  page came out 46 points too high, drawn over the strip it was meant to sit
+  below. Same rule as a split view's panes, now in the same guard, and GTK4
+  had to be told too (a page is not the notebook's direct child there, so the
+  question is asked of the notebook).
+- **Three controls reported cortado's own writes as the user's.** The header
+  has always said `ctd_set_*` changes a control silently, and the GTK4 host has
+  had a `g_writing` counter since it was written. macOS broke the rule in three
+  places — `-setFrame:` on a split view re-divides its panes and says a divider
+  moved, `-setPosition:` says it again, `-selectRowIndexes:` posts a selection
+  change — and Win32 in one, `LVM_SETITEMSTATE`. A sidebar asked for at 210
+  points came up at half the window; a navigator that opened a tree node and
+  selected it heard the selection as a click and shut the node again. All four
+  hosts now carry the same counter under the same name.
+- **`LayoutSpec` could not say "this tall, any width".** The obvious spelling,
+  `fixed(0.0, 96.0)`, pins the width to zero — laid out exactly as written,
+  reporting nothing, invisible. `examples/panes.b` had already shipped that
+  way. There is now `LayoutSpec.tall` and `LayoutSpec.wide`.
+
+`ctd_widget_synth_value` also learned tables, on all four hosts, because
+without it "a program's select is silent" would have passed on a host that
+raised no selection event at all.
+
+**What cask could not work around: there is no outline view.** Thirty widget
+kinds and none is a tree, so its navigator is a tree flattened into a
+one-column table by hand — no triangle to click on its own, no keyboard tree
+navigation, no icons in cells, indentation by spaces. The shape is already in
+the header (an outline is a table whose data source is asked for children
+rather than rows) and the three controls it would wrap are `NSOutlineView`,
+`GtkTreeListModel` over `GtkColumnView`, and a `TVS_HASBUTTONS` tree view.
+
 ### Found while building this
 
 - **`tools/sanitize.sh` kept its own list of frameworks, and lost a leg to it.**

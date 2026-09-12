@@ -41,6 +41,13 @@ pub enum Capability {
     /// and iOS; GTK's engine is WebKitGTK, a separate library, and Windows' is
     /// WebView2, a redistributable the user has to have installed.
     web
+    /// The system's own icon set, named by role — see `widgets.SystemIcon`.
+    ///
+    /// Every platform here answers yes, and that is not the same as every
+    /// role being available: what this asks is whether there is a set at all,
+    /// and `SystemIcon.available()` is what asks about one icon. Windows has
+    /// an icon set and no picture for "run".
+    icons
 
     fn code() -> int {
         return match self {
@@ -54,6 +61,7 @@ pub enum Capability {
             toolbar => host.CAP_TOOLBAR,
             popover => host.CAP_POPOVER,
             web => host.CAP_WEB,
+            icons => host.CAP_ICONS,
         }
     }
 
@@ -69,6 +77,7 @@ pub enum Capability {
             toolbar => "toolbar",
             popover => "popover",
             web => "web",
+            icons => "icons",
         }
     }
 

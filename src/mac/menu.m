@@ -249,6 +249,27 @@ ctd_status ctd_menu_set_enabled(ctd_handle handle, int64_t token, int32_t on) {
     return CTD_OK;
 }
 
+ctd_status ctd_menu_set_icon(ctd_handle handle, int64_t token, int32_t icon) {
+    NSMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    NSMenuItem *item = ctd_find_command(menu, token);
+    if (!item) return CTD_ERR_RANGE;
+    if (icon == CTD_ICON_NONE) {
+        [item setImage:nil];
+        return CTD_OK;
+    }
+    NSImage *picture = ctd_icon_image(icon);
+    // Refused rather than cleared: a caller asking for an icon this system
+    // cannot draw wants to know, so it can show a word instead. Silently
+    // leaving the item blank is the failure this refusal exists to prevent.
+    if (!picture) return CTD_ERR_RANGE;
+    // It lives on the menu item, and the toolbar reads it from there — which
+    // is the same reason a toolbar takes a menu at all: one description of a
+    // command, in one place, and the toolbar and the menu bar both show it.
+    [item setImage:picture];
+    return CTD_OK;
+}
+
 ctd_status ctd_menu_invoke(ctd_handle handle, int64_t token) {
     NSMenu *menu = ctd_menu_of(handle);
     if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;

@@ -40,6 +40,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_TAB_VIEW:
         case CTD_W_SPLIT_VIEW:
         case CTD_W_WEB_VIEW:
+        case CTD_W_OUTLINE_VIEW:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -180,6 +181,26 @@ ctd_handle ctd_widget_new(int32_t kind) {
                 [[NSTableView alloc] initWithFrame:NSMakeRect(0, 0, 200, 120)];
             [rows setUsesAlternatingRowBackgroundColors:YES];
             [rows setColumnAutoresizingStyle:NSTableViewUniformColumnAutoresizingStyle];
+            [scroller setDocumentView:rows];
+            [scroller setHasVerticalScroller:YES];
+            [scroller setBorderType:NSBezelBorder];
+            [rows release];
+            view = scroller;
+            break;
+        }
+        case CTD_W_OUTLINE_VIEW: {
+            // Tracked as the scroll view, exactly as a table is, and for the
+            // same reason: that is the thing with a frame.
+            NSScrollView *scroller =
+                [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 200, 160)];
+            NSOutlineView *rows =
+                [[NSOutlineView alloc] initWithFrame:NSMakeRect(0, 0, 200, 160)];
+            [rows setUsesAlternatingRowBackgroundColors:YES];
+            [rows setIndentationPerLevel:16.0];
+            // The twisty is drawn for the first column's cell, which is what
+            // `outlineTableColumn` names — set in ctd_outline_columns, once
+            // there is a column to name.
+            [rows setAutoresizesOutlineColumn:NO];
             [scroller setDocumentView:rows];
             [scroller setHasVerticalScroller:YES];
             [scroller setBorderType:NSBezelBorder];
@@ -347,6 +368,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
     }
     // Controls report their own actions from birth; a widget with no handler
     // registered simply reaches a sink that does nothing with it.
+    if (kind == CTD_W_OUTLINE_VIEW) ctd_outline_attach(handle, view);
     if (kind == CTD_W_DISCLOSURE) ctd_disclosure_attach(handle, view);
     if (kind == CTD_W_TAB_VIEW) ctd_tabs_attach(handle, view);
     if (kind == CTD_W_SPLIT_VIEW) ctd_split_attach(handle, view);

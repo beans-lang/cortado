@@ -96,6 +96,35 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             // has this property" is what a caller would be told on every other
             // host too. CTD_P_DIVIDER is a real and is refused in ctd_set_real.
             return CTD_ERR_KIND;
+        case CTD_P_ICON: {
+            if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value >= CTD_ICON_COUNT) return CTD_ERR_RANGE;
+            // The shell's stock set, because a button and a static control
+            // take an HICON — the standard toolbar bitmap is an image list
+            // and only a toolbar can draw from it. A role in one set and not
+            // the other is therefore refused here and drawn on the toolbar,
+            // which is honest about what Windows has rather than uniform
+            // about what it does not.
+            HICON picture = value == CTD_ICON_NONE
+                          ? NULL : ctd_icon_handle((int32_t)value);
+            if (value != CTD_ICON_NONE && !picture) return CTD_ERR_RANGE;
+            HICON old = NULL;
+            if (ctd_slot_kind(widget) == CTD_W_IMAGE_VIEW) {
+                old = (HICON)SendMessageW(view, STM_GETICON, 0, 0);
+                SendMessageW(view, STM_SETICON, (WPARAM)picture, 0);
+            } else {
+                old = (HICON)SendMessageW(view, BM_GETIMAGE, IMAGE_ICON, 0);
+                LONG_PTR style = GetWindowLongPtrW(view, GWL_STYLE);
+                SetWindowLongPtrW(view, GWL_STYLE,
+                                  picture ? (style | BS_ICON) : (style & ~BS_ICON));
+                SendMessageW(view, BM_SETIMAGE, IMAGE_ICON, (LPARAM)picture);
+            }
+            // SHGetStockIconInfo hands out a copy per call, so the one this
+            // control was showing is this code's to destroy.
+            if (old && old != picture) DestroyIcon(old);
+            g_icon[(uint32_t)(widget & 0xffffffffu)] = (int32_t)value;
+            return CTD_OK;
+        }
         case CTD_P_EXPANDED:
             // Nor a disclosure. The kind refusal rather than the platform
             // refusal, because "no control anywhere has this property" is what
@@ -183,6 +212,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_ANIMATING:
             return CTD_ERR_KIND;
         case CTD_P_AXIS:
+        case CTD_P_ICON:
+            if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            // Kept beside the handle: BM_GETIMAGE answers an HICON and there
+            // is no way from one back to the role that asked for it.
+            value = g_icon[(uint32_t)(widget & 0xffffffffu)];
+            break;
         case CTD_P_EXPANDED:
             return CTD_ERR_KIND;
         case CTD_P_EDITABLE:

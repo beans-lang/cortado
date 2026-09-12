@@ -68,6 +68,7 @@ pub partial class Shelf extends component.Component {
     pub has_tabs: bool = false
     pub has_split: bool = false
     pub has_web: bool = false
+    pub has_tree: bool = false
     pub inventory: string = ""
 
     pub fn init() {
@@ -81,6 +82,7 @@ pub partial class Shelf extends component.Component {
         self.has_tabs = widgets.WidgetKind.tab_view.available()
         self.has_split = widgets.WidgetKind.split_view.available()
         self.has_web = widgets.WidgetKind.web_view.available()
+        self.has_tree = widgets.WidgetKind.outline_view.available()
         var here: int = 0
         for kind: widgets.WidgetKind in widgets.WidgetKind.all() {
             if kind.available() { here = here + 1 }
@@ -519,28 +521,38 @@ partial class Shelf {
             b.text("no split view on this platform")
             b.close()
         }
-        if self.has_web {  // shelf.bx:178
-            b.open("WebView")  // shelf.bx:179
+        if self.has_tree {  // shelf.bx:178
+            b.open("OutlineView")  // shelf.bx:179
             b.number("height", (90) as f64)
             b.close()
         }
-        if !self.has_web {  // shelf.bx:181
+        if !self.has_tree {  // shelf.bx:181
             b.open("Label")  // shelf.bx:182
+            b.text("no outline view on this platform")
+            b.close()
+        }
+        if self.has_web {  // shelf.bx:184
+            b.open("WebView")  // shelf.bx:185
+            b.number("height", (90) as f64)
+            b.close()
+        }
+        if !self.has_web {  // shelf.bx:187
+            b.open("Label")  // shelf.bx:188
             b.text("no browser engine on this platform")
             b.close()
         }
         b.close()
         b.close()
-        b.open("HStack")  // shelf.bx:187
+        b.open("HStack")  // shelf.bx:193
         b.number("spacing", (10) as f64)
         b.word("justify", "end")
-        b.open("Button")  // shelf.bx:188
+        b.open("Button")  // shelf.bx:194
         b.flag("enabled", self.shots > 0)
         b.on("click", fn(e: UiEvent) { self.order() })
         b.text("Order")
         b.close()
         b.close()
-        b.open("Label")  // shelf.bx:191
+        b.open("Label")  // shelf.bx:197
         b.text("{self.status}")
         b.close()
         b.close()

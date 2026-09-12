@@ -231,6 +231,12 @@ int32_t ctd_tab_label(ctd_handle widget, int32_t index, char *out, int32_t cap) 
     // the program. The divider index is in the note exactly when a divider is
     // what moved.
     if (![[note userInfo] objectForKey:@"NSSplitViewDividerIndex"]) return;
+    // And a divider does move when nobody dragged it: giving the split view
+    // its frame re-divides the panes, with a divider index in the note like
+    // any drag, so the test above is not enough on its own. `g_writing` is
+    // non-zero exactly while cortado is inside -setFrame:, which is the only
+    // way that happens.
+    if (g_writing) return;
     id object = ctd_resolve(_handle);
     if (![object isKindOfClass:[NSSplitView class]]) return;
     NSSplitView *split = (NSSplitView *)object;

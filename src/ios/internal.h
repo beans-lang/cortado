@@ -94,6 +94,14 @@ void ctd_untrack(ctd_handle handle);
 id ctd_resolve(ctd_handle handle);
 int ctd_has_nul(const char *utf8, int32_t len);
 int32_t ctd_copy_out(NSString *text, char *out, int32_t cap);
+
+// The system image for a CTD_ICON_* role, or nil. See src/ios/icon.m.
+UIImage *ctd_icon_image(int32_t icon);
+
+// Which CTD_ICON_* a widget is showing, and setting it. The table is private
+// to handles.m here, the way g_kind is.
+int32_t ctd_slot_icon(ctd_handle handle);
+void    ctd_set_slot_icon(ctd_handle handle, int32_t icon);
 int32_t ctd_slot_kind(ctd_handle handle);
 void ctd_emit_control(ctd_handle target, id sender);
 

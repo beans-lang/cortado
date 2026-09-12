@@ -1,0 +1,10 @@
+module cask
+kind application
+
+# A SQLite browser, built out of cortado's controls and nothing else.
+#
+# This is the example that exists to be *used* rather than read: a real
+# program with a real dependency, which is the only way to find out what the
+# control set is missing. Every gap it hit is written down in its README.
+require path "../.."
+require path "../../../sqlite"

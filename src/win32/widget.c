@@ -34,6 +34,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_GROUP_BOX:
         case CTD_W_DATE_PICKER:
         case CTD_W_TAB_VIEW:
+        case CTD_W_OUTLINE_VIEW:
             return 1;
         case CTD_W_SEGMENTED:
             // The common controls have no segmented control. A toolbar with
@@ -210,6 +211,15 @@ ctd_handle ctd_widget_new(int32_t kind) {
             class_name = WC_LISTVIEWW;
             style |= LVS_REPORT | LVS_OWNERDATA | LVS_SINGLESEL
                    | LVS_SHOWSELALWAYS | WS_TABSTOP;
+            extended = WS_EX_CLIENTEDGE;
+            break;
+        case CTD_W_OUTLINE_VIEW:
+            // TVS_HASBUTTONS draws the twisty; LINESATROOT is what makes the
+            // top level's buttons appear at all, which is a Win32 quirk worth
+            // naming — without it a root node looks like a leaf.
+            class_name = WC_TREEVIEWW;
+            style |= TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT
+                   | TVS_SHOWSELALWAYS | WS_TABSTOP;
             extended = WS_EX_CLIENTEDGE;
             break;
         case CTD_W_SCROLL_VIEW:

@@ -42,6 +42,21 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_DISCLOSURE:
         case CTD_W_WEB_VIEW:
             return 1;
+        case CTD_W_OUTLINE_VIEW:
+            // UIKit has no outline view. What a phone has is a collection
+            // view with a list layout and section snapshots — a *layout*
+            // applied to a different control, with a different data source
+            // and a different lifetime. Handing one back under this name
+            // would be the substitution this function exists to refuse, and a
+            // program written against an outline would find that expanding a
+            // node is a snapshot it has to rebuild rather than a call.
+            //
+            // What would change it: a second sub-ABI shaped for snapshots, or
+            // a decision that cortado's outline is allowed to be a different
+            // control on one platform. Neither is a small edit, and until one
+            // is made a tree on a phone is what examples/cask had before this
+            // control existed — a table the program flattens itself.
+            return 0;
         case CTD_W_SPLIT_VIEW:
             // UIKit's split view is a view *controller* as well, and one that
             // owns the screen and changes shape with the device. There is no

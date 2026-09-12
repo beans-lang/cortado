@@ -569,6 +569,88 @@ does what a person does, and the event follows. That is also how the tests
 drive controls: `activate()` on a combo box would open its menu and never
 return.
 
+Three controls make that rule hard to keep, because their platforms treat the
+state as the user's: a split view is re-divided by `-setFrame:` and says a
+divider moved, `-setPosition:` says it again, and a table posts a selection
+change for `-selectRowIndexes:` exactly as it does for a click. All three used
+to reach the program. `examples/cask` found all three on its first run — a
+sidebar asked for at 210 points came up at half the window, and a navigator
+that opened a tree node and selected it heard the selection as a click and
+shut the node again. Each host now carries one counter, `g_writing`, and
+`tests/panes.b` and `tests/table.b` fail when it is taken out.
+
+## Trees
+
+**A table asks "what is at row 7"; an outline asks about a node.** That one
+difference is the whole control, and it is why an outline is not a table with
+indentation:
+
+```beans
+var tree: widgets.OutlineView = widgets.OutlineView.of(["Name"])?
+tree.set_source(catalogue)?    // four methods: child_count, child_at, expandable, cell
+tree.expand(connection)?
+```
+
+The control owns which nodes are showing, so opening one costs the children of
+*that node* and nothing else. `tests/outline.b` opens one node of a tree with
+400,004 nodes in it and asserts the source was asked fewer than a thousand
+questions — a claim a flattened list cannot make, because a flattened list has
+to know how long it is.
+
+A **node** is an `int` the program chooses: a row id, an index into its own
+list, anything. cortado never looks inside one. `OutlineView.root()` is the
+node above the top level, and because it is never itself a row it doubles as
+"nothing is selected". A `selection` event carries the **node**, not a row —
+a row number changes every time something above it opens, and a node does not.
+
+`expandable` is asked separately from `child_count`, and the difference is
+load-bearing: a folder nobody has read yet has no children to report and must
+still draw a twisty, and a table in a database has none and must not. A
+control that inferred one from the other would make "empty" and "closed" the
+same thing.
+
+**Two platform gaps, both stated rather than papered over.** UIKit has no
+outline view — a phone's tree is a collection-view layout with section
+snapshots, which is a different control with a different data source — so the
+kind answers `available() == false` there. And a `SysTreeView32` has no
+columns at all, so a second column on Windows is `unsupported`; a program that
+wants to work there asks for one and puts the rest in the text, which is what
+a Windows tree looks like anyway.
+
+## Icons
+
+**An icon is named by what it is for, not by what it is called.** Every
+platform ships an icon set and no two agree on a name: macOS and iOS have SF
+Symbols (`arrow.clockwise`), GTK the freedesktop theme
+(`view-refresh-symbolic`), Windows the standard toolbar bitmap and the shell's
+stock icons (`STD_FILEOPEN`, `SIID_FOLDER`). So cortado names the job.
+
+```beans
+commands.set_icon(RUN, widgets.SystemIcon.run)      // on a command, and so on a toolbar
+button.set_icon(widgets.SystemIcon.refresh)          // on a button
+widgets.ImageView.of(widgets.SystemIcon.warning)?    // on its own
+```
+
+Twenty-seven roles — refresh, add, remove, delete, open, save, search, run,
+stop, back, forward, cut, copy, paste, undo, redo, print, settings, info,
+warning, error, help, document, folder, database, table, and `none` to take
+one away. The point of using the system's set rather than shipping pictures is
+that the person already knows their own system's icon for "refresh"; one this
+library drew would be one more thing to learn.
+
+**Not every role exists everywhere, and the API says so rather than drawing a
+blank.** Windows' standard toolbar bitmap has fifteen images and no "run" or
+"database" among them, so `SystemIcon.run.available()` is false there and
+`set_icon` refuses rather than leaving an empty square. A program asks first
+and shows a word instead — which is what `examples/cask` does, so its toolbar
+is icons on a Mac and words on Windows without saying so twice.
+
+`SystemIcon.platform_name()` answers what this host calls the role. It is for
+reading: it is what makes a mapping table testable — `tests/icons.b` asserts
+every role a host claims has its own name and that no two share one — and what
+makes a misdrawn toolbar diagnosable without a screenshot. Nothing portable
+should compare those strings.
+
 ## Menus, dialogs and the system
 
 **A menu command carries a role, and the platform places it.** This is the one

@@ -389,6 +389,27 @@ static CtdCommand *ctd_find_command(CtdMenu *menu, int64_t token) {
     return NULL;
 }
 
+ctd_status ctd_menu_set_icon(ctd_handle handle, int64_t token, int32_t icon) {
+    CtdMenu *menu = ctd_menu_of(handle);
+    if (!menu) return ctd_slot(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    CtdCommand *command = ctd_find_command(menu, token);
+    if (!command) return CTD_ERR_RANGE;
+    if (icon == CTD_ICON_NONE) {
+        command->icon = CTD_ICON_NONE;
+        return CTD_OK;
+    }
+    // Refused where Windows has no icon for the role. There is no standard
+    // Windows picture for "run" or "database", and drawing one here would be
+    // cortado deciding what Windows looks like — see src/win32/icon.c.
+    if (ctd_icon_std_index(icon) < 0) {
+        HICON stock = ctd_icon_handle(icon);
+        if (!stock) return CTD_ERR_RANGE;
+        DestroyIcon(stock);
+    }
+    command->icon = icon;
+    return CTD_OK;
+}
+
 ctd_status ctd_menu_set_enabled(ctd_handle handle, int64_t token, int32_t on) {
     CtdMenu *menu = ctd_menu_of(handle);
     if (!menu) return ctd_slot(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;

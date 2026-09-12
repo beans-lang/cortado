@@ -1,5 +1,6 @@
 -- a toolbar --
   it shows some of the menu's items and no more: true
+  each item carries its own command's words, in order: true
   a command reaches the same handler with the same token: true
   disabling one does not change what is shown: true
   and taking the toolbar away leaves nothing: true

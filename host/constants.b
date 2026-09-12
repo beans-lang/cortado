@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 20
+pub const ABI_VERSION: int = 23
 
 // ---- statuses ----
 
@@ -77,6 +77,7 @@ pub const CAP_GPU: int = 7
 pub const CAP_TOOLBAR: int = 8
 pub const CAP_POPOVER: int = 9
 pub const CAP_WEB: int = 10
+pub const CAP_ICONS: int = 11
 
 // ---- widget kinds ----
 
@@ -110,6 +111,7 @@ pub const W_DISCLOSURE: int = 26
 pub const W_TAB_VIEW: int = 27
 pub const W_SPLIT_VIEW: int = 28
 pub const W_WEB_VIEW: int = 29
+pub const W_OUTLINE_VIEW: int = 30
 pub const PERM_BLUETOOTH: int = 1
 pub const PERM_LOCATION: int = 2
 pub const PERM_CAMERA: int = 3
@@ -150,6 +152,44 @@ pub const P_COLOR: int = 16
 pub const P_EXPANDED: int = 17
 pub const P_AXIS: int = 18
 pub const P_DIVIDER: int = 19
+pub const P_ICON: int = 20
+
+// What an outline's source is being asked. See "outlines" in
+// src/cortado_host.h.
+pub const OUTLINE_ROOT: int = 0
+pub const OUTLINE_CHILDREN: int = 0
+pub const OUTLINE_CHILD: int = 1
+pub const OUTLINE_EXPANDS: int = 2
+
+// The system icon roles. See "icons" in src/cortado_host.h.
+pub const ICON_NONE: int = 0
+pub const ICON_REFRESH: int = 1
+pub const ICON_ADD: int = 2
+pub const ICON_REMOVE: int = 3
+pub const ICON_DELETE: int = 4
+pub const ICON_OPEN: int = 5
+pub const ICON_SAVE: int = 6
+pub const ICON_SEARCH: int = 7
+pub const ICON_RUN: int = 8
+pub const ICON_STOP: int = 9
+pub const ICON_BACK: int = 10
+pub const ICON_FORWARD: int = 11
+pub const ICON_CUT: int = 12
+pub const ICON_COPY: int = 13
+pub const ICON_PASTE: int = 14
+pub const ICON_UNDO: int = 15
+pub const ICON_REDO: int = 16
+pub const ICON_PRINT: int = 17
+pub const ICON_SETTINGS: int = 18
+pub const ICON_INFO: int = 19
+pub const ICON_WARNING: int = 20
+pub const ICON_ERROR: int = 21
+pub const ICON_HELP: int = 22
+pub const ICON_DOCUMENT: int = 23
+pub const ICON_FOLDER: int = 24
+pub const ICON_DATABASE: int = 25
+pub const ICON_TABLE: int = 26
+pub const ICON_COUNT: int = 27
 pub const S_HINT: int = 1
 pub const S_URL: int = 2
 

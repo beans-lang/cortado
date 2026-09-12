@@ -41,6 +41,10 @@ class Ledger implements widgets.TableRows {
 
 class Heard {
     pub rows: List<int> = []
+    /// What the router heard, so a write that should be silent can be proved
+    /// so.
+    pub count: int = 0
+    pub last: int = 0
     pub fn init() {}
 }
 
@@ -91,6 +95,13 @@ fn drive() -> Result<bool> {
 
     let small: Ledger = new Ledger(3)
     table.set_source(small)?
+
+    let tally: Heard = new Heard()
+    app.router.on(table.handle(), events.EventKind.selection,
+        fn(event: events.UiEvent) {
+            tally.count = tally.count + 1
+            tally.last = event.index as int
+        })
     io.println("  it has the columns it was given: {table.column_count() == 1}")
 
     io.println("-- the round trip --")
@@ -116,11 +127,32 @@ fn drive() -> Result<bool> {
     io.println("  a second column is given, or refused as unsupported: {gave_two != said_cannot}")
 
     io.println("-- selection --")
+    // Counted across every write below, because the header's rule is that a
+    // write is silent and a table is the control most likely to break it:
+    // NSTableView posts a selection change for -selectRowIndexes: exactly as
+    // it does for a click, GtkSingleSelection emits "selection-changed"
+    // whoever moved it, and LVM_SETITEMSTATE sends LVN_ITEMCHANGED to the
+    // parent. Three of the four hosts had to be told; UIKit is quiet on its
+    // own.
+    //
+    // A program that hears its own selection is not a curiosity. A navigator
+    // that opens a tree node and then selects it hears the selection, treats
+    // it as a click, and shuts the node it just opened — which is exactly
+    // what examples/cask did, on the first run, with nothing in any log.
+    let quiet_at: int = tally.count
     table.select(1)?
     io.println("  a selected row reads back: {table.selected().or(-9) == 1}")
     table.select(-1)?
     io.println("  and -1 clears it: {table.selected().or(-9) == -1}")
     io.println("  a row past the end is refused: {refused_flag(table.select(99))}")
+    io.println("  and none of that was reported as the user's doing: {tally.count == quiet_at}")
+
+    // The other half, or the line above would pass on a host that raises no
+    // selection event at all.
+    table.set_value_as_user(2, 0.0)?
+    let heard_once: bool = tally.count == quiet_at + 1
+    let heard_which: bool = tally.last == 2
+    io.println("  a user picking a row is reported, and says which: {heard_once && heard_which}")
 
     io.println("-- a thousand rows, then a hundred thousand --")
     // The measurement this file exists for, and it is a *comparison* rather

@@ -60,6 +60,7 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "TabView" { return true }
     if tag == "SplitView" { return true }
     if tag == "WebView" { return true }
+    if tag == "OutlineView" { return true }
     return false
 }
 
@@ -164,7 +165,7 @@ pub fn widget_tags() -> List<string> {
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",
             "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper",
             "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack",
-            "WebView"]
+            "OutlineView", "WebView"]
 }
 
 /// Whether a tag is spelled like an identifier.

@@ -175,6 +175,12 @@
       $if !self.has_split {
         <Label text="no split view on this platform" />
       }
+      $if self.has_tree {
+        <OutlineView height={90} />
+      }
+      $if !self.has_tree {
+        <Label text="no outline view on this platform" />
+      }
       $if self.has_web {
         <WebView height={90} />
       }
@@ -247,6 +253,7 @@ pub partial class Shelf extends component.Component {
     pub has_tabs: bool = false
     pub has_split: bool = false
     pub has_web: bool = false
+    pub has_tree: bool = false
     pub inventory: string = ""
 
     pub fn init() {
@@ -260,6 +267,7 @@ pub partial class Shelf extends component.Component {
         self.has_tabs = widgets.WidgetKind.tab_view.available()
         self.has_split = widgets.WidgetKind.split_view.available()
         self.has_web = widgets.WidgetKind.web_view.available()
+        self.has_tree = widgets.WidgetKind.outline_view.available()
         var here: int = 0
         for kind: widgets.WidgetKind in widgets.WidgetKind.all() {
             if kind.available() { here = here + 1 }

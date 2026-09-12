@@ -272,9 +272,28 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
     // anyway is worse than doing nothing: -setFrame: on a pane makes AppKit
     // post splitViewDidResizeSubviews, and the program would hear its own
     // layout come back as a value change.
+    // A pane and a page are both the platform's to place, and for the same
+    // reason: the control owns where its child goes and will put it back
+    // there on its next layout pass. A split view divides its panes; a tab
+    // view sizes its item's view to the rectangle under the strip. Writing a
+    // frame on either is at best undone and at worst believed — the tab
+    // pages in examples/cask came out 46 points high, drawn over the strip
+    // they were supposed to sit below, because the layout wrote the box it
+    // had solved and AppKit had already put the view where it belonged.
     NSView *owner = [view superview];
-    if (owner && [owner isKindOfClass:[NSSplitView class]]) return CTD_OK;
+    if (owner && ([owner isKindOfClass:[NSSplitView class]] ||
+                  [owner isKindOfClass:[NSTabView class]])) return CTD_OK;
+    // Marked for the duration of the write. Resizing a split view re-divides
+    // its panes right here, inside -setFrame:, and it tells its delegate that
+    // a divider moved. Reporting that would be cortado handing the program
+    // back its own layout as a value the user changed — and a program that
+    // stores what it hears then writes the platform's transient even split
+    // where its own divider used to be. That is not hypothetical: it is what
+    // examples/cask did, and the sidebar it asked for at 210 points came up
+    // at half the window.
+    g_writing = g_writing + 1;
     [view setFrame:NSMakeRect(x, y, width, height)];
+    g_writing = g_writing - 1;
     return CTD_OK;
 }
 

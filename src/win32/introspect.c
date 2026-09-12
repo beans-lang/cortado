@@ -46,6 +46,10 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_STEPPER:      role = "spinbutton";  break;
         case CTD_W_LEVEL_INDICATOR: role = "meter";    break;
         case CTD_W_TABLE:        role = "grid";        break;
+        // ARIA's word for a tree with columns. A `tree` is one
+        // column of nodes; this is rows and columns where the
+        // rows nest, which is what an outline view is.
+        case CTD_W_OUTLINE_VIEW: role = "treegrid";    break;
         case CTD_W_SEARCH_FIELD: role = "searchbox";   break;
         case CTD_W_SPINNER:      role = "progressbar"; break;
         case CTD_W_LINK:         role = "link";        break;
@@ -100,6 +104,23 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     if (!view) return CTD_ERR_STALE;
     ctd_handle target = widget;
     switch (ctd_slot_kind(widget)) {
+        case CTD_W_TABLE: {
+            // Selected the way a click selects: without the g_writing guard
+            // ctd_table_select uses, so LVM_SETITEMSTATE's LVN_ITEMCHANGED
+            // reaches the parent and the event travels a click's path.
+            // The list view *is* the control's window on this host — there is
+            // no scroll-view wrapper to reach through, the way there is on
+            // the other three.
+            HWND rows = view;
+            if (index < 0 || index >= (int64_t)SendMessageW(rows, LVM_GETITEMCOUNT, 0, 0))
+                return CTD_ERR_RANGE;
+            LVITEMW item;
+            memset(&item, 0, sizeof item);
+            item.stateMask = LVIS_SELECTED | LVIS_FOCUSED;
+            item.state = LVIS_SELECTED | LVIS_FOCUSED;
+            SendMessageW(rows, LVM_SETITEMSTATE, (WPARAM)index, (LPARAM)&item);
+            return CTD_OK;
+        }
         case CTD_W_TAB_VIEW: {
             if (index < 0 || index >= (int64_t)SendMessageW(view, TCM_GETITEMCOUNT, 0, 0))
                 return CTD_ERR_RANGE;

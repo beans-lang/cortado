@@ -16,17 +16,30 @@ pub class TextArea extends Widget {
         super.init(WidgetKind.text_area)
     }
 
-    pub static fn of(text: string) -> Result<TextArea> {
+    pub static fn of(value: string) -> Result<TextArea> {
         var control: TextArea = new TextArea()
-        control.set_text(text)?
+        control.set_value(value)?
         return ok(control)
     }
 
-    pub fn set_text(text: string) -> Result<bool> {
-        return self.set_text_raw(text)
+    /// What is in the box.
+    ///
+    /// `set_value` and not `set_text`, which is what this used to be called.
+    /// The four controls a person types into — `TextField`, `SecureField`,
+    /// `SearchField` and this one — now all spell it the same way, and the
+    /// rule behind the names is worth stating because it is the one thing
+    /// that keeps them from drifting again: **a caption is text, an edited
+    /// value is a value.** A `Label` and a `Button` carry text, because it is
+    /// the program's words and the user cannot change them; a text control
+    /// carries a value, because it is the user's and the program reads it
+    /// back. Under both names it was always the same `P_VALUE` write, so
+    /// nothing here changed except which word a person has to remember, and
+    /// there is now one of those instead of two.
+    pub fn set_value(value: string) -> Result<bool> {
+        return self.set_text_raw(value)
     }
 
-    pub fn text() -> Result<string> {
+    pub fn value() -> Result<string> {
         return self.text_raw()
     }
 

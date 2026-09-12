@@ -228,6 +228,15 @@ ctd_status ctd_toolbar_count(ctd_handle surface, int32_t *out) {
     return CTD_OK;
 }
 
+int32_t ctd_toolbar_label(ctd_handle surface, int32_t index, char *out,
+                          int32_t cap) {
+    (void)index; (void)out; (void)cap;
+    // A refusal rather than an empty string, and the difference matters: there
+    // is no item 0 here to have a label, because there is no toolbar. Counting
+    // none and naming none are different questions.
+    return ctd_resolve(surface) ? CTD_ERR_UNSUPPORTED : CTD_ERR_STALE;
+}
+
 ctd_handle ctd_popover_new(ctd_handle content, double width, double height) {
     (void)content; (void)width; (void)height;
     return 0;

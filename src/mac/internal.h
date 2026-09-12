@@ -47,6 +47,14 @@ enum { CTD_SLOTS = 8192 };
 // A table's data source and delegate. AppKit holds both weakly, so `g_targets`
 // keeps it alive — the same arrangement, and for the same reason, as the
 // target/action forwarder above.
+@interface CortadoOutlineSource : NSObject <NSOutlineViewDataSource, NSOutlineViewDelegate>
+@property (assign) ctd_handle handle;
+@property (retain) NSMutableDictionary *nodes;
+- (NSNumber *)boxed:(int64_t)node;
+- (int64_t)nodeOf:(id)item;
+- (void)forget;
+@end
+
 @interface CortadoTableSource : NSObject <NSTableViewDataSource, NSTableViewDelegate>
 @property (assign) ctd_handle handle;
 @property (assign) NSInteger rows;
@@ -88,6 +96,7 @@ enum { CTD_SLOTS = 8192 };
 extern id           g_object[CTD_SLOTS];
 extern uint32_t     g_generation[CTD_SLOTS];
 extern int32_t      g_kind[CTD_SLOTS];
+extern int32_t      g_icon[CTD_SLOTS];  // CTD_P_ICON, per slot
 extern uint32_t     g_used;             // slot 0 is reserved for "no handle"
 extern ctd_event_fn g_sink;
 extern void        *g_sink_context;
@@ -96,6 +105,28 @@ extern int          g_started;
 // Set by ctd_app_stop and read by ctd_app_run_for. -[NSApplication stop:] is
 // only understood by -[NSApplication run], and a bounded run is not that loop.
 extern int          g_stop_requested;
+
+// Non-zero while cortado is writing on the program's behalf.
+//
+// The header is explicit that ctd_set_* changes a control *silently*: a
+// program that heard about its own writes would feed itself for as long as it
+// ran. Most of AppKit is quiet by construction — -setState: sends no action,
+// -setDoubleValue: sends no action — but three places are not, and all three
+// are controls whose state AppKit treats as the user's:
+//
+//   * -setFrame: on a split view re-divides its panes and tells the delegate
+//     a divider moved;
+//   * -setPosition:ofDividerAtIndex: tells it the same thing;
+//   * -selectRowIndexes: on a table posts a selection change.
+//
+// A program that keeps what it hears then writes the platform's transient
+// even split where its own divider used to be, or closes the tree node it
+// just opened. Both happened in examples/cask.
+//
+// The GTK4 host has had this since it was written, under this name and for
+// this reason — see g_writing in src/gtk4/internal.h. A counter rather than a
+// flag because a setter can reach another setter.
+extern int          g_writing;
 
 extern NSMutableArray *g_targets;       // app.m — keeps every CortadoTarget alive
 extern CortadoCommand *g_commands;      // app.m — the one menu-item target
@@ -112,6 +143,11 @@ NSArray    *ctd_children(NSView *container);
 // Answers the byte length the text needs, and writes at most `cap` bytes —
 // the two-call shape every text reader in the ABI uses.
 int32_t     ctd_copy_out(NSString *text, char *out, int32_t cap);
+
+// The system image for a CTD_ICON_* role, or nil when this system has none —
+// which is a real answer and not only a stale table: SF Symbols arrived in
+// macOS 11 and a symbol added later is nil on an older one. See src/mac/icon.m.
+NSImage    *ctd_icon_image(int32_t icon);
 // Rule 3 at the top of cortado_host.h: no platform text control can hold a
 // zero byte, so one is refused at the boundary rather than cutting a string
 // in half inside the platform.
@@ -136,6 +172,14 @@ NSTextView *ctd_text_view(id object);
 
 // The NSTableView a CTD_W_TABLE handle stands for; nil for anything else.
 NSTableView *ctd_table_view(id object);
+
+// The outline's half of the same idea, in src/mac/outline.m. NSOutlineView
+// compares items by pointer, so one NSNumber per node is kept and handed out
+// every time — see the note at the top of that file.
+@class CortadoOutlineSource;
+NSOutlineView *ctd_outline_view(id object);
+void           ctd_outline_attach(ctd_handle outline, NSView *view);
+NSString      *ctd_outline_words(ctd_handle outline, int64_t node, int32_t column);
 
 // ------------------------------------------------------------------ view.m
 

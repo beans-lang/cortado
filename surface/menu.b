@@ -2,6 +2,7 @@
 package surface
 
 import cortado.host
+import cortado.widgets
 
 /// A menu: a list of commands, separators and submenus.
 ///
@@ -150,6 +151,26 @@ pub class Menu {
     /// Public API and not only a test hook: a program that offers the same
     /// command from a toolbar button should run it through here rather than
     /// calling its handler, so the command is disabled in both places at once.
+    /// Gives the command carrying `token` one of the system's icons.
+    ///
+    /// The menu and the toolbar are the same list, so this puts the icon in
+    /// both — which is the reason `set_toolbar` takes a menu at all. Where a
+    /// platform shows icons in menus it shows them there too, and where it
+    /// does not, the toolbar still gets one.
+    ///
+    /// Refused with `out_of_range` for a token this menu does not have and
+    /// for a role this platform has no icon for. `SystemIcon.available()` is
+    /// the question to ask first; `examples/cask` asks it and falls back to
+    /// the command's words.
+    pub fn set_icon(token: int, icon: widgets.SystemIcon) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_menu_set_icon(self.handle().raw, token as i64,
+                                       icon.code() as i32) as int,
+                "put the {icon.name()} icon on command {token}")
+        }
+    }
+
     pub fn invoke(token: int) -> Result<bool> {
         unsafe {
             return host.check(host.ctd_menu_invoke(self.slot.raw, token as i64) as int,

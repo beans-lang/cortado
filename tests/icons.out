@@ -1,0 +1,15 @@
+-- what this platform has --
+  an icon set is offered exactly where the capability says so: true
+  every role it claims has its own name: true
+  and it claims at least one: true
+  the absence of an icon is always available: true
+  asking twice gives the same answer: true
+-- on a control --
+  a button keeps the icon it was given: true
+  and none takes it away again: true
+  a label has no icon to set: true
+  a role outside the list is refused: true
+-- on a command --
+  a command takes one, or the platform has no menus: true
+  a token the menu does not have is refused: true
+drove=true

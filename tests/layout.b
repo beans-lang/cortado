@@ -74,6 +74,22 @@ fn row(spacing: f64) -> layout.StackLayout {
     return layout.StackLayout.row(spacing)
 }
 
+/// A run that stretches its children across, so a child with no opinion about
+/// its cross-axis size gets the whole width — which is what makes the `tall`
+/// and `wide` cases below mean something: a spec that pinned the other axis
+/// to zero would win over the stretch and show it.
+fn stretched_column(spacing: f64) -> layout.StackLayout {
+    var stack: layout.StackLayout = layout.StackLayout.column(spacing)
+    stack.set_align(geometry.Align.stretch)
+    return stack
+}
+
+fn stretched_row(spacing: f64) -> layout.StackLayout {
+    var stack: layout.StackLayout = layout.StackLayout.row(spacing)
+    stack.set_align(geometry.Align.stretch)
+    return stack
+}
+
 // ---- 1. stacks ----
 
 fn stacks() {
@@ -252,6 +268,22 @@ fn bounds() {
     var exact: layout.LayoutNode = layout.LayoutNode.group("root", column(0.0))
     exact.add(spec_leaf("pinned", 1, layout.LayoutSpec.fixed(77.0, 33.0)))
     run("fixed size", exact, 300.0, 300.0)
+
+    // One axis pinned and the other left alone, which is what a text area, a
+    // status row and a sidebar all want, and what `fixed` cannot say. Writing
+    // `fixed(0.0, 33.0)` for it reads like "33 tall, whatever wide" and asks
+    // for a box zero points across — laid out exactly as written, reporting
+    // nothing, invisible on screen. `examples/panes.b` shipped that way, so
+    // both of these are stretched here in a run that would otherwise give
+    // them their measured size: the height case must come out full width and
+    // the width case full height.
+    var one_axis: layout.LayoutNode = layout.LayoutNode.group("root", stretched_column(0.0))
+    one_axis.add(spec_leaf("tall only", 1, layout.LayoutSpec.tall(33.0)))
+    run("height pinned, width left alone", one_axis, 300.0, 300.0)
+
+    var across_axis: layout.LayoutNode = layout.LayoutNode.group("root", stretched_row(0.0))
+    across_axis.add(spec_leaf("wide only", 1, layout.LayoutSpec.wide(77.0)))
+    run("width pinned, height left alone", across_axis, 300.0, 300.0)
 
     // A child may not out-grow the room its parent has, even asking for it.
     var greedy: layout.LayoutNode = layout.LayoutNode.group("root", column(0.0))

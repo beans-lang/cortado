@@ -106,6 +106,12 @@ root stack frame=0,0,300,300
 == fixed size ==
 root stack frame=0,0,300,300
   pinned leaf frame=0,0,77,33
+== height pinned, width left alone ==
+root stack frame=0,0,300,300
+  tall only leaf frame=0,0,300,33
+== width pinned, height left alone ==
+root stack frame=0,0,300,300
+  wide only leaf frame=0,0,77,300
 == child wider than parent ==
 root stack frame=0,0,300,300
   too wide leaf frame=0,0,300,20

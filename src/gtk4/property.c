@@ -63,6 +63,30 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
             gtk_orientable_set_orientation(GTK_ORIENTABLE(object),
                 value == 0 ? GTK_ORIENTATION_HORIZONTAL : GTK_ORIENTATION_VERTICAL);
             return CTD_OK;
+        case CTD_P_ICON: {
+            if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value >= CTD_ICON_COUNT) return CTD_ERR_RANGE;
+            const char *picture = value == CTD_ICON_NONE
+                                ? NULL : ctd_icon_theme_name((int32_t)value);
+            if (value != CTD_ICON_NONE && !picture) return CTD_ERR_RANGE;
+            if (GTK_IS_BUTTON(object)) {
+                if (picture) {
+                    gtk_button_set_icon_name(GTK_BUTTON(object), picture);
+                } else {
+                    gtk_button_set_label(GTK_BUTTON(object), "");
+                }
+            } else if (GTK_IS_IMAGE(object)) {
+                if (picture) {
+                    gtk_image_set_from_icon_name(GTK_IMAGE(object), picture);
+                } else {
+                    gtk_image_clear(GTK_IMAGE(object));
+                }
+            } else {
+                return CTD_ERR_KIND;
+            }
+            g_icon[(uint32_t)(widget & 0xffffffffu)] = (int32_t)value;
+            return CTD_OK;
+        }
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -180,6 +204,13 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = gtk_orientable_get_orientation(GTK_ORIENTABLE(object)) ==
                     GTK_ORIENTATION_HORIZONTAL ? 0 : 1;
+            break;
+        case CTD_P_ICON:
+            if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            // Kept beside the handle: a GtkButton set from an icon name can
+            // be asked for the name back, a GtkImage's depends on how it was
+            // filled, and neither answers with a cortado role.
+            value = g_icon[(uint32_t)(widget & 0xffffffffu)];
             break;
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;

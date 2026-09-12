@@ -54,6 +54,10 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // interactive one — cells you can move through — which is what every
         // one of these controls is.
         case CTD_W_TABLE:        role = @"grid";        break;
+        // ARIA's word for a tree with columns. A `tree` is one
+        // column of nodes; this is rows and columns where the
+        // rows nest, which is what an outline view is.
+        case CTD_W_OUTLINE_VIEW: role = @"treegrid";    break;
         // ARIA's word for a field that searches, and a spinner is a progress
         // bar with no total — which is what "progressbar" means to every
         // assistive layer under this one.
@@ -98,6 +102,19 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
         if (value < 0.0 || value > along) return CTD_ERR_RANGE;
         [split setPosition:value ofDividerAtIndex:0];
         return CTD_OK;
+    }
+    {
+        // A table, selected the way a click selects: *without* the g_writing
+        // guard ctd_table_select uses, so AppKit's own notification fires and
+        // the event travels the path a real click travels. That difference is
+        // the whole point of this call — the setter is silent, this is not.
+        NSTableView *rows = ctd_table_view(object);
+        if (rows) {
+            if (index < 0 || index >= (int64_t)[rows numberOfRows]) return CTD_ERR_RANGE;
+            [rows selectRowIndexes:[NSIndexSet indexSetWithIndex:(NSUInteger)index]
+              byExtendingSelection:NO];
+            return CTD_OK;
+        }
     }
     if ([object isKindOfClass:[NSTabView class]]) {
         NSTabView *tabs = (NSTabView *)object;

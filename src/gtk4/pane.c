@@ -285,20 +285,42 @@ ctd_status ctd_toolbar_set(ctd_handle surface, ctd_handle menu_handle) {
 
     GtkWidget *bar = gtk_header_bar_new();
     gtk_header_bar_set_show_title_buttons(GTK_HEADER_BAR(bar), TRUE);
+    // The words, in the order they were packed. Kept beside the bar rather
+    // than read back off it, because a GtkHeaderBar's children are not only
+    // the ones packed into it — the title widget and the window controls are
+    // in there too — so walking it would answer about GTK's furniture as
+    // readily as about the program's commands.
+    GPtrArray *words = g_ptr_array_new_with_free_func(g_free);
     int shown = 0;
     for (guint at = 0; at < items->len; at++) {
         CtdCommand *item = &g_array_index(items, CtdCommand, at);
         // A separator is a gap, which a header bar spells by packing nothing.
-        if (item->separator) { shown++; continue; }
-        GtkWidget *button = gtk_button_new_with_label(item->title ? item->title : "");
+        if (item->separator) {
+            g_ptr_array_add(words, g_strdup(""));
+            shown++;
+            continue;
+        }
+        // An icon where the command has one and the theme has it, a label
+        // otherwise — so a cut-down icon set degrades to words rather than to
+        // a row of empty squares.
+        const char *picture = ctd_icon_theme_name(item->icon);
+        GtkWidget *button = picture
+            ? gtk_button_new_from_icon_name(picture)
+            : gtk_button_new_with_label(item->title ? item->title : "");
+        if (picture) {
+            gtk_widget_set_tooltip_text(button, item->title ? item->title : "");
+        }
         g_object_set_data(G_OBJECT(button), "ctd-token",
                           (gpointer)(intptr_t)item->token);
         g_signal_connect(button, "clicked", G_CALLBACK(ctd_toolbar_clicked), NULL);
         gtk_widget_set_sensitive(button, item->enabled ? TRUE : FALSE);
         gtk_header_bar_pack_start(GTK_HEADER_BAR(bar), button);
+        g_ptr_array_add(words, g_strdup(item->title ? item->title : ""));
         shown++;
     }
     g_object_set_data(G_OBJECT(bar), "ctd-count", (gpointer)(intptr_t)shown);
+    g_object_set_data_full(G_OBJECT(bar), "ctd-words", words,
+                           (GDestroyNotify)g_ptr_array_unref);
     gtk_window_set_titlebar(GTK_WINDOW(window), bar);
     return CTD_OK;
 }
@@ -320,6 +342,20 @@ ctd_status ctd_toolbar_count(ctd_handle surface, int32_t *out) {
         *out = bar ? (int32_t)(intptr_t)g_object_get_data(G_OBJECT(bar), "ctd-count") : 0;
     }
     return CTD_OK;
+}
+
+int32_t ctd_toolbar_label(ctd_handle surface, int32_t index, char *out,
+                          int32_t cap) {
+    gpointer window = ctd_resolve(surface);
+    if (!window) return CTD_ERR_STALE;
+    if (!GTK_IS_WINDOW(window)) return CTD_ERR_KIND;
+    GtkWidget *bar = ctd_header_of(GTK_WINDOW(window));
+    if (!bar) return CTD_ERR_RANGE;
+    GPtrArray *words = g_object_get_data(G_OBJECT(bar), "ctd-words");
+    if (!words) return CTD_ERR_RANGE;
+    if (index < 0 || index >= (int32_t)words->len) return CTD_ERR_RANGE;
+    return ctd_copy_out((const char *)g_ptr_array_index(words, (guint)index),
+                        out, cap);
 }
 
 // ----------------------------------------------------------------- popovers

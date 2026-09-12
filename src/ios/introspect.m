@@ -47,6 +47,10 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_STEPPER:      role = @"spinbutton";  break;
         case CTD_W_LEVEL_INDICATOR: role = @"meter";    break;
         case CTD_W_TABLE:        role = @"grid";        break;
+        // ARIA's word for a tree with columns. A `tree` is one
+        // column of nodes; this is rows and columns where the
+        // rows nest, which is what an outline view is.
+        case CTD_W_OUTLINE_VIEW: role = @"treegrid";    break;
         case CTD_W_SEARCH_FIELD: role = @"searchbox";   break;
         case CTD_W_SPINNER:      role = @"progressbar"; break;
         case CTD_W_LINK:         role = @"link";        break;
@@ -120,6 +124,26 @@ ctd_status ctd_widget_activate(ctd_handle widget) {
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    {
+        // A table. UIKit is the one host where selecting a row from code does
+        // *not* call the delegate — -selectRowAtIndexPath: is documented not
+        // to — so the event is raised here, which is also why this host needed
+        // no guard in ctd_table_select. The other three are the other way
+        // round: quiet here for free, told to be quiet in the setter.
+        UITableView *rows = ctd_table_view(object);
+        if (rows) {
+            id source = [rows dataSource];
+            int64_t count = [source respondsToSelector:@selector(rows)]
+                          ? (int64_t)[(CortadoTableSource *)source rows] : 0;
+            if (index < 0 || index >= count) return CTD_ERR_RANGE;
+            [rows selectRowAtIndexPath:[NSIndexPath indexPathForRow:(NSInteger)index
+                                                         inSection:0]
+                              animated:NO
+                        scrollPosition:UITableViewScrollPositionNone];
+            ctd_emit(CTD_EV_SELECTION, widget, index, 0);
+            return CTD_OK;
+        }
+    }
     if ([object isKindOfClass:[CortadoDisclosure class]]) {
         if (index < 0 || index > 1) return CTD_ERR_RANGE;
         [(CortadoDisclosure *)object setOpen:index ? YES : NO];

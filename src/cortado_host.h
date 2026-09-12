@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 20
+#define CTD_ABI_VERSION 23
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -167,6 +167,7 @@ void       ctd_post(int64_t token);
 #define CTD_CAP_TOOLBAR         8  /* a row of commands attached to a window */
 #define CTD_CAP_POPOVER         9  /* a small window anchored to a control   */
 #define CTD_CAP_WEB            10  /* a browser engine in a rectangle        */
+#define CTD_CAP_ICONS          11  /* the system's own icon set; see "icons"  */
 
 int32_t    ctd_capability(int32_t capability);
 
@@ -382,6 +383,28 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
  * that says it is not there, so both refuse. */
 #define CTD_W_WEB_VIEW     29
 
+/* A table whose rows are a tree.
+ *
+ * The difference from CTD_W_TABLE is one question. A table asks "what is at
+ * row r"; an outline asks "how many children has this node, which is child i
+ * of it, and can it be opened at all" — and the rows a person sees are
+ * whichever nodes happen to be open. That is not a table with indentation: the
+ * control owns which nodes are showing, so opening one costs the children of
+ * one node and nothing else, which is the whole reason a schema with four
+ * hundred tables opens instantly.
+ *
+ * Every desktop platform has one and calls it something different:
+ * NSOutlineView, a GtkColumnView over a GtkTreeListModel, a SysTreeView32
+ * with TVS_HASBUTTONS. **UIKit does not.** A phone's outline is a collection
+ * view with a list layout and section snapshots — a layout, not a control,
+ * with a different lifetime and a different data source — and handing one
+ * back would be the substitution ctd_widget_supports exists to refuse. So
+ * this kind answers 0 there, and a program that needs a tree on a phone
+ * builds it out of a table the way examples/cask had to before this existed.
+ *
+ * See "outlines" below for the data source. */
+#define CTD_W_OUTLINE_VIEW 30
+
 /* Whether this host can build a control of this kind.
  *
  * 1 yes, 0 no, CTD_ERR_RANGE when `kind` is not a kind at all — and that third
@@ -590,6 +613,16 @@ ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset);
  * a caller who computed it has a bug, and quietly moving the divider somewhere
  * else hides it. */
 #define CTD_P_DIVIDER     19
+/* Which system icon a control shows, as a CTD_ICON_* role.
+ *
+ * CTD_ICON_NONE takes it away. A role this host has no icon for is
+ * CTD_ERR_RANGE and the control keeps whatever it had — refusing rather than
+ * showing nothing, because a toolbar of blank squares is harder to diagnose
+ * than a call that said no. See "icons" below.
+ *
+ * Carried by a button and an image view. Not by a label: a label is text, and
+ * a platform that draws an image beside it is drawing a different control. */
+#define CTD_P_ICON        20
 
 /* **Which widgets carry CTD_P_ENABLED**, because leaving it unsaid cost four
  * hosts four different answers.
@@ -1220,6 +1253,206 @@ ctd_status ctd_toolbar_clear(ctd_handle surface);
  * on some and not others. A test that asserted the menu's count would be
  * asserting the menu. */
 ctd_status ctd_toolbar_count(ctd_handle surface, int32_t *out);
+/* What item `index` says, in the two-call text shape: pass a null `out` or a
+ * cap of 0 for the length, then a buffer.
+ *
+ * The count alone is not enough to know a toolbar is right, and that is not a
+ * theoretical gap. cortado shipped a toolbar where every item carried the
+ * first command's words and the first command's token — four buttons, all of
+ * them Reload — and the suite was green, because what it checked was that
+ * there were four of them. An item's own label is the smallest fact that
+ * distinguishes item 2 from item 0.
+ *
+ * A separator has no label and answers 0 with an empty buffer, which is the
+ * same answer as an item whose title is empty; a caller that needs to tell
+ * those apart is asking about the menu, and should ask the menu.
+ *
+ * Writes at most `cap` bytes and answers the byte length the label needs, the
+ * two-call shape every text reader in this header uses. CTD_ERR_RANGE for an
+ * index outside the toolbar and for a surface that has none;
+ * CTD_ERR_UNSUPPORTED where ctd_capability(CTD_CAP_TOOLBAR) answers 0. */
+int32_t ctd_toolbar_label(ctd_handle surface, int32_t index, char *out, int32_t cap);
+
+/* ---- outlines ----------------------------------------------------------- */
+
+/* A tree, asked about a node at a time.
+ *
+ * This is the table's data source with one idea added: **identity**. A table
+ * asks about row 7; an outline asks about a *node*, and a node is an int64 the
+ * application chooses — a row id, an index into its own array, a pointer it
+ * cast. cortado never looks inside one. The host keeps whatever object its
+ * toolkit needs beside it, which is the work this sub-ABI exists to do once
+ * rather than in every program.
+ *
+ * CTD_OUTLINE_ROOT is the node above the top level: its children are the
+ * things a person sees first. It is 0, so an application whose own ids start
+ * at 0 adds one to them — which is a sentence in a comment, against a scheme
+ * where every host would need a second way to spell "nothing".
+ *
+ * **Two callbacks, not one.** Structure and text are different questions with
+ * different answers, and a single function would need seven parameters, one
+ * more than a C callback here may have. So the shape function answers an
+ * integer and the text function answers bytes, with exactly the rules
+ * ctd_table_fn already has: write at most `cap`, answer the length, expect a
+ * `cap` of 0 first.
+ *
+ * **What must not happen inside either.** They run while the platform is
+ * drawing, on the UI thread, and they must return. No waiting, no fetching. A
+ * node's children are a lookup in something the program already has; if they
+ * are not there yet, answer none and call ctd_outline_reload when they
+ * arrive. */
+#define CTD_OUTLINE_ROOT      0
+
+/* How many children `node` has. `index` is unused. */
+#define CTD_OUTLINE_CHILDREN  0
+/* Which node is child `index` of `node`. Answers the child's own id. */
+#define CTD_OUTLINE_CHILD     1
+/* Whether `node` can be opened at all — 1 or 0. Asked separately from the
+ * child count because the two differ: a folder that has not been read yet has
+ * no children to report and must still draw a twisty, and a table in a
+ * database has none and must not. A host that inferred one from the other
+ * would make "empty" and "closed" the same thing. */
+#define CTD_OUTLINE_EXPANDS   2
+
+typedef int64_t (*ctd_outline_fn)(void *context, ctd_handle outline,
+                                  int32_t what, int64_t node, int32_t index);
+
+/* The text of `node` in `column`. Same two-call shape as ctd_table_fn. */
+typedef int32_t (*ctd_outline_text_fn)(void *context, ctd_handle outline,
+                                       int64_t node, int32_t column,
+                                       char *out, int32_t cap);
+
+/* One source for the process, like the event sink and the table source. Not
+ * one per control: the hazard at the top of this file applies here exactly as
+ * it does to events.
+ *
+ * **A context each, not one between them.** A binding that reaches a managed
+ * language does not pass a plain function pointer — it passes a trampoline
+ * plus the context that trampoline looks its closure up in — so two functions
+ * sharing one context is two closures with one address, and the second is
+ * called as the first. Two fields cost nothing here and make the wrong
+ * version impossible to write. */
+ctd_status ctd_set_outline_source(ctd_outline_fn shape, void *shape_context,
+                                  ctd_outline_text_fn text, void *text_context);
+
+/* The columns, the same three calls a table takes. An outline with one column
+ * is a plain tree; the first column is the one that carries the indent and
+ * the twisty, on every platform here.
+ *
+ * **More than one column is not on every platform.** A SysTreeView32 has no
+ * columns at all — Windows applications that show a tree with columns either
+ * own-draw a list view or buy a control — so the Win32 host takes 1 and
+ * answers CTD_ERR_UNSUPPORTED for more. A program that wants to work there
+ * asks for one column and puts what it would have put in the second into the
+ * text, which is what a Windows tree looks like anyway. */
+ctd_status ctd_outline_columns(ctd_handle outline, int32_t count);
+ctd_status ctd_outline_column_title(ctd_handle outline, int32_t column,
+                                    const char *utf8, int32_t len);
+ctd_status ctd_outline_column_width(ctd_handle outline, int32_t column,
+                                    double points);
+
+/* Ask again, from the root down. What is open stays open where the same nodes
+ * are still there. */
+ctd_status ctd_outline_reload(ctd_handle outline);
+
+/* Open or close one node. CTD_ERR_RANGE for a node the control is not
+ * showing — which includes a node inside a closed parent, because a control
+ * that has not been asked about it does not have it. */
+ctd_status ctd_outline_expand(ctd_handle outline, int64_t node, int32_t on);
+ctd_status ctd_outline_expanded(ctd_handle outline, int64_t node, int32_t *out);
+
+/* The selected node, or CTD_OUTLINE_ROOT for none — which is unambiguous
+ * because the root is never itself a row. */
+ctd_status ctd_outline_selected(ctd_handle outline, int64_t *out);
+ctd_status ctd_outline_select(ctd_handle outline, int64_t node);
+
+/* What the *platform* has for one cell, asked through its own data source —
+ * the round trip ctd_table_cell is for a table, and the only way to check the
+ * path at all without a display. */
+int32_t    ctd_outline_cell(ctd_handle outline, int64_t node, int32_t column,
+                            char *out, int32_t cap);
+
+/* ---- icons -------------------------------------------------------------- */
+
+/* The system's own icon set, named by **role** rather than by name.
+ *
+ * Every platform here ships a set of icons and no two agree on what anything
+ * is called: macOS and iOS have SF Symbols ("arrow.clockwise"), GTK has the
+ * freedesktop icon theme ("view-refresh-symbolic"), Windows has the standard
+ * toolbar bitmap and the shell's stock icons (STD_FILEOPEN, SIID_FOLDER). A
+ * program that named one of those would be a program for one platform.
+ *
+ * So cortado names the *job*. "Refresh" is a role; what it looks like is the
+ * host's business and the person using it already knows their own system's
+ * icon for it, which is the whole reason to use the system's set instead of
+ * shipping pictures. This is the same trade `ctd_menu_add_item`'s
+ * CTD_CMD_* roles already make for commands the platform handles itself.
+ *
+ * **Not every role exists everywhere, and this API says so rather than
+ * drawing a blank.** Windows' standard toolbar bitmap has fifteen images and
+ * no "run" or "database" among them; `ctd_icon_name` answers CTD_ERR_RANGE
+ * for a role the host cannot draw, and a caller that wants to degrade to text
+ * asks before it sets one. `ctd_capability(CTD_CAP_ICONS)` answers whether
+ * there is a set here at all.
+ *
+ * Where an icon goes: CTD_P_ICON on a button or an image view, and
+ * `ctd_menu_set_icon` on a menu item — which is how a toolbar gets icons,
+ * because a toolbar is a menu. */
+#define CTD_ICON_NONE        0  /* no icon; takes one away                    */
+#define CTD_ICON_REFRESH     1
+#define CTD_ICON_ADD         2
+#define CTD_ICON_REMOVE      3
+#define CTD_ICON_DELETE      4
+#define CTD_ICON_OPEN        5
+#define CTD_ICON_SAVE        6
+#define CTD_ICON_SEARCH      7
+#define CTD_ICON_RUN         8
+#define CTD_ICON_STOP        9
+#define CTD_ICON_BACK       10
+#define CTD_ICON_FORWARD    11
+#define CTD_ICON_CUT        12
+#define CTD_ICON_COPY       13
+#define CTD_ICON_PASTE      14
+#define CTD_ICON_UNDO       15
+#define CTD_ICON_REDO       16
+#define CTD_ICON_PRINT      17
+#define CTD_ICON_SETTINGS   18
+#define CTD_ICON_INFO       19
+#define CTD_ICON_WARNING    20
+#define CTD_ICON_ERROR      21
+#define CTD_ICON_HELP       22
+#define CTD_ICON_DOCUMENT   23
+#define CTD_ICON_FOLDER     24
+#define CTD_ICON_DATABASE   25
+#define CTD_ICON_TABLE      26
+#define CTD_ICON_COUNT      27
+
+/* What this host calls `icon`, in the two-call text shape.
+ *
+ * This exists to be *read*, not to be passed back in. It is what makes the
+ * mapping testable — a suite can assert that every role this host claims has
+ * a name, and that no two roles share one — and what makes a misdrawn toolbar
+ * diagnosable, because "which icon did it actually ask for" is otherwise a
+ * question only a screenshot answers.
+ *
+ * CTD_ERR_RANGE for a role outside the list and for one this host has no icon
+ * for; CTD_ERR_UNSUPPORTED where CTD_CAP_ICONS answers 0. The strings name one
+ * platform on purpose: "arrow.clockwise" on macOS, "view-refresh-symbolic" on
+ * GTK, "STD_FILEOPEN" on Windows. Nothing portable should compare them. */
+int32_t    ctd_icon_name(int32_t icon, char *out, int32_t cap);
+
+/* Gives the item carrying `token` the system icon for `icon`.
+ *
+ * A menu item is not a widget and has no handle, so this takes the menu and
+ * the application's own token — the same pair `ctd_menu_set_enabled` takes,
+ * and for the same reason: one command, one place to describe it. Setting it
+ * on a menu that is also a window's toolbar is what puts icons on the
+ * toolbar, and where the platform shows icons in menus it shows them there
+ * too.
+ *
+ * CTD_ICON_NONE takes the icon away. CTD_ERR_RANGE for a token the menu does
+ * not have and for a role this host cannot draw. */
+ctd_status ctd_menu_set_icon(ctd_handle menu, int64_t token, int32_t icon);
 
 /* ---- popovers ---------------------------------------------------------- */
 

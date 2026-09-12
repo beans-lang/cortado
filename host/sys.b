@@ -111,6 +111,19 @@ pub extern "C" fn ctd_menu_invoke(menu: u64, token: i64) -> i32
 pub extern "C" fn ctd_toolbar_set(surface: u64, menu: u64) -> i32
 pub extern "C" fn ctd_toolbar_clear(surface: u64) -> i32
 pub extern "C" fn ctd_toolbar_count(surface: u64, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_toolbar_label(surface: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_set_outline_source(shape: fn(RawPtr<u8>, u64, i32, i64, i32) -> i64, shape_context: RawPtr<u8>, text: fn(RawPtr<u8>, u64, i64, i32, RawPtr<i8>, i32) -> i32, text_context: RawPtr<u8>) -> i32
+pub extern "C" fn ctd_outline_columns(outline: u64, count: i32) -> i32
+pub extern "C" fn ctd_outline_column_title(outline: u64, column: i32, utf8: RawPtr<i8>, len: i32) -> i32
+pub extern "C" fn ctd_outline_column_width(outline: u64, column: i32, points: f64) -> i32
+pub extern "C" fn ctd_outline_reload(outline: u64) -> i32
+pub extern "C" fn ctd_outline_expand(outline: u64, node: i64, on: i32) -> i32
+pub extern "C" fn ctd_outline_expanded(outline: u64, node: i64, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_outline_selected(outline: u64, out: RawPtr<i64>) -> i32
+pub extern "C" fn ctd_outline_select(outline: u64, node: i64) -> i32
+pub extern "C" fn ctd_outline_cell(outline: u64, node: i64, column: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_icon_name(icon: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_menu_set_icon(menu: u64, token: i64, icon: i32) -> i32
 pub extern "C" fn ctd_popover_new(content: u64, width: f64, height: f64) -> u64
 pub extern "C" fn ctd_popover_show(popover: u64, anchor: u64, edge: i32) -> i32
 pub extern "C" fn ctd_popover_close(popover: u64) -> i32

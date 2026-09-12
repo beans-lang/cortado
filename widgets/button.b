@@ -1,6 +1,8 @@
 // Something the user presses.
 package widgets
 
+import cortado.host
+
 /// A push button.
 ///
 /// Pressing it produces an `activate` event. There is no handler argument
@@ -30,5 +32,18 @@ pub class Button extends Widget {
 
     pub override fn display_text() -> Result<string> {
         return self.title()
+    }
+
+    /// The system icon this control shows, or `SystemIcon.none` for no icon.
+    ///
+    /// Refused with `out_of_range` where this platform has no icon for the
+    /// role, rather than quietly leaving the control blank — ask
+    /// `SystemIcon.available()` first and show a word when the answer is no.
+    pub fn set_icon(icon: SystemIcon) -> Result<bool> {
+        return self.set_property(host.P_ICON, icon.code())
+    }
+
+    pub fn icon() -> Result<SystemIcon> {
+        return ok(SystemIcon.of(self.read_property(host.P_ICON)?))
     }
 }

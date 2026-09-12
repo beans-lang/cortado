@@ -47,6 +47,7 @@ fn drive() -> Result<bool> {
     var bar_counts: bool = true
     var bar_commands: bool = true
     var bar_goes: bool = true
+    var bar_names: bool = true
 
     if have_bar {
         var commands: surface.Menu = surface.Menu.of("Brew")?
@@ -62,6 +63,19 @@ fn drive() -> Result<bool> {
         // no more than the menu it was built from.
         let shown: int = window.toolbar_count()?
         bar_counts = shown > 0 && shown <= commands.count()?
+
+        // And *which* items, which the count cannot tell you. cortado shipped
+        // a toolbar where every item carried the first command's words and
+        // the first command's token — four buttons, all of them Grind — and
+        // this file was green, because the line above is all it asked.
+        //
+        // The claim is portable: whatever a platform does with the separator,
+        // the commands are the menu's and they are in the menu's order, so
+        // the first two are the first two and the last one is the last one.
+        bar_names = window.toolbar_label(0)? == "Grind" &&
+                    window.toolbar_label(1)? == "Pour" &&
+                    window.toolbar_label(shown - 1)? == "Stop" &&
+                    refusal_label(window, shown) == "out_of_range"
 
         // The command reaches the same handler from the toolbar as from the
         // menu, because it is the same command. Invoking through the menu is
@@ -85,6 +99,7 @@ fn drive() -> Result<bool> {
 
     io.println("-- a toolbar --")
     io.println("  it shows some of the menu's items and no more: {bar_counts}")
+    io.println("  each item carries its own command's words, in order: {bar_names}")
     io.println("  a command reaches the same handler with the same token: {bar_commands}")
     io.println("  disabling one does not change what is shown: {bar_ok}")
     io.println("  and taking the toolbar away leaves nothing: {bar_goes}")
@@ -145,6 +160,14 @@ fn drive() -> Result<bool> {
     window.close()?
     app.shutdown()
     return ok(true)
+}
+
+/// The kind slug a toolbar read refuses with, or "" when it answered.
+fn refusal_label(window: surface.Window, index: int) -> string {
+    match window.toolbar_label(index) {
+        ok(words) => { return "" }
+        err(problem) => { return problem.kind }
+    }
 }
 
 fn refusal_size(content: widgets.Widget, width: f64, height: f64) -> string {

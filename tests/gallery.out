@@ -1,7 +1,7 @@
 Container CortadoView role=group "" frame=0,0,460,460 children=1
   Container CortadoView role=group "" frame=0,0,460,460 children=12
     Label NSTextField role=text "Every control cortado has" frame=16,16,428,21
-    Label NSTextField role=text "30 of 30 kinds on this platform" frame=16,47,428,16
+    Label NSTextField role=text "31 of 31 kinds on this platform" frame=16,47,428,16
     Separator NSBox role=separator "" frame=16,73,428,1
     Disclosure CortadoDisclosure role=group "Words" frame=16,84,428,213 children=1
       Container CortadoView role=group "" frame=0,0,428,192 children=5
@@ -66,15 +66,16 @@ Container CortadoView role=group "" frame=0,0,460,460 children=1
             Label NSTextField role=text "More than fits" frame=4,4,404,16
             Label NSTextField role=text "so the rest scrolls" frame=4,24,404,16
             Label NSTextField role=text "and nothing is clipped away" frame=4,44,404,16
-    Disclosure CortadoDisclosure role=group "Pages, panes and a browser" frame=16,1170,428,303 children=1
-      Container CortadoView role=group "" frame=0,0,428,282 children=3
+    Disclosure CortadoDisclosure role=group "Pages, panes and a browser" frame=16,1170,428,401 children=1
+      Container CortadoView role=group "" frame=0,0,428,380 children=4
         TabView NSTabView role=tablist "" frame=8,8,412,90 children=2
-          Container CortadoView role=group "" frame=0,0,392,44
+          Container CortadoView role=group "" frame=10,33,392,44
           Container CortadoView role=group "" frame=0,0,392,44
         SplitView NSSplitView role=separator "" frame=8,106,412,70 children=2
           Container CortadoView role=group "" frame=0,0,206,70
           Container CortadoView role=group "" frame=207,0,205,70
-        WebView WKWebView role=document "" frame=8,184,412,90
-    Container CortadoView role=group "" frame=16,1483,428,24 children=1
+        OutlineView NSScrollView role=treegrid "" frame=8,184,412,90
+        WebView WKWebView role=document "" frame=8,282,412,90
+    Container CortadoView role=group "" frame=16,1581,428,24 children=1
       Button NSButton role=button "Order" frame=369,0,59,24
-    Label NSTextField role=text "Nothing ordered yet" frame=16,1517,428,16
+    Label NSTextField role=text "Nothing ordered yet" frame=16,1615,428,16

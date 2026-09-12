@@ -8,6 +8,7 @@
 void     *g_object[CTD_SLOTS];      // HWND, or CtdMenu*
 uint32_t  g_generation[CTD_SLOTS];
 int32_t   g_kind[CTD_SLOTS];        // CTD_W_*, or -1 for a non-widget
+int32_t   g_icon[CTD_SLOTS];        // CTD_P_ICON, per slot; see icon.c
 int32_t   g_type[CTD_SLOTS];        // CTD_T_*
 double    g_progress_value[CTD_SLOTS];
 double    g_progress_min[CTD_SLOTS];
@@ -18,6 +19,8 @@ double    g_step_size[CTD_SLOTS];
 uint32_t  g_used;
 
 ctd_event_fn g_sink;
+// See internal.h: non-zero while cortado writes on the program's behalf.
+int g_writing = 0;
 void        *g_sink_context;
 int32_t      g_role = CTD_ROLE_GUI;
 int          g_started;
@@ -80,6 +83,7 @@ void ctd_untrack(ctd_handle handle) {
     g_object[slot] = NULL;
     g_type[slot] = CTD_T_FREE;
     g_kind[slot] = -1;
+    g_icon[slot] = CTD_ICON_NONE;
     g_generation[slot] = g_generation[slot] + 1;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     ctd_give_back(slot);
@@ -91,6 +95,7 @@ ctd_handle ctd_track(void *object, int32_t type, int32_t kind) {
     g_object[slot] = object;
     g_type[slot] = type;
     g_kind[slot] = kind;
+    g_icon[slot] = CTD_ICON_NONE;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     return ((uint64_t)g_generation[slot] << 32) | slot;
 }

@@ -97,7 +97,7 @@ fn run() -> Result<bool> {
         var two: layout.LayoutNode = sheet.group("detail", detail, right)
         two.add(sheet.leaf("name", name))
         var body_notes: layout.LayoutNode = sheet.leaf("notes", notes)
-        body_notes.spec = layout.LayoutSpec.fixed(0.0, 120.0)
+        body_notes.spec = layout.LayoutSpec.tall(120.0)
         two.add(body_notes)
 
         if have_split {

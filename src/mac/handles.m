@@ -11,9 +11,12 @@
 id       g_object[CTD_SLOTS];
 uint32_t g_generation[CTD_SLOTS];
 int32_t  g_kind[CTD_SLOTS];
+int32_t  g_icon[CTD_SLOTS];  // CTD_P_ICON, per slot; see icon.*
 uint32_t g_used;                 // slot 0 is reserved for "no handle"
 
 ctd_event_fn g_sink;
+// See internal.h: non-zero while cortado writes on the program's behalf.
+int g_writing = 0;
 void        *g_sink_context;
 int32_t      g_role = CTD_ROLE_GUI;
 int          g_started;
@@ -63,6 +66,7 @@ void ctd_untrack(ctd_handle handle) {
     id object = g_object[slot];
     g_object[slot] = nil;
     g_kind[slot] = -1;
+    g_icon[slot] = CTD_ICON_NONE;
     g_generation[slot]++;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     ctd_give_back(slot);
@@ -74,6 +78,7 @@ ctd_handle ctd_track(id object, int32_t kind) {
     if (slot == 0) return 0;
     g_object[slot] = [object retain];
     g_kind[slot] = kind;
+    g_icon[slot] = CTD_ICON_NONE;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     return ((uint64_t)g_generation[slot] << 32) | slot;
 }

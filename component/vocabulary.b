@@ -55,6 +55,7 @@ pub class Vocabulary {
         if tag == "TabView" { return some(widgets.WidgetKind.tab_view) }
         if tag == "SplitView" { return some(widgets.WidgetKind.split_view) }
         if tag == "WebView" { return some(widgets.WidgetKind.web_view) }
+        if tag == "OutlineView" { return some(widgets.WidgetKind.outline_view) }
         return none
     }
 

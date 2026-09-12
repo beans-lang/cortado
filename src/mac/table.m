@@ -59,6 +59,13 @@ static NSString *ctd_table_text(ctd_handle table, int32_t row, int32_t column) {
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)note {
+    // Not when the program did it. NSTableView posts this for
+    // -selectRowIndexes: exactly as it does for a click, and the header's
+    // rule is that a write is silent — see g_writing in internal.h. A
+    // navigator that opens a node and then selects it would otherwise hear
+    // the selection and toggle the node shut again, which is what
+    // examples/cask did.
+    if (g_writing) return;
     NSTableView *view = (NSTableView *)[note object];
     NSInteger row = [view isKindOfClass:[NSTableView class]] ? [view selectedRow] : -1;
     ctd_emit(CTD_EV_SELECTION, _handle, (int64_t)row, 0);
@@ -182,11 +189,15 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row) {
     NSTableView *view = ctd_table_view(object);
     if (!view) return CTD_ERR_KIND;
     if (row < 0) {
+        g_writing = g_writing + 1;
         [view deselectAll:nil];
+        g_writing = g_writing - 1;
         return CTD_OK;
     }
     if (row >= [view numberOfRows]) return CTD_ERR_RANGE;
+    g_writing = g_writing + 1;
     [view selectRowIndexes:[NSIndexSet indexSetWithIndex:(NSUInteger)row]
       byExtendingSelection:NO];
+    g_writing = g_writing - 1;
     return CTD_OK;
 }

@@ -68,6 +68,15 @@ ctd_status ctd_menu_set_enabled(ctd_handle menu, int64_t token, int32_t on) {
     return CTD_ERR_UNSUPPORTED;
 }
 
+ctd_status ctd_menu_set_icon(ctd_handle menu, int64_t token, int32_t icon) {
+    (void)menu; (void)token; (void)icon;
+    // This host has no menus to put an icon on — see the note at the top of
+    // this file. The icons themselves are here and real: ctd_icon_name
+    // answers, and CTD_P_ICON works on a button and an image view, which is
+    // where a phone shows one.
+    return CTD_ERR_UNSUPPORTED;
+}
+
 ctd_status ctd_menu_invoke(ctd_handle menu, int64_t token) {
     (void)menu; (void)token;
     return CTD_ERR_UNSUPPORTED;

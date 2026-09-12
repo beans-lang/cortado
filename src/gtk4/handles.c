@@ -9,6 +9,7 @@
 GObject  *g_object[CTD_SLOTS];
 uint32_t  g_generation[CTD_SLOTS];
 int32_t   g_kind[CTD_SLOTS];
+int32_t   g_icon[CTD_SLOTS];  // CTD_P_ICON, per slot; see icon.*
 // How far the table has ever been filled. Shared, because anything that has to
 // walk every live slot — the frame clock, the animations — needs to know where
 // to stop, and slot 0 is reserved for "no handle".
@@ -70,6 +71,7 @@ void ctd_untrack(ctd_handle handle) {
     GObject *object = g_object[slot];
     g_object[slot] = NULL;
     g_kind[slot] = -1;
+    g_icon[slot] = CTD_ICON_NONE;
     g_generation[slot] = g_generation[slot] + 1;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     ctd_give_back(slot);
@@ -81,6 +83,7 @@ ctd_handle ctd_track(gpointer object, int32_t kind) {
     if (slot == 0) return 0;
     g_object[slot] = G_OBJECT(g_object_ref_sink(object));
     g_kind[slot] = kind;
+    g_icon[slot] = CTD_ICON_NONE;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     return ((uint64_t)g_generation[slot] << 32) | slot;
 }

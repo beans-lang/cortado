@@ -144,6 +144,7 @@ static void ctd_table_selection_changed(GtkSelectionModel *model, guint position
                                         guint n_items, gpointer user) {
     (void)position; (void)n_items;
     ctd_handle table = (ctd_handle)(uintptr_t)user;
+    if (g_writing) return;
     guint chosen = gtk_single_selection_get_selected(GTK_SINGLE_SELECTION(model));
     if (chosen == GTK_INVALID_LIST_POSITION) return;
     ctd_emit(CTD_EV_SELECTION, table, (int64_t)chosen, 0);
@@ -305,12 +306,20 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row) {
     if (!selection) return CTD_ERR_STATE;
     CtdRowModel *model = ctd_table_model(view);
     if (!model) return CTD_ERR_STATE;
+    // Silent, like every other write cortado makes on the program's behalf —
+    // see g_writing in internal.h. GtkSingleSelection emits
+    // "selection-changed" whoever moved the selection, so without this a
+    // program that selects a row hears it back as a row the user picked.
     if (row < 0) {
+        g_writing++;
         gtk_single_selection_set_selected(GTK_SINGLE_SELECTION(selection),
                                           GTK_INVALID_LIST_POSITION);
+        g_writing--;
         return CTD_OK;
     }
     if ((guint)row >= model->rows) return CTD_ERR_RANGE;
+    g_writing++;
     gtk_single_selection_set_selected(GTK_SINGLE_SELECTION(selection), (guint)row);
+    g_writing--;
     return CTD_OK;
 }

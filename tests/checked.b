@@ -63,6 +63,7 @@ fn should_have_it(kind: widgets.WidgetKind) -> bool {
         tab_view => { return false }
         split_view => { return false }
         web_view => { return false }
+        outline_view => { return false }
         secure_field => { return false }
         stepper => { return false }
         level_indicator => { return false }
@@ -101,6 +102,7 @@ fn should_have_mixed(kind: widgets.WidgetKind) -> bool {
         tab_view => { return false }
         split_view => { return false }
         web_view => { return false }
+        outline_view => { return false }
         secure_field => { return false }
         stepper => { return false }
         level_indicator => { return false }

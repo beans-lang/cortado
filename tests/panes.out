@@ -12,10 +12,12 @@
 -- a tab view --
   its children are its pages, and its labels are not: true
   a page that moves takes its label with it: true
+  a page sits where the tab view puts it, not where it is told: true
   a page that is not there is refused, and so is none at all: true
   a user choosing a tab raises the page it chose: true
 -- a split view --
   its handle keeps room on the axis it sits on: true
   a third pane is refused, and so is a handle off the control: true
+  a program moves the handle quietly, and a resize is not a drag: true
   a user dragging the handle raises where it landed: true
 drove=true

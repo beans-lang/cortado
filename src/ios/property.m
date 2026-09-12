@@ -32,6 +32,22 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             // No kind this platform builds has one; the kind refusal is what
             // every other host answers for a control that is not a split view.
             return CTD_ERR_KIND;
+        case CTD_P_ICON: {
+            if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value >= CTD_ICON_COUNT) return CTD_ERR_RANGE;
+            UIImage *picture = value == CTD_ICON_NONE
+                             ? nil : ctd_icon_image((int32_t)value);
+            if (value != CTD_ICON_NONE && !picture) return CTD_ERR_RANGE;
+            if ([object isKindOfClass:[UIButton class]]) {
+                [(UIButton *)object setImage:picture forState:UIControlStateNormal];
+            } else if ([object isKindOfClass:[UIImageView class]]) {
+                [(UIImageView *)object setImage:picture];
+            } else {
+                return CTD_ERR_KIND;
+            }
+            ctd_set_slot_icon(widget, (int32_t)value);
+            return CTD_OK;
+        }
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -165,6 +181,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         case CTD_P_AXIS:
             return CTD_ERR_KIND;
+        case CTD_P_ICON:
+            if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            // Kept beside the handle: UIKit hands out a UIImage and there is
+            // no way from one back to the role that asked for it.
+            value = ctd_slot_icon(widget);
+            break;
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = [(CortadoDisclosure *)object isOpen] ? 1 : 0;

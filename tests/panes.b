@@ -45,6 +45,9 @@ fn holds_children(kind: widgets.WidgetKind) -> bool {
         group_box => { return true }
         disclosure => { return true }
         canvas => { return true }
+        // A table and an outline hold no children: their rows come
+        // from a source, which is the whole point of both.
+        outline_view => { return false }
         label => { return false }
         button => { return false }
         text_field => { return false }
@@ -238,6 +241,7 @@ fn drive() -> Result<bool> {
     io.println("-- a tab view --")
     var pages_ok: bool = true
     var pages_order: bool = true
+    var pages_placed: bool = true
     var pages_refuse: bool = true
     var pages_raise: bool = true
     if widgets.WidgetKind.tab_view.available() {
@@ -287,11 +291,35 @@ fn drive() -> Result<bool> {
         pages_raise = tally.count > before && tally.last == 1
         app.router.forget(tabs.handle())
 
+        // A page's frame is the tab view's to set, the same way a split
+        // view's panes are. The strip takes room off the top, and where a
+        // page starts under it is the platform's arithmetic — so a frame
+        // written onto a page has to not move it. cortado wrote one anyway,
+        // and every page in examples/cask came out 46 points high, drawn over
+        // the strip it was supposed to sit below.
+        //
+        // Asserted against the *tab view's own* chrome rather than against a
+        // number, so this line is the same on a host whose strip is 46 points
+        // tall and on one whose strip is 24.
+        tabs.set_frame(geometry.Rect.of(0.0, 0.0, 300.0, 200.0))?
+        tabs.set_page(0)?
+        match tabs.child_at(0) {
+            none => { pages_placed = false }
+            some(first) => {
+                let kept: geometry.EdgeInsets = tabs.content_inset()?
+                first.set_frame(geometry.Rect.of(0.0, 0.0, 999.0, 999.0))?
+                let sat: geometry.Rect = first.frame()?
+                pages_placed = sat.width <= 300.0 - kept.horizontal() &&
+                               sat.height <= 200.0 - kept.vertical()
+            }
+        }
+
         tabs.remove(1)?
         pages_ok = pages_ok && tabs.count() == 1
     }
     io.println("  its children are its pages, and its labels are not: {pages_ok}")
     io.println("  a page that moves takes its label with it: {pages_order}")
+    io.println("  a page sits where the tab view puts it, not where it is told: {pages_placed}")
     io.println("  a page that is not there is refused, and so is none at all: {pages_refuse}")
     io.println("  a user choosing a tab raises the page it chose: {pages_raise}")
 
@@ -301,6 +329,7 @@ fn drive() -> Result<bool> {
     var split_ok: bool = true
     var split_refuse: bool = true
     var split_raise: bool = true
+    var split_quiet: bool = true
     if widgets.WidgetKind.split_view.available() {
         var split: widgets.SplitView = widgets.SplitView.of(false)?
         var left: widgets.Container = new widgets.Container()
@@ -336,6 +365,23 @@ fn drive() -> Result<bool> {
                 tally.count = tally.count + 1
                 tally.last = event.index
             })
+
+        // The header's rule, which this control is the one most likely to
+        // break: `ctd_set_*` changes a control silently. Two writes here, and
+        // the second is the one that bites — resizing a split view re-divides
+        // its panes, and a host that reported *that* would hand a program its
+        // own layout back as news. A program that keeps what it hears then
+        // writes the platform's transient even split where its own divider
+        // used to be, which is exactly what happened to examples/cask: a
+        // sidebar asked for at 210 points came up at half the window, with no
+        // error anywhere.
+        let quiet_at: int = tally.count
+        split.set_divider(90.0)?
+        split.set_frame(geometry.Rect.of(0.0, 0.0, 260.0, 180.0))?
+        split.set_frame(geometry.Rect.of(0.0, 0.0, 300.0, 200.0))?
+        split_quiet = tally.count == quiet_at
+        split.set_divider(120.0)?
+
         let before: int = tally.count
         split.set_value_as_user(0, 80.0)?
         split_raise = tally.count > before && tally.last == 80 &&
@@ -344,6 +390,7 @@ fn drive() -> Result<bool> {
     }
     io.println("  its handle keeps room on the axis it sits on: {split_ok}")
     io.println("  a third pane is refused, and so is a handle off the control: {split_refuse}")
+    io.println("  a program moves the handle quietly, and a resize is not a drag: {split_quiet}")
     io.println("  a user dragging the handle raises where it landed: {split_raise}")
 
     window.close()?
