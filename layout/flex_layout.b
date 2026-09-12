@@ -38,6 +38,10 @@ pub class FlexLayout extends StackLayout {
         return "flex"
     }
 
+    override fn shares_space() -> bool {
+        return true
+    }
+
     override fn distribute(run: AxisRun) {
         // Start from each child's base size, pulled inside its own bounds. A
         // child already out of range is frozen there: it has no slack to give

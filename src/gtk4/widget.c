@@ -29,6 +29,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_STEPPER:
         case CTD_W_LEVEL_INDICATOR:
         case CTD_W_TABLE:
+        case CTD_W_SEARCH_FIELD:
+        case CTD_W_SPINNER:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -83,6 +85,14 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // not exist until this widget is tracked, so ctd_table_attach
             // fills it in below.
             widget = gtk_scrolled_window_new();
+            break;
+        case CTD_W_SEARCH_FIELD:
+            // GTK's own, which brings the magnifier and the clear button and
+            // the keyboard handling a GNOME user expects to find in one.
+            widget = gtk_search_entry_new();
+            break;
+        case CTD_W_SPINNER:
+            widget = gtk_spinner_new();
             break;
         case CTD_W_SECURE_FIELD:
             widget = gtk_entry_new();
@@ -164,6 +174,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
             break;
         case CTD_W_TEXT_FIELD:
         case CTD_W_SECURE_FIELD:
+        case CTD_W_SEARCH_FIELD:
             g_signal_connect(widget, "activate", G_CALLBACK(ctd_on_signal),
                              (gpointer)(uintptr_t)handle);
             break;

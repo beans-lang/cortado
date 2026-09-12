@@ -1,21 +1,23 @@
-Container CortadoView role=group "" frame=0,0,480,520 children=17
+Container CortadoView role=group "" frame=0,0,480,520 children=19
   Label NSTextField role=text "Every control" frame=20,20,300,28
   Button NSButton role=button "Press" frame=20,56,300,28
   TextField NSTextField role=textbox "one line" frame=20,92,300,28
   TextArea NSScrollView role=textbox "several\nlines\nof text" frame=20,128,300,28
   CheckBox NSButton role=checkbox "Extra shot" frame=20,164,300,28
   Switch NSSwitch role=switch "" frame=20,200,300,28
-  SecureField NSSecureTextField role=password "" frame=20,236,300,28
-  RadioButton NSButton role=radio "Decaf" frame=20,272,300,28
-  Slider NSSlider role=slider "" frame=20,308,300,28
-  ProgressBar NSProgressIndicator role=progressbar "" frame=20,344,300,28
-  Stepper NSStepper role=spinbutton "" frame=20,380,300,28
-  LevelIndicator NSLevelIndicator role=meter "" frame=20,416,300,28
-  Separator NSBox role=separator "" frame=20,452,300,28
-  ComboBox NSPopUpButton role=combobox "cortado" frame=20,488,300,28
-  ImageView NSImageView role=image "" frame=20,524,300,28
-  Table NSScrollView role=grid "" frame=20,560,300,28
-  ScrollView NSScrollView role=scrollarea "" frame=20,596,300,28 children=1
+  SearchField NSSearchField role=searchbox "" frame=20,236,300,28
+  Spinner NSProgressIndicator role=progressbar "" frame=20,272,300,28
+  SecureField NSSecureTextField role=password "" frame=20,308,300,28
+  RadioButton NSButton role=radio "Decaf" frame=20,344,300,28
+  Slider NSSlider role=slider "" frame=20,380,300,28
+  ProgressBar NSProgressIndicator role=progressbar "" frame=20,416,300,28
+  Stepper NSStepper role=spinbutton "" frame=20,452,300,28
+  LevelIndicator NSLevelIndicator role=meter "" frame=20,488,300,28
+  Separator NSBox role=separator "" frame=20,524,300,28
+  ComboBox NSPopUpButton role=combobox "cortado" frame=20,560,300,28
+  ImageView NSImageView role=image "" frame=20,596,300,28
+  Table NSScrollView role=grid "" frame=20,632,300,28
+  ScrollView NSScrollView role=scrollarea "" frame=20,668,300,28 children=1
     Label NSTextField role=text "inside the scroller" frame=0,0,0,0
 -- state --
 slider value=4 low=0 high=10
@@ -24,6 +26,7 @@ combo items=3 selected=2 text="cortado"
 combo item 0="flat white" item 2="cortado"
 radio chosen=true
 switch on=true
+search hint="Search the menu" spinner turning=true
 stepper value=4 step=2 low=0 high=8
 level 7 of 10
 table columns=2 cell(1,0)="espresso" cell(2,1)="360p"

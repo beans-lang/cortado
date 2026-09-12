@@ -31,12 +31,50 @@ static inline int ctd_kind_has_enabled(int32_t kind) {
     return kind == CTD_W_BUTTON
         || kind == CTD_W_TEXT_FIELD
         || kind == CTD_W_SECURE_FIELD
+        || kind == CTD_W_SEARCH_FIELD
         || kind == CTD_W_CHECK_BOX
         || kind == CTD_W_RADIO_BUTTON
         || kind == CTD_W_SWITCH
         || kind == CTD_W_SLIDER
         || kind == CTD_W_STEPPER
         || kind == CTD_W_COMBO_BOX;
+}
+
+/* Whether a kind shows words while it is empty.
+ *
+ * Every single-line field does, and nothing else. A text area could —
+ * NSTextView and GtkTextView both have a placeholder of sorts — but neither
+ * has one cortado could read back, and a string that goes in and does not come
+ * out is worse than one that is refused. */
+static inline int ctd_kind_has_hint(int32_t kind) {
+    return kind == CTD_W_TEXT_FIELD
+        || kind == CTD_W_SECURE_FIELD
+        || kind == CTD_W_SEARCH_FIELD;
+}
+
+/* Whether a kind carries a number in a range — CTD_P_MIN, CTD_P_MAX and
+ * CTD_P_VALUE.
+ *
+ * A slider and a stepper are numbers the user moves; a progress bar and a
+ * level indicator are numbers the program shows. Nothing else has one.
+ *
+ * Written down here because the classes lie. A spinner is an
+ * `NSProgressIndicator` on macOS — the same class as a progress bar — so a
+ * host that asked the object would let a spinner take a range it has no
+ * meaning for, and only on that one platform. A spinner makes no claim about
+ * how much is left; that is the whole difference between it and a bar. */
+static inline int ctd_kind_has_range(int32_t kind) {
+    return kind == CTD_W_SLIDER
+        || kind == CTD_W_STEPPER
+        || kind == CTD_W_PROGRESS_BAR
+        || kind == CTD_W_LEVEL_INDICATOR;
+}
+
+/* Whether a kind can be turning. Only a spinner: a progress bar's
+ * indeterminate mode is CTD_P_INDETERMINATE and means something else — that
+ * the *total* is unknown, not that the control is animating. */
+static inline int ctd_kind_has_animating(int32_t kind) {
+    return kind == CTD_W_SPINNER;
 }
 
 /* Whether a kind carries CTD_P_CHECKED — the rule stated in full beside

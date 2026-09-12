@@ -45,6 +45,11 @@ pub enum WidgetKind {
     level_indicator
     /// Rows and columns, filled by asking rather than by building.
     table
+    /// A text field that says what it is for.
+    search_field
+    /// Something is happening and nobody knows for how long — and **not on
+    /// every platform**: the Win32 common controls have no spinner.
+    spinner
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -68,6 +73,8 @@ pub enum WidgetKind {
             stepper => host.W_STEPPER,
             level_indicator => host.W_LEVEL_INDICATOR,
             table => host.W_TABLE,
+            search_field => host.W_SEARCH_FIELD,
+            spinner => host.W_SPINNER,
         }
     }
 
@@ -93,6 +100,8 @@ pub enum WidgetKind {
             stepper => "Stepper",
             level_indicator => "LevelIndicator",
             table => "Table",
+            search_field => "SearchField",
+            spinner => "Spinner",
         }
     }
 
@@ -136,6 +145,8 @@ pub enum WidgetKind {
             stepper => { return false }
             level_indicator => { return false }
             table => { return false }
+            search_field => { return false }
+            spinner => { return false }
         }
     }
 
@@ -194,6 +205,8 @@ pub enum WidgetKind {
         every.push(WidgetKind.stepper)
         every.push(WidgetKind.level_indicator)
         every.push(WidgetKind.table)
+        every.push(WidgetKind.search_field)
+        every.push(WidgetKind.spinner)
         return move every
     }
 
@@ -217,6 +230,8 @@ pub enum WidgetKind {
         if code == host.W_STEPPER { return some(WidgetKind.stepper) }
         if code == host.W_LEVEL_INDICATOR { return some(WidgetKind.level_indicator) }
         if code == host.W_TABLE { return some(WidgetKind.table) }
+        if code == host.W_SEARCH_FIELD { return some(WidgetKind.search_field) }
+        if code == host.W_SPINNER { return some(WidgetKind.spinner) }
         return none
     }
 }

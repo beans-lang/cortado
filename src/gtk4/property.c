@@ -84,6 +84,10 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
             gtk_drop_down_set_selected(menu, (guint)value);
             return CTD_OK;
         }
+        case CTD_P_ANIMATING:
+            if (!ctd_kind_has_animating(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            gtk_spinner_set_spinning(GTK_SPINNER(object), value ? TRUE : FALSE);
+            return CTD_OK;
         case CTD_P_INDETERMINATE:
             if (!GTK_IS_PROGRESS_BAR(object)) return CTD_ERR_KIND;
             if (value) gtk_progress_bar_pulse(GTK_PROGRESS_BAR(object));
@@ -137,6 +141,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = chosen == GTK_INVALID_LIST_POSITION ? -1 : (int64_t)chosen;
             break;
         }
+        case CTD_P_ANIMATING:
+            if (!ctd_kind_has_animating(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = gtk_spinner_get_spinning(GTK_SPINNER(object)) ? 1 : 0;
+            break;
         case CTD_P_INDETERMINATE:
             if (!GTK_IS_PROGRESS_BAR(object)) return CTD_ERR_KIND;
             value = 0;
@@ -200,6 +208,7 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
             return CTD_OK;
         }
         case CTD_P_MIN:
+            if (!ctd_kind_has_range(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (GTK_IS_RANGE(object)) {
                 GtkAdjustment *a = gtk_range_get_adjustment(GTK_RANGE(object));
                 gtk_adjustment_set_lower(a, value);
@@ -217,6 +226,7 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
             if (GTK_IS_PROGRESS_BAR(object)) { g_progress_min[slot] = value; return CTD_OK; }
             return CTD_ERR_KIND;
         case CTD_P_MAX:
+            if (!ctd_kind_has_range(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (GTK_IS_RANGE(object)) {
                 GtkAdjustment *a = gtk_range_get_adjustment(GTK_RANGE(object));
                 gtk_adjustment_set_upper(a, value);
@@ -234,6 +244,7 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
             if (GTK_IS_PROGRESS_BAR(object)) { g_progress_max[slot] = value; return CTD_OK; }
             return CTD_ERR_KIND;
         case CTD_P_VALUE:
+            if (!ctd_kind_has_range(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (GTK_IS_SPIN_BUTTON(object)) {
                 gtk_spin_button_set_value(GTK_SPIN_BUTTON(object), value);
                 return CTD_OK;
@@ -356,6 +367,42 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     return CTD_OK;
 }
 
+
+ctd_status ctd_set_string(ctd_handle widget, int32_t key,
+                          const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
+    gpointer object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    switch (key) {
+        case CTD_S_HINT: {
+            if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            // By property name rather than by a typed setter: a GtkEntry and a
+            // GtkSearchEntry both have "placeholder-text" and neither is the
+            // other's class, so this is the one call that reaches both.
+            char *text = g_strndup(utf8, (gsize)(len < 0 ? 0 : len));
+            g_object_set(G_OBJECT(object), "placeholder-text", text, NULL);
+            g_free(text);
+            return CTD_OK;
+        }
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
+
+int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
+    gpointer object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    switch (key) {
+        case CTD_S_HINT: {
+            if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            char *text = NULL;
+            g_object_get(G_OBJECT(object), "placeholder-text", &text, NULL);
+            int32_t answered = ctd_copy_out(text ? text : "", out, cap);
+            g_free(text);
+            return answered;
+        }
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
 
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;

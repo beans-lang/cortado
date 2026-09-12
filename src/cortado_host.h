@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 10
+#define CTD_ABI_VERSION 11
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -288,6 +288,12 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 #define CTD_W_LEVEL_INDICATOR 17
 /* Rows and columns, filled by asking rather than by building. See "a table". */
 #define CTD_W_TABLE        18
+/* A text field that says what it is for. CTD_S_HINT is the words it shows
+ * while it is empty. */
+#define CTD_W_SEARCH_FIELD 19
+/* Something is happening and nobody knows for how long. CTD_P_ANIMATING turns
+ * it. Not on every platform: the Win32 common controls have no spinner. */
+#define CTD_W_SPINNER      20
 
 /* Whether this host can build a control of this kind.
  *
@@ -441,6 +447,11 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  * Out of range is CTD_ERR_RANGE rather than a clamp. A caller that computed
  * 1.5 has a bug, and quietly showing them 1.0 hides it. */
 #define CTD_P_OPACITY     13
+/* Whether a spinner is turning. A spinner that is not turning is a control
+ * that looks broken rather than idle, so a program that has nothing to wait
+ * for hides it — but stopping it is still the honest way to say "done", and
+ * every platform has a stop. */
+#define CTD_P_ANIMATING   14
 
 /* **Which widgets carry CTD_P_ENABLED**, because leaving it unsaid cost four
  * hosts four different answers.
@@ -458,8 +469,8 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  *   **A widget has an enabled state exactly when it accepts input.**
  *
  * That is CTD_W_BUTTON, CTD_W_TEXT_FIELD, CTD_W_SECURE_FIELD,
- * CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON, CTD_W_SWITCH, CTD_W_SLIDER,
- * CTD_W_STEPPER and CTD_W_COMBO_BOX. Every other kind answers CTD_ERR_KIND from both
+ * CTD_W_SEARCH_FIELD, CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON, CTD_W_SWITCH,
+ * CTD_W_SLIDER, CTD_W_STEPPER and CTD_W_COMBO_BOX. Every other kind answers CTD_ERR_KIND from both
  * `ctd_set_int` and `ctd_get_int`, on every host.
  *
  * A label, an image, a separator and a progress bar take no input, so there is
@@ -509,6 +520,27 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  * has no check box, so mixed on a check box is honoured on three hosts and
  * refused with CTD_ERR_UNSUPPORTED on the fourth. `tests/checked.out` is these
  * paragraphs as a golden, and it is a cross-host file. */
+
+/* ---- a second string ---------------------------------------------------- */
+
+/* Text a control carries that is not the text it *is*.
+ *
+ * `ctd_set_text` is a control's own text — a button's title, a field's value.
+ * A control can carry more than one: a field has words it shows while it is
+ * empty, a link has somewhere it goes. Those are keyed, for the reason the
+ * scalar property bag already gives: a new string costs four `switch` cases
+ * here rather than four implementations of a new entry point.
+ *
+ * Same rules as ctd_set_text — UTF-8 with an explicit length, never
+ * NUL-terminated, CTD_ERR_RANGE when the bytes contain a zero — and the same
+ * two-call shape for reading. CTD_ERR_KIND when this control has no such
+ * string. */
+#define CTD_S_HINT  1  /* what a field shows while it is empty                */
+
+ctd_status ctd_set_string(ctd_handle widget, int32_t key,
+                          const char *utf8, int32_t len);
+/* Answers the byte length, writes at most `cap`. Negative is a ctd_status. */
+int32_t    ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap);
 
 /* CTD_ERR_RANGE when the bytes contain a zero: see rule 3 at the top. */
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len);

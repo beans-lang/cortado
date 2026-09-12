@@ -1123,6 +1123,47 @@ First working macOS host.
   is that a canvas now says `no_size`, and a table cannot, because the layout
   may legitimately run after the source is set.
 
+- **`CTD_W_SEARCH_FIELD` and `CTD_W_SPINNER`, and a keyed second string.** A
+  search field is `NSSearchField`, a `UISearchTextField`, a `GtkSearchEntry`,
+  an `EDIT` with a cue banner — which is what a Windows search box is, Explorer
+  included, though it has no clear button and a program that leans on one
+  should offer its own. A spinner is a spinning `NSProgressIndicator`, a
+  `UIActivityIndicatorView`, a `GtkSpinner`, and **nothing on Win32**: a
+  marquee progress bar is a different control with a different shape.
+
+  The hint — the words a field shows while it is empty — is what makes a search
+  field a search field rather than a text field with rounder corners, and it
+  needed a second string channel. `ctd_set_string(widget, key, ...)` rather
+  than `ctd_set_hint`, for the reason the scalar property bag already gives:
+  the next string (a link's URL) costs four `switch` cases instead of four
+  implementations of a new entry point.
+
+- **A spinner is an `NSProgressIndicator`, so asking the object let it take a
+  range.** The classes do not line up with the rules, and this is the third
+  time that has bitten: on macOS a spinner accepted `CTD_P_MIN`, `CTD_P_MAX`
+  and `CTD_P_VALUE` — the same class as a progress bar — while GTK4 refused
+  them, because a `GtkSpinner` is not a `GtkProgressBar`. Found by the GTK4 leg
+  printing `true` where macOS printed `false`.
+
+  `ctd_kind_has_range` is the rule now, beside `ctd_kind_has_enabled`,
+  `ctd_kind_has_checked`, `ctd_kind_has_hint` and `ctd_kind_has_animating`. A
+  spinner makes no claim about how much is left; that is the whole difference
+  between it and a bar, and `CTD_P_INDETERMINATE` on one is refused for the
+  same reason.
+
+- **A growing child in a `StackLayout` is refused rather than ignored.** A
+  stack gives every child the size it measures — that is what it is — and
+  `grow` is `FlexLayout`'s word. Asking for it in a stack laid the child out at
+  its intrinsic size and said nothing, and that silence cost three separate
+  afternoons in this changelog alone: a canvas 0 points wide in the GPU work, a
+  table 0 points wide in `examples/ledger.b`, and a search field squeezed to
+  nothing in `examples/finder.b`. Each was laid out exactly as asked.
+
+  It answers `grow_in_a_stack` now, naming the child and the layout to use.
+  `FlexLayout` extends `StackLayout` and shares `arrange`, so the check asks
+  `shares_space()` — false in the stack, true in the flex — rather than the
+  class.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

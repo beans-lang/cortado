@@ -196,6 +196,30 @@ fn drive() -> Result<bool> {
     io.println("  each one this platform has raises value_changed when it is moved: {heard == states_here}")
     io.println("  and none raises anything when the program writes to it: {heard_on_a_write == 0}")
 
+    // One more per-kind rule, here rather than in a file of its own because it
+    // is one property on one control. A spinner can be turning; nothing else
+    // can. It is worth a line because the classes do not line up with it — a
+    // spinner is an `NSProgressIndicator`, the same class as a progress bar,
+    // so a host that asked the object would let a bar be "turning" on that one
+    // platform.
+    var turning_correct: int = 0
+    for kind: widgets.WidgetKind in every {
+        if !kind.available() { continue }
+        var control: widgets.Widget = component.WidgetMaker.of_kind(kind)?
+        var took_it: bool = false
+        match control.set_property(host.P_ANIMATING, 1) {
+            ok(done) => { took_it = true }
+            err(problem) => { took_it = false }
+        }
+        if took_it == (kind == widgets.WidgetKind.spinner) {
+            turning_correct = turning_correct + 1
+        } else {
+            io.println("  ...{kind.name()} answered {took_it} to being turned on")
+        }
+    }
+    io.println("-- what can be turning --")
+    io.println("  exactly a spinner, and only where there is one: {turning_correct == offered}")
+
     io.println("-- a number that is not a kind --")
     io.println("  the host refuses it rather than calling it a missing control: {not_a_kind == 3}")
     io.println("  and cortado has no name for it: {no_name == 3}")

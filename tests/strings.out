@@ -1,0 +1,10 @@
+-- which controls show words while they are empty --
+  cortado has this many kinds: 21
+  every kind this platform builds was asked: true
+  exactly the kinds that have a hint take one: true
+  this many kinds have one: true
+  each reads back the words it was given: true
+  and the hint and the value are different strings: true
+-- a key that is not a string --
+  is refused as unsupported, not quietly written: true
+drove=true

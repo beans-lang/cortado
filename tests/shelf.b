@@ -65,6 +65,12 @@ fn build() -> Result<bool> {
     var remember: widgets.Switch = widgets.Switch.of(true)?
     root.add(remember)?
 
+    var find: widgets.SearchField = widgets.SearchField.of("Search the menu")?
+    root.add(find)?
+
+    var busy: widgets.Spinner = widgets.Spinner.of(true)?
+    root.add(busy)?
+
     var secret: widgets.SecureField = widgets.SecureField.of("hunter2")?
     root.add(secret)?
 
@@ -128,6 +134,7 @@ fn build() -> Result<bool> {
     io.println("combo item 0=\"{drink.item_at(0).or("?")}\" item 2=\"{drink.item_at(2).or("?")}\"")
     io.println("radio chosen={pick.is_chosen().or(false)}")
     io.println("switch on={remember.is_on().or(false)}")
+    io.println("search hint=\"{find.hint().or("?")}\" spinner turning={busy.is_turning().or(false)}")
     io.println("stepper value={shots.value().or(-1.0)} step={shots.step().or(-1.0)} low={shots.low().or(-1.0)} high={shots.high().or(-1.0)}")
     io.println("level {battery.level().or(-1.0)} of {battery.high().or(-1.0)}")
     io.println("table columns={ledger.column_count()} cell(1,0)=\"{ledger.native_cell(1, 0).or("?")}\" cell(2,1)=\"{ledger.native_cell(2, 1).or("?")}\"")

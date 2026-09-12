@@ -40,9 +40,12 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
                          value == 1 ? BST_CHECKED : BST_UNCHECKED, 0);
             return CTD_OK;
         }
+        case CTD_P_ANIMATING:
+            // No spinner exists on this platform, so no handle can be one.
+            return CTD_ERR_KIND;
         case CTD_P_EDITABLE:
             if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_SECURE_FIELD &&
-                kind != CTD_W_TEXT_AREA)
+                kind != CTD_W_SEARCH_FIELD && kind != CTD_W_TEXT_AREA)
                 return CTD_ERR_KIND;
             SendMessageW(view, EM_SETREADONLY, value ? FALSE : TRUE, 0);
             return CTD_OK;
@@ -108,9 +111,11 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = state == BST_CHECKED ? 1 : state == BST_INDETERMINATE ? 2 : 0;
             break;
         }
+        case CTD_P_ANIMATING:
+            return CTD_ERR_KIND;
         case CTD_P_EDITABLE:
             if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_SECURE_FIELD &&
-                kind != CTD_W_TEXT_AREA)
+                kind != CTD_W_SEARCH_FIELD && kind != CTD_W_TEXT_AREA)
                 return CTD_ERR_KIND;
             value = (GetWindowLongPtrW(view, GWL_STYLE) & ES_READONLY) ? 0 : 1;
             break;
@@ -249,6 +254,7 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             return CTD_OK;
         }
         case CTD_P_MIN:
+            if (!ctd_kind_has_range(kind)) return CTD_ERR_KIND;
             if (kind == CTD_W_SLIDER) {
                 SendMessageW(view, TBM_SETRANGEMIN, TRUE, (LPARAM)(LONG)value);
                 return CTD_OK;
@@ -261,6 +267,7 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             }
             return CTD_ERR_KIND;
         case CTD_P_MAX:
+            if (!ctd_kind_has_range(kind)) return CTD_ERR_KIND;
             if (kind == CTD_W_SLIDER) {
                 SendMessageW(view, TBM_SETRANGEMAX, TRUE, (LPARAM)(LONG)value);
                 return CTD_OK;
@@ -273,6 +280,7 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             }
             return CTD_ERR_KIND;
         case CTD_P_VALUE:
+            if (!ctd_kind_has_range(kind)) return CTD_ERR_KIND;
             if (kind == CTD_W_SLIDER) {
                 SendMessageW(view, TBM_SETPOS, TRUE, (LPARAM)(LONG)value);
                 return CTD_OK;
@@ -351,6 +359,7 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             break;
         }
         case CTD_P_MIN:
+            if (!ctd_kind_has_range(kind)) return CTD_ERR_KIND;
             if (kind == CTD_W_SLIDER) {
                 value = (double)(LONG)SendMessageW(view, TBM_GETRANGEMIN, 0, 0);
             } else if (kind == CTD_W_PROGRESS_BAR) { value = g_progress_min[slot]; }
@@ -358,6 +367,7 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             else return CTD_ERR_KIND;
             break;
         case CTD_P_MAX:
+            if (!ctd_kind_has_range(kind)) return CTD_ERR_KIND;
             if (kind == CTD_W_SLIDER) {
                 value = (double)(LONG)SendMessageW(view, TBM_GETRANGEMAX, 0, 0);
             } else if (kind == CTD_W_PROGRESS_BAR) { value = g_progress_max[slot]; }
@@ -365,6 +375,7 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             else return CTD_ERR_KIND;
             break;
         case CTD_P_VALUE:
+            if (!ctd_kind_has_range(kind)) return CTD_ERR_KIND;
             if (kind == CTD_W_SLIDER) {
                 value = (double)(LONG)SendMessageW(view, TBM_GETPOS, 0, 0);
             } else if (kind == CTD_W_PROGRESS_BAR) {
@@ -388,6 +399,42 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     return CTD_OK;
 }
 
+
+ctd_status ctd_set_string(ctd_handle widget, int32_t key,
+                          const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    switch (key) {
+        case CTD_S_HINT: {
+            if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            WCHAR *text = ctd_wide(utf8, len);
+            if (!text) return CTD_ERR_PLATFORM;
+            // TRUE: keep showing it while the field has focus, which is what
+            // every other platform's placeholder does.
+            LRESULT done = SendMessageW(view, EM_SETCUEBANNER, TRUE, (LPARAM)text);
+            free(text);
+            return done ? CTD_OK : CTD_ERR_PLATFORM;
+        }
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
+
+int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    switch (key) {
+        case CTD_S_HINT: {
+            if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            WCHAR room[512];
+            room[0] = L'\0';
+            SendMessageW(view, EM_GETCUEBANNER, (WPARAM)room,
+                         (LPARAM)(sizeof room / sizeof room[0]));
+            return ctd_copy_wide_out(room, out, cap);
+        }
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
 
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;

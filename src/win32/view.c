@@ -295,6 +295,7 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
             break;
         case CTD_W_TEXT_FIELD:
         case CTD_W_SECURE_FIELD:
+        case CTD_W_SEARCH_FIELD:
             width += 8.0;
             height += 8.0;
             break;

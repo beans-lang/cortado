@@ -49,6 +49,7 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         button => { return true }
         text_field => { return true }
         secure_field => { return true }
+        search_field => { return true }
         check_box => { return true }
         radio_button => { return true }
         switch => { return true }
@@ -65,6 +66,7 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         scroll_view => { return false }
         canvas => { return false }
         table => { return false }
+        spinner => { return false }
     }
 }
 

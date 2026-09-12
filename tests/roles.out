@@ -1,4 +1,4 @@
-Container role=group "" children=15
+Container role=group "" children=16
   Label role=text "Order a coffee"
   TextField role=textbox "flat white"
   TextArea role=textbox "no sugar"
@@ -9,6 +9,7 @@ Container role=group "" children=15
   Stepper role=spinbutton ""
   Separator role=separator ""
   ComboBox role=combobox "espresso"
+  SearchField role=searchbox ""
   SecureField role=password ""
   Table role=grid ""
   ImageView role=image "" hidden

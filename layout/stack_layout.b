@@ -127,6 +127,20 @@ pub class StackLayout extends Layout {
             if child.spec.basis >= 0.0 {
                 base = child.spec.basis
             }
+            // A child that asked to grow, in a layout that hands nothing out.
+            //
+            // This is a refusal rather than a silent ignore, and it is here
+            // because the silent version cost three separate afternoons: a
+            // canvas 0 points wide, a table 0 points wide, and a search field
+            // squeezed to its intrinsic size — each laid out exactly as asked,
+            // each invisible or useless, and none of them saying anything. A
+            // `StackLayout` gives every child the size it measured; `grow` is
+            // `FlexLayout`'s word, and asking for it here is asking the wrong
+            // layout.
+            if child.spec.grow > 0.0 && !self.shares_space() {
+                return err("\"{child.name}\" asks to grow by {child.spec.grow}, but its parent is a StackLayout, which gives every child the size it measures — use FlexLayout.{self.axis.name()} to hand out the leftover space",
+                           "grow_in_a_stack")
+            }
             run.add(base, child.spec.min_on(self.axis), child.spec.max_on(self.axis),
                     child.spec.grow, child.spec.shrink)
         }
@@ -180,6 +194,15 @@ pub class StackLayout extends Layout {
     ///
     /// Package-private on purpose: it is the extension point between these two
     /// classes, not something an application overrides.
+    /// Whether this layout hands out the leftover space along its main axis.
+    ///
+    /// False here, true in `FlexLayout`, and the only reason it exists is the
+    /// refusal above: `arrange` is shared between the two, so the check that
+    /// catches `grow` in a stack has to be able to tell which one it is in.
+    fn shares_space() -> bool {
+        return false
+    }
+
     fn distribute(run: AxisRun) {
         var index: int = 0
         for index: int in 0..run.count {

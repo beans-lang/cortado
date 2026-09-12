@@ -94,10 +94,18 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             [menu setTitle:[chosen title] forState:UIControlStateNormal];
             return CTD_OK;
         }
+        case CTD_P_ANIMATING: {
+            if (!ctd_kind_has_animating(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            UIActivityIndicatorView *wheel = (UIActivityIndicatorView *)object;
+            if (value) [wheel startAnimating]; else [wheel stopAnimating];
+            return CTD_OK;
+        }
         case CTD_P_INDETERMINATE:
             // A UIProgressView is always determinate; an indeterminate one is
-            // a UIActivityIndicatorView, a different control. Saying so beats
+            // a UIActivityIndicatorView, a different control — which is
+            // CTD_W_SPINNER and CTD_P_ANIMATING, not this. Saying so beats
             // showing a bar stuck at zero.
+            if (ctd_slot_kind(widget) == CTD_W_SPINNER) return CTD_ERR_KIND;
             if (![object isKindOfClass:[UIProgressView class]]) return CTD_ERR_KIND;
             return value ? CTD_ERR_UNSUPPORTED : CTD_OK;
         default: return CTD_ERR_UNSUPPORTED;
@@ -138,7 +146,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             if (ctd_slot_kind(widget) != CTD_W_COMBO_BOX) return CTD_ERR_KIND;
             value = (int64_t)[(UIButton *)object tag];
             break;
+        case CTD_P_ANIMATING:
+            if (!ctd_kind_has_animating(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = [(UIActivityIndicatorView *)object isAnimating] ? 1 : 0;
+            break;
         case CTD_P_INDETERMINATE:
+            if (ctd_slot_kind(widget) == CTD_W_SPINNER) return CTD_ERR_KIND;
             if (![object isKindOfClass:[UIProgressView class]]) return CTD_ERR_KIND;
             value = 0;
             break;
@@ -193,6 +206,9 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             return CTD_OK;
         }
         case CTD_P_MIN:
+            // By kind first: the classes do not line up with the rule, and the
+            // rule is cortado's. See ctd_kind_has_range in ../cortado_rules.h.
+            if (!ctd_kind_has_range(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if ([object isKindOfClass:[UIStepper class]]) {
                 [(UIStepper *)object setMinimumValue:value];
                 return CTD_OK;
@@ -207,6 +223,7 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             }
             return CTD_ERR_KIND;
         case CTD_P_MAX:
+            if (!ctd_kind_has_range(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if ([object isKindOfClass:[UIStepper class]]) {
                 [(UIStepper *)object setMaximumValue:value];
                 return CTD_OK;
@@ -221,6 +238,7 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             }
             return CTD_ERR_KIND;
         case CTD_P_VALUE:
+            if (!ctd_kind_has_range(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if ([object isKindOfClass:[UIStepper class]]) {
                 [(UIStepper *)object setValue:value];
                 return CTD_OK;
@@ -320,6 +338,33 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
     return CTD_OK;
 }
 
+
+ctd_status ctd_set_string(ctd_handle widget, int32_t key,
+                          const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    switch (key) {
+        case CTD_S_HINT:
+            if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            [(UITextField *)object setPlaceholder:ctd_string(utf8, len)];
+            return CTD_OK;
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
+
+int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    switch (key) {
+        case CTD_S_HINT: {
+            if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSString *hint = [(UITextField *)object placeholder];
+            return ctd_copy_out(hint ? hint : @"", out, cap);
+        }
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
 
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;

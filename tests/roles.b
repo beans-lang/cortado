@@ -102,6 +102,7 @@ fn build() -> Result<bool> {
     // whole of `ctd_widget_supports`: every host has a secure field, and the
     // Win32 common controls have no toggle switch. This file is the golden
     // every platform must print, so it holds only what every platform has.
+    var find: widgets.SearchField = widgets.SearchField.of("Search orders")?
     var secret: widgets.SecureField = widgets.SecureField.of("hunter2")?
     // One column, because that is what every host has — a UITableView is a
     // list. `tests/table.out` is where the second column's answer lives.
@@ -131,6 +132,7 @@ fn build() -> Result<bool> {
     root.add(shots_up)?
     root.add(rule)?
     root.add(choice)?
+    root.add(find)?
     root.add(secret)?
     root.add(orders)?
     root.add(picture)?
@@ -157,6 +159,7 @@ fn build() -> Result<bool> {
     page.add(fixed(sheet, "shots_up", shots_up, 20.0))
     page.add(fixed(sheet, "rule", rule, 1.0))
     page.add(fixed(sheet, "choice", choice, 24.0))
+    page.add(fixed(sheet, "find", find, 24.0))
     page.add(fixed(sheet, "secret", secret, 24.0))
     page.add(fixed(sheet, "orders", orders, 40.0))
     page.add(fixed(sheet, "picture", picture, 40.0))

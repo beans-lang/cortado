@@ -188,6 +188,45 @@ pub abstract class Widget {
         return ok(scratch.integer() != 0)
     }
 
+    /// Writes one of a control's other strings by its `host.S_*` id.
+    ///
+    /// Public for the reason `set_property` is: a test that asks what a *kind*
+    /// answers has no named accessor to reach for, and the applier writes by
+    /// id. Application code wants the named one — `field.set_hint(...)` says
+    /// what it means.
+    pub fn set_string_at(key: int, text: string) -> Result<bool> {
+        return self.set_string(key, text, "set string {key} of a {self.kind_value.name()}")
+    }
+
+    pub fn string_at_key(key: int) -> Result<string> {
+        return self.string_at(key, "read string {key} of a {self.kind_value.name()}")
+    }
+
+    /// Writes one of a control's *other* strings by its `host.S_*` id.
+    ///
+    /// `set_text_raw` is the text a control **is** — a button's title, a
+    /// field's value. A control can carry more than one: a field has words it
+    /// shows while it is empty. Those are keyed, for the same reason the
+    /// scalar properties are, and each subclass exposes the ones it has under
+    /// a name that says what they mean.
+    fn set_string(key: int, text: string, attempt: string) -> Result<bool> {
+        let buffer: Bytes = host.HostText.encode(text, attempt)?
+        unsafe {
+            return host.check(
+                host.ctd_set_string(self.slot.raw, key as i32,
+                                    host.HostText.pointer(buffer),
+                                    buffer.len() as i32) as int,
+                attempt)
+        }
+    }
+
+    fn string_at(key: int, attempt: string) -> Result<string> {
+        let raw: u64 = self.slot.raw
+        return host.HostText.read(attempt, fn(out: RawPtr<i8>, cap: i32) -> i32 {
+            unsafe { return host.ctd_get_string(raw, key as i32, out, cap) }
+        })
+    }
+
     // Text lives on the base because three kinds carry it and the host keys it
     // by widget, not by class. Subclasses expose it under the name their
     // control actually uses: a button has a title, a field has a value.

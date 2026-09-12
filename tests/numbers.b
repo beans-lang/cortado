@@ -56,6 +56,8 @@ fn carries_a_number(kind: widgets.WidgetKind) -> bool {
         scroll_view => { return false }
         canvas => { return false }
         table => { return false }
+        search_field => { return false }
+        spinner => { return false }
     }
 }
 
@@ -82,6 +84,8 @@ fn takes_a_step(kind: widgets.WidgetKind) -> bool {
         scroll_view => { return false }
         canvas => { return false }
         table => { return false }
+        search_field => { return false }
+        spinner => { return false }
     }
 }
 
@@ -106,6 +110,8 @@ fn reads_its_step(kind: widgets.WidgetKind) -> bool {
         scroll_view => { return false }
         canvas => { return false }
         table => { return false }
+        search_field => { return false }
+        spinner => { return false }
     }
 }
 
@@ -133,6 +139,8 @@ fn moved_by_a_user(kind: widgets.WidgetKind) -> bool {
         scroll_view => { return false }
         canvas => { return false }
         table => { return false }
+        search_field => { return false }
+        spinner => { return false }
     }
 }
 
@@ -215,6 +223,8 @@ fn drive() -> Result<bool> {
         let value_ok: bool = took(control, host.P_VALUE, 3.0)
         if low_ok == wanted && high_ok == wanted && value_ok == wanted {
             range_correct = range_correct + 1
+        } else {
+            io.println("  ...{kind.name()} took low={low_ok} high={high_ok} value={value_ok}, wanted {wanted}")
         }
 
         // The step, written. A slider takes one and a progress bar does not,

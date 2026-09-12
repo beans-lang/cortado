@@ -82,6 +82,8 @@ pub class WidgetMaker {
             stepper => { return ok(new widgets.Stepper()) }
             level_indicator => { return ok(new widgets.LevelIndicator()) }
             table => { return ok(new widgets.Table()) }
+            search_field => { return ok(new widgets.SearchField()) }
+            spinner => { return ok(new widgets.Spinner()) }
         }
     }
 

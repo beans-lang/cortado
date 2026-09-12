@@ -362,8 +362,8 @@ mistake.
 `VFlex`, `HFlex`, `Grid`, `Box`, `Container` and `ScrollView`; controls are
 `Label`, `Button`, `TextField`, `SecureField`, `TextArea`, `CheckBox`,
 `RadioButton`, `Switch`, `Slider`, `Stepper`, `ProgressBar`,
-`LevelIndicator`, `ComboBox`, `Table`, `Separator`, `Image` and `Canvas`. A
-closed set, and
+`LevelIndicator`, `ComboBox`, `Table`, `SearchField`, `Spinner`, `Separator`,
+`Image` and `Canvas`. A closed set, and
 any other capitalised tag is a component. There is no `<div>`, no entity table,
 no escaping and no `$html`: the output is a tree of native objects, and there
 is nothing to inject into.
@@ -405,6 +405,7 @@ ran.
 | `Label` | `NSTextField` | static text |
 | `Button` | `NSButton` | a command |
 | `TextField` | `NSTextField` | one line of editable text |
+| `SearchField` | `NSSearchField` | a field that says what it is for |
 | `SecureField` | `NSSecureTextField` | one line the platform shows as dots |
 | `TextArea` | `NSScrollView` + `NSTextView` | many lines, scrolling |
 | `CheckBox` | `NSButton` | on, off or mixed |
@@ -418,6 +419,7 @@ ran.
 | `Separator` | `NSBox` | a rule between groups |
 | `Image` | `NSImageView` | a picture |
 | `Table` | `NSTableView` | rows and columns, filled by asking |
+| `Spinner` | `NSProgressIndicator` | work with no known end — **not everywhere** |
 | `Container` | `CortadoView` | holds children |
 | `ScrollView` | `NSScrollView` | holds children, and scrolls them |
 
@@ -453,6 +455,24 @@ platform that has one and a platform that has not: every line asks whether what
 happened agrees with what the platform promised, so a host that quietly
 substituted something would print different bytes even though it built a
 control.
+
+**A control's other strings are keyed.** `set_text` is the text a control *is*
+— a button's title, a field's value. A field also has words it shows while it
+is empty, and a `Table` will have a URL when links land, so those go through
+`ctd_set_string(widget, CTD_S_HINT, ...)` rather than one entry point each: a
+new string costs four `switch` cases, not four implementations. Which kinds
+have which key is cortado's rule, in `src/cortado_rules.h`, and
+`tests/strings.out` is that rule as a golden — including that the hint and the
+value are different strings, which a host that stored one where the other goes
+would otherwise pass.
+
+**A growing child in a stack is refused, not ignored.** `StackLayout` gives
+every child the size it measures; `grow` is `FlexLayout`'s word. Asking for it
+in a stack used to lay the child out at its intrinsic size and say nothing,
+which cost three separate afternoons — a canvas 0 points wide, a table 0 points
+wide, and a search field squeezed to nothing, each laid out exactly as asked
+and each useless. It now answers `grow_in_a_stack` and names the child and the
+fix.
 
 **A table asks for its cells; it does not hold them.** This is the one control
 cortado does not build out of widgets, and the reason is the only one that

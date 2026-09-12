@@ -29,6 +29,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_STEPPER:
         case CTD_W_LEVEL_INDICATOR:
         case CTD_W_TABLE:
+        case CTD_W_SEARCH_FIELD:
+        case CTD_W_SPINNER:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -182,6 +184,25 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // a Mac user calls a switch has been its own class since 10.15.
             view = [[NSSwitch alloc] initWithFrame:NSZeroRect];
             break;
+        case CTD_W_SEARCH_FIELD:
+            // Also an NSTextField underneath, so every text and property path
+            // in this host reaches it — and a real one, so it brings the
+            // magnifier, the clear button and the shape a Mac user expects to
+            // find a search box in.
+            view = [[NSSearchField alloc] initWithFrame:NSZeroRect];
+            break;
+        case CTD_W_SPINNER: {
+            NSProgressIndicator *wheel =
+                [[NSProgressIndicator alloc] initWithFrame:NSZeroRect];
+            [wheel setStyle:NSProgressIndicatorStyleSpinning];
+            [wheel setIndeterminate:YES];
+            // Kept on screen when it stops. The default is to vanish, which
+            // leaves a hole in a laid-out column and makes "stopped" look like
+            // "broken" — and cortado has already decided where it goes.
+            [wheel setDisplayedWhenStopped:YES];
+            view = wheel;
+            break;
+        }
         case CTD_W_SECURE_FIELD:
             // A subclass of NSTextField, so every text and property path in
             // this host already reaches it — and a real one, so the window

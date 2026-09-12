@@ -46,6 +46,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_STEPPER:      role = "spinbutton";  break;
         case CTD_W_LEVEL_INDICATOR: role = "meter";    break;
         case CTD_W_TABLE:        role = "grid";        break;
+        case CTD_W_SEARCH_FIELD: role = "searchbox";   break;
+        case CTD_W_SPINNER:      role = "progressbar"; break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -127,13 +129,14 @@ ctd_status ctd_widget_synth_text(ctd_handle widget, const char *utf8, int32_t le
     if (!view) return CTD_ERR_STALE;
     int32_t kind = ctd_slot_kind(widget);
     if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_SECURE_FIELD &&
-        kind != CTD_W_TEXT_AREA) return CTD_ERR_KIND;
+        kind != CTD_W_SEARCH_FIELD && kind != CTD_W_TEXT_AREA) return CTD_ERR_KIND;
     ctd_status wrote = ctd_set_text(widget, utf8, len);
     if (wrote != CTD_OK) return wrote;
     // Typed text is committed when the field is left or Return is pressed, and
     // an edit box reports the first through its parent. This is that message,
     // sent the way the control itself would send it.
-    if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_SECURE_FIELD) {
+    if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_SECURE_FIELD ||
+        kind == CTD_W_SEARCH_FIELD) {
         SendMessageW(GetParent(view), WM_COMMAND,
                      MAKEWPARAM(0, EN_KILLFOCUS), (LPARAM)view);
     }

@@ -58,6 +58,7 @@ void ctd_emit_control(ctd_handle target) {
             break;
         case CTD_W_TEXT_FIELD:
         case CTD_W_SECURE_FIELD:
+        case CTD_W_SEARCH_FIELD:
             kind = CTD_EV_TEXT_COMMIT;
             break;
         default: break;
@@ -123,6 +124,7 @@ static LRESULT ctd_common_message(HWND window, UINT message,
                         break;
                     case CTD_W_TEXT_FIELD:
                     case CTD_W_SECURE_FIELD:
+                    case CTD_W_SEARCH_FIELD:
                         // "Return pressed, or focus left the field" is what the
                         // header calls a commit. An edit box reports the second
                         // and not the first, so Return is caught in the

@@ -260,6 +260,15 @@ fn bounds() {
     greedy.add(spec_leaf("too wide", 1, huge))
     run("child wider than parent", greedy, 300.0, 300.0)
 
+    // A child that asks to grow, in a layout that hands nothing out. Refused
+    // rather than ignored: the silent version cost three afternoons — a canvas
+    // 0 points wide, a table 0 points wide, a search field squeezed to its
+    // intrinsic size — each laid out exactly as asked and none of them saying
+    // anything.
+    var mistaken: layout.LayoutNode = layout.LayoutNode.group("root", row(0.0))
+    mistaken.add(spec_leaf("wants room", 5, layout.LayoutSpec.flexible(1.0)))
+    run("grow in a stack", mistaken, 300.0, 60.0)
+
     // A leaf measures at most what it is offered — the table's 200pt label in
     // a 120pt box comes back 120 wide.
     var narrow: layout.StackLayout = column(0.0)

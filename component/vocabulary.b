@@ -44,6 +44,8 @@ pub class Vocabulary {
         if tag == "Stepper" { return some(widgets.WidgetKind.stepper) }
         if tag == "LevelIndicator" { return some(widgets.WidgetKind.level_indicator) }
         if tag == "Table" { return some(widgets.WidgetKind.table) }
+        if tag == "SearchField" { return some(widgets.WidgetKind.search_field) }
+        if tag == "Spinner" { return some(widgets.WidgetKind.spinner) }
         return none
     }
 

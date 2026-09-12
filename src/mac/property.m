@@ -26,6 +26,43 @@ NSTextView *ctd_text_view(id object) {
     return nil;
 }
 
+// Whether a spinner is turning.
+//
+// Kept here because NSProgressIndicator has no way to be asked. It answers
+// -isIndeterminate and nothing about whether the animation is running, and a
+// property a caller can set and not read back is half a property. Nothing but
+// the program starts or stops one, so there is no second answer for this to
+// disagree with — the same argument the progress bar's value makes on the
+// three hosts that keep it.
+static int g_spinning[CTD_SLOTS];
+
+ctd_status ctd_set_string(ctd_handle widget, int32_t key,
+                          const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    switch (key) {
+        case CTD_S_HINT:
+            if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            [(NSTextField *)object setPlaceholderString:ctd_string(utf8, len)];
+            return CTD_OK;
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
+
+int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    switch (key) {
+        case CTD_S_HINT: {
+            if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSString *hint = [(NSTextField *)object placeholderString];
+            return ctd_copy_out(hint ? hint : @"", out, cap);
+        }
+        default: return CTD_ERR_UNSUPPORTED;
+    }
+}
+
 ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     id object = ctd_resolve(widget);
@@ -106,7 +143,17 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             [menu selectItemAtIndex:(NSInteger)value];
             return CTD_OK;
         }
+        case CTD_P_ANIMATING: {
+            if (!ctd_kind_has_animating(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSProgressIndicator *wheel = (NSProgressIndicator *)object;
+            if (value) [wheel startAnimation:nil]; else [wheel stopAnimation:nil];
+            g_spinning[(uint32_t)(widget & 0xffffffffu)] = value ? 1 : 0;
+            return CTD_OK;
+        }
         case CTD_P_INDETERMINATE: {
+            // A spinner has no total to be unknown about; that is what
+            // CTD_P_ANIMATING is for, and the two mean different things.
+            if (ctd_slot_kind(widget) == CTD_W_SPINNER) return CTD_ERR_KIND;
             if (![object isKindOfClass:[NSProgressIndicator class]]) return CTD_ERR_KIND;
             NSProgressIndicator *bar = (NSProgressIndicator *)object;
             [bar setIndeterminate:value ? YES : NO];
@@ -153,7 +200,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             if (![object isKindOfClass:[NSPopUpButton class]]) return CTD_ERR_KIND;
             value = (int64_t)[(NSPopUpButton *)object indexOfSelectedItem];
             break;
+        case CTD_P_ANIMATING:
+            if (!ctd_kind_has_animating(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = g_spinning[(uint32_t)(widget & 0xffffffffu)] ? 1 : 0;
+            break;
         case CTD_P_INDETERMINATE:
+            if (ctd_slot_kind(widget) == CTD_W_SPINNER) return CTD_ERR_KIND;
             if (![object isKindOfClass:[NSProgressIndicator class]]) return CTD_ERR_KIND;
             value = [(NSProgressIndicator *)object isIndeterminate] ? 1 : 0;
             break;
@@ -184,7 +236,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
 - (double)doubleValue;
 @end
 
-static id<CortadoRanged> ctd_ranged(id object) {
+// The kind decides, and the class only picks which object to send it to. A
+// spinner is an NSProgressIndicator — the same class as a progress bar — so
+// asking the object would let a spinner take a range on this platform and
+// nowhere else. See ctd_kind_has_range in ../cortado_rules.h.
+static id<CortadoRanged> ctd_ranged(ctd_handle widget, id object) {
+    if (!ctd_kind_has_range(ctd_slot_kind(widget))) return nil;
     if ([object isKindOfClass:[NSSlider class]] ||
         [object isKindOfClass:[NSProgressIndicator class]] ||
         [object isKindOfClass:[NSStepper class]] ||
@@ -207,19 +264,19 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             [(NSControl *)object setFont:[NSFont systemFontOfSize:value]];
             return CTD_OK;
         case CTD_P_MIN: {
-            id<CortadoRanged> ranged = ctd_ranged(object);
+            id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;
             [ranged setMinValue:value];
             return CTD_OK;
         }
         case CTD_P_MAX: {
-            id<CortadoRanged> ranged = ctd_ranged(object);
+            id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;
             [ranged setMaxValue:value];
             return CTD_OK;
         }
         case CTD_P_VALUE: {
-            id<CortadoRanged> ranged = ctd_ranged(object);
+            id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;
             [ranged setDoubleValue:value];
             return CTD_OK;
@@ -265,19 +322,19 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             value = (double)[[(NSControl *)object font] pointSize];
             break;
         case CTD_P_MIN: {
-            id<CortadoRanged> ranged = ctd_ranged(object);
+            id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;
             value = [ranged minValue];
             break;
         }
         case CTD_P_MAX: {
-            id<CortadoRanged> ranged = ctd_ranged(object);
+            id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;
             value = [ranged maxValue];
             break;
         }
         case CTD_P_VALUE: {
-            id<CortadoRanged> ranged = ctd_ranged(object);
+            id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;
             value = [ranged doubleValue];
             break;

@@ -62,6 +62,7 @@ static void ctd_emit_control(ctd_handle target) {
             break;
         case CTD_W_TEXT_FIELD:
         case CTD_W_SECURE_FIELD:
+        case CTD_W_SEARCH_FIELD:
             kind = CTD_EV_TEXT_COMMIT;
             text = gtk_editable_get_text(GTK_EDITABLE(object));
             break;

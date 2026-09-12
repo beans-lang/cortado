@@ -29,7 +29,13 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SECURE_FIELD:
         case CTD_W_STEPPER:
         case CTD_W_TABLE:
+        case CTD_W_SEARCH_FIELD:
             return 1;
+        case CTD_W_SPINNER:
+            // The common controls have no spinner. A marquee progress bar is
+            // the nearest thing Windows has and it is a different control with
+            // a different shape, so this refuses rather than substituting one.
+            return 0;
         case CTD_W_SWITCH:
             return 0;
         case CTD_W_LEVEL_INDICATOR:
@@ -82,6 +88,15 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // a spin *field* and a different control.
             class_name = UPDOWN_CLASSW;
             style |= UDS_ARROWKEYS | UDS_ALIGNRIGHT | WS_TABSTOP;
+            break;
+        case CTD_W_SEARCH_FIELD:
+            // An edit control with a cue banner, which is what a Windows
+            // search box is — Explorer's is exactly that. What it does not
+            // have is a clear button, so a program that leans on one offers
+            // its own.
+            class_name = WC_EDITW;
+            style |= ES_LEFT | ES_AUTOHSCROLL | WS_TABSTOP;
+            extended = WS_EX_CLIENTEDGE;
             break;
         case CTD_W_SECURE_FIELD:
             // The real thing: an edit control with ES_PASSWORD does not let
@@ -166,7 +181,8 @@ ctd_handle ctd_widget_new(int32_t kind) {
             SetPropW(content, CTD_INNER, (HANDLE)1);
         }
     }
-    if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_SECURE_FIELD) {
+    if (kind == CTD_W_TEXT_FIELD || kind == CTD_W_SECURE_FIELD ||
+        kind == CTD_W_SEARCH_FIELD) {
         SetWindowSubclass(window, ctd_edit_proc, 1, 0);
     }
     if (kind == CTD_W_PROGRESS_BAR) {

@@ -109,6 +109,8 @@ root stack frame=0,0,300,300
 == child wider than parent ==
 root stack frame=0,0,300,300
   too wide leaf frame=0,0,300,20
+== grow in a stack ==
+  FAILED grow_in_a_stack: "wants room" asks to grow by 1, but its parent is a StackLayout, which gives every child the size it measures — use FlexLayout.horizontal to hand out the leftover space
 == leaf clipped by padding ==
 root stack frame=0,0,300,300
   long label leaf frame=90,0,120,16

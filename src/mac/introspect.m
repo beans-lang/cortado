@@ -54,6 +54,11 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // interactive one — cells you can move through — which is what every
         // one of these controls is.
         case CTD_W_TABLE:        role = @"grid";        break;
+        // ARIA's word for a field that searches, and a spinner is a progress
+        // bar with no total — which is what "progressbar" means to every
+        // assistive layer under this one.
+        case CTD_W_SEARCH_FIELD: role = @"searchbox";   break;
+        case CTD_W_SPINNER:      role = @"progressbar"; break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);

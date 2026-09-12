@@ -33,6 +33,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SECURE_FIELD:
         case CTD_W_STEPPER:
         case CTD_W_TABLE:
+        case CTD_W_SEARCH_FIELD:
+        case CTD_W_SPINNER:
             return 1;
         case CTD_W_LEVEL_INDICATOR:
             // UIKit has no level indicator. A UIProgressView is a progress
@@ -99,6 +101,25 @@ ctd_handle ctd_widget_new(int32_t kind) {
             [stepper setValue:0.0];
             [stepper setWraps:NO];
             view = stepper;
+            break;
+        }
+        case CTD_W_SEARCH_FIELD: {
+            // A UITextField underneath, so every text path in this host
+            // reaches it — and the real one, so it brings the magnifier and
+            // the clear button a phone user expects.
+            UISearchTextField *field =
+                [[UISearchTextField alloc] initWithFrame:CGRectZero];
+            view = field;
+            break;
+        }
+        case CTD_W_SPINNER: {
+            UIActivityIndicatorView *wheel = [[UIActivityIndicatorView alloc]
+                initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
+            // Kept on screen when it stops, for the reason the Mac keeps it:
+            // cortado has already decided where it goes, and a control that
+            // vanishes leaves a hole in a laid-out column.
+            [wheel setHidesWhenStopped:NO];
+            view = wheel;
             break;
         }
         case CTD_W_SECURE_FIELD: {
