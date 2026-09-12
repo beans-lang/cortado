@@ -40,6 +40,19 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
     exit 0
 fi
 
+# The display stays awake for as long as this script runs.
+#
+# Not a convenience: a sleeping screen has no active display, so
+# CVDisplayLinkCreateWithActiveCGDisplays refuses and every case that drives a
+# frame clock fails — `clock`, `frames` and `shader` — in a way that reads
+# exactly like a bug in the clock. `test.sh` has held the display awake since
+# it was written and this script did not, so the same list passed through one
+# and failed through the other. `-w $$` ties it to this process, so it goes
+# when this does.
+if command -v caffeinate >/dev/null 2>&1; then
+    caffeinate -du -w $$ &
+fi
+
 # The cases to run. `test.sh` passes its own list, which is the point: a second
 # copy of that list here drifted the moment a case was added, and four cases
 # went unsanitized without anything saying so. The default is for running this
