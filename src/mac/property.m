@@ -137,6 +137,14 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     // A group box's text is the title on its frame. A separator is also an
     // NSBox and has none, which the kind decides rather than the class.
     else if (ctd_slot_kind(widget) == CTD_W_GROUP_BOX)   [(NSBox *)object setTitle:text];
+    // A disclosure's text is the title beside the triangle. The header sizes
+    // itself to the words, so the body moves when a title wraps to two lines —
+    // which is why the caller is told about it through ctd_view_content_inset
+    // rather than being asked to guess.
+    else if ([object isKindOfClass:[CortadoDisclosure class]]) {
+        [[(CortadoDisclosure *)object caption] setStringValue:text];
+        [(CortadoDisclosure *)object relayout];
+    }
     else if ([object isKindOfClass:[NSButton class]])    [(NSButton *)object setTitle:text];
     else if ([object isKindOfClass:[NSTextField class]]) [(NSTextField *)object setStringValue:text];
     else return CTD_ERR_KIND;
@@ -154,6 +162,8 @@ int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
         return ctd_copy_out([inner string], out, cap);
     if (ctd_slot_kind(widget) == CTD_W_GROUP_BOX)
         return ctd_copy_out([(NSBox *)object title], out, cap);
+    if ([object isKindOfClass:[CortadoDisclosure class]])
+        return ctd_copy_out([[(CortadoDisclosure *)object caption] stringValue], out, cap);
     if ([object isKindOfClass:[NSButton class]])
         return ctd_copy_out([(NSButton *)object title], out, cap);
     if ([object isKindOfClass:[NSTextField class]])
@@ -174,6 +184,15 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             [(NSView *)object setHidden:value ? YES : NO];
             return CTD_OK;
+        case CTD_P_EXPANDED: {
+            if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value > 1) return CTD_ERR_RANGE;
+            CortadoDisclosure *twisty = (CortadoDisclosure *)object;
+            [[twisty triangle] setState:value ? NSControlStateValueOn
+                                              : NSControlStateValueOff];
+            [[twisty content] setHidden:value ? NO : YES];
+            return CTD_OK;
+        }
         case CTD_P_COLOR: {
             if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
@@ -270,6 +289,13 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         case CTD_P_HIDDEN:
             value = [(NSView *)object isHidden] ? 1 : 0;
+            break;
+        case CTD_P_EXPANDED:
+            if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            // The triangle, not a copy kept beside it: the user can turn it
+            // and a second record of the same fact is a second answer.
+            value = [[(CortadoDisclosure *)object triangle] state] ==
+                        NSControlStateValueOn ? 1 : 0;
             break;
         case CTD_P_COLOR: {
             if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;

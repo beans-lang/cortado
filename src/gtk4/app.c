@@ -60,6 +60,10 @@ static void ctd_emit_control(ctd_handle target) {
             kind = CTD_EV_VALUE_CHANGED;
             index = gtk_switch_get_active(GTK_SWITCH(object)) ? 1 : 0;
             break;
+        case CTD_W_DISCLOSURE:
+            kind = CTD_EV_VALUE_CHANGED;
+            index = gtk_expander_get_expanded(GTK_EXPANDER(object)) ? 1 : 0;
+            break;
         case CTD_W_DATE_PICKER:
             kind = CTD_EV_VALUE_CHANGED;
             index = (int64_t)ctd_calendar_seconds(GTK_CALENDAR(object));

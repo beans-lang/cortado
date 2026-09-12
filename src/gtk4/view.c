@@ -21,6 +21,13 @@ static GtkFixed *ctd_container_of(gpointer object) {
         if (inner && GTK_IS_FIXED(inner)) return GTK_FIXED(inner);
         return NULL;
     }
+    // A disclosure's children go under its header. GtkExpander takes one
+    // child, the same as a frame, so the one child is a GtkFixed.
+    if (GTK_IS_EXPANDER(object)) {
+        GtkWidget *inner = gtk_expander_get_child(GTK_EXPANDER(object));
+        if (inner && GTK_IS_FIXED(inner)) return GTK_FIXED(inner);
+        return NULL;
+    }
     if (GTK_IS_WINDOW(object)) {
         GtkWidget *child = gtk_window_get_child(GTK_WINDOW(object));
         if (child && GTK_IS_FIXED(child)) return GTK_FIXED(child);

@@ -41,7 +41,7 @@
   "reservedAttributes": [
     {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position."}
   ],
-  "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "Stepper", "Switch", "Table", "TextArea", "TextField", "VFlex", "VStack"],
+  "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Disclosure", "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "Stepper", "Switch", "Table", "TextArea", "TextField", "VFlex", "VStack"],
   "attributes": [
     {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
     {"name": "alignment", "detail": "number", "note": "text alignment inside the control"},
@@ -61,6 +61,7 @@
     {"name": "max", "detail": "number", "note": "the high end of a range"},
     {"name": "min", "detail": "number", "note": "the low end of a range"},
     {"name": "opacity", "detail": "number", "note": "how opaque this control is, 0.0 to 1.0"},
+    {"name": "open", "detail": "flag", "note": "whether a disclosure is showing what is under it"},
     {"name": "padding", "detail": "number", "note": "space kept inside a container"},
     {"name": "selected", "detail": "number", "note": "which item of a list is chosen, as an index; -1 for none"},
     {"name": "shrink", "detail": "number", "note": "share of overflow this control gives up"},

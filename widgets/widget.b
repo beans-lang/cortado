@@ -510,6 +510,28 @@ pub abstract class Widget {
     ///
     /// `index` chooses for a control with a list and is the new state for a
     /// check box; `value` is the position of a slider.
+    /// How much of this control's frame the platform keeps for itself.
+    ///
+    /// Four zeros for almost everything. The exceptions are the containers a
+    /// platform draws chrome for — a group box's border and title band, a
+    /// disclosure's header — whose children live inside a view the platform
+    /// positions. What the chrome takes from the caller is *room*: the
+    /// children's own coordinates already start at that view's corner, so
+    /// nothing here moves them.
+    ///
+    /// `WidgetLayout.group` asks this once per container when the tree is
+    /// built. A caller building frames by hand wants it too, and that is why
+    /// it is public.
+    pub fn content_inset() -> Result<geometry.EdgeInsets> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        unsafe {
+            host.check(host.ctd_view_content_inset(self.slot.raw, scratch.reals) as int,
+                       "read what {self.kind_value.name()} keeps for its own chrome")?
+        }
+        return ok(geometry.EdgeInsets { left: scratch.real(0), top: scratch.real(1),
+                                        right: scratch.real(2), bottom: scratch.real(3) })
+    }
+
     pub fn set_value_as_user(index: int, value: f64) -> Result<bool> {
         unsafe {
             return host.check(

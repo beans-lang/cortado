@@ -77,8 +77,73 @@ fn build() -> Result<bool> {
         err(refused) => { io.println("a zero-sized control: refused ({refused.kind})") }
     }
 
+    // ------------------------------------------- inside the border, not over it
+    //
+    // The one thing in this suite that catches a container drawing its
+    // children in the wrong place, and the reason it has to be a picture.
+    //
+    // A group box's children live in a content view the platform positions
+    // inside the border. A child's frame is read in *that view's* coordinates,
+    // so it is (0, 0) whether the content view is where it should be or
+    // twenty-two points too tall — which is what AppKit gave a box built at
+    // zero size, for as long as cortado built them that way. The children of
+    // every group box were drawn over the title and out of the top of the box,
+    // and every golden in this suite stayed green through it, because a frame
+    // read in the content view's own coordinates was right either way.
+    //
+    // What is compared is two pictures of the same button: one in a plain
+    // container at a known offset, one at the corner of a group box. The ink a
+    // control lays down is not its frame — AppKit's push-button bezel bleeds a
+    // point or two outside it — so neither number means anything on its own,
+    // and the difference between them is exactly the inset the box reported.
+    if widgets.WidgetKind.group_box.available() {
+        let offset: f64 = 8.0
+
+        var plain: widgets.Container = new widgets.Container()
+        box.add(plain)?
+        plain.set_frame(geometry.Rect.of(0.0, 0.0, 100.0, 40.0))?
+        let plain_bare: widgets.Snapshot = plain.snapshot()?
+        var loose: widgets.Button = widgets.Button.of("Buy")?
+        plain.add(loose)?
+        loose.set_frame(geometry.Rect.of(0.0, offset, 40.0, 20.0))?
+        let plain_ink: int = first_row(plain.snapshot()?, plain_bare)?
+
+        var frame: widgets.GroupBox = widgets.GroupBox.of("Options")?
+        box.add(frame)?
+        frame.set_frame(geometry.Rect.of(0.0, 0.0, 100.0, 40.0))?
+        let chrome: geometry.EdgeInsets = frame.content_inset()?
+        let frame_bare: widgets.Snapshot = frame.snapshot()?
+        var corner: widgets.Button = widgets.Button.of("Buy")?
+        frame.add(corner)?
+        corner.set_frame(geometry.Rect.of(0.0, 0.0, 40.0, 20.0))?
+        let frame_ink: int = first_row(frame.snapshot()?, frame_bare)?
+
+        io.println("a group box keeps room for its title: {chrome.top > chrome.bottom}")
+        io.println("a child at its corner changes pixels: {frame_ink >= 0}")
+        io.println("and starts exactly the title's height down: {frame_ink - plain_ink == (chrome.top - offset) as int}")
+    }
+
     app.shutdown()
     return ok(true)
+}
+
+/// The first row of the picture that `filled` changed, or -1 for none.
+///
+/// Rows rather than columns, because the mistake this is here for is vertical:
+/// a box's title band is at the top, and a content view that is too tall puts
+/// its children above the title and out of the box, where the snapshot clips
+/// them. The sides came out right even when that was broken.
+fn first_row(filled: widgets.Snapshot, bare: widgets.Snapshot) -> Result<int> {
+    var row: int = 0
+    for row in 0..filled.height {
+        var column: int = 0
+        for column in 0..filled.width {
+            if !filled.pixel(column, row)?.same_as(bare.pixel(column, row)?) {
+                return ok(row)
+            }
+        }
+    }
+    return ok(-1)
 }
 
 fn main() {

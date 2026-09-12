@@ -39,6 +39,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_SEGMENTED:
         case CTD_W_DATE_PICKER:
         case CTD_W_COLOR_WELL:
+        case CTD_W_DISCLOSURE:
             return 1;
         case CTD_W_GROUP_BOX:
             // UIKit has nothing that means "a titled frame around a group".
@@ -129,6 +130,9 @@ ctd_handle ctd_widget_new(int32_t kind) {
             view = bar;
             break;
         }
+        case CTD_W_DISCLOSURE:
+            view = ctd_disclosure_new();
+            break;
         case CTD_W_DATE_PICKER: {
             UIDatePicker *picker = [[UIDatePicker alloc] initWithFrame:CGRectZero];
             // A day, the rule beside CTD_W_DATE_PICKER in the header — and
@@ -263,6 +267,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
         [g_targets addObject:source];
         [source release];
     }
+    if (kind == CTD_W_DISCLOSURE) ctd_disclosure_attach(handle, view);
     if ([view isKindOfClass:[UIControl class]]) {
         CortadoTarget *forwarder = [[CortadoTarget alloc] init];
         [forwarder setHandle:handle];

@@ -16,7 +16,7 @@
 // children it has is a question with a real answer — none — and refusing it
 // would make every tree walk special-case every kind. Refusing to *add* a
 // child to one is a different question, and `ctd_can_hold` is where that lives.
-static NSView *ctd_container_of(id object) {
+NSView *ctd_container_of(id object) {
     if ([object isKindOfClass:[NSWindow class]]) return [(NSWindow *)object contentView];
     // A box holds its children in a content view of its own, so the frame it
     // draws stays outside them — unless it is a separator, which is also an
@@ -31,8 +31,58 @@ static NSView *ctd_container_of(id object) {
         if ([inner isKindOfClass:[NSView class]]) return (NSView *)inner;
         return (NSView *)object;
     }
+    if ([object isKindOfClass:[CortadoDisclosure class]])
+        return [(CortadoDisclosure *)object content];
     if ([object isKindOfClass:[NSView class]]) return (NSView *)object;
     return nil;
+}
+
+// AppKit's own inset for a titled box, asked once and remembered.
+//
+// There is no call that answers it. `contentViewMargins` is the border, five
+// points on every side; `titleRect` is where the words go; and the gap AppKit
+// leaves between the words and the content is neither of those — adding them
+// gives fourteen where the truth is seventeen. So one box is built the way
+// AppKit expects, a frame *before* a content view, and the difference between
+// the two frames is the answer. Built once, because it is the same number for
+// every box on this system, and read from AppKit rather than written here
+// because seventeen is not cortado's number to choose.
+static void ctd_box_chrome(double *out) {
+    static double known[4];
+    static int asked = 0;
+    if (!asked) {
+        NSBox *ruler = [[NSBox alloc] initWithFrame:NSMakeRect(0, 0, 200, 200)];
+        [ruler setBoxType:NSBoxPrimary];
+        [ruler setTitle:@"X"];
+        NSView *inside = [[NSView alloc] initWithFrame:NSZeroRect];
+        [ruler setContentView:inside];
+        NSRect own = [ruler bounds];
+        NSRect held = [inside frame];
+        known[0] = held.origin.x;
+        known[1] = own.size.height - (held.origin.y + held.size.height);
+        known[2] = own.size.width - (held.origin.x + held.size.width);
+        known[3] = held.origin.y;
+        [inside release];
+        [ruler release];
+        asked = 1;
+    }
+    out[0] = known[0]; out[1] = known[1]; out[2] = known[2]; out[3] = known[3];
+}
+
+void ctd_chrome_of(id object, double *out) {
+    out[0] = 0.0; out[1] = 0.0; out[2] = 0.0; out[3] = 0.0;
+    if ([object isKindOfClass:[NSBox class]]) {
+        // A separator is an NSBox too and holds nothing, so it has no content
+        // to leave room for.
+        if ([(NSBox *)object boxType] == NSBoxSeparator) return;
+        ctd_box_chrome(out);
+        return;
+    }
+    if ([object isKindOfClass:[CortadoDisclosure class]]) {
+        CortadoDisclosure *twisty = (CortadoDisclosure *)object;
+        out[1] = (double)[twisty headerHeight];
+        return;
+    }
 }
 
 // Whether a widget may be given children.
@@ -153,6 +203,21 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
     if (!view) return CTD_ERR_STALE;
     if (![view isKindOfClass:[NSView class]]) return CTD_ERR_KIND;
     [view setFrame:NSMakeRect(x, y, width, height)];
+    return CTD_OK;
+}
+
+ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if (![object isKindOfClass:[NSView class]]) return CTD_ERR_KIND;
+    double chrome[4];
+    ctd_chrome_of(object, chrome);
+    if (out_inset) {
+        out_inset[0] = chrome[0];
+        out_inset[1] = chrome[1];
+        out_inset[2] = chrome[2];
+        out_inset[3] = chrome[3];
+    }
     return CTD_OK;
 }
 

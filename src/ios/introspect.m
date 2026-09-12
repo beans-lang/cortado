@@ -57,6 +57,7 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // would make tests/roles.out a description of this machine.
         case CTD_W_DATE_PICKER:  role = @"spinbutton";    break;
         case CTD_W_COLOR_WELL:   role = @"button";        break;
+        case CTD_W_DISCLOSURE:   role = @"group";         break;
         default:                 role = @"group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -116,6 +117,12 @@ ctd_status ctd_widget_activate(ctd_handle widget) {
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    if ([object isKindOfClass:[CortadoDisclosure class]]) {
+        if (index < 0 || index > 1) return CTD_ERR_RANGE;
+        [(CortadoDisclosure *)object setOpen:index ? YES : NO];
+        ctd_emit(CTD_EV_VALUE_CHANGED, widget, index, 0);
+        return CTD_OK;
+    }
     if ([object isKindOfClass:[UIDatePicker class]]) {
         [(UIDatePicker *)object
             setDate:[NSDate dateWithTimeIntervalSince1970:ctd_date_floor(value)]];

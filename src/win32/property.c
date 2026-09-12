@@ -91,6 +91,12 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_ANIMATING:
             // No spinner exists on this platform, so no handle can be one.
             return CTD_ERR_KIND;
+        case CTD_P_EXPANDED:
+            // Nor a disclosure. The kind refusal rather than the platform
+            // refusal, because "no control anywhere has this property" is what
+            // a caller asking a group box would be told on every other host
+            // too.
+            return CTD_ERR_KIND;
         case CTD_P_EDITABLE:
             if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_SECURE_FIELD &&
                 kind != CTD_W_SEARCH_FIELD && kind != CTD_W_TEXT_AREA)
@@ -160,6 +166,8 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         }
         case CTD_P_ANIMATING:
+            return CTD_ERR_KIND;
+        case CTD_P_EXPANDED:
             return CTD_ERR_KIND;
         case CTD_P_EDITABLE:
             if (kind != CTD_W_TEXT_FIELD && kind != CTD_W_SECURE_FIELD &&

@@ -46,6 +46,14 @@ int32_t ctd_widget_supports(int32_t kind) {
             return 0;
         case CTD_W_SWITCH:
             return 0;
+        case CTD_W_DISCLOSURE:
+            // The common controls have no disclosure triangle. A group box
+            // does not collapse, a command link's chevron points the wrong way
+            // and is part of a button rather than a header, and there is no
+            // glyph in comctl32 that means "open this". Drawing one would be
+            // cortado drawing a control, which is the substitution
+            // ctd_widget_supports exists to refuse.
+            return 0;
         case CTD_W_COLOR_WELL:
             // The common controls have no colour well. ChooseColor is a
             // dialog — a modal chooser a program opens — and a control that is

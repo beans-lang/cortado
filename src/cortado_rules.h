@@ -43,6 +43,18 @@ static inline int ctd_kind_has_enabled(int32_t kind) {
         || kind == CTD_W_COLOR_WELL;
 }
 
+/* Why no container is in that list, including the one with a button in it.
+ *
+ * A disclosure's header is pressed, so "it accepts input" is arguably true of
+ * it — and it still answers CTD_ERR_KIND, because the platforms do not agree
+ * on what a disabled container *is*. GtkWidget's sensitivity greys the whole
+ * subtree, children included; AppKit has no setEnabled: on a plain NSView at
+ * all; UIKit has neither. A property that meant "the header is dim" on two
+ * platforms and "everything inside is dim" on a third is exactly the kind of
+ * per-host answer this file exists to prevent. A screen that wants a shut
+ * section disables the controls inside it, which means the same thing
+ * everywhere. */
+
 /* Whether a kind shows words while it is empty.
  *
  * Every single-line field does, and nothing else. A text area could —
@@ -142,6 +154,29 @@ static inline int32_t ctd_color_byte(double unit) {
 static inline int64_t ctd_color_pack(int32_t r, int32_t g, int32_t b, int32_t a) {
     return ((int64_t)(r & 0xFF) << 24) | ((int64_t)(g & 0xFF) << 16)
          | ((int64_t)(b & 0xFF) <<  8) |  (int64_t)(a & 0xFF);
+}
+
+/* Whether a kind can be opened and shut. Only a disclosure.
+ *
+ * Not the same question as CTD_P_HIDDEN, which every view has: hiding a
+ * disclosure takes the whole control away, title and all. This is about what
+ * is *under* the title. */
+static inline int ctd_kind_has_expanded(int32_t kind) {
+    return kind == CTD_W_DISCLOSURE;
+}
+
+/* Whether a kind holds children the caller adds.
+ *
+ * Stated here because four hosts had four ways of deciding it — AppKit asked
+ * whether the object was an NSTextView, GTK asked whether it was a GtkFixed,
+ * and neither question is "is this a container". A kind that holds children is
+ * a fact about the kind. */
+static inline int ctd_kind_holds_children(int32_t kind) {
+    return kind == CTD_W_CONTAINER
+        || kind == CTD_W_SCROLL_VIEW
+        || kind == CTD_W_GROUP_BOX
+        || kind == CTD_W_DISCLOSURE
+        || kind == CTD_W_CANVAS;
 }
 
 /* Whether a kind carries somewhere to go. Only a link. */

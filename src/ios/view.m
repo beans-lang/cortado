@@ -8,6 +8,10 @@
 
 static UIView *ctd_container_of(id object) {
     if ([object isKindOfClass:[UIWindow class]]) return ctd_surface_view(object);
+    // A disclosure's children go under its header, not beside it. Asked before
+    // UIView, because a disclosure is one.
+    if ([object isKindOfClass:[CortadoDisclosure class]])
+        return [(CortadoDisclosure *)object content];
     if ([object isKindOfClass:[UIView class]]) return (UIView *)object;
     return nil;
 }

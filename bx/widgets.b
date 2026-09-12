@@ -56,6 +56,7 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "GroupBox" { return true }
     if tag == "DatePicker" { return true }
     if tag == "ColorWell" { return true }
+    if tag == "Disclosure" { return true }
     return false
 }
 
@@ -93,6 +94,7 @@ pub fn is_boolean_attribute(name: string) -> bool {
     if name == "checked" { return true }
     if name == "editable" { return true }
     if name == "indeterminate" { return true }
+    if name == "open" { return true }
     return false
 }
 
@@ -145,14 +147,14 @@ pub fn attribute_names() -> List<string> {
     return ["align", "alignment", "basis", "checked", "color", "day",
             "editable", "enabled",
             "font_size", "grow", "height", "hidden", "indeterminate",
-            "justify", "margin", "max", "min", "opacity", "padding",
+            "justify", "margin", "max", "min", "opacity", "open", "padding",
             "selected", "shrink", "spacing", "step", "text", "value", "width"]
 }
 
 /// Every control tag, for the same reason.
 pub fn widget_tags() -> List<string> {
     return ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox",
-            "Container", "DatePicker",
+            "Container", "DatePicker", "Disclosure",
             "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label",
             "LevelIndicator", "Link",
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",

@@ -97,6 +97,13 @@ void ctd_on_signal(GtkWidget *widget, gpointer user);
 void ctd_on_notify(GObject *object, GParamSpec *pspec, gpointer user);
 void ctd_tag(GtkWidget *widget);
 
+// ------------------------------------------------------------------- pane.c
+
+// What the platform keeps for itself, as left, top, right, bottom. Four zeros
+// for everything but the containers that draw chrome. See
+// ctd_view_content_inset in ../cortado_host.h.
+void ctd_chrome_of(gpointer object, double *out);
+
 // A GtkCalendar's day as CTD_P_DATE carries it, and the way back.
 //
 // Only the year, month and day cross: GtkCalendar's GDateTime is in the local

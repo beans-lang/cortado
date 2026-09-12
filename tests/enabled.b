@@ -72,6 +72,7 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         spinner => { return false }
         link => { return false }
         group_box => { return false }
+        disclosure => { return false }
     }
 }
 

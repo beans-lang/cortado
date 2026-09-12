@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 15
+#define CTD_ABI_VERSION 16
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -318,6 +318,21 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
  * 0xRRGGBBAA. Not on every platform: the Win32 common controls have no colour
  * well — ChooseColor is a dialog, which is a different control. */
 #define CTD_W_COLOR_WELL   25
+/* A title you press to show or hide what is under it. Holds children; its
+ * text is the title; CTD_P_EXPANDED is whether they are showing.
+ *
+ * Not on every platform: the Win32 common controls have no disclosure
+ * triangle. The other three draw the glyph themselves — AppKit's
+ * NSBezelStyleDisclosure, UIKit's chevron symbol, GtkExpander's arrow — and
+ * cortado only puts it beside a title, which is what an application does.
+ *
+ * **A collapsed disclosure still occupies the room its children asked for**,
+ * unless the program stops describing them. The host hides the content and
+ * reports the header as chrome (see ctd_view_content_inset); what it cannot do
+ * is re-run the caller's layout. A screen that wants the column to close up
+ * renders no children while it is shut, which in markup is an $if and in code
+ * is not adding them. */
+#define CTD_W_DISCLOSURE   26
 
 /* Whether this host can build a control of this kind.
  *
@@ -407,6 +422,28 @@ ctd_status ctd_view_frame(ctd_handle widget, double *out_frame);
 ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_height,
                             double *out_size);
 
+/* How much of a control's frame the platform keeps for itself, as
+ * left, top, right, bottom into out[0..3].
+ *
+ * Most controls answer four zeros. The ones that do not are the containers a
+ * platform draws chrome for: a group box's border and its title band, a
+ * disclosure's header, a tab view's tab strip. Their children live inside a
+ * view the platform positions, so a child's coordinates already start at that
+ * view's corner — what the chrome takes from the caller is *room*, not origin,
+ * and that is the whole of what this answers.
+ *
+ * **It exists because the alternative is a number written in the caller's
+ * layout.** Before it, a screen that put a group box on the page added twelve
+ * points of padding by eye and was wrong on the other three platforms, whose
+ * borders and title bands are not twelve points. AppKit's is seventeen at the
+ * top and five at the sides, and it is seventeen because AppKit says so — no
+ * host here writes a metric down; each asks its own toolkit and reports the
+ * answer.
+ *
+ * The answer must not depend on the control's current size, because the layout
+ * asks before anything has one. */
+ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset);
+
 /* ---- properties -------------------------------------------------------- */
 
 /* Keys for the scalar property bag. Adding a property here costs no new
@@ -494,6 +531,8 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  * caller who computed one has a bug, and quietly dropping their high bits
  * hides it. */
 #define CTD_P_COLOR       16
+/* Whether a disclosure is showing what is under it. 0 shut, 1 open. */
+#define CTD_P_EXPANDED    17
 
 /* **Which widgets carry CTD_P_ENABLED**, because leaving it unsaid cost four
  * hosts four different answers.

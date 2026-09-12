@@ -56,6 +56,7 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // tests/roles.out a description of this machine.
         case CTD_W_DATE_PICKER:  role = "spinbutton";    break;
         case CTD_W_COLOR_WELL:   role = "button";        break;
+        case CTD_W_DISCLOSURE:   role = "group";         break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -96,6 +97,11 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     if (!view) return CTD_ERR_STALE;
     ctd_handle target = widget;
     switch (ctd_slot_kind(widget)) {
+        case CTD_W_DISCLOSURE:
+            // Unreachable: no handle on this platform is one. Written down so
+            // the switch names every kind cortado has rather than leaving one
+            // to the default, which is how a kind gets forgotten.
+            return CTD_ERR_KIND;
         case CTD_W_DATE_PICKER: {
             SYSTEMTIME when;
             ctd_date_to_system(value, &when);

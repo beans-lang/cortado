@@ -28,6 +28,21 @@ pub class LayoutNode {
     /// otherwise needs a constructor argument for every field on it.
     pub spec: LayoutSpec = LayoutSpec {}
 
+    /// How much of this node's box the platform keeps for itself: a group
+    /// box's border and title band, a disclosure's header, a tab strip.
+    ///
+    /// It is not padding, and the difference is the whole reason it is a
+    /// second field. Padding moves the children; this does not. The children
+    /// of such a container live inside a view the *platform* positions, so
+    /// their coordinates already start at that view's corner — what the chrome
+    /// takes away is room, and nothing else.
+    ///
+    /// Filled by `widgets.WidgetLayout` from `ctd_view_content_inset`, and
+    /// left at zero by anything that builds a tree without controls, which is
+    /// what keeps this package free of host calls and its goldens runnable on
+    /// a machine with no display.
+    pub chrome: geometry.EdgeInsets = geometry.EdgeInsets {}
+
     arranger: Layout
     contents: List<LayoutNode> = []
     box: geometry.Rect = geometry.Rect.zero()
@@ -104,8 +119,12 @@ pub class LayoutNode {
     /// smaller, and the final answer is clamped to what the parent offered.
     pub fn measure(limit: Constraint, ruler: Measure) -> Result<geometry.Size> {
         let mine: Constraint = self.spec.constrain(limit)
-        let wanted: geometry.Size = self.arranger.measure(self, mine, ruler)?
-        return ok(mine.clamp(wanted))
+        let inside: Constraint = mine.deflate(self.chrome)
+        let wanted: geometry.Size = self.arranger.measure(self, inside, ruler)?
+        let whole: geometry.Size = geometry.Size.of(
+            wanted.width + self.chrome.horizontal(),
+            wanted.height + self.chrome.vertical())
+        return ok(mine.clamp(whole))
     }
 
     /// Puts this node at `frame` and lays its children out inside it.
@@ -115,8 +134,27 @@ pub class LayoutNode {
     /// answer, and a subclass that placed nodes itself could place one twice.
     pub fn place(frame: geometry.Rect, ruler: Measure) -> Result<bool> {
         self.box = frame
-        let content: geometry.Rect = self.arranger.padding().deflate(
-            geometry.Rect.of(0.0, 0.0, frame.width, frame.height))
+        // The chrome comes off the size and not off the origin — see the
+        // field's own note. A child of a group box that starts at zero starts
+        // at the corner of the box's *content view*, which AppKit has already
+        // moved inside the border; offsetting it here as well would move it
+        // twice.
+        let room: geometry.Rect = geometry.Rect.of(
+            0.0, 0.0,
+            widen(frame.width - self.chrome.horizontal()),
+            widen(frame.height - self.chrome.vertical()))
+        let content: geometry.Rect = self.arranger.padding().deflate(room)
         return self.arranger.arrange(self, content, ruler)
     }
+}
+
+/// Zero rather than a negative size.
+///
+/// A container smaller than its own chrome is a real thing to ask for — a
+/// window dragged down to nothing does it — and a negative width would put a
+/// child's right edge to the left of its left one, which every arranger below
+/// would then propagate.
+fn widen(value: f64) -> f64 {
+    if value < 0.0 { return 0.0 }
+    return value
 }

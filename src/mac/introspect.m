@@ -71,6 +71,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // ARIA has no colour well either. "button" is what it is: a thing you
         // press that opens a chooser.
         case CTD_W_COLOR_WELL:   role = @"button";        break;
+        // ARIA's word for a header that opens and shuts what is under it.
+        case CTD_W_DISCLOSURE:   role = @"group";         break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);
@@ -79,6 +81,19 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    if ([object isKindOfClass:[CortadoDisclosure class]]) {
+        // Through the triangle, so the control ends up in the state its own
+        // click would have left it in — and the event is raised here rather
+        // than by ctd_emit_control below, which decides the kind from the
+        // class and would call a disclosure a plain view being activated.
+        if (index < 0 || index > 1) return CTD_ERR_RANGE;
+        CortadoDisclosure *twisty = (CortadoDisclosure *)object;
+        [[twisty triangle] setState:index ? NSControlStateValueOn
+                                          : NSControlStateValueOff];
+        [[twisty content] setHidden:index ? NO : YES];
+        ctd_emit(CTD_EV_VALUE_CHANGED, widget, index, 0);
+        return CTD_OK;
+    }
     if ([object isKindOfClass:[NSDatePicker class]]) {
         // Through the rule, the same as the setter: a user picks a day from a
         // calendar and cannot pick a quarter past one.

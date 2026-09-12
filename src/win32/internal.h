@@ -169,6 +169,13 @@ const WCHAR *ctd_link_target(ctd_handle widget);
 void ctd_table_disp_info(NMLVDISPINFOW *info);
 void ctd_table_item_changed(NMLISTVIEW *info);
 
+// ------------------------------------------------------------------- pane.c
+
+// What the platform keeps for itself, as left, top, right, bottom. Four zeros
+// for everything but a group box. See ctd_view_content_inset in
+// ../cortado_host.h.
+void ctd_chrome_of(ctd_handle widget, double *out);
+
 // A day, both ways, between CTD_P_DATE's seconds and a SYSTEMTIME.
 //
 // Only the year, month and day cross, which is what makes the conversion

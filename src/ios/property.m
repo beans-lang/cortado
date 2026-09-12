@@ -28,6 +28,11 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             [(UIView *)object setHidden:value ? YES : NO];
             return CTD_OK;
+        case CTD_P_EXPANDED:
+            if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value > 1) return CTD_ERR_RANGE;
+            [(CortadoDisclosure *)object setOpen:value ? YES : NO];
+            return CTD_OK;
         case CTD_P_COLOR:
             if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
@@ -153,6 +158,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_HIDDEN:
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             value = [(UIView *)object isHidden] ? 1 : 0;
+            break;
+        case CTD_P_EXPANDED:
+            if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = [(CortadoDisclosure *)object isOpen] ? 1 : 0;
             break;
         case CTD_P_COLOR:
             if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
@@ -449,7 +458,13 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     NSString *text = ctd_string(utf8, len);
-    if ([object isKindOfClass:[UILabel class]])          [(UILabel *)object setText:text];
+    // A disclosure's text is the title beside the chevron. Asked before
+    // UILabel and the rest, because none of those is what it is.
+    if ([object isKindOfClass:[CortadoDisclosure class]]) {
+        [[(CortadoDisclosure *)object caption] setText:text];
+        [(CortadoDisclosure *)object relayout];
+    }
+    else if ([object isKindOfClass:[UILabel class]])     [(UILabel *)object setText:text];
     else if ([object isKindOfClass:[UITextField class]]) [(UITextField *)object setText:text];
     else if ([object isKindOfClass:[UITextView class]])  [(UITextView *)object setText:text];
     else if ([object isKindOfClass:[UIButton class]])
@@ -470,6 +485,8 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
 int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    if ([object isKindOfClass:[CortadoDisclosure class]])
+        return ctd_copy_out([[(CortadoDisclosure *)object caption] text], out, cap);
     if ([object isKindOfClass:[UILabel class]])
         return ctd_copy_out([(UILabel *)object text], out, cap);
     if ([object isKindOfClass:[UITextField class]])

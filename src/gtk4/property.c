@@ -57,6 +57,11 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             gtk_widget_set_visible(GTK_WIDGET(object), value ? FALSE : TRUE);
             return CTD_OK;
+        case CTD_P_EXPANDED:
+            if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value > 1) return CTD_ERR_RANGE;
+            gtk_expander_set_expanded(GTK_EXPANDER(object), value ? TRUE : FALSE);
+            return CTD_OK;
         case CTD_P_COLOR: {
             if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
@@ -156,6 +161,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         case CTD_P_HIDDEN:
             value = gtk_widget_get_visible(GTK_WIDGET(object)) ? 0 : 1;
+            break;
+        case CTD_P_EXPANDED:
+            if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = gtk_expander_get_expanded(GTK_EXPANDER(object)) ? 1 : 0;
             break;
         case CTD_P_COLOR: {
             if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
@@ -483,6 +492,9 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     GtkTextView *view = ctd_text_view(object);
     if (view) {
         gtk_text_buffer_set_text(gtk_text_view_get_buffer(view), text, -1);
+    } else if (GTK_IS_EXPANDER(object)) {
+        // A disclosure's text is the title beside the arrow.
+        gtk_expander_set_label(GTK_EXPANDER(object), text);
     } else if (GTK_IS_FRAME(object)) {
         // A group box's text is the title on its frame.
         gtk_frame_set_label(GTK_FRAME(object), text[0] ? text : NULL);
@@ -513,6 +525,10 @@ int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
         int32_t needed = ctd_copy_out(text, out, cap);
         g_free(text);
         return needed;
+    }
+    if (GTK_IS_EXPANDER(object)) {
+        const char *title = gtk_expander_get_label(GTK_EXPANDER(object));
+        return ctd_copy_out(title ? title : "", out, cap);
     }
     if (GTK_IS_FRAME(object)) {
         const char *title = gtk_frame_get_label(GTK_FRAME(object));

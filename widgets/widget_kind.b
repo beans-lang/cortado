@@ -70,6 +70,9 @@ pub enum WidgetKind {
     /// the Win32 common controls have no colour well. `ChooseColor` is a
     /// dialog, which is a different control.
     color_well
+    /// A title you press to show or hide what is under it — and **not on every
+    /// platform**: the Win32 common controls have no disclosure triangle.
+    disclosure
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -100,6 +103,7 @@ pub enum WidgetKind {
             group_box => host.W_GROUP_BOX,
             date_picker => host.W_DATE_PICKER,
             color_well => host.W_COLOR_WELL,
+            disclosure => host.W_DISCLOSURE,
         }
     }
 
@@ -132,6 +136,7 @@ pub enum WidgetKind {
             group_box => "GroupBox",
             date_picker => "DatePicker",
             color_well => "ColorWell",
+            disclosure => "Disclosure",
         }
     }
 
@@ -182,6 +187,7 @@ pub enum WidgetKind {
             group_box => { return false }
             date_picker => { return false }
             color_well => { return false }
+            disclosure => { return false }
         }
     }
 
@@ -247,6 +253,7 @@ pub enum WidgetKind {
         every.push(WidgetKind.group_box)
         every.push(WidgetKind.date_picker)
         every.push(WidgetKind.color_well)
+        every.push(WidgetKind.disclosure)
         return move every
     }
 
@@ -277,6 +284,7 @@ pub enum WidgetKind {
         if code == host.W_GROUP_BOX { return some(WidgetKind.group_box) }
         if code == host.W_DATE_PICKER { return some(WidgetKind.date_picker) }
         if code == host.W_COLOR_WELL { return some(WidgetKind.color_well) }
+        if code == host.W_DISCLOSURE { return some(WidgetKind.disclosure) }
         return none
     }
 }

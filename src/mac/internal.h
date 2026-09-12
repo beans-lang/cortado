@@ -52,6 +52,28 @@ enum { CTD_SLOTS = 8192 };
 @property (assign) NSInteger rows;
 @end
 
+// A title you press to show or hide what is under it.
+//
+// AppKit has no disclosure *container* — no class that holds a body and
+// collapses it. What it has is the triangle: an NSButton with
+// NSBezelStyleDisclosure, drawn by AppKit, rotated by AppKit, reported to
+// assistive technology by AppKit as AXDisclosureTriangle. Putting one beside a
+// title and hiding a view below it is what an application does, and it is what
+// this class does; no pixel here is cortado's.
+//
+// The same arrangement as the group box's: children go into `content`, which
+// this view keeps positioned under the header, so a child's coordinates start
+// at the content's corner and the caller never has to know the header is
+// there. `ctd_view_content_inset` is what tells the layout how much room it
+// took.
+@interface CortadoDisclosure : NSView
+@property (assign) NSButton *triangle;
+@property (assign) NSTextField *caption;
+@property (assign) NSView *content;
+- (void)relayout;
+- (CGFloat)headerHeight;
+@end
+
 // One target object for every menu item cortado owns. `ctd_init` makes it and
 // `menu.m` implements it.
 @interface CortadoCommand : NSObject
@@ -114,5 +136,22 @@ NSTextView *ctd_text_view(id object);
 
 // The NSTableView a CTD_W_TABLE handle stands for; nil for anything else.
 NSTableView *ctd_table_view(id object);
+
+// ------------------------------------------------------------------ view.m
+
+// The view a container's children actually go into: a scroll view's document
+// view, a box's content view, a disclosure's body. The view itself for
+// anything else, and nil for an object that is not a view at all.
+NSView *ctd_container_of(id object);
+
+// What the platform keeps for itself, as left, top, right, bottom. Four zeros
+// for everything but the containers that draw chrome. See
+// ctd_view_content_inset in ../cortado_host.h.
+void ctd_chrome_of(id object, double *out);
+
+// ------------------------------------------------------------------- pane.m
+
+NSView *ctd_disclosure_new(void);
+void    ctd_disclosure_attach(ctd_handle handle, NSView *view);
 
 #endif

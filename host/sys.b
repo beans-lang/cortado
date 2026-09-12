@@ -54,6 +54,7 @@ pub extern "C" fn ctd_view_surface(widget: u64) -> u64
 pub extern "C" fn ctd_view_set_frame(widget: u64, x: f64, y: f64, width: f64, height: f64) -> i32
 pub extern "C" fn ctd_view_frame(widget: u64, out_frame: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_view_measure(widget: u64, avail_width: f64, avail_height: f64, out_size: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_view_content_inset(widget: u64, out_inset: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_set_string(widget: u64, key: i32, utf8: RawPtr<i8>, len: i32) -> i32
 pub extern "C" fn ctd_get_string(widget: u64, key: i32, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_set_text(widget: u64, utf8: RawPtr<i8>, len: i32) -> i32

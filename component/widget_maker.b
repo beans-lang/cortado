@@ -89,6 +89,7 @@ pub class WidgetMaker {
             group_box => { return ok(new widgets.GroupBox()) }
             date_picker => { return ok(new widgets.DatePicker()) }
             color_well => { return ok(new widgets.ColorWell()) }
+            disclosure => { return ok(new widgets.Disclosure()) }
         }
     }
 

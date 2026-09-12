@@ -131,5 +131,6 @@ pub fn property_name(property: int) -> string {
     if property == host.P_ANIMATING { return "animating" }
     if property == host.P_DATE { return "day" }
     if property == host.P_COLOR { return "color" }
+    if property == host.P_EXPANDED { return "open" }
     return "p{property}"
 }

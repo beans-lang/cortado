@@ -62,6 +62,19 @@ pub class WidgetLayout implements layout.Measure {
                  arranger: layout.Layout) -> layout.LayoutNode {
         var node: layout.LayoutNode = layout.LayoutNode.group(name, arranger)
         node.key = self.register(control)
+        // What the platform keeps for itself: a group box's border and title
+        // band, a disclosure's header. Asked here, once per tree, rather than
+        // written into the caller's padding — before this, a screen with a
+        // group box on it added twelve points by eye and was wrong on the
+        // other three platforms, whose borders are not twelve points.
+        //
+        // A control that cannot answer leaves it at zero rather than failing
+        // the build: a chrome nobody can name is no chrome, and a layout is
+        // not the place to discover a stale handle.
+        match control.content_inset() {
+            ok(inset) => { node.chrome = inset }
+            err(problem) => {}
+        }
         return node
     }
 

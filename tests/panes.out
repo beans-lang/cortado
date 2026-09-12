@@ -1,0 +1,20 @@
+-- what a control keeps for itself --
+  every kind this platform builds was asked: true
+  and every one of them answered: true
+  no control keeps a negative amount: true
+  exactly the containers that draw chrome keep any: true
+  and only a disclosure can be opened: true
+  a group box keeps a border, and more of it where the title is: true
+-- a disclosure --
+  every platform cortado builds for has one: true
+  its header is at the top and nowhere else: true
+  its text is the title: true
+  it opens and shuts: true
+  and stays shut: true
+  and opens again: true
+  shutting it does not change what it keeps: true
+  it holds children: true
+  a user shutting it raises value_changed: true
+  carrying the state it is now in: true
+  and the program's own write raises nothing: true
+drove=true

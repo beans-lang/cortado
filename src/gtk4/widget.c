@@ -35,6 +35,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_GROUP_BOX:
         case CTD_W_DATE_PICKER:
         case CTD_W_COLOR_WELL:
+        case CTD_W_DISCLOSURE:
             return 1;
         case CTD_W_SEGMENTED:
             // GTK has no segmented control. A row of toggle buttons with the
@@ -113,6 +114,17 @@ ctd_handle ctd_widget_new(int32_t kind) {
             ctd_tag(inside);
             gtk_frame_set_child(GTK_FRAME(frame), inside);
             widget = frame;
+            break;
+        }
+        case CTD_W_DISCLOSURE: {
+            // The real one. GTK is the only platform of the four with a
+            // disclosure container rather than a triangle to build one from.
+            GtkWidget *twisty = gtk_expander_new("");
+            GtkWidget *inside = gtk_fixed_new();
+            ctd_tag(inside);
+            gtk_expander_set_child(GTK_EXPANDER(twisty), inside);
+            gtk_expander_set_expanded(GTK_EXPANDER(twisty), TRUE);
+            widget = twisty;
             break;
         }
         case CTD_W_DATE_PICKER:
@@ -234,6 +246,13 @@ ctd_handle ctd_widget_new(int32_t kind) {
             break;
         case CTD_W_DATE_PICKER:
             g_signal_connect(widget, "day-selected", G_CALLBACK(ctd_on_signal),
+                             (gpointer)(uintptr_t)handle);
+            break;
+        case CTD_W_DISCLOSURE:
+            // A property here too, and so it needs the three-argument
+            // callback for the same reason.
+            g_signal_connect(widget, "notify::expanded",
+                             G_CALLBACK(ctd_on_notify),
                              (gpointer)(uintptr_t)handle);
             break;
         case CTD_W_COLOR_WELL:

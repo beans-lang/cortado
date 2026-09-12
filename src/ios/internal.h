@@ -50,6 +50,18 @@ enum { CTD_SLOTS = 8192 };
 
 // A link's own target. A tap opens the URL; see the note beside CTD_S_URL in
 // the header for why a link raises nothing.
+// A title you press to show or hide what is under it. See pane.m, and the
+// macOS host's file of the same name, for why UIKit needs a class here at all.
+@interface CortadoDisclosure : UIView
+@property (assign) UIButton *triangle;
+@property (assign) UILabel *caption;
+@property (assign) UIView *content;
+@property (assign) BOOL open;
+- (void)relayout;
+- (CGFloat)headerHeight;
+- (BOOL)isOpen;
+@end
+
 @interface CortadoLink : NSObject
 @property (assign) ctd_handle handle;
 - (void)follow:(id)sender;
@@ -106,5 +118,11 @@ void ctd_tag(id object);
 // Shared rather than static in app.m: table.m raises a selection too.
 void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 UITableView *ctd_table_view(id object);
+
+// ------------------------------------------------------------------- pane.m
+
+UIView *ctd_disclosure_new(void);
+void    ctd_disclosure_attach(ctd_handle handle, UIView *view);
+void    ctd_chrome_of(id object, double *out);
 
 #endif

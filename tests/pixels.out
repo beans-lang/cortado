@@ -5,3 +5,6 @@ with a button, one colour: false
 the button changed pixels: true
 hiding it restores the image: true
 a zero-sized control: refused (out_of_range)
+a group box keeps room for its title: true
+a child at its corner changes pixels: true
+and starts exactly the title's height down: true

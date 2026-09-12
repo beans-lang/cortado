@@ -59,6 +59,7 @@ fn should_have_it(kind: widgets.WidgetKind) -> bool {
         group_box => { return false }
         date_picker => { return false }
         color_well => { return false }
+        disclosure => { return false }
         secure_field => { return false }
         stepper => { return false }
         level_indicator => { return false }
@@ -93,6 +94,7 @@ fn should_have_mixed(kind: widgets.WidgetKind) -> bool {
         group_box => { return false }
         date_picker => { return false }
         color_well => { return false }
+        disclosure => { return false }
         secure_field => { return false }
         stepper => { return false }
         level_indicator => { return false }

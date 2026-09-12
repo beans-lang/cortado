@@ -50,6 +50,7 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         // tests/roles.out a description of this machine.
         case CTD_W_DATE_PICKER:  role = "spinbutton";    break;
         case CTD_W_COLOR_WELL:   role = "button";        break;
+        case CTD_W_DISCLOSURE:   role = "group";         break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -85,6 +86,14 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     // The setters below are the ordinary ones, and the signal they raise is
     // the platform's own — GTK notifies on a property change whoever made it,
     // which is exactly what "as a user would" means here.
+    if (GTK_IS_EXPANDER(object)) {
+        if (index < 0 || index > 1) return CTD_ERR_RANGE;
+        // The ordinary setter, and the signal it raises is GTK's own: a
+        // property notification reaches whoever made the change, which is
+        // exactly what "as a user would" means here.
+        gtk_expander_set_expanded(GTK_EXPANDER(object), index ? TRUE : FALSE);
+        return CTD_OK;
+    }
     if (GTK_IS_CALENDAR(object)) {
         // Through the rule, the same as the setter: a user picks a day from a
         // calendar and cannot pick a quarter past one.

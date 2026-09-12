@@ -51,6 +51,7 @@ pub class Vocabulary {
         if tag == "GroupBox" { return some(widgets.WidgetKind.group_box) }
         if tag == "DatePicker" { return some(widgets.WidgetKind.date_picker) }
         if tag == "ColorWell" { return some(widgets.WidgetKind.color_well) }
+        if tag == "Disclosure" { return some(widgets.WidgetKind.disclosure) }
         return none
     }
 
@@ -85,6 +86,7 @@ pub class Vocabulary {
         if name == "opacity" { return host.P_OPACITY }
         if name == "day" { return host.P_DATE }
         if name == "color" { return host.P_COLOR }
+        if name == "open" { return host.P_EXPANDED }
         return -1
     }
 
@@ -103,6 +105,7 @@ pub class Vocabulary {
            name == "color" {
             return AttributeKind.whole
         }
+        if name == "open" { return AttributeKind.flag }
         return AttributeKind.flag
     }
 
