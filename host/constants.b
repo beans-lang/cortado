@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 26
+pub const ABI_VERSION: int = 27
 
 // ---- statuses ----
 
@@ -55,7 +55,12 @@ pub const EV_ANIM_DONE: int = 24
 /// One past the last kind, so a table with a row per kind can be sized.
 pub const EV_NET_CHANGED: int = 32
 pub const EV_POWER_CHANGED: int = 33
-pub const EV_COUNT: int = 34
+pub const EV_LOCATION: int = 34
+pub const EV_BLE_FOUND: int = 35
+pub const EV_BLE_LINK: int = 36
+pub const EV_CAPTURE_DEVICES: int = 37
+pub const EV_SCREEN_FRAME: int = 38
+pub const EV_COUNT: int = 39
 
 // ---- modifier bits ----
 
@@ -85,6 +90,10 @@ pub const CAP_WEB: int = 10
 pub const CAP_ICONS: int = 11
 pub const CAP_NETWORK: int = 12
 pub const CAP_POWER: int = 13
+pub const CAP_LOCATION: int = 14
+pub const CAP_BLUETOOTH: int = 15
+pub const CAP_CAPTURE: int = 16
+pub const CAP_SCREEN: int = 17
 
 // ---- widget kinds ----
 
@@ -353,3 +362,9 @@ pub const THERMAL_NOMINAL: int = 1
 pub const THERMAL_FAIR: int = 2
 pub const THERMAL_SERIOUS: int = 3
 pub const THERMAL_CRITICAL: int = 4
+
+// ---- the gated four ----
+
+// Which kind of thing a machine listens or looks through.
+pub const CAPTURE_CAMERA: int = 0
+pub const CAPTURE_MICROPHONE: int = 1

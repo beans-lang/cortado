@@ -64,6 +64,21 @@ pub enum EventKind {
     /// the new `device.PowerSource`, `position.x` the charge — or -1 where
     /// there is no battery to have one.
     power_changed
+    /// Where the machine is. `position` is the latitude and longitude,
+    /// `size.width` the accuracy in metres and `size.height` the heading — or
+    /// -1 where nobody knows, which is every machine standing still.
+    location
+    /// Something was seen over Bluetooth, or one that was seen changed.
+    /// `index` is its row and `position.x` the signal strength.
+    ble_found
+    /// A peripheral was connected or dropped. `index` is the row, `token` 1 or
+    /// 0 for which.
+    ble_link
+    /// A camera or microphone appeared or went. `index` is how many there are.
+    capture_devices
+    /// A picture of the screen is ready, or was not. `token` echoes the
+    /// request's and `index` is the byte length waiting — 0 where it failed.
+    screen_frame
     unknown
 
     pub fn name() -> string {
@@ -101,6 +116,11 @@ pub enum EventKind {
             web_result => "web_result",
             net_changed => "net_changed",
             power_changed => "power_changed",
+            location => "location",
+            ble_found => "ble_found",
+            ble_link => "ble_link",
+            capture_devices => "capture_devices",
+            screen_frame => "screen_frame",
             unknown => "unknown",
         }
     }
@@ -142,6 +162,11 @@ pub enum EventKind {
             web_result => host.EV_WEB_RESULT,
             net_changed => host.EV_NET_CHANGED,
             power_changed => host.EV_POWER_CHANGED,
+            location => host.EV_LOCATION,
+            ble_found => host.EV_BLE_FOUND,
+            ble_link => host.EV_BLE_LINK,
+            capture_devices => host.EV_CAPTURE_DEVICES,
+            screen_frame => host.EV_SCREEN_FRAME,
             unknown => 0,
         }
     }
@@ -183,6 +208,11 @@ pub enum EventKind {
         if code == host.EV_WEB_RESULT { return EventKind.web_result }
         if code == host.EV_NET_CHANGED { return EventKind.net_changed }
         if code == host.EV_POWER_CHANGED { return EventKind.power_changed }
+        if code == host.EV_LOCATION { return EventKind.location }
+        if code == host.EV_BLE_FOUND { return EventKind.ble_found }
+        if code == host.EV_BLE_LINK { return EventKind.ble_link }
+        if code == host.EV_CAPTURE_DEVICES { return EventKind.capture_devices }
+        if code == host.EV_SCREEN_FRAME { return EventKind.screen_frame }
         return EventKind.unknown
     }
 }

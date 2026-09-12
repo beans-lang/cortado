@@ -62,6 +62,22 @@ pub enum Capability {
     /// Apple's platforms have a scale for heat. What this asks is whether
     /// there is anything to ask.
     power
+    /// Where the machine is.
+    ///
+    /// Gated: a program that asks without a bundle and a declared reason is
+    /// refused, and one that reached the framework without them would be
+    /// terminated rather than refused.
+    location
+    /// What is nearby, over Bluetooth. Gated the same way.
+    bluetooth
+    /// Cameras and microphones. Gated the same way, and separately for each:
+    /// a program that only wants to hear should not be asking to see.
+    capture
+    /// Recording the screen.
+    ///
+    /// No on a phone, and not for want of trying: ReplayKit is a broadcast the
+    /// person starts from Control Centre, not a screen a program can read.
+    screen
 
     fn code() -> int {
         return match self {
@@ -78,6 +94,10 @@ pub enum Capability {
             icons => host.CAP_ICONS,
             network => host.CAP_NETWORK,
             power => host.CAP_POWER,
+            location => host.CAP_LOCATION,
+            bluetooth => host.CAP_BLUETOOTH,
+            capture => host.CAP_CAPTURE,
+            screen => host.CAP_SCREEN,
         }
     }
 
@@ -96,6 +116,10 @@ pub enum Capability {
             icons => "icons",
             network => "network",
             power => "power",
+            location => "location",
+            bluetooth => "bluetooth",
+            capture => "capture",
+            screen => "screen",
         }
     }
 

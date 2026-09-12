@@ -180,3 +180,20 @@ pub extern "C" fn ctd_power_source(out: RawPtr<i32>) -> i32
 pub extern "C" fn ctd_power_charge(out: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_power_saving(out: RawPtr<i32>) -> i32
 pub extern "C" fn ctd_thermal_state(out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_location_start() -> i32
+pub extern "C" fn ctd_location_stop() -> i32
+pub extern "C" fn ctd_location_last(out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_ble_scan(on: i32) -> i32
+pub extern "C" fn ctd_ble_count() -> i32
+pub extern "C" fn ctd_ble_name(row: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_ble_id(row: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_ble_signal(row: i32, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_ble_connect(row: i32, on: i32) -> i32
+pub extern "C" fn ctd_ble_linked(row: i32) -> i32
+pub extern "C" fn ctd_capture_count(kind: i32) -> i32
+pub extern "C" fn ctd_capture_name(kind: i32, row: i32, out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_capture_is_default(kind: i32, row: i32) -> i32
+pub extern "C" fn ctd_screen_count() -> i32
+pub extern "C" fn ctd_screen_size(display: i32, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_screen_capture(display: i32, token: i64) -> i32
+pub extern "C" fn ctd_screen_take(token: i64, out_size: RawPtr<f64>, out: RawPtr<u8>, cap: i32) -> i32

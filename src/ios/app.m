@@ -344,6 +344,10 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_ICONS:         return 1;  /* SF Symbols, the same set the Mac draws */
         case CTD_CAP_NETWORK:       return 1;  /* the same nw_path_monitor, and the one that knows about cellular */
         case CTD_CAP_POWER:         return 1;  /* UIDevice's battery, plus NSProcessInfo for heat */
+        case CTD_CAP_LOCATION:      return 1;  /* CoreLocation, the same framework the Mac uses */
+        case CTD_CAP_BLUETOOTH:     return 1;  /* CoreBluetooth, likewise */
+        case CTD_CAP_CAPTURE:       return 1;  /* AVFoundation, likewise */
+        case CTD_CAP_SCREEN:        return 0;  /* ReplayKit is a broadcast the person starts, not a screen a program reads */
         case CTD_CAP_WEB:           return 1;
         default:                    return 0;
     }

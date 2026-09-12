@@ -1,0 +1,12 @@
+-- this program is an application --
+  seven permissions are named: true
+  and the ones this platform gates now answer: true
+-- each one, by name --
+  bluetooth answers something real: true
+  location answers something real: true
+  camera answers something real: true
+  microphone answers something real: true
+  screen_capture answers something real: true
+-- and still nothing was touched --
+  a turn of the run loop later, with no prompt on screen: true
+drove=true

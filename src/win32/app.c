@@ -575,6 +575,13 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_ICONS:         return 1;  /* the standard toolbar bitmap and the shell stock icons — a subset of the roles, and ctd_icon_name says which */
         case CTD_CAP_NETWORK:       return 1;  /* GetAdaptersAddresses, asked rather than watched */
         case CTD_CAP_POWER:         return 1;  /* GetSystemPowerStatus */
+        /* All four exist on this platform and none of them is this toolkit:
+           WinRT. A host that answered yes and
+           then refused every call would be worse than one that says no. */
+        case CTD_CAP_LOCATION:
+        case CTD_CAP_BLUETOOTH:
+        case CTD_CAP_CAPTURE:
+        case CTD_CAP_SCREEN:        return 0;
         case CTD_CAP_WEB:           return 0;
         default:                    return 0;
     }

@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 26
+#define CTD_ABI_VERSION 27
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -170,6 +170,10 @@ void       ctd_post(int64_t token);
 #define CTD_CAP_ICONS          11  /* the system's own icon set; see "icons"  */
 #define CTD_CAP_NETWORK        12  /* can say whether anything is reachable   */
 #define CTD_CAP_POWER          13  /* can say what is running the machine     */
+#define CTD_CAP_LOCATION       14  /* where the machine is                    */
+#define CTD_CAP_BLUETOOTH      15  /* what is nearby                          */
+#define CTD_CAP_CAPTURE        16  /* cameras and microphones                 */
+#define CTD_CAP_SCREEN         17  /* recording the screen                    */
 
 int32_t    ctd_capability(int32_t capability);
 
@@ -1778,10 +1782,24 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row);
 #define CTD_EV_WEB_RESULT       31  /* token echoes the eval's               */
 #define CTD_EV_NET_CHANGED      32  /* index is CTD_NET_*; x is the flags     */
 #define CTD_EV_POWER_CHANGED    33  /* index is CTD_POWER_*; x is the charge  */
+/* Where the machine is. x and y are latitude and longitude, width the accuracy
+ * in metres, height the heading in degrees or -1 where there is none. */
+#define CTD_EV_LOCATION         34
+/* Something was seen over Bluetooth, or one that was seen changed. `index` is
+ * the device's row, which is what ctd_ble_* take; `x` is the signal strength. */
+#define CTD_EV_BLE_FOUND        35
+/* A peripheral was connected or dropped. `index` is the row, 1 or 0 in
+ * `token` for which. */
+#define CTD_EV_BLE_LINK         36
+/* A camera or microphone appeared or went. `index` is how many there are. */
+#define CTD_EV_CAPTURE_DEVICES  37
+/* A frame of the screen is ready, or was not. `token` echoes the request's and
+ * `index` is the byte length waiting — 0 where the capture failed. */
+#define CTD_EV_SCREEN_FRAME     38
 /* One past the last kind. It exists so a host can keep an array per kind —
  * `ctd_listen` is exactly that — and so adding a kind without widening the
  * array is a compile error rather than a write off the end of one. */
-#define CTD_EV_COUNT            34
+#define CTD_EV_COUNT            39
 
 ctd_status ctd_permission_status(int32_t what, int32_t *out);
 /* Asks the user. CTD_ERR_UNSUPPORTED where a prompt cannot appear — which is
@@ -2136,5 +2154,115 @@ ctd_status ctd_power_saving(int32_t *out);
 #define CTD_THERMAL_CRITICAL 4
 
 ctd_status ctd_thermal_state(int32_t *out);
+
+/* ---- the gated four ---------------------------------------------------- */
+
+/* Where the machine is, what is nearby, what it can see and hear, and what is
+ * on its screen.
+ *
+ * **Every call in this section can end the process, and the guard is the same
+ * one for all of them.** macOS does not return an error when a program touches
+ * a privacy-gated framework without the matching usage description in its
+ * Info.plist — it terminates the program, on a later turn of the run loop, in
+ * unrelated code, with nothing on stderr. There is no status to turn into a
+ * ctd_status because there is no process left to return one.
+ *
+ * So nothing here touches a framework until three things are true: the process
+ * has a bundle, the bundle declares what it wants the permission for, and the
+ * permission is not already denied. All three are read from the Info.plist and
+ * from the static authorization queries beside ctd_permission_status, none of
+ * which constructs anything. A call that fails any of them answers
+ * CTD_ERR_UNSUPPORTED and touches nothing.
+ *
+ * **That makes every one of these unreachable under `beansc run`**, where the
+ * process is `beansc` and carries no such keys, and unreachable from any
+ * program that was not built into a bundle. It is not a limitation cortado
+ * could lift: TCC answers for the *responsible* process, so a bare binary run
+ * from a terminal reads the terminal's grants, and reporting those as the
+ * program's own would be worse than reporting nothing. `tools/bundle.sh`
+ * builds the bundle these need, and cortado's own suite runs them through it.
+ *
+ * Windows and Linux answer CTD_ERR_UNSUPPORTED for all of it behind the four
+ * CTD_CAP_* above. The shape is here so a host can be written later without
+ * this header changing; what is not here is a pretence that one has been. */
+
+/* ---- where the machine is ---- */
+
+/* Starts and stops the platform's own location updates. Answers arrive as
+ * CTD_EV_LOCATION. CTD_ERR_UNSUPPORTED where the guard above says no. */
+ctd_status ctd_location_start(void);
+ctd_status ctd_location_stop(void);
+/* The last fix, into out[0..3]: latitude, longitude, accuracy in metres, and
+ * heading in degrees — or -1 for a heading this platform does not report. A
+ * fix that has not arrived yet is CTD_ERR_STATE rather than four zeroes, which
+ * are a real place in the Gulf of Guinea. */
+ctd_status ctd_location_last(double *out);
+
+/* ---- what is nearby ---- */
+
+/* Starts and stops a scan. Everything seen is a *row*, numbered from zero in
+ * the order it was first seen, and a row keeps its number for as long as the
+ * scan does — which is what lets an event name one without carrying a string.
+ * CTD_EV_BLE_FOUND when a row appears or its signal changes. */
+ctd_status ctd_ble_scan(int32_t on);
+/* How many rows there are. */
+int32_t    ctd_ble_count(void);
+/* The name a peripheral advertises, which is often empty: a device is not
+ * obliged to say what it is, and most do not until they are connected. */
+int32_t    ctd_ble_name(int32_t row, char *out, int32_t cap);
+/* The identifier the platform uses for it, which is stable for this machine
+ * and this device and is *not* the hardware address — Apple does not hand that
+ * out. It is what a program stores to recognise the same device tomorrow. */
+int32_t    ctd_ble_id(int32_t row, char *out, int32_t cap);
+/* Signal strength in dBm, which is negative and closer to zero when nearer. */
+ctd_status ctd_ble_signal(int32_t row, double *out);
+/* Connects or drops. The answer is CTD_EV_BLE_LINK, because a connection takes
+ * as long as it takes. */
+ctd_status ctd_ble_connect(int32_t row, int32_t on);
+/* 1 while connected. */
+int32_t    ctd_ble_linked(int32_t row);
+
+/* ---- what it can see and hear ---- */
+
+#define CTD_CAPTURE_CAMERA      0
+#define CTD_CAPTURE_MICROPHONE  1
+
+/* How many of a kind there are, and what each is called. The list is the
+ * platform's and the order is the platform's; what cortado promises is that a
+ * row keeps its number until CTD_EV_CAPTURE_DEVICES says the list changed. */
+int32_t    ctd_capture_count(int32_t kind);
+int32_t    ctd_capture_name(int32_t kind, int32_t row, char *out, int32_t cap);
+/* Whether this is the one the system would pick. A program that offers a list
+ * should have it already selected. */
+int32_t    ctd_capture_is_default(int32_t kind, int32_t row);
+
+/* ---- what is on the screen ---- */
+
+/* How many displays can be recorded, and the pixel size of one. */
+int32_t    ctd_screen_count(void);
+ctd_status ctd_screen_size(int32_t display, double *out);
+
+/* One frame of a display, which **takes time and so is asked for rather than
+ * returned.**
+ *
+ * There used to be a plain call for this — `CGDisplayCreateImage` — and macOS
+ * 15 removed it, not deprecated it: the symbol is marked unavailable and a
+ * program that used it no longer builds. What replaced it is ScreenCaptureKit,
+ * where a frame arrives on a queue some time later. So this is the shape the
+ * rest of the ABI already uses for anything slow: ask with a token, and the
+ * answer arrives as CTD_EV_SCREEN_FRAME carrying it back.
+ *
+ * `index` on that event is the byte length waiting, or 0 where the capture
+ * failed; `ctd_screen_take` reads it, once, and forgets it. Once, because a
+ * screen is large — a Retina display is thirty megabytes a frame — and holding
+ * the last one for a caller that may never ask would be thirty megabytes this
+ * library keeps for nothing. */
+ctd_status ctd_screen_capture(int32_t display, int64_t token);
+/* The pixels a token is holding, as the same 8-bit RGBA `ctd_snapshot`
+ * answers, through the same two-call shape: `out` NULL answers the byte
+ * length. Writes the pixel size into out_size[0..1]. A token nobody filled in,
+ * or one already taken, is CTD_ERR_STATE. */
+int32_t    ctd_screen_take(int64_t token, double *out_size,
+                           uint8_t *out, int32_t cap);
 
 #endif /* CORTADO_HOST_H */

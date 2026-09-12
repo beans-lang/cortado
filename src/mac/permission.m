@@ -51,6 +51,37 @@ static BOOL ctd_permission_declared(int32_t what) {
     return [[NSBundle mainBundle] objectForInfoDictionaryKey:key] != nil;
 }
 
+// **The one guard every gated call goes through.**
+//
+// Three things have to be true before a framework in this section may be
+// touched at all: the process has a bundle, the bundle says what it wants the
+// permission for, and the permission is not already denied. All three are read
+// from the Info.plist and from the static authorization queries below, none of
+// which constructs anything.
+//
+// It is one function rather than three lines repeated nineteen times because
+// the failure it prevents is not an error — it is the process ending, in
+// unrelated code, on a later turn of the run loop, with nothing on stderr. A
+// service that forgot one of the three would not fail its own test; it would
+// take the suite down somewhere else.
+ctd_status ctd_permission_status(int32_t what, int32_t *out);
+
+ctd_status ctd_gated(int32_t what) {
+    if (!ctd_permission_is_known(what)) return CTD_ERR_RANGE;
+    if (!ctd_is_bundled()) return CTD_ERR_UNSUPPORTED;
+    if (!ctd_permission_declared(what)) return CTD_ERR_UNSUPPORTED;
+    int32_t allowed = CTD_ALLOW_UNAVAILABLE;
+    ctd_permission_status(what, &allowed);
+    // Undecided is allowed through: touching the framework is what makes the
+    // system ask, and a program that had to be granted before it could ask
+    // could never be granted. Denied is not — the framework would answer
+    // nothing and the prompt would not come back.
+    if (allowed == CTD_ALLOW_DENIED || allowed == CTD_ALLOW_UNAVAILABLE) {
+        return CTD_ERR_UNSUPPORTED;
+    }
+    return CTD_OK;
+}
+
 ctd_status ctd_permission_status(int32_t what, int32_t *out) {
     if (!ctd_permission_is_known(what)) return CTD_ERR_RANGE;
     if (out) *out = CTD_ALLOW_UNAVAILABLE;

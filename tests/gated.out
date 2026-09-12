@@ -1,0 +1,28 @@
+-- what this platform claims --
+  four services, each claimed or not: true
+-- nobody here is a bundle --
+  and the permission model says so: true
+-- where the machine is --
+  starting is refused: true
+  stopping what never started is harmless: true
+  and asking where is refused: true
+-- what is nearby --
+  scanning is refused: true
+  and nothing was seen: true
+  a row that cannot exist has no name: true
+  and no identifier: true
+  and no signal: true
+  connecting to it is refused: true
+  and it is not connected: true
+-- what it can see and hear --
+  nothing is enumerated: true
+  and naming one is refused: true
+  and none is the default: true
+-- what is on the screen --
+  no display can be recorded: true
+  measuring one is refused: true
+  asking for a frame is refused: true
+  and taking one nobody asked for is refused: true
+-- and the program is still here --
+  nineteen gated calls later, after a turn of the run loop: true
+drove=true

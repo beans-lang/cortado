@@ -293,6 +293,10 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_ICONS:         return 1;  /* SF Symbols, since macOS 11 */
         case CTD_CAP_NETWORK:       return 1;  /* nw_path_monitor, and not privacy-gated */
         case CTD_CAP_POWER:         return 1;  /* IOKit's power sources, plus NSProcessInfo for heat */
+        case CTD_CAP_LOCATION:      return 1;  /* CoreLocation, behind the plist guard */
+        case CTD_CAP_BLUETOOTH:     return 1;  /* CoreBluetooth, behind the same one */
+        case CTD_CAP_CAPTURE:       return 1;  /* AVFoundation */
+        case CTD_CAP_SCREEN:        return 1;  /* ScreenCaptureKit, since CGDisplayCreateImage was removed */
         case CTD_CAP_WEB:           return 1;
         default:                    return 0;
     }

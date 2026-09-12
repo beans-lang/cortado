@@ -118,7 +118,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine pickers panes shell web page permission icons opacity clock frames anim gpu triangle canvas shader)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity clock frames anim gpu triangle canvas shader)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -183,7 +183,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled checked controls numbers strings table outline input surface machine pickers panes shell web permission icons opacity clock anim gpu canvas shader)
+cross_host=(roles events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock anim gpu canvas shader)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -753,6 +753,50 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         fi
         pass
         echo "ok bundle: a .app lints, verifies, and runs under its own name"
+
+        # ---- the bundled leg, and the only place the gated four can be seen
+        #
+        # `tests/gated.b` runs on every ordinary leg and proves the half that
+        # matters most: every privacy-gated call refuses from a process with no
+        # bundle, and the program is still alive afterwards. It has to run
+        # there, because *not being bundled* is exactly the state it is testing.
+        #
+        # This is the other half, and there is no other way to get it. A
+        # program with no bundle has no privacy identity: TCC answers for
+        # whichever process is responsible for it, so a binary run from a
+        # terminal reads the terminal's grants and reporting those as its own
+        # would be worse than reporting nothing. Only a real application
+        # bundle, with the usage descriptions in its Info.plist, gets a real
+        # answer — and this leg builds one, signs it, runs it and reads what it
+        # said.
+        #
+        # `open -W --stdout` rather than running the executable inside the
+        # bundle: a bundle is only a bundle to macOS when Launch Services opens
+        # it. Run the binary by its path and `[NSBundle mainBundle]` answers a
+        # nil identifier, every line reads as it does on an ordinary leg, and
+        # the leg would pass while proving nothing.
+        #
+        # Nothing in tests/bundled.b starts a service, and that is deliberate:
+        # touching CoreLocation or CoreBluetooth for real puts a panel on the
+        # screen and waits, which on a machine with nobody sitting at it is a
+        # hang with no output. Every line there is a status read.
+        "$BEANSC" build "$root/tests/bundled.b" -o "$tmp/bundled.bin" >/dev/null
+        "$root/tools/bundle.sh" "$tmp/bundled.bin" CortadoGated org.beans-lang.cortado.gated "" \
+            NSBluetoothAlwaysUsageDescription="to show what cortado's Bluetooth service answers" \
+            NSLocationWhenInUseUsageDescription="to show what cortado's location service answers" \
+            NSCameraUsageDescription="to show what cortado's capture service answers" \
+            NSMicrophoneUsageDescription="to show what cortado's capture service answers" \
+            NSPhotoLibraryUsageDescription="to show what cortado's permission model answers" \
+            NSMotionUsageDescription="to show what cortado's permission model answers" \
+            >"$tmp/bundled.log" 2>&1 || {
+            echo "FAIL bundled:" >&2; cat "$tmp/bundled.log" >&2; exit 1
+        }
+        plutil -lint "$tmp/CortadoGated.app/Contents/Info.plist" >/dev/null
+        codesign --verify --strict "$tmp/CortadoGated.app"
+        open -W --stdout "$tmp/bundled.out" "$tmp/CortadoGated.app"
+        diff -u "$root/tests/bundled.out" "$tmp/bundled.out"
+        pass
+        echo "ok bundled: the gated four answer for real from inside a signed .app"
     else
         skip markup_mount "barista is not checked out at ../barista, so the markup example cannot be built"
     fi

@@ -38,6 +38,32 @@ static BOOL ctd_permission_declared(int32_t what) {
     return [[NSBundle mainBundle] objectForInfoDictionaryKey:key] != nil;
 }
 
+ctd_status ctd_permission_status(int32_t what, int32_t *out);
+
+// **The one guard every gated call goes through**, and the same one the Mac
+// has for the same reason: touching a privacy-gated framework without the
+// matching usage description does not fail, it ends the process. Three things
+// have to be true first — a bundle, a declared reason, and a permission that
+// is not already denied — and none of them touches a framework to decide.
+//
+// A phone is almost always bundled, which makes this look redundant there.
+// It is not: an application whose plist is missing a key it needs is exactly
+// as dead as a bare binary, and that is a build mistake rather than a rare one.
+ctd_status ctd_gated(int32_t what) {
+    if (!ctd_permission_is_known(what)) return CTD_ERR_RANGE;
+    if (!ctd_is_bundled()) return CTD_ERR_UNSUPPORTED;
+    if (!ctd_permission_declared(what)) return CTD_ERR_UNSUPPORTED;
+    int32_t allowed = CTD_ALLOW_UNAVAILABLE;
+    ctd_permission_status(what, &allowed);
+    // Undecided is allowed through: touching the framework is what makes the
+    // system ask, and a program that had to be granted before it could ask
+    // could never be granted.
+    if (allowed == CTD_ALLOW_DENIED || allowed == CTD_ALLOW_UNAVAILABLE) {
+        return CTD_ERR_UNSUPPORTED;
+    }
+    return CTD_OK;
+}
+
 ctd_status ctd_permission_status(int32_t what, int32_t *out) {
     if (!ctd_permission_is_known(what)) return CTD_ERR_RANGE;
     if (out) *out = CTD_ALLOW_UNAVAILABLE;

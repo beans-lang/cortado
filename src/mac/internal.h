@@ -266,6 +266,15 @@ void        ctd_surface_event(uint32_t kind, ctd_handle surface,
 
 // The platform's own watchers, up when the first handler for their kind
 // arrives and down with the last — which is what ctd_listen is for.
+// ------------------------------------------------------------ permission.m
+
+// The one guard every gated call goes through: a bundle, a declared reason,
+// and a permission that is not already denied. CTD_ERR_UNSUPPORTED for any of
+// the three, and it touches no framework to decide. See the note beside it.
+ctd_status  ctd_gated(int32_t what);
+
+// --------------------------------------------------------------- machine.m
+
 void        ctd_net_start(void);
 void        ctd_net_stop(void);
 void        ctd_power_start(void);
