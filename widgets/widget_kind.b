@@ -73,6 +73,14 @@ pub enum WidgetKind {
     /// A title you press to show or hide what is under it — and **not on every
     /// platform**: the Win32 common controls have no disclosure triangle.
     disclosure
+    /// One page at a time, with a strip of labels to choose it — and **not on
+    /// every platform**: UIKit has no tab view, only a tab bar *controller*
+    /// that owns the whole screen.
+    tab_view
+    /// Two panes with a handle between them — and **not on every platform**:
+    /// the Win32 common controls have no splitter, and UIKit's is a view
+    /// controller rather than a control.
+    split_view
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -104,6 +112,8 @@ pub enum WidgetKind {
             date_picker => host.W_DATE_PICKER,
             color_well => host.W_COLOR_WELL,
             disclosure => host.W_DISCLOSURE,
+            tab_view => host.W_TAB_VIEW,
+            split_view => host.W_SPLIT_VIEW,
         }
     }
 
@@ -137,6 +147,8 @@ pub enum WidgetKind {
             date_picker => "DatePicker",
             color_well => "ColorWell",
             disclosure => "Disclosure",
+            tab_view => "TabView",
+            split_view => "SplitView",
         }
     }
 
@@ -188,6 +200,8 @@ pub enum WidgetKind {
             date_picker => { return false }
             color_well => { return false }
             disclosure => { return false }
+            tab_view => { return false }
+            split_view => { return false }
         }
     }
 
@@ -254,6 +268,8 @@ pub enum WidgetKind {
         every.push(WidgetKind.date_picker)
         every.push(WidgetKind.color_well)
         every.push(WidgetKind.disclosure)
+        every.push(WidgetKind.tab_view)
+        every.push(WidgetKind.split_view)
         return move every
     }
 
@@ -285,6 +301,8 @@ pub enum WidgetKind {
         if code == host.W_DATE_PICKER { return some(WidgetKind.date_picker) }
         if code == host.W_COLOR_WELL { return some(WidgetKind.color_well) }
         if code == host.W_DISCLOSURE { return some(WidgetKind.disclosure) }
+        if code == host.W_TAB_VIEW { return some(WidgetKind.tab_view) }
+        if code == host.W_SPLIT_VIEW { return some(WidgetKind.split_view) }
         return none
     }
 }

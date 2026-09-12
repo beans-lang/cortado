@@ -91,6 +91,11 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_ANIMATING:
             // No spinner exists on this platform, so no handle can be one.
             return CTD_ERR_KIND;
+        case CTD_P_AXIS:
+            // Nor a split view. The kind refusal, because "no control anywhere
+            // has this property" is what a caller would be told on every other
+            // host too. CTD_P_DIVIDER is a real and is refused in ctd_set_real.
+            return CTD_ERR_KIND;
         case CTD_P_EXPANDED:
             // Nor a disclosure. The kind refusal rather than the platform
             // refusal, because "no control anywhere has this property" is what
@@ -121,6 +126,16 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_OK;
         }
         case CTD_P_SELECTED: {
+            // A tab view first: its selection is a page, and -1 means nothing
+            // to it because a tab control always shows one of its pages.
+            if (kind == CTD_W_TAB_VIEW) {
+                if (value < 0 ||
+                    value >= (int64_t)SendMessageW(view, TCM_GETITEMCOUNT, 0, 0))
+                    return CTD_ERR_RANGE;
+                SendMessageW(view, TCM_SETCURSEL, (WPARAM)value, 0);
+                ctd_tab_sync(widget);
+                return CTD_OK;
+            }
             if (kind != CTD_W_COMBO_BOX) return CTD_ERR_KIND;
             LRESULT count = SendMessageW(view, CB_GETCOUNT, 0, 0);
             if (value < 0) {
@@ -167,6 +182,7 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         }
         case CTD_P_ANIMATING:
             return CTD_ERR_KIND;
+        case CTD_P_AXIS:
         case CTD_P_EXPANDED:
             return CTD_ERR_KIND;
         case CTD_P_EDITABLE:
@@ -188,6 +204,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         }
         case CTD_P_SELECTED: {
+            if (kind == CTD_W_TAB_VIEW) {
+                value = (int64_t)SendMessageW(view, TCM_GETCURSEL, 0, 0);
+                break;
+            }
             if (kind != CTD_W_COMBO_BOX) return CTD_ERR_KIND;
             LRESULT chosen = SendMessageW(view, CB_GETCURSEL, 0, 0);
             value = chosen == CB_ERR ? -1 : (int64_t)chosen;
@@ -352,6 +372,9 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             }
             if (kind == CTD_W_STEPPER) return ctd_stepper_set(view, slot, value);
             return CTD_ERR_KIND;
+        case CTD_P_DIVIDER:
+            // No split view on this platform, so no handle can be one.
+            return CTD_ERR_KIND;
         case CTD_P_DATE: {
             if (!ctd_kind_has_date(kind)) return CTD_ERR_KIND;
             SYSTEMTIME when;
@@ -447,6 +470,8 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
                 value = ctd_stepper_value(view, slot);
             } else return CTD_ERR_KIND;
             break;
+        case CTD_P_DIVIDER:
+            return CTD_ERR_KIND;
         case CTD_P_DATE: {
             if (!ctd_kind_has_date(kind)) return CTD_ERR_KIND;
             SYSTEMTIME shown;

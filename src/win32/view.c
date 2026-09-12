@@ -32,7 +32,10 @@ static HWND ctd_container_of(ctd_handle handle) {
 // bottom, so the walk comes back reversed and is flipped here. Index 0 is the
 // bottom of the stack, the child drawn first, which is what `addSubview:` and
 // `gtk_fixed_put` also mean by "first".
-static int32_t ctd_children(HWND container, HWND *out, int32_t cap) {
+// Shared rather than static: pane.c needs the same walk to keep a tab
+// control's strip in step with its pages, and two walks that could disagree
+// about which windows are cortado's would be two answers to one question.
+int32_t ctd_own_children(HWND container, HWND *out, int32_t cap) {
     HWND stack[256];
     int32_t found = 0;
     for (HWND child = GetWindow(container, GW_CHILD); child;
@@ -62,9 +65,10 @@ ctd_status ctd_view_add_child(ctd_handle parent, ctd_handle child, int32_t index
     SetWindowPos(view, HWND_BOTTOM, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
+    ctd_tab_sync(parent);
     if (index >= 0) {
         HWND ours[256];
-        int32_t count = ctd_children(container, ours, 256);
+        int32_t count = ctd_own_children(container, ours, 256);
         if (index < count - 1) {
             // In front of the one it should precede: "after" in z-order terms
             // is the window just below it, and index 0 is the bottom.
@@ -81,7 +85,7 @@ ctd_status ctd_view_add_child(ctd_handle parent, ctd_handle child, int32_t index
     // is the rule every host here follows, and this is how Windows spells it.
     if (ctd_slot_kind(child) == CTD_W_RADIO_BUTTON) {
         HWND ours[256];
-        int32_t count = ctd_children(container, ours, 256);
+        int32_t count = ctd_own_children(container, ours, 256);
         int first = 1;
         for (int32_t i = 0; i < count; i++) {
             if (ctd_slot_kind(ctd_handle_of(ours[i])) != CTD_W_RADIO_BUTTON) continue;
@@ -104,6 +108,7 @@ ctd_status ctd_view_remove_child(ctd_handle parent, ctd_handle child) {
     // widget that was removed so it could be added somewhere else must survive
     // the trip.
     SetParent(view, g_limbo);
+    ctd_tab_sync(parent);
     return CTD_OK;
 }
 
@@ -112,7 +117,7 @@ ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to) {
     if (!ctd_slot(parent)) return CTD_ERR_STALE;
     if (!container) return CTD_ERR_KIND;
     HWND ours[256];
-    int32_t count = ctd_children(container, ours, 256);
+    int32_t count = ctd_own_children(container, ours, 256);
     if (from < 0 || from >= count || to < 0 || to >= count) return CTD_ERR_RANGE;
     if (from == to) return CTD_OK;
 
@@ -124,6 +129,7 @@ ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to) {
     HWND below = to == 0 ? HWND_BOTTOM : ours[to > from ? to : to - 1];
     SetWindowPos(moving, below, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    ctd_tab_sync(parent);
     return CTD_OK;
 }
 
@@ -132,7 +138,7 @@ ctd_status ctd_view_child_count(ctd_handle parent, int32_t *out) {
     HWND container = ctd_container_of(parent);
     // A control that cannot hold children has none, which is an answer and not
     // a refusal: a tree walk asks this of every node.
-    if (out) *out = container ? ctd_children(container, NULL, 0) : 0;
+    if (out) *out = container ? ctd_own_children(container, NULL, 0) : 0;
     return CTD_OK;
 }
 
@@ -140,7 +146,7 @@ ctd_handle ctd_view_child_at(ctd_handle parent, int32_t index) {
     HWND container = ctd_container_of(parent);
     if (!container) return 0;
     HWND ours[256];
-    int32_t count = ctd_children(container, ours, 256);
+    int32_t count = ctd_own_children(container, ours, 256);
     if (index < 0 || index >= count) return 0;
     return ctd_handle_of(ours[index]);
 }
@@ -172,7 +178,7 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
         if (content) {
             RECT bounds = { 0, 0, 0, 0 };
             HWND ours[256];
-            int32_t count = ctd_children(content, ours, 256);
+            int32_t count = ctd_own_children(content, ours, 256);
             for (int32_t i = 0; i < count; i++) {
                 RECT frame;
                 GetWindowRect(ours[i], &frame);

@@ -33,6 +33,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_LINK:
         case CTD_W_GROUP_BOX:
         case CTD_W_DATE_PICKER:
+        case CTD_W_TAB_VIEW:
             return 1;
         case CTD_W_SEGMENTED:
             // The common controls have no segmented control. A toolbar with
@@ -45,6 +46,12 @@ int32_t ctd_widget_supports(int32_t kind) {
             // a different shape, so this refuses rather than substituting one.
             return 0;
         case CTD_W_SWITCH:
+            return 0;
+        case CTD_W_SPLIT_VIEW:
+            // The common controls have no splitter. Every Windows application
+            // that has one draws it — a thin window with a resize cursor and
+            // its own mouse capture — which is cortado drawing a control, and
+            // is what ctd_widget_supports exists to refuse.
             return 0;
         case CTD_W_DISCLOSURE:
             // The common controls have no disclosure triangle. A group box
@@ -179,6 +186,10 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_COMBO_BOX:
             class_name = WC_COMBOBOXW;
             style |= CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP;
+            break;
+        case CTD_W_TAB_VIEW:
+            class_name = WC_TABCONTROLW;
+            style |= WS_CLIPCHILDREN | WS_TABSTOP;
             break;
         case CTD_W_DATE_PICKER:
             // A day, and DTS_SHORTDATEFORMAT is what says so: the control

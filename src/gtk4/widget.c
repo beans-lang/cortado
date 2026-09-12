@@ -36,6 +36,8 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_DATE_PICKER:
         case CTD_W_COLOR_WELL:
         case CTD_W_DISCLOSURE:
+        case CTD_W_TAB_VIEW:
+        case CTD_W_SPLIT_VIEW:
             return 1;
         case CTD_W_SEGMENTED:
             // GTK has no segmented control. A row of toggle buttons with the
@@ -116,6 +118,14 @@ ctd_handle ctd_widget_new(int32_t kind) {
             widget = frame;
             break;
         }
+        case CTD_W_TAB_VIEW:
+            widget = gtk_notebook_new();
+            break;
+        case CTD_W_SPLIT_VIEW:
+            // cortado names the axis the panes run along; GTK names it the
+            // same way. Side by side is horizontal, and is CTD_P_AXIS 0.
+            widget = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
+            break;
         case CTD_W_DISCLOSURE: {
             // The real one. GTK is the only platform of the four with a
             // disclosure container rather than a triangle to build one from.
@@ -246,6 +256,18 @@ ctd_handle ctd_widget_new(int32_t kind) {
             break;
         case CTD_W_DATE_PICKER:
             g_signal_connect(widget, "day-selected", G_CALLBACK(ctd_on_signal),
+                             (gpointer)(uintptr_t)handle);
+            break;
+        case CTD_W_SPLIT_VIEW:
+            g_signal_connect(widget, "notify::position",
+                             G_CALLBACK(ctd_on_notify),
+                             (gpointer)(uintptr_t)handle);
+            break;
+        case CTD_W_TAB_VIEW:
+            // The page a notebook is showing is a property as well, and
+            // "switch-page" fires before the page has changed.
+            g_signal_connect(widget, "notify::page",
+                             G_CALLBACK(ctd_on_notify),
                              (gpointer)(uintptr_t)handle);
             break;
         case CTD_W_DISCLOSURE:

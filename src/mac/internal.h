@@ -154,4 +154,18 @@ void ctd_chrome_of(id object, double *out);
 NSView *ctd_disclosure_new(void);
 void    ctd_disclosure_attach(ctd_handle handle, NSView *view);
 
+// The NSTabView a CTD_W_TAB_VIEW handle stands for; nil for anything else.
+NSTabView *ctd_tab_view(id object);
+void       ctd_tabs_attach(ctd_handle handle, NSView *view);
+// Which page a view is, or NSNotFound. A page is not a subview of the tab
+// view, so the ordinary child walk cannot find it.
+NSInteger  ctd_tab_index_of(NSTabView *tabs, NSView *page);
+ctd_status ctd_tab_add_page(NSTabView *tabs, NSView *page, int32_t index);
+
+// The NSSplitView a CTD_W_SPLIT_VIEW handle stands for; nil for anything else.
+NSSplitView *ctd_split_view(id object);
+NSView      *ctd_split_new(void);
+void         ctd_split_attach(ctd_handle handle, NSView *view);
+double       ctd_split_position(NSSplitView *split);
+
 #endif

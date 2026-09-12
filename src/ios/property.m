@@ -28,6 +28,10 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             [(UIView *)object setHidden:value ? YES : NO];
             return CTD_OK;
+        case CTD_P_AXIS:
+            // No kind this platform builds has one; the kind refusal is what
+            // every other host answers for a control that is not a split view.
+            return CTD_ERR_KIND;
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -159,6 +163,8 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             value = [(UIView *)object isHidden] ? 1 : 0;
             break;
+        case CTD_P_AXIS:
+            return CTD_ERR_KIND;
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = [(CortadoDisclosure *)object isOpen] ? 1 : 0;
@@ -306,6 +312,9 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
                 return CTD_OK;
             }
             return CTD_ERR_KIND;
+        case CTD_P_DIVIDER:
+            // Nor a divider. See ctd_widget_supports in widget.m.
+            return CTD_ERR_KIND;
         case CTD_P_DATE:
             if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             [(UIDatePicker *)object
@@ -378,6 +387,8 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
                 value = g_progress_value[slot];
             } else { return CTD_ERR_KIND; }
             break;
+        case CTD_P_DIVIDER:
+            return CTD_ERR_KIND;
         case CTD_P_DATE:
             if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = ctd_date_floor([[(UIDatePicker *)object date] timeIntervalSince1970]);

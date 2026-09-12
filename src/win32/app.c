@@ -56,6 +56,10 @@ void ctd_emit_control(ctd_handle target) {
             index = (int64_t)SendMessageW(window, CB_GETCURSEL, 0, 0);
             if (index == CB_ERR) index = -1;
             break;
+        case CTD_W_TAB_VIEW:
+            kind = CTD_EV_VALUE_CHANGED;
+            index = (int64_t)SendMessageW(window, TCM_GETCURSEL, 0, 0);
+            break;
         case CTD_W_DATE_PICKER: {
             kind = CTD_EV_VALUE_CHANGED;
             SYSTEMTIME shown;
@@ -174,6 +178,17 @@ static LRESULT ctd_common_message(HWND window, UINT message,
                     if (where && where[0] != L'\0') {
                         ShellExecuteW(NULL, L"open", where, NULL, NULL, SW_SHOWNORMAL);
                     }
+                    return 0;
+                }
+                break;
+            }
+            if (note->code == TCN_SELCHANGE) {
+                ctd_handle tabs = ctd_handle_of(note->hwndFrom);
+                if (tabs && ctd_slot_kind(tabs) == CTD_W_TAB_VIEW) {
+                    // Showing the right page is the application's job on this
+                    // platform — a tab control is the strip and nothing else.
+                    ctd_tab_sync(tabs);
+                    ctd_emit_control(tabs);
                     return 0;
                 }
                 break;

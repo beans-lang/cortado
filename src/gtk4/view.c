@@ -52,6 +52,16 @@ ctd_status ctd_view_add_child(ctd_handle parent, ctd_handle child, int32_t index
     gpointer owner = ctd_resolve(parent);
     gpointer view = ctd_resolve(child);
     if (!owner || !view) return CTD_ERR_STALE;
+    // A tab view's children are its pages, and a page is not a child of a
+    // GtkFixed: it belongs to the notebook, which shows and hides it as the
+    // selection moves. Asked first, because a notebook would otherwise fall
+    // through to `ctd_container_of` and be refused as holding nothing.
+    GtkNotebook *tabs = ctd_tab_view(owner);
+    if (tabs) return ctd_tab_add_page(tabs, GTK_WIDGET(view), index);
+    // A split view's two panes are children in the ABI's sense and children of
+    // no GtkFixed: GtkPaned holds one at each end and lays both out itself.
+    GtkPaned *split = ctd_split_view(owner);
+    if (split) return ctd_split_add_pane(split, GTK_WIDGET(view), index);
     GtkFixed *container = ctd_container_of(owner);
     if (!container) return CTD_ERR_KIND;
 
@@ -89,6 +99,21 @@ ctd_status ctd_view_remove_child(ctd_handle parent, ctd_handle child) {
     gpointer owner = ctd_resolve(parent);
     gpointer view = ctd_resolve(child);
     if (!owner || !view) return CTD_ERR_STALE;
+    GtkNotebook *tabs = ctd_tab_view(owner);
+    if (tabs) {
+        int at = ctd_tab_index_of(tabs, GTK_WIDGET(view));
+        if (at < 0) return CTD_ERR_RANGE;
+        gtk_notebook_remove_page(tabs, at);
+        return CTD_OK;
+    }
+    GtkPaned *split = ctd_split_view(owner);
+    if (split) {
+        int at = ctd_split_index_of(split, GTK_WIDGET(view));
+        if (at < 0) return CTD_ERR_RANGE;
+        if (at == 0) gtk_paned_set_start_child(split, NULL);
+        else         gtk_paned_set_end_child(split, NULL);
+        return CTD_OK;
+    }
     GtkFixed *container = ctd_container_of(owner);
     if (!container) return CTD_ERR_KIND;
     if (gtk_widget_get_parent(GTK_WIDGET(view)) != GTK_WIDGET(container))
@@ -102,6 +127,37 @@ ctd_status ctd_view_remove_child(ctd_handle parent, ctd_handle child) {
 ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to) {
     gpointer owner = ctd_resolve(parent);
     if (!owner) return CTD_ERR_STALE;
+    GtkPaned *split = ctd_split_view(owner);
+    if (split) {
+        GtkWidget *first = gtk_paned_get_start_child(split);
+        GtkWidget *last = gtk_paned_get_end_child(split);
+        if (from < 0 || from > 1 || to < 0 || to > 1) return CTD_ERR_RANGE;
+        if (!first || !last) return CTD_ERR_RANGE;
+        if (from == to) return CTD_OK;
+        // Both references are held by the handle table, so unparenting one
+        // cannot finalize it — which is the hazard ctd_view_move_child exists
+        // to keep out of the layer above.
+        g_object_ref(first);
+        g_object_ref(last);
+        gtk_paned_set_start_child(split, NULL);
+        gtk_paned_set_end_child(split, NULL);
+        gtk_paned_set_start_child(split, last);
+        gtk_paned_set_end_child(split, first);
+        g_object_unref(first);
+        g_object_unref(last);
+        return CTD_OK;
+    }
+    GtkNotebook *tabs = ctd_tab_view(owner);
+    if (tabs) {
+        int count = gtk_notebook_get_n_pages(tabs);
+        if (from < 0 || from >= count || to < 0 || to >= count) return CTD_ERR_RANGE;
+        if (from == to) return CTD_OK;
+        // GtkNotebook has a real reorder, which keeps the page's label and its
+        // widget together and never unparents anything — the hazard
+        // ctd_view_move_child exists to keep out of the layer above.
+        gtk_notebook_reorder_child(tabs, gtk_notebook_get_nth_page(tabs, from), to);
+        return CTD_OK;
+    }
     GtkFixed *container = ctd_container_of(owner);
     if (!container) return CTD_ERR_KIND;
     GPtrArray *ours = ctd_children(container);
@@ -133,6 +189,17 @@ ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to) {
 ctd_status ctd_view_child_count(ctd_handle parent, int32_t *out) {
     gpointer owner = ctd_resolve(parent);
     if (!owner) return CTD_ERR_STALE;
+    GtkNotebook *tabs = ctd_tab_view(owner);
+    if (tabs) {
+        if (out) *out = gtk_notebook_get_n_pages(tabs);
+        return CTD_OK;
+    }
+    GtkPaned *split = ctd_split_view(owner);
+    if (split) {
+        if (out) *out = (gtk_paned_get_start_child(split) ? 1 : 0) +
+                        (gtk_paned_get_end_child(split) ? 1 : 0);
+        return CTD_OK;
+    }
     GtkFixed *container = ctd_container_of(owner);
     if (!container) {
         // A control that cannot hold children has none, which is an answer and
@@ -149,6 +216,17 @@ ctd_status ctd_view_child_count(ctd_handle parent, int32_t *out) {
 ctd_handle ctd_view_child_at(ctd_handle parent, int32_t index) {
     gpointer owner = ctd_resolve(parent);
     if (!owner) return 0;
+    GtkNotebook *tabs = ctd_tab_view(owner);
+    if (tabs) {
+        if (index < 0 || index >= gtk_notebook_get_n_pages(tabs)) return 0;
+        return ctd_handle_of(gtk_notebook_get_nth_page(tabs, index));
+    }
+    GtkPaned *split = ctd_split_view(owner);
+    if (split) {
+        GtkWidget *pane = index == 0 ? gtk_paned_get_start_child(split)
+                        : index == 1 ? gtk_paned_get_end_child(split) : NULL;
+        return pane ? ctd_handle_of(pane) : 0;
+    }
     GtkFixed *container = ctd_container_of(owner);
     if (!container) return 0;
     GPtrArray *ours = ctd_children(container);
@@ -178,6 +256,10 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
     // belongs to the parent's layout and size is a request the child makes.
     // The request is a *minimum* — GTK will not allocate a widget smaller than
     // it says it needs — which is why `tests/roles.out` carries no frames.
+    // A split view's panes are the platform's to place: GtkPaned lays both out
+    // from the divider's position, and a size request on one would fight it.
+    GtkWidget *owner_widget = gtk_widget_get_parent(GTK_WIDGET(view));
+    if (owner_widget && GTK_IS_PANED(owner_widget)) return CTD_OK;
     gtk_widget_set_size_request(GTK_WIDGET(view), (int)width, (int)height);
     GtkWidget *parent = gtk_widget_get_parent(GTK_WIDGET(view));
     if (parent && GTK_IS_FIXED(parent)) {

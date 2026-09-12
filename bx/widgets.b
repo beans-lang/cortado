@@ -57,6 +57,8 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "DatePicker" { return true }
     if tag == "ColorWell" { return true }
     if tag == "Disclosure" { return true }
+    if tag == "TabView" { return true }
+    if tag == "SplitView" { return true }
     return false
 }
 
@@ -158,8 +160,8 @@ pub fn widget_tags() -> List<string> {
             "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label",
             "LevelIndicator", "Link",
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",
-            "SearchField", "Segmented", "Separator", "Slider", "Spinner", "Stepper",
-            "Switch", "Table", "TextArea", "TextField", "VFlex", "VStack"]
+            "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper",
+            "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack"]
 }
 
 /// Whether a tag is spelled like an identifier.

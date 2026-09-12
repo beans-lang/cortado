@@ -41,6 +41,19 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_COLOR_WELL:
         case CTD_W_DISCLOSURE:
             return 1;
+        case CTD_W_SPLIT_VIEW:
+            // UIKit's split view is a view *controller* as well, and one that
+            // owns the screen and changes shape with the device. There is no
+            // draggable divider on a phone at all.
+            return 0;
+        case CTD_W_TAB_VIEW:
+            // UIKit has no tab *view*. UITabBarController is a view controller
+            // that owns the whole screen — not a control that goes into a
+            // layout — and a UISegmentedControl with a container under it
+            // would be cortado assembling a substitute out of two kinds the
+            // caller already has, which is what ctd_widget_supports exists to
+            // refuse.
+            return 0;
         case CTD_W_GROUP_BOX:
             // UIKit has nothing that means "a titled frame around a group".
             // A UIView with a border and a label on top would be cortado

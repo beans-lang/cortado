@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 16
+#define CTD_ABI_VERSION 18
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -333,6 +333,37 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
  * renders no children while it is shut, which in markup is an $if and in code
  * is not adding them. */
 #define CTD_W_DISCLOSURE   26
+/* One page at a time, with a strip of labels to choose it.
+ *
+ * **Its children are its pages**, one each, in order — so the tree a program
+ * builds and the tree a screen reader walks are the same tree, and a page is
+ * a container like any other. The labels are not children: they are set by
+ * index with ctd_tab_set_label, the same shape a table's column titles use,
+ * because a label is a property of the page and not a control of its own.
+ * CTD_P_SELECTED is which page is showing.
+ *
+ * Not on every platform. UIKit has no tab *view*: UITabBarController is a view
+ * controller that owns the whole screen, not a control that goes in a layout,
+ * and a segmented control with a container under it would be cortado
+ * assembling a substitute out of two other kinds the caller already has. */
+#define CTD_W_TAB_VIEW     27
+/* Two panes with a handle between them that the user can drag.
+ *
+ * Exactly two children, and the platform is what positions them: NSSplitView
+ * and GtkPaned both lay their own panes out from one number, and neither can
+ * be talked out of it. So cortado does not set a pane's frame — it sets
+ * CTD_P_DIVIDER and reads the same number back, and the panes' *contents* are
+ * laid out by the solver inside the sizes that number implies.
+ *
+ * CTD_P_AXIS says which way: 0 for side by side, 1 for stacked. The divider's
+ * own thickness is reported through ctd_view_content_inset, on the axis it
+ * eats — so a layout that already asks a container what it keeps for itself
+ * needs nothing new to account for it.
+ *
+ * Not on every platform. The Win32 common controls have no splitter at all —
+ * every Windows application draws its own — and UIKit's split view is a view
+ * *controller* that owns the screen rather than a control in a layout. */
+#define CTD_W_SPLIT_VIEW   28
 
 /* Whether this host can build a control of this kind.
  *
@@ -533,6 +564,15 @@ ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset);
 #define CTD_P_COLOR       16
 /* Whether a disclosure is showing what is under it. 0 shut, 1 open. */
 #define CTD_P_EXPANDED    17
+/* Which way a split view divides: 0 side by side, 1 stacked. */
+#define CTD_P_AXIS        18
+/* Where a split view's divider sits, in points from the leading edge.
+ *
+ * A real, because it is a coordinate. Out of the control's own bounds is
+ * CTD_ERR_RANGE rather than a clamp, for the reason CTD_P_OPACITY refuses 1.5:
+ * a caller who computed it has a bug, and quietly moving the divider somewhere
+ * else hides it. */
+#define CTD_P_DIVIDER     19
 
 /* **Which widgets carry CTD_P_ENABLED**, because leaving it unsaid cost four
  * hosts four different answers.
@@ -1195,6 +1235,24 @@ ctd_status ctd_font_size(int32_t role, double *out);
 ctd_status ctd_items_clear(ctd_handle widget);
 ctd_status ctd_items_add(ctd_handle widget, const char *utf8, int32_t len);
 ctd_status ctd_items_count(ctd_handle widget, int32_t *out);
+
+/* ---- tabs -------------------------------------------------------------- */
+
+/* The words on a tab view's Nth tab.
+ *
+ * By index rather than through the child, because a label belongs to the page
+ * and not to the control on it: a page is an ordinary container, and
+ * containers have no text on any platform cortado targets. The same shape as
+ * ctd_table_column_title, for the same reason.
+ *
+ * An index past the last page is CTD_ERR_RANGE. Setting a label does not
+ * create a page: a tab view has exactly as many tabs as it has children, and
+ * adding a child is what adds a tab. */
+ctd_status ctd_tab_set_label(ctd_handle widget, int32_t index,
+                             const char *utf8, int32_t len);
+/* Writes at most `cap` bytes and answers the byte length the label needs —
+ * the two-call shape every text reader in this header uses. */
+int32_t    ctd_tab_label(ctd_handle widget, int32_t index, char *out, int32_t cap);
 /* Same contract as ctd_get_text: answers the byte length, writes at most cap. */
 int32_t    ctd_items_at(ctd_handle widget, int32_t index, char *out, int32_t cap);
 

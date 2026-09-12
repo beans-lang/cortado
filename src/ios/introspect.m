@@ -58,6 +58,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_DATE_PICKER:  role = @"spinbutton";    break;
         case CTD_W_COLOR_WELL:   role = @"button";        break;
         case CTD_W_DISCLOSURE:   role = @"group";         break;
+        case CTD_W_TAB_VIEW:     role = @"tablist";       break;
+        case CTD_W_SPLIT_VIEW:   role = @"separator";     break;
         default:                 role = @"group";       break;
     }
     return ctd_copy_out(role, out, cap);

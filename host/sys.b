@@ -116,6 +116,8 @@ pub extern "C" fn ctd_font_size(role: i32, out: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_items_clear(widget: u64) -> i32
 pub extern "C" fn ctd_items_add(widget: u64, utf8: RawPtr<i8>, len: i32) -> i32
 pub extern "C" fn ctd_items_count(widget: u64, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_tab_set_label(widget: u64, index: i32, utf8: RawPtr<i8>, len: i32) -> i32
+pub extern "C" fn ctd_tab_label(widget: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_items_at(widget: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_set_table_source(source: fn(RawPtr<u8>, u64, i32, i32, RawPtr<i8>, i32) -> i32, context: RawPtr<u8>) -> i32
 pub extern "C" fn ctd_table_columns(table: u64, count: i32) -> i32

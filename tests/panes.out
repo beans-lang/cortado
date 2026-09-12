@@ -6,15 +6,16 @@
   and only a disclosure can be opened: true
   a group box keeps a border, and more of it where the title is: true
 -- a disclosure --
-  every platform cortado builds for has one: true
-  its header is at the top and nowhere else: true
-  its text is the title: true
-  it opens and shuts: true
-  and stays shut: true
-  and opens again: true
-  shutting it does not change what it keeps: true
-  it holds children: true
-  a user shutting it raises value_changed: true
-  carrying the state it is now in: true
-  and the program's own write raises nothing: true
+  its header is chrome at the top and nothing else: true
+  it holds children like any other box: true
+  a user opens it loudly and a program quietly: true
+-- a tab view --
+  its children are its pages, and its labels are not: true
+  a page that moves takes its label with it: true
+  a page that is not there is refused, and so is none at all: true
+  a user choosing a tab raises the page it chose: true
+-- a split view --
+  its handle keeps room on the axis it sits on: true
+  a third pane is refused, and so is a handle off the control: true
+  a user dragging the handle raises where it landed: true
 drove=true

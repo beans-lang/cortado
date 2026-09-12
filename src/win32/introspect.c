@@ -57,6 +57,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_DATE_PICKER:  role = "spinbutton";    break;
         case CTD_W_COLOR_WELL:   role = "button";        break;
         case CTD_W_DISCLOSURE:   role = "group";         break;
+        case CTD_W_TAB_VIEW:     role = "tablist";       break;
+        case CTD_W_SPLIT_VIEW:   role = "separator";     break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -97,6 +99,17 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     if (!view) return CTD_ERR_STALE;
     ctd_handle target = widget;
     switch (ctd_slot_kind(widget)) {
+        case CTD_W_TAB_VIEW: {
+            if (index < 0 || index >= (int64_t)SendMessageW(view, TCM_GETITEMCOUNT, 0, 0))
+                return CTD_ERR_RANGE;
+            SendMessageW(view, TCM_SETCURSEL, (WPARAM)index, 0);
+            // A tab control told to change by a message does not notify its
+            // parent — only a click does — so the notification that click
+            // would have sent is sent here, on the control's behalf.
+            ctd_tab_sync(widget);
+            ctd_emit_control(widget);
+            return CTD_OK;
+        }
         case CTD_W_DISCLOSURE:
             // Unreachable: no handle on this platform is one. Written down so
             // the switch names every kind cortado has rather than leaving one

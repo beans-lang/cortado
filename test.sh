@@ -530,6 +530,27 @@ for target in x86_64-pc-windows-gnu aarch64-unknown-linux-gnu; do
 done
 echo "ok cross-target check: windows-gnu, linux-gnu"
 
+# ------------------------------------------------------------- the Windows host
+#
+# The fourth implementation of the header, compiled. It is not *run* here —
+# there is no Windows machine under this script and the leg does not pretend
+# otherwise — but it is linked into a real PE32+ executable against the real
+# Win32 host, which is the difference between "the Windows port exists" and
+# "the Windows port was written".
+#
+# **This leg exists because the Windows host silently stopped compiling.**
+# `tools/win32.sh` was written, worked, and was never wired into the gate;
+# some later commit put a call to `ctd_resolve` into `src/win32/gpu.c`, which
+# is a macOS-host function that does not exist there, and nothing noticed for
+# as long as nobody typed the script's name by hand. A host nothing builds is
+# a host that is already broken and has not been told yet.
+if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+    skip win32 "no mingw-w64 on the path — 'brew install mingw-w64' to build the Windows host"
+else
+    bash "$root/tools/win32.sh"
+    pass
+fi
+
 # ------------------------------------------------------------------ native leg
 if [[ $native -eq 1 ]]; then
     for name in "${portable[@]}"; do
@@ -552,7 +573,7 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # display, and a gate must not need one. An example that is not built is an
     # example that goes stale, and the first person to find out is whoever
     # copied it.
-    for example in hello clock shader canvas signin brew ledger finder about settings permissions booking outline; do
+    for example in hello clock shader canvas signin brew ledger finder about settings permissions booking outline notebook panes; do
         "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
         pass
     done

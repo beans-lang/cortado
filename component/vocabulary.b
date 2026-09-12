@@ -52,6 +52,8 @@ pub class Vocabulary {
         if tag == "DatePicker" { return some(widgets.WidgetKind.date_picker) }
         if tag == "ColorWell" { return some(widgets.WidgetKind.color_well) }
         if tag == "Disclosure" { return some(widgets.WidgetKind.disclosure) }
+        if tag == "TabView" { return some(widgets.WidgetKind.tab_view) }
+        if tag == "SplitView" { return some(widgets.WidgetKind.split_view) }
         return none
     }
 

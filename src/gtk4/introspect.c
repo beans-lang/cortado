@@ -51,6 +51,8 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_DATE_PICKER:  role = "spinbutton";    break;
         case CTD_W_COLOR_WELL:   role = "button";        break;
         case CTD_W_DISCLOSURE:   role = "group";         break;
+        case CTD_W_TAB_VIEW:     role = "tablist";       break;
+        case CTD_W_SPLIT_VIEW:   role = "separator";     break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);
@@ -86,6 +88,19 @@ ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value
     // The setters below are the ordinary ones, and the signal they raise is
     // the platform's own — GTK notifies on a property change whoever made it,
     // which is exactly what "as a user would" means here.
+    if (GTK_IS_PANED(object)) {
+        // The ordinary setter, and the property notification GTK raises is
+        // the same one a drag raises.
+        if (value < 0.0) return CTD_ERR_RANGE;
+        gtk_paned_set_position(GTK_PANED(object), (int)value);
+        return CTD_OK;
+    }
+    if (GTK_IS_NOTEBOOK(object)) {
+        GtkNotebook *tabs = GTK_NOTEBOOK(object);
+        if (index < 0 || index >= gtk_notebook_get_n_pages(tabs)) return CTD_ERR_RANGE;
+        gtk_notebook_set_current_page(tabs, (int)index);
+        return CTD_OK;
+    }
     if (GTK_IS_EXPANDER(object)) {
         if (index < 0 || index > 1) return CTD_ERR_RANGE;
         // The ordinary setter, and the signal it raises is GTK's own: a

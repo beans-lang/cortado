@@ -176,7 +176,27 @@ static inline int ctd_kind_holds_children(int32_t kind) {
         || kind == CTD_W_SCROLL_VIEW
         || kind == CTD_W_GROUP_BOX
         || kind == CTD_W_DISCLOSURE
+        || kind == CTD_W_TAB_VIEW
+        || kind == CTD_W_SPLIT_VIEW
         || kind == CTD_W_CANVAS;
+}
+
+/* Whether a kind divides its children with a handle the user can drag.
+ *
+ * Only a split view, and it is the one kind whose children the *platform*
+ * positions: NSSplitView and GtkPaned both lay their panes out from the
+ * divider's position and neither can be talked out of it. */
+static inline int ctd_kind_has_divider(int32_t kind) {
+    return kind == CTD_W_SPLIT_VIEW;
+}
+
+/* Whether a kind holds its children as pages, one showing at a time.
+ *
+ * The distinction matters to every host's add-a-child path: a page is not a
+ * subview of the control, it is a page *of* it, and the platform owns where it
+ * goes and whether it is on screen at all. */
+static inline int ctd_kind_holds_pages(int32_t kind) {
+    return kind == CTD_W_TAB_VIEW;
 }
 
 /* Whether a kind carries somewhere to go. Only a link. */

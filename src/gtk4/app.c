@@ -64,6 +64,14 @@ static void ctd_emit_control(ctd_handle target) {
             kind = CTD_EV_VALUE_CHANGED;
             index = gtk_expander_get_expanded(GTK_EXPANDER(object)) ? 1 : 0;
             break;
+        case CTD_W_TAB_VIEW:
+            kind = CTD_EV_VALUE_CHANGED;
+            index = (int64_t)gtk_notebook_get_current_page(GTK_NOTEBOOK(object));
+            break;
+        case CTD_W_SPLIT_VIEW:
+            kind = CTD_EV_VALUE_CHANGED;
+            index = (int64_t)gtk_paned_get_position(GTK_PANED(object));
+            break;
         case CTD_W_DATE_PICKER:
             kind = CTD_EV_VALUE_CHANGED;
             index = (int64_t)ctd_calendar_seconds(GTK_CALENDAR(object));

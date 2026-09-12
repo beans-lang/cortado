@@ -184,6 +184,14 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             [(NSView *)object setHidden:value ? YES : NO];
             return CTD_OK;
+        case CTD_P_AXIS: {
+            if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value > 1) return CTD_ERR_RANGE;
+            // cortado names the axis the panes run along; AppKit names the
+            // divider. Side by side is `vertical` here and 0 there.
+            [(NSSplitView *)object setVertical:value == 0 ? YES : NO];
+            return CTD_OK;
+        }
         case CTD_P_EXPANDED: {
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -238,6 +246,16 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_OK;
         }
         case CTD_P_SELECTED: {
+            // A tab view first, because its selection is a page rather than a
+            // row of a menu, and -1 means nothing to it: a tab view always
+            // shows one of its pages.
+            NSTabView *tabs = ctd_tab_view(object);
+            if (tabs) {
+                if (value < 0 || value >= (int64_t)[tabs numberOfTabViewItems])
+                    return CTD_ERR_RANGE;
+                [tabs selectTabViewItemAtIndex:(NSInteger)value];
+                return CTD_OK;
+            }
             if ([object isKindOfClass:[NSSegmentedControl class]]) {
                 NSSegmentedControl *bar = (NSSegmentedControl *)object;
                 if (value < 0) { [bar setSelectedSegment:-1]; return CTD_OK; }
@@ -290,6 +308,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_HIDDEN:
             value = [(NSView *)object isHidden] ? 1 : 0;
             break;
+        case CTD_P_AXIS:
+            if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = [(NSSplitView *)object isVertical] ? 0 : 1;
+            break;
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             // The triangle, not a copy kept beside it: the user can turn it
@@ -324,6 +346,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = [(NSTextField *)object isEditable] ? 1 : 0;
             break;
         case CTD_P_SELECTED:
+            if ([object isKindOfClass:[NSTabView class]]) {
+                NSTabView *tabs = (NSTabView *)object;
+                NSTabViewItem *shown = [tabs selectedTabViewItem];
+                value = shown ? (int64_t)[tabs indexOfTabViewItem:shown] : -1;
+                break;
+            }
             if ([object isKindOfClass:[NSSegmentedControl class]]) {
                 value = (int64_t)[(NSSegmentedControl *)object selectedSegment];
                 break;
@@ -412,6 +440,16 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             [ranged setDoubleValue:value];
             return CTD_OK;
         }
+        case CTD_P_DIVIDER: {
+            if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSSplitView *split = (NSSplitView *)object;
+            if ([[split subviews] count] < 2) return CTD_ERR_RANGE;
+            NSRect own = [split bounds];
+            double along = [split isVertical] ? own.size.width : own.size.height;
+            if (value < 0.0 || value > along) return CTD_ERR_RANGE;
+            [split setPosition:value ofDividerAtIndex:0];
+            return CTD_OK;
+        }
         case CTD_P_DATE: {
             if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             [(NSDatePicker *)object
@@ -476,6 +514,10 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             value = [ranged doubleValue];
             break;
         }
+        case CTD_P_DIVIDER:
+            if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = ctd_split_position((NSSplitView *)object);
+            break;
         case CTD_P_DATE:
             if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             // Floored again on the way out, not trusted from the way in: a

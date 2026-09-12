@@ -64,6 +64,8 @@ fn carries_a_number(kind: widgets.WidgetKind) -> bool {
         date_picker => { return false }
         color_well => { return false }
         disclosure => { return false }
+        tab_view => { return false }
+        split_view => { return false }
     }
 }
 
@@ -98,6 +100,8 @@ fn takes_a_step(kind: widgets.WidgetKind) -> bool {
         date_picker => { return false }
         color_well => { return false }
         disclosure => { return false }
+        tab_view => { return false }
+        split_view => { return false }
     }
 }
 
@@ -130,6 +134,8 @@ fn reads_its_step(kind: widgets.WidgetKind) -> bool {
         date_picker => { return false }
         color_well => { return false }
         disclosure => { return false }
+        tab_view => { return false }
+        split_view => { return false }
     }
 }
 
@@ -165,6 +171,8 @@ fn moved_by_a_user(kind: widgets.WidgetKind) -> bool {
         date_picker => { return false }
         color_well => { return false }
         disclosure => { return false }
+        tab_view => { return false }
+        split_view => { return false }
     }
 }
 

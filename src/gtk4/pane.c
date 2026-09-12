@@ -57,11 +57,43 @@ static void ctd_pane_reference(int *header, int *frame_x, int *frame_y) {
     if (frame_y) *frame_y = known_y;
 }
 
+// The height a GtkNotebook takes for its strip of tabs, measured the same way
+// and for the same reason: an empty page makes the measurement the chrome.
+static void ctd_notebook_reference(int *header) {
+    static int known = 0;
+    static int asked = 0;
+    if (!asked) {
+        int least = 0, natural = 0;
+        GtkWidget *book = gtk_notebook_new();
+        GtkWidget *empty = gtk_fixed_new();
+        gtk_notebook_append_page(GTK_NOTEBOOK(book), empty, gtk_label_new("X"));
+        gtk_widget_measure(book, GTK_ORIENTATION_VERTICAL, -1,
+                           &least, &natural, NULL, NULL);
+        known = least;
+        g_object_ref_sink(book);
+        g_object_unref(book);
+        asked = 1;
+    }
+    if (header) *header = known;
+}
+
+void ctd_split_chrome(gpointer object, double *out);
+
 void ctd_chrome_of(gpointer object, double *out) {
     out[0] = 0.0; out[1] = 0.0; out[2] = 0.0; out[3] = 0.0;
     if (GTK_IS_EXPANDER(object)) {
         int header = 0;
         ctd_pane_reference(&header, NULL, NULL);
+        out[1] = (double)header;
+        return;
+    }
+    if (GTK_IS_PANED(object)) {
+        ctd_split_chrome(object, out);
+        return;
+    }
+    if (GTK_IS_NOTEBOOK(object)) {
+        int header = 0;
+        ctd_notebook_reference(&header);
         out[1] = (double)header;
         return;
     }
@@ -94,4 +126,126 @@ ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset) {
         out_inset[3] = chrome[3];
     }
     return CTD_OK;
+}
+
+// ------------------------------------------------------------------ tab views
+//
+// GtkNotebook, and the same model as every other host: a tab view's children
+// are its pages, one each, in order. A page is not a child of a GtkFixed here
+// either — it is a page *of* the notebook, which is what
+// `ctd_kind_holds_pages` names.
+
+GtkNotebook *ctd_tab_view(gpointer object) {
+    if (GTK_IS_NOTEBOOK(object)) return GTK_NOTEBOOK(object);
+    return NULL;
+}
+
+int ctd_tab_index_of(GtkNotebook *tabs, GtkWidget *page) {
+    int count = gtk_notebook_get_n_pages(tabs);
+    for (int at = 0; at < count; at++) {
+        if (gtk_notebook_get_nth_page(tabs, at) == page) return at;
+    }
+    return -1;
+}
+
+ctd_status ctd_tab_add_page(GtkNotebook *tabs, GtkWidget *page, int32_t index) {
+    GtkWidget *label = gtk_label_new("");
+    int count = gtk_notebook_get_n_pages(tabs);
+    if (index < 0 || index >= count) {
+        gtk_notebook_append_page(tabs, page, label);
+    } else {
+        gtk_notebook_insert_page(tabs, page, label, index);
+    }
+    return CTD_OK;
+}
+
+ctd_status ctd_tab_set_label(ctd_handle widget, int32_t index,
+                             const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
+    gpointer object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    GtkNotebook *tabs = ctd_tab_view(object);
+    if (!tabs) return CTD_ERR_KIND;
+    if (index < 0 || index >= gtk_notebook_get_n_pages(tabs)) return CTD_ERR_RANGE;
+    char *text = ctd_dup(utf8, len);
+    gtk_notebook_set_tab_label_text(tabs, gtk_notebook_get_nth_page(tabs, index), text);
+    g_free(text);
+    return CTD_OK;
+}
+
+int32_t ctd_tab_label(ctd_handle widget, int32_t index, char *out, int32_t cap) {
+    gpointer object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    GtkNotebook *tabs = ctd_tab_view(object);
+    if (!tabs) return CTD_ERR_KIND;
+    if (index < 0 || index >= gtk_notebook_get_n_pages(tabs)) return CTD_ERR_RANGE;
+    const char *words =
+        gtk_notebook_get_tab_label_text(tabs, gtk_notebook_get_nth_page(tabs, index));
+    return ctd_copy_out(words ? words : "", out, cap);
+}
+
+// ---------------------------------------------------------------- split views
+//
+// GtkPaned, which takes exactly two children and lays them out from one
+// number — the same arrangement NSSplitView has, and the reason a split view's
+// panes are the platform's to place rather than the solver's.
+
+GtkPaned *ctd_split_view(gpointer object) {
+    if (GTK_IS_PANED(object)) return GTK_PANED(object);
+    return NULL;
+}
+
+// Which pane a child is: 0, 1, or -1 for neither.
+int ctd_split_index_of(GtkPaned *split, GtkWidget *pane) {
+    if (gtk_paned_get_start_child(split) == pane) return 0;
+    if (gtk_paned_get_end_child(split) == pane) return 1;
+    return -1;
+}
+
+ctd_status ctd_split_add_pane(GtkPaned *split, GtkWidget *pane, int32_t index) {
+    int filled = (gtk_paned_get_start_child(split) ? 1 : 0) +
+                 (gtk_paned_get_end_child(split) ? 1 : 0);
+    if (filled >= 2) return CTD_ERR_RANGE;
+    // Index past the end appends, the same as every other container here. The
+    // first child added is the first pane whatever index says, because there
+    // is nowhere else for it to go.
+    if (!gtk_paned_get_start_child(split) && (index <= 0 || filled == 0)) {
+        gtk_paned_set_start_child(split, pane);
+        return CTD_OK;
+    }
+    if (!gtk_paned_get_end_child(split)) {
+        gtk_paned_set_end_child(split, pane);
+        return CTD_OK;
+    }
+    gtk_paned_set_start_child(split, pane);
+    return CTD_OK;
+}
+
+// The handle's own thickness, from the widget rather than from a number here.
+static int ctd_paned_handle(void) {
+    static int known = 0;
+    static int asked = 0;
+    if (!asked) {
+        int least = 0, natural = 0;
+        GtkWidget *split = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
+        gtk_paned_set_start_child(GTK_PANED(split), gtk_fixed_new());
+        gtk_paned_set_end_child(GTK_PANED(split), gtk_fixed_new());
+        gtk_widget_measure(split, GTK_ORIENTATION_HORIZONTAL, -1,
+                           &least, &natural, NULL, NULL);
+        known = least;
+        g_object_ref_sink(split);
+        g_object_unref(split);
+        asked = 1;
+    }
+    return known;
+}
+
+void ctd_split_chrome(gpointer object, double *out) {
+    GtkPaned *split = GTK_PANED(object);
+    if (gtk_orientable_get_orientation(GTK_ORIENTABLE(split)) ==
+        GTK_ORIENTATION_HORIZONTAL) {
+        out[2] = (double)ctd_paned_handle();
+    } else {
+        out[3] = (double)ctd_paned_handle();
+    }
 }

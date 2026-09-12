@@ -104,6 +104,20 @@ void ctd_tag(GtkWidget *widget);
 // ctd_view_content_inset in ../cortado_host.h.
 void ctd_chrome_of(gpointer object, double *out);
 
+// The GtkNotebook a CTD_W_TAB_VIEW handle stands for; NULL for anything else.
+// A tab view's children are its pages, so the ordinary child walk cannot find
+// them and every path that adds, removes, counts or names one asks here first.
+GtkNotebook *ctd_tab_view(gpointer object);
+int          ctd_tab_index_of(GtkNotebook *tabs, GtkWidget *page);
+ctd_status   ctd_tab_add_page(GtkNotebook *tabs, GtkWidget *page, int32_t index);
+
+// The GtkPaned a CTD_W_SPLIT_VIEW handle stands for; NULL for anything else.
+// Its two panes are children in the ABI's sense and are not children of a
+// GtkFixed, so the same paths that special-case a notebook special-case this.
+GtkPaned    *ctd_split_view(gpointer object);
+int          ctd_split_index_of(GtkPaned *split, GtkWidget *pane);
+ctd_status   ctd_split_add_pane(GtkPaned *split, GtkWidget *pane, int32_t index);
+
 // A GtkCalendar's day as CTD_P_DATE carries it, and the way back.
 //
 // Only the year, month and day cross: GtkCalendar's GDateTime is in the local

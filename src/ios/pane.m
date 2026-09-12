@@ -171,3 +171,20 @@ ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset) {
     }
     return CTD_OK;
 }
+
+// ------------------------------------------------------------------ tab views
+//
+// There are none on this platform — see ctd_widget_supports in widget.m — so
+// both entry points refuse by kind. Written out rather than left to a default,
+// because "this platform has no such control" is an answer a caller can act on
+// and a missing symbol is not.
+ctd_status ctd_tab_set_label(ctd_handle widget, int32_t index,
+                             const char *utf8, int32_t len) {
+    (void)index; (void)utf8; (void)len;
+    return ctd_resolve(widget) ? CTD_ERR_KIND : CTD_ERR_STALE;
+}
+
+int32_t ctd_tab_label(ctd_handle widget, int32_t index, char *out, int32_t cap) {
+    (void)index; (void)out; (void)cap;
+    return ctd_resolve(widget) ? CTD_ERR_KIND : CTD_ERR_STALE;
+}

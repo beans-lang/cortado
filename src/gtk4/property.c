@@ -57,6 +57,12 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             gtk_widget_set_visible(GTK_WIDGET(object), value ? FALSE : TRUE);
             return CTD_OK;
+        case CTD_P_AXIS:
+            if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value > 1) return CTD_ERR_RANGE;
+            gtk_orientable_set_orientation(GTK_ORIENTABLE(object),
+                value == 0 ? GTK_ORIENTATION_HORIZONTAL : GTK_ORIENTATION_VERTICAL);
+            return CTD_OK;
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -116,6 +122,14 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_ERR_KIND;
         }
         case CTD_P_SELECTED: {
+            // A tab view first: its selection is a page, and -1 means nothing
+            // to it because a notebook always shows one of its pages.
+            if (GTK_IS_NOTEBOOK(object)) {
+                if (value < 0 || value >= gtk_notebook_get_n_pages(GTK_NOTEBOOK(object)))
+                    return CTD_ERR_RANGE;
+                gtk_notebook_set_current_page(GTK_NOTEBOOK(object), (int)value);
+                return CTD_OK;
+            }
             if (!GTK_IS_DROP_DOWN(object)) return CTD_ERR_KIND;
             GtkDropDown *menu = GTK_DROP_DOWN(object);
             GListModel *items = gtk_drop_down_get_model(menu);
@@ -162,6 +176,11 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_HIDDEN:
             value = gtk_widget_get_visible(GTK_WIDGET(object)) ? 0 : 1;
             break;
+        case CTD_P_AXIS:
+            if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = gtk_orientable_get_orientation(GTK_ORIENTABLE(object)) ==
+                    GTK_ORIENTATION_HORIZONTAL ? 0 : 1;
+            break;
         case CTD_P_EXPANDED:
             if (!ctd_kind_has_expanded(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = gtk_expander_get_expanded(GTK_EXPANDER(object)) ? 1 : 0;
@@ -195,6 +214,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         }
         case CTD_P_SELECTED: {
+            if (GTK_IS_NOTEBOOK(object)) {
+                value = (int64_t)gtk_notebook_get_current_page(GTK_NOTEBOOK(object));
+                break;
+            }
             if (!GTK_IS_DROP_DOWN(object)) return CTD_ERR_KIND;
             guint chosen = gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
             value = chosen == GTK_INVALID_LIST_POSITION ? -1 : (int64_t)chosen;
@@ -326,6 +349,26 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
                 return CTD_OK;
             }
             return CTD_ERR_KIND;
+        case CTD_P_DIVIDER: {
+            if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0.0) return CTD_ERR_RANGE;
+            // Bounded by the size cortado gave the control, not by GTK's
+            // allocation. An allocation only exists once the widget has been
+            // laid out inside a window that is on screen, and a headless run
+            // never has one — so bounding by it meant a divider of 9000 was
+            // refused on macOS and accepted here, which is a platform
+            // difference in a rule that is cortado's.
+            int wide = -1, tall = -1;
+            gtk_widget_get_size_request(GTK_WIDGET(object), &wide, &tall);
+            if (wide < 0) wide = gtk_widget_get_width(GTK_WIDGET(object));
+            if (tall < 0) tall = gtk_widget_get_height(GTK_WIDGET(object));
+            int along = gtk_orientable_get_orientation(GTK_ORIENTABLE(object)) ==
+                        GTK_ORIENTATION_VERTICAL ? tall : wide;
+            if (along < 0) along = 0;
+            if (value > (double)along) return CTD_ERR_RANGE;
+            gtk_paned_set_position(GTK_PANED(object), (int)value);
+            return CTD_OK;
+        }
         case CTD_P_DATE:
             if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             ctd_calendar_set_seconds(GTK_CALENDAR(object), value);
@@ -414,6 +457,10 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             } else if (GTK_IS_PROGRESS_BAR(object)) {
                 value = g_progress_value[slot];
             } else return CTD_ERR_KIND;
+            break;
+        case CTD_P_DIVIDER:
+            if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = (double)gtk_paned_get_position(GTK_PANED(object));
             break;
         case CTD_P_DATE:
             if (!ctd_kind_has_date(ctd_slot_kind(widget))) return CTD_ERR_KIND;

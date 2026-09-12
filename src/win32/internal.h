@@ -153,6 +153,10 @@ int ctd_dispatch_editing(int32_t role);
 int ctd_has_nul(const char *utf8, int32_t len);
 int32_t ctd_copy_out(const char *text, char *out, int32_t cap);
 int32_t ctd_copy_wide_out(const WCHAR *text, char *out, int32_t cap);
+// cortado's own children of a container window, in z-order, skipping anything
+// Windows put there itself.
+int32_t ctd_own_children(HWND container, HWND *out, int32_t cap);
+int32_t ctd_copy_wide_out(const WCHAR *text, char *out, int32_t cap);
 int32_t ctd_slot_kind(ctd_handle handle);
 int32_t ctd_window_text_out(HWND window, char *out, int32_t cap);
 uint32_t ctd_slot(ctd_handle handle);
@@ -175,6 +179,11 @@ void ctd_table_item_changed(NMLISTVIEW *info);
 // for everything but a group box. See ctd_view_content_inset in
 // ../cortado_host.h.
 void ctd_chrome_of(ctd_handle widget, double *out);
+
+// Makes a tab control's strip agree with its children and shows exactly one
+// page. A tab control on Windows is the strip and nothing else, so this is
+// what the ordinary child calls have to end with.
+void ctd_tab_sync(ctd_handle widget);
 
 // A day, both ways, between CTD_P_DATE's seconds and a SYSTEMTIME.
 //

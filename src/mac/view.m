@@ -71,6 +71,29 @@ static void ctd_box_chrome(double *out) {
 
 void ctd_chrome_of(id object, double *out) {
     out[0] = 0.0; out[1] = 0.0; out[2] = 0.0; out[3] = 0.0;
+    if ([object isKindOfClass:[NSSplitView class]]) {
+        // The divider's thickness, on the axis it eats. The two panes together
+        // get everything but this, which is what a layout needs to know and
+        // the only part of a split view's geometry that is not the platform's
+        // own business.
+        NSSplitView *split = (NSSplitView *)object;
+        if ([split isVertical]) out[2] = [split dividerThickness];
+        else                    out[3] = [split dividerThickness];
+        return;
+    }
+    if ([object isKindOfClass:[NSTabView class]]) {
+        // AppKit's own, and it does not depend on the size: contentRect at any
+        // frame, zero included, reports the same four gaps. It is also where
+        // AppKit itself puts a page, which is the number that has to agree.
+        NSTabView *tabs = (NSTabView *)object;
+        NSRect own = [tabs bounds];
+        NSRect inner = [tabs contentRect];
+        out[0] = inner.origin.x;
+        out[1] = own.size.height - (inner.origin.y + inner.size.height);
+        out[2] = own.size.width - (inner.origin.x + inner.size.width);
+        out[3] = inner.origin.y;
+        return;
+    }
     if ([object isKindOfClass:[NSBox class]]) {
         // A separator is an NSBox too and holds nothing, so it has no content
         // to leave room for.
@@ -100,6 +123,13 @@ ctd_status ctd_view_add_child(ctd_handle parent, ctd_handle child, int32_t index
     id owner = ctd_resolve(parent);
     NSView *view = (NSView *)ctd_resolve(child);
     if (!owner || !view) return CTD_ERR_STALE;
+    // A tab view's children are its pages, and a page is not a subview: it
+    // belongs to an NSTabViewItem, which AppKit installs and removes as the
+    // selection moves. Asked first, because a tab view is an NSView and would
+    // otherwise take the ordinary path and end up holding a subview nobody
+    // could see.
+    NSTabView *tabs = ctd_tab_view(owner);
+    if (tabs) return ctd_tab_add_page(tabs, view, index);
     NSView *container = ctd_container_of(owner);
     if (!ctd_can_hold(container)) return CTD_ERR_KIND;
     NSArray *existing = ctd_children(container);
@@ -117,6 +147,13 @@ ctd_status ctd_view_remove_child(ctd_handle parent, ctd_handle child) {
     id owner = ctd_resolve(parent);
     NSView *view = (NSView *)ctd_resolve(child);
     if (!owner || !view) return CTD_ERR_STALE;
+    NSTabView *tabs = ctd_tab_view(owner);
+    if (tabs) {
+        NSInteger at = ctd_tab_index_of(tabs, view);
+        if (at == NSNotFound) return CTD_ERR_RANGE;
+        [tabs removeTabViewItem:[tabs tabViewItemAtIndex:at]];
+        return CTD_OK;
+    }
     NSView *container = ctd_container_of(owner);
     if (!ctd_can_hold(container)) return CTD_ERR_KIND;
     if ([view superview] != container) return CTD_ERR_RANGE;
@@ -127,6 +164,22 @@ ctd_status ctd_view_remove_child(ctd_handle parent, ctd_handle child) {
 ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to) {
     id owner = ctd_resolve(parent);
     if (!owner) return CTD_ERR_STALE;
+    NSTabView *tabs = ctd_tab_view(owner);
+    if (tabs) {
+        int32_t count = (int32_t)[tabs numberOfTabViewItems];
+        if (from < 0 || from >= count || to < 0 || to >= count) return CTD_ERR_RANGE;
+        if (from == to) return CTD_OK;
+        // Remove and re-insert is the move here, and unlike a subview it is
+        // exactly equivalent: an NSTabViewItem carries its label, its view and
+        // its identifier with it, and the item object itself is what moves.
+        NSTabViewItem *moving = [[tabs tabViewItemAtIndex:(NSInteger)from] retain];
+        BOOL was_showing = [tabs selectedTabViewItem] == moving;
+        [tabs removeTabViewItem:moving];
+        [tabs insertTabViewItem:moving atIndex:(NSInteger)to];
+        if (was_showing) [tabs selectTabViewItem:moving];
+        [moving release];
+        return CTD_OK;
+    }
     NSView *container = ctd_container_of(owner);
     if (!ctd_can_hold(container)) return CTD_ERR_KIND;
     NSArray *children = ctd_children(container);
@@ -158,6 +211,11 @@ ctd_status ctd_view_move_child(ctd_handle parent, int32_t from, int32_t to) {
 ctd_status ctd_view_child_count(ctd_handle parent, int32_t *out) {
     id owner = ctd_resolve(parent);
     if (!owner) return CTD_ERR_STALE;
+    NSTabView *tabs = ctd_tab_view(owner);
+    if (tabs) {
+        if (out) *out = (int32_t)[tabs numberOfTabViewItems];
+        return CTD_OK;
+    }
     NSView *container = ctd_container_of(owner);
     // A control that cannot hold children has none, which is an answer and not
     // a refusal — a tree walk asks this of every node and would otherwise have
@@ -173,11 +231,18 @@ ctd_status ctd_view_child_count(ctd_handle parent, int32_t *out) {
 ctd_handle ctd_view_child_at(ctd_handle parent, int32_t index) {
     id owner = ctd_resolve(parent);
     if (!owner) return 0;
+    id wanted = nil;
+    NSTabView *tabs = ctd_tab_view(owner);
+    if (tabs) {
+        if (index < 0 || index >= (int32_t)[tabs numberOfTabViewItems]) return 0;
+        wanted = [[tabs tabViewItemAtIndex:(NSInteger)index] view];
+    } else {
     NSView *container = ctd_container_of(owner);
     if (!container || !ctd_can_hold(container)) return 0;
     NSArray *children = ctd_children(container);
     if (index < 0 || index >= (int32_t)[children count]) return 0;
-    id wanted = [children objectAtIndex:(NSUInteger)index];
+    wanted = [children objectAtIndex:(NSUInteger)index];
+    }
     for (uint32_t slot = 1; slot <= g_used; slot++) {
         if (g_object[slot] == wanted) return ((uint64_t)g_generation[slot] << 32) | slot;
     }
@@ -202,6 +267,13 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
     NSView *view = (NSView *)ctd_resolve(widget);
     if (!view) return CTD_ERR_STALE;
     if (![view isKindOfClass:[NSView class]]) return CTD_ERR_KIND;
+    // A split view's panes are the platform's to place, and it will place
+    // them again on its next layout pass whatever is written here. Writing
+    // anyway is worse than doing nothing: -setFrame: on a pane makes AppKit
+    // post splitViewDidResizeSubviews, and the program would hear its own
+    // layout come back as a value change.
+    NSView *owner = [view superview];
+    if (owner && [owner isKindOfClass:[NSSplitView class]]) return CTD_OK;
     [view setFrame:NSMakeRect(x, y, width, height)];
     return CTD_OK;
 }

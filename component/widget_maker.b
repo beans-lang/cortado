@@ -90,6 +90,8 @@ pub class WidgetMaker {
             date_picker => { return ok(new widgets.DatePicker()) }
             color_well => { return ok(new widgets.ColorWell()) }
             disclosure => { return ok(new widgets.Disclosure()) }
+            tab_view => { return ok(new widgets.TabView()) }
+            split_view => { return ok(new widgets.SplitView()) }
         }
     }
 

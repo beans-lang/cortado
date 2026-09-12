@@ -73,6 +73,10 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_COLOR_WELL:   role = @"button";        break;
         // ARIA's word for a header that opens and shuts what is under it.
         case CTD_W_DISCLOSURE:   role = @"group";         break;
+        // ARIA's word for a strip of tabs with pages behind it.
+        case CTD_W_TAB_VIEW:     role = @"tablist";       break;
+        // ARIA's word for two panes with a draggable handle between them.
+        case CTD_W_SPLIT_VIEW:   role = @"separator";     break;
         default:               role = @"window";   break;
     }
     return ctd_copy_out(role, out, cap);
@@ -81,6 +85,26 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
 ctd_status ctd_widget_synth_value(ctd_handle widget, int64_t index, double value) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
+    if ([object isKindOfClass:[NSSplitView class]]) {
+        // A drag, as far as anything above can tell: the divider moves and the
+        // delegate AppKit calls is what raises the event, which is the same
+        // path a real drag takes.
+        NSSplitView *split = (NSSplitView *)object;
+        if ([[split subviews] count] < 2) return CTD_ERR_RANGE;
+        NSRect own = [split bounds];
+        double along = [split isVertical] ? own.size.width : own.size.height;
+        if (value < 0.0 || value > along) return CTD_ERR_RANGE;
+        [split setPosition:value ofDividerAtIndex:0];
+        return CTD_OK;
+    }
+    if ([object isKindOfClass:[NSTabView class]]) {
+        NSTabView *tabs = (NSTabView *)object;
+        if (index < 0 || index >= (int64_t)[tabs numberOfTabViewItems]) return CTD_ERR_RANGE;
+        // The ordinary selection, and the delegate AppKit calls is what raises
+        // the event — the same path a user's click takes.
+        [tabs selectTabViewItemAtIndex:(NSInteger)index];
+        return CTD_OK;
+    }
     if ([object isKindOfClass:[CortadoDisclosure class]]) {
         // Through the triangle, so the control ends up in the state its own
         // click would have left it in — and the event is raised here rather

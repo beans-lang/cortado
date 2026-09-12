@@ -162,7 +162,7 @@ ctd_status ctd_gpu_canvas_attach(ctd_handle widget, ctd_handle device) {
     // GPU" is not, and a host that answered the second to both would make the
     // first invisible on three platforms out of four. It is the same mistake
     // CTD_P_ENABLED cost four hosts once already.
-    if (!ctd_resolve(widget)) return CTD_ERR_STALE;
+    if (!ctd_window(widget)) return CTD_ERR_STALE;
     if (ctd_slot_kind(widget) != CTD_W_CANVAS) return CTD_ERR_KIND;
     return CTD_ERR_UNSUPPORTED;
 }

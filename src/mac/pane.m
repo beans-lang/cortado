@@ -136,3 +136,142 @@ void ctd_disclosure_attach(ctd_handle handle, NSView *view) {
     [g_targets addObject:forwarder];
     [forwarder release];
 }
+
+// ------------------------------------------------------------------ tab views
+//
+// A tab view's children are its pages, one each, in order. That is what makes
+// the tree a program builds and the tree a screen reader walks the same tree —
+// and it is why the four functions below exist rather than the ordinary
+// subview path: an NSTabViewItem is not a view, so a page is added to the tab
+// view's item list and never to its subviews.
+
+// The delegate. AppKit holds it weakly, so `g_targets` keeps it alive — the
+// same arrangement as the target/action forwarder and the table's data source.
+@interface CortadoTabs : NSObject <NSTabViewDelegate>
+@property (assign) ctd_handle handle;
+@end
+
+@implementation CortadoTabs
+- (void)tabView:(NSTabView *)view didSelectTabViewItem:(NSTabViewItem *)item {
+    ctd_emit(CTD_EV_VALUE_CHANGED, _handle,
+             (int64_t)[view indexOfTabViewItem:item], 0);
+}
+@end
+
+NSTabView *ctd_tab_view(id object) {
+    if ([object isKindOfClass:[NSTabView class]]) return (NSTabView *)object;
+    return nil;
+}
+
+void ctd_tabs_attach(ctd_handle handle, NSView *view) {
+    NSTabView *tabs = ctd_tab_view(view);
+    if (!tabs) return;
+    CortadoTabs *delegate = [[CortadoTabs alloc] init];
+    [delegate setHandle:handle];
+    [tabs setDelegate:delegate];
+    [g_targets addObject:delegate];
+    [delegate release];
+}
+
+// The page a view stands on, or NSNotFound.
+NSInteger ctd_tab_index_of(NSTabView *tabs, NSView *page) {
+    for (NSInteger at = 0; at < [tabs numberOfTabViewItems]; at++) {
+        if ([[tabs tabViewItemAtIndex:at] view] == page) return at;
+    }
+    return NSNotFound;
+}
+
+ctd_status ctd_tab_add_page(NSTabView *tabs, NSView *page, int32_t index) {
+    NSTabViewItem *item =
+        [[NSTabViewItem alloc] initWithIdentifier:[NSNumber numberWithLong:(long)page]];
+    [item setLabel:@""];
+    [item setView:page];
+    NSInteger count = [tabs numberOfTabViewItems];
+    if (index < 0 || index >= (int32_t)count) {
+        [tabs addTabViewItem:item];
+    } else {
+        [tabs insertTabViewItem:item atIndex:(NSInteger)index];
+    }
+    [item release];
+    return CTD_OK;
+}
+
+ctd_status ctd_tab_set_label(ctd_handle widget, int32_t index,
+                             const char *utf8, int32_t len) {
+    if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
+    NSTabView *tabs = ctd_tab_view(ctd_resolve(widget));
+    if (!tabs) return ctd_resolve(widget) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    if (index < 0 || index >= (int32_t)[tabs numberOfTabViewItems]) return CTD_ERR_RANGE;
+    [[tabs tabViewItemAtIndex:(NSInteger)index] setLabel:ctd_string(utf8, len)];
+    return CTD_OK;
+}
+
+int32_t ctd_tab_label(ctd_handle widget, int32_t index, char *out, int32_t cap) {
+    NSTabView *tabs = ctd_tab_view(ctd_resolve(widget));
+    if (!tabs) return ctd_resolve(widget) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    if (index < 0 || index >= (int32_t)[tabs numberOfTabViewItems]) return CTD_ERR_RANGE;
+    return ctd_copy_out([[tabs tabViewItemAtIndex:(NSInteger)index] label], out, cap);
+}
+
+// ---------------------------------------------------------------- split views
+//
+// The one kind whose children the *platform* positions. NSSplitView lays its
+// panes out from the divider's position and cannot be talked out of it, so
+// cortado sets the position and reads it back rather than setting two frames.
+
+@interface CortadoSplit : NSObject <NSSplitViewDelegate>
+@property (assign) ctd_handle handle;
+@end
+
+@implementation CortadoSplit
+- (void)splitViewDidResizeSubviews:(NSNotification *)note {
+    // Only a drag. AppKit posts this for every resize the split view sees,
+    // its window's included, and a value_changed raised because the user
+    // widened the window would be cortado reporting its own layout back to
+    // the program. The divider index is in the note exactly when a divider is
+    // what moved.
+    if (![[note userInfo] objectForKey:@"NSSplitViewDividerIndex"]) return;
+    id object = ctd_resolve(_handle);
+    if (![object isKindOfClass:[NSSplitView class]]) return;
+    NSSplitView *split = (NSSplitView *)object;
+    if ([[split subviews] count] < 1) return;
+    NSRect first = [[[split subviews] objectAtIndex:0] frame];
+    double where = [split isVertical] ? first.size.width : first.size.height;
+    ctd_emit(CTD_EV_VALUE_CHANGED, _handle, (int64_t)where, 0);
+}
+@end
+
+NSSplitView *ctd_split_view(id object) {
+    if ([object isKindOfClass:[NSSplitView class]]) return (NSSplitView *)object;
+    return nil;
+}
+
+NSView *ctd_split_new(void) {
+    NSSplitView *split = [[NSSplitView alloc] initWithFrame:NSZeroRect];
+    // Side by side is CTD_P_AXIS 0, and AppKit spells the same arrangement
+    // "vertical" — the divider is vertical, the panes are not. cortado names
+    // the axis the panes run along, which is what a caller is thinking about.
+    [split setVertical:YES];
+    [split setDividerStyle:NSSplitViewDividerStyleThin];
+    return split;
+}
+
+void ctd_split_attach(ctd_handle handle, NSView *view) {
+    NSSplitView *split = ctd_split_view(view);
+    if (!split) return;
+    CortadoSplit *delegate = [[CortadoSplit alloc] init];
+    [delegate setHandle:handle];
+    [split setDelegate:delegate];
+    [g_targets addObject:delegate];
+    [delegate release];
+}
+
+// Where the divider is, in points from the leading edge: the first pane's size
+// along the axis. Read from the panes rather than kept beside them, because
+// the user can drag it and a second record of the same fact is a second
+// answer.
+double ctd_split_position(NSSplitView *split) {
+    if ([[split subviews] count] < 1) return 0.0;
+    NSRect first = [[[split subviews] objectAtIndex:0] frame];
+    return [split isVertical] ? first.size.width : first.size.height;
+}
