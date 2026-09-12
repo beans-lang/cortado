@@ -342,6 +342,8 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_POPOVER:       return 0;
         // WKWebView is part of the system here, the same as on the Mac.
         case CTD_CAP_ICONS:         return 1;  /* SF Symbols, the same set the Mac draws */
+        case CTD_CAP_NETWORK:       return 1;  /* the same nw_path_monitor, and the one that knows about cellular */
+        case CTD_CAP_POWER:         return 1;  /* UIDevice's battery, plus NSProcessInfo for heat */
         case CTD_CAP_WEB:           return 1;
         default:                    return 0;
     }

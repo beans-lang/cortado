@@ -100,6 +100,10 @@ pub class UiEvent {
             key_down => { return "key_down {self.target.show()} key={self.key().name()} typed=\"{self.text}\"" }
             key_up => { return "key_up {self.target.show()} key={self.key().name()}" }
             focus => { return "focus {self.target.show()}" }
+            // The machine's own events name no widget: `target` is 0, because
+            // a network is not a control.
+            net_changed => { return "net_changed index={self.index} flags={self.position.x as int}" }
+            power_changed => { return "power_changed index={self.index}" }
             blur => { return "blur {self.target.show()}" }
             _ => { return "{self.kind.name()} {self.target.show()}" }
         }

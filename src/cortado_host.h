@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 25
+#define CTD_ABI_VERSION 26
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -168,6 +168,8 @@ void       ctd_post(int64_t token);
 #define CTD_CAP_POPOVER         9  /* a small window anchored to a control   */
 #define CTD_CAP_WEB            10  /* a browser engine in a rectangle        */
 #define CTD_CAP_ICONS          11  /* the system's own icon set; see "icons"  */
+#define CTD_CAP_NETWORK        12  /* can say whether anything is reachable   */
+#define CTD_CAP_POWER          13  /* can say what is running the machine     */
 
 int32_t    ctd_capability(int32_t capability);
 
@@ -1774,10 +1776,12 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row);
 #define CTD_EV_WEB_FAILED       29  /* index the serial, token the error     */
 #define CTD_EV_WEB_MESSAGE      30  /* token keys the text; ctd_web_take     */
 #define CTD_EV_WEB_RESULT       31  /* token echoes the eval's               */
+#define CTD_EV_NET_CHANGED      32  /* index is CTD_NET_*; x is the flags     */
+#define CTD_EV_POWER_CHANGED    33  /* index is CTD_POWER_*; x is the charge  */
 /* One past the last kind. It exists so a host can keep an array per kind —
  * `ctd_listen` is exactly that — and so adding a kind without widening the
  * array is a compile error rather than a write off the end of one. */
-#define CTD_EV_COUNT            32
+#define CTD_EV_COUNT            34
 
 ctd_status ctd_permission_status(int32_t what, int32_t *out);
 /* Asks the user. CTD_ERR_UNSUPPORTED where a prompt cannot appear — which is
@@ -2057,5 +2061,80 @@ ctd_status ctd_listen(int32_t kind, int32_t on);
  * new scale for those two, and both are ignored for a close. */
 ctd_status ctd_surface_synth(ctd_handle surface, int32_t what,
                              double a, double b);
+
+/* ---- the machine ------------------------------------------------------- */
+
+/* Two questions an application asks about the computer it is on rather than
+ * about anything it drew: **can I reach anything, and what is this costing.**
+ *
+ * Neither is gated. Proven from a bare binary with no bundle and no usage
+ * description, across a turn of the run loop — which is where a privacy death
+ * lands — so unlike everything under "permission" these answer for real under
+ * `beansc run` and on the ordinary test legs. Nothing here constructs a
+ * CoreLocation or CoreBluetooth object, and nothing here can.
+ *
+ * **The path is a push on one platform and a pull on the others, and this ABI
+ * is written for the push.** `nw_path_monitor` has no synchronous read at all:
+ * it starts, and some time later it calls back. Windows and Linux can be asked
+ * directly and synthesise the push. So `ctd_net_path` answers *the last thing
+ * that was heard*, and CTD_NET_UNKNOWN before anything has been — a program
+ * asks, lets the loop turn once, and asks again, which is what an application
+ * does anyway and what `tests/machine.b` does. The alternative was a blocking
+ * read, and a blocking read on the UI thread is a beachball whenever the
+ * answer is slow.
+ *
+ * **`ctd_listen` is the watch.** There is no ctd_net_watch and no
+ * ctd_power_watch: a host already learns that somebody wants a kind of event
+ * the moment the first handler is registered, and starting the platform's
+ * monitor there is the same decision `ctd_listen` was written for — do the
+ * work somebody asked for and no other. Asking `ctd_net_path` also starts one,
+ * so a program that only ever wants the answer once does not have to register
+ * a handler to get it. */
+
+#define CTD_NET_UNKNOWN    0  /* nothing has answered yet                    */
+#define CTD_NET_NONE       1  /* answered, and there is no path              */
+#define CTD_NET_WIFI       2
+#define CTD_NET_WIRED      3
+#define CTD_NET_CELLULAR   4
+#define CTD_NET_OTHER      5  /* a path over something with no name here     */
+
+/* Flags, because a path is several things at once. */
+#define CTD_NET_F_EXPENSIVE    1  /* cellular, or somebody's hotspot         */
+#define CTD_NET_F_CONSTRAINED  2  /* Low Data Mode, or a metered connection  */
+
+/* Writes the kind into `out_kind` and the flags into `out_flags`; either may be
+ * NULL. CTD_ERR_UNSUPPORTED where CTD_CAP_NETWORK answers 0. */
+ctd_status ctd_net_path(int32_t *out_kind, int32_t *out_flags);
+
+#define CTD_POWER_UNKNOWN  0
+#define CTD_POWER_MAINS    1
+#define CTD_POWER_BATTERY  2
+
+/* What is running the machine. A desktop with no battery answers MAINS. */
+ctd_status ctd_power_source(int32_t *out);
+/* How full the battery is, 0 to 1. CTD_ERR_UNSUPPORTED where there is no
+ * battery at all, which is a real answer and not a missing feature: a desktop
+ * has none and a program drawing a meter should draw nothing rather than a
+ * full one. */
+ctd_status ctd_power_charge(double *out);
+/* Whether the system is in its own low-power mode — Low Power Mode, Power
+ * Saver, a power profile. 1 or 0. */
+ctd_status ctd_power_saving(int32_t *out);
+
+/* How hot the machine is, which is the number that says whether to do less.
+ *
+ * **Only Apple's platforms have a scale for this**, and inventing one for the
+ * others from a temperature in a sysfs file would be inventing a number: what
+ * counts as hot depends on the machine, and the scale is the operating
+ * system's judgement rather than a reading. So the honest answer elsewhere is
+ * CTD_THERMAL_UNKNOWN, and a program that throttles itself asks and does
+ * nothing when nobody knows. */
+#define CTD_THERMAL_UNKNOWN  0
+#define CTD_THERMAL_NOMINAL  1
+#define CTD_THERMAL_FAIR     2
+#define CTD_THERMAL_SERIOUS  3
+#define CTD_THERMAL_CRITICAL 4
+
+ctd_status ctd_thermal_state(int32_t *out);
 
 #endif /* CORTADO_HOST_H */

@@ -32,6 +32,11 @@ int ctd_listening(uint32_t kind) {
 ctd_status ctd_listen(int32_t kind, int32_t on) {
     if (kind < 0 || kind >= CTD_EV_COUNT) return CTD_ERR_RANGE;
     g_wanted[kind] = on ? 1 : 0;
+    // The two services that watch the machine start and stop here, for the
+    // same reason: a path monitor is work nobody asked for until somebody
+    // does. There is no ctd_net_watch because this call already is one.
+    if (kind == CTD_EV_NET_CHANGED)   { if (on) ctd_net_start();   else ctd_net_stop(); }
+    if (kind == CTD_EV_POWER_CHANGED) { if (on) ctd_power_start(); else ctd_power_stop(); }
     return CTD_OK;
 }
 

@@ -245,6 +245,8 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_TOOLBAR:       return 1;
         case CTD_CAP_POPOVER:       return 1;
         case CTD_CAP_ICONS:         return 1;  /* the freedesktop icon theme; which names it has is the installed theme's business, and ctd_icon_name asks it */
+        case CTD_CAP_NETWORK:       return 1;  /* GIO's own GNetworkMonitor, which exists wherever GTK does */
+        case CTD_CAP_POWER:         return 1;  /* /sys/class/power_supply, and an honest "no battery" where there is none */
         case CTD_CAP_WEB:           return 0;
         default:                    return 0;
     }

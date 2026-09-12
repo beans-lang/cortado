@@ -37,6 +37,13 @@ ctd_status ctd_listen(int32_t kind, int32_t on) {
     // there is nothing to turn off here beyond the crossing into the program —
     // which is what the header allows this call to be: advice.
     g_wanted[kind] = on ? 1 : 0;
+    // The two services that watch the machine would start and stop here, as
+    // they do on the other hosts. On Windows there is nothing to start:
+    // WM_POWERBROADCAST and WM_SETTINGCHANGE reach every window whether or not
+    // anybody asked, and g_wanted above is what decides whether they cost the
+    // program anything.
+    if (kind == CTD_EV_NET_CHANGED)   { if (on) ctd_net_start();   else ctd_net_stop(); }
+    if (kind == CTD_EV_POWER_CHANGED) { if (on) ctd_power_start(); else ctd_power_stop(); }
     return CTD_OK;
 }
 

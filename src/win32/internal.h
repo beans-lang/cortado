@@ -210,6 +210,19 @@ int ctd_listening(uint32_t kind);
 
 // Raises one of the four things that happen to a surface, if anything asked.
 void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b);
+
+// --------------------------------------------------------------- machine.c
+
+// Nothing to start on this host — Windows broadcasts both changes to every
+// window whether or not anybody asked — but the pair exists so this host
+// answers the same shape as the others.
+void ctd_net_start(void);
+void ctd_net_stop(void);
+void ctd_power_start(void);
+void ctd_power_stop(void);
+// Raised from the window procedure when Windows says one of them changed.
+void ctd_power_changed(void);
+void ctd_net_changed(void);
 // A list view asking for a cell it is about to paint, and a selection that
 // moved. Both arrive as WM_NOTIFY on the *parent*, which is where every Win32
 // control reports, so app.c routes them here.

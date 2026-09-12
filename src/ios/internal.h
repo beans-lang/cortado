@@ -149,6 +149,15 @@ int ctd_listening(uint32_t kind);
 
 // Raises one of the four things that happen to a surface, if anything asked.
 void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b);
+
+// --------------------------------------------------------------- machine.m
+
+// The platform's own watchers, up when the first handler for their kind
+// arrives and down with the last — which is what ctd_listen is for.
+void ctd_net_start(void);
+void ctd_net_stop(void);
+void ctd_power_start(void);
+void ctd_power_stop(void);
 UITableView *ctd_table_view(id object);
 
 // ------------------------------------------------------------------- pane.m

@@ -98,6 +98,15 @@ int ctd_listening(uint32_t kind);
 
 // Raises one of the four things that happen to a surface, if anything asked.
 void ctd_surface_event(uint32_t kind, ctd_handle surface, double a, double b);
+
+// --------------------------------------------------------------- machine.c
+
+// The platform's own watchers, up when the first handler for their kind
+// arrives and down with the last — which is what ctd_listen is for.
+void ctd_net_start(void);
+void ctd_net_stop(void);
+void ctd_power_start(void);
+void ctd_power_stop(void);
 void ctd_give_back(uint32_t slot);
 // Forgets the clock a slot may have had, before the slot is handed out again.
 void ctd_clock_forget(uint32_t slot);

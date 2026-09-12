@@ -54,6 +54,16 @@ pub enum EventKind {
     web_message
     /// A script answered. `token` echoes the call's; `WebView.collect` reads it.
     web_result
+    /// What this machine can reach changed. `index` is the new
+    /// `device.NetworkPath`, `position.x` the flags.
+    ///
+    /// Registering for it is also what starts the platform's own monitor,
+    /// which is why there is no separate watch call.
+    net_changed
+    /// What is running the machine changed, or the battery moved. `index` is
+    /// the new `device.PowerSource`, `position.x` the charge — or -1 where
+    /// there is no battery to have one.
+    power_changed
     unknown
 
     pub fn name() -> string {
@@ -89,6 +99,8 @@ pub enum EventKind {
             web_failed => "web_failed",
             web_message => "web_message",
             web_result => "web_result",
+            net_changed => "net_changed",
+            power_changed => "power_changed",
             unknown => "unknown",
         }
     }
@@ -128,6 +140,8 @@ pub enum EventKind {
             web_failed => host.EV_WEB_FAILED,
             web_message => host.EV_WEB_MESSAGE,
             web_result => host.EV_WEB_RESULT,
+            net_changed => host.EV_NET_CHANGED,
+            power_changed => host.EV_POWER_CHANGED,
             unknown => 0,
         }
     }
@@ -167,6 +181,8 @@ pub enum EventKind {
         if code == host.EV_WEB_FAILED { return EventKind.web_failed }
         if code == host.EV_WEB_MESSAGE { return EventKind.web_message }
         if code == host.EV_WEB_RESULT { return EventKind.web_result }
+        if code == host.EV_NET_CHANGED { return EventKind.net_changed }
+        if code == host.EV_POWER_CHANGED { return EventKind.power_changed }
         return EventKind.unknown
     }
 }

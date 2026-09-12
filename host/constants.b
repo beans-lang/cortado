@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 25
+pub const ABI_VERSION: int = 26
 
 // ---- statuses ----
 
@@ -53,7 +53,9 @@ pub const EV_FRAME: int = 23
 pub const EV_ANIM_DONE: int = 24
 
 /// One past the last kind, so a table with a row per kind can be sized.
-pub const EV_COUNT: int = 32
+pub const EV_NET_CHANGED: int = 32
+pub const EV_POWER_CHANGED: int = 33
+pub const EV_COUNT: int = 34
 
 // ---- modifier bits ----
 
@@ -81,6 +83,8 @@ pub const CAP_TOOLBAR: int = 8
 pub const CAP_POPOVER: int = 9
 pub const CAP_WEB: int = 10
 pub const CAP_ICONS: int = 11
+pub const CAP_NETWORK: int = 12
+pub const CAP_POWER: int = 13
 
 // ---- widget kinds ----
 
@@ -319,3 +323,33 @@ pub const KEY_F10: int = 25
 pub const KEY_F11: int = 26
 pub const KEY_F12: int = 27
 pub const KEY_COUNT: int = 28
+
+// ---- the machine ----
+
+// Whether anything is reachable, and over what. `UNKNOWN` is "nothing has
+// answered yet", which is a real state and not a failure: one platform's
+// answer is a push and arrives a turn of the loop later.
+pub const NET_UNKNOWN: int = 0
+pub const NET_NONE: int = 1
+pub const NET_WIFI: int = 2
+pub const NET_WIRED: int = 3
+pub const NET_CELLULAR: int = 4
+pub const NET_OTHER: int = 5
+
+// A path is several things at once, so these are bits.
+pub const NET_F_EXPENSIVE: int = 1
+pub const NET_F_CONSTRAINED: int = 2
+
+// What is running the machine.
+pub const POWER_UNKNOWN: int = 0
+pub const POWER_MAINS: int = 1
+pub const POWER_BATTERY: int = 2
+
+// How hot it is. Only Apple's platforms have a scale for this; everywhere else
+// the honest answer is `UNKNOWN`, because a temperature in a sysfs file is a
+// reading and this is a judgement.
+pub const THERMAL_UNKNOWN: int = 0
+pub const THERMAL_NOMINAL: int = 1
+pub const THERMAL_FAIR: int = 2
+pub const THERMAL_SERIOUS: int = 3
+pub const THERMAL_CRITICAL: int = 4

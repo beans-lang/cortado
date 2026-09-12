@@ -357,6 +357,11 @@ static LRESULT CALLBACK ctd_surface_proc(HWND window, UINT message,
                               (double)LOWORD(wparam) / 96.0, 0);
             return 0;
         }
+        case WM_POWERBROADCAST:
+            // PBT_APMPOWERSTATUSCHANGE: the mains came or went, or the battery
+            // moved. Windows sends it to every top-level window.
+            if (wparam == PBT_APMPOWERSTATUSCHANGE) ctd_power_changed();
+            return TRUE;
         case WM_SETTINGCHANGE:
             // Light and dark live in a user setting, and this is the broadcast
             // that says one changed. Windows names the key rather than the
@@ -364,6 +369,10 @@ static LRESULT CALLBACK ctd_surface_proc(HWND window, UINT message,
             if (lparam && wcscmp((const WCHAR *)lparam, L"ImmersiveColorSet") == 0)
                 ctd_surface_event(CTD_EV_APPEARANCE, ctd_handle_of(window),
                                   (double)ctd_appearance(), 0);
+            // Windows names the key rather than the thing here too, and this
+            // is the one it sends when an adapter comes or goes.
+            if (lparam && wcscmp((const WCHAR *)lparam, L"Policy") == 0)
+                ctd_net_changed();
             return 0;
         default: break;
     }
@@ -564,6 +573,8 @@ int32_t ctd_capability(int32_t capability) {
         // dismiss it — which is cortado drawing a control.
         case CTD_CAP_POPOVER:       return 0;
         case CTD_CAP_ICONS:         return 1;  /* the standard toolbar bitmap and the shell stock icons — a subset of the roles, and ctd_icon_name says which */
+        case CTD_CAP_NETWORK:       return 1;  /* GetAdaptersAddresses, asked rather than watched */
+        case CTD_CAP_POWER:         return 1;  /* GetSystemPowerStatus */
         case CTD_CAP_WEB:           return 0;
         default:                    return 0;
     }

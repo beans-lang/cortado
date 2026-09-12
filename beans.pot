@@ -33,6 +33,7 @@ csrc macos "src/mac/outline.m"
 csrc macos "src/mac/icon.m"
 csrc macos "src/mac/permission.m"
 csrc macos "src/mac/input.m"
+csrc macos "src/mac/machine.m"
 
 link macos framework "AppKit"
 link macos framework "Foundation"
@@ -69,6 +70,14 @@ link macos framework "WebKit"
 link macos framework "AVFoundation"
 link macos framework "CoreBluetooth"
 link macos framework "CoreLocation"
+# The machine itself: whether anything is reachable, and what is running it.
+# Neither is privacy-gated — both were proven from a bare binary with no bundle
+# across a turn of the run loop — and neither costs anything to link. Measured
+# the way Metal was, forty warm runs each alternated: same binary size, two
+# more load commands, and a median launch of 4.71 ms against 4.82 with the p10
+# unchanged at 4.25 and 4.27. That is noise.
+link macos framework "Network"
+link macos framework "IOKit"
 
 # The iOS host. Same header, same Beans above it — `tests/roles.out` is the
 # same bytes on both, which is the claim this file exists to make testable.
@@ -96,6 +105,7 @@ csrc ios "src/ios/outline.m"
 csrc ios "src/ios/icon.m"
 csrc ios "src/ios/permission.m"
 csrc ios "src/ios/input.m"
+csrc ios "src/ios/machine.m"
 
 link ios framework "UIKit"
 link ios framework "Foundation"
@@ -112,6 +122,9 @@ link ios framework "CoreGraphics"
 link ios framework "Metal"
 # A browser engine, the same WKWebView the Mac links.
 link ios framework "WebKit"
+# The machine itself, the same framework the Mac reads the path from. The
+# power half is UIKit's UIDevice rather than IOKit, which a phone does not have.
+link ios framework "Network"
 # Privacy, the same three and the same rule as the Mac.
 link ios framework "AVFoundation"
 link ios framework "CoreBluetooth"
@@ -154,6 +167,7 @@ csrc linux "src/gtk4/outline.c"
 csrc linux "src/gtk4/icon.c"
 csrc linux "src/gtk4/permission.c"
 csrc linux "src/gtk4/input.c"
+csrc linux "src/gtk4/machine.c"
 
 # The Windows host, over Win32 and common controls v6. A fourth object system,
 # or rather the absence of one: a control is an HWND, its state is set by
@@ -186,6 +200,7 @@ csrc windows "src/win32/outline.c"
 csrc windows "src/win32/icon.c"
 csrc windows "src/win32/permission.c"
 csrc windows "src/win32/input.c"
+csrc windows "src/win32/machine.c"
 
 # Common controls carries the trackbar and the progress bar; comdlg32 the file
 # choosers; gdi32 the device contexts every measurement goes through. user32
@@ -197,3 +212,7 @@ link windows library "user32"
 link windows library "advapi32"
 # ShellExecuteW, which follows a link. See ctd_link_target in src/win32/.
 link windows library "shell32"
+# GetAdaptersAddresses, which is how this host answers whether anything is
+# reachable and over what. GetSystemPowerStatus is in kernel32, which the
+# toolchain links on its own.
+link windows library "iphlpapi"

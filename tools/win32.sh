@@ -107,11 +107,32 @@ for source in "$root"/src/win32/*.c; do
     objects+=("$object")
 done
 
+# The libraries the host needs, read out of `beans.pot` rather than written
+# here.
+#
+# A second copy of that list is a list that drifts, and this one did: adding
+# `iphlpapi` to the manifest for `src/win32/machine.c` left this line behind,
+# and the failure was an undefined reference at link time from a script nobody
+# would think to edit. On a Windows machine `beansc` reads those rows itself;
+# this leg links by hand because beansc's bundled clang has no Windows sysroot,
+# and reading the same rows is what keeps the two the same.
+host_libraries=()
+while read -r library; do
+    host_libraries+=("-l$library")
+done < <(sed -n 's/^link windows library "\(.*\)"$/\1/p' "$root/beans.pot")
+if [[ ${#host_libraries[@]} -eq 0 ]]; then
+    echo "win32: no 'link windows library' rows in beans.pot — the manifest moved" >&2
+    exit 1
+fi
+
 # Statically, because mingw's own libwinpthread is a DLL that only exists
 # beside a mingw installation. A binary that needs it is not a Windows program
 # anybody else can run, and the failure is a silent exit before `main`.
+#
+# The second row is the Beans runtime's own, which is not in the manifest
+# because it belongs to the language rather than to this package.
 "$CC" -static "${objects[@]}" -o "$out/$name.exe" \
-      -lcomctl32 -lcomdlg32 -lgdi32 -luser32 -ladvapi32 \
+      "${host_libraries[@]}" \
       -lws2_32 -lmswsock -lbcrypt -luserenv -lntdll -lsynchronization -lm
 
 # Common controls v6 is what makes a button a themed button rather than a flat

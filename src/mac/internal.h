@@ -262,4 +262,13 @@ void        ctd_focus_moved(ctd_handle left, ctd_handle took);
 void        ctd_surface_event(uint32_t kind, ctd_handle surface,
                               double a, double b);
 
+// --------------------------------------------------------------- machine.m
+
+// The platform's own watchers, up when the first handler for their kind
+// arrives and down with the last — which is what ctd_listen is for.
+void        ctd_net_start(void);
+void        ctd_net_stop(void);
+void        ctd_power_start(void);
+void        ctd_power_stop(void);
+
 #endif

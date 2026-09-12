@@ -48,6 +48,20 @@ pub enum Capability {
     /// and `SystemIcon.available()` is what asks about one icon. Windows has
     /// an icon set and no picture for "run".
     icons
+    /// Whether anything is reachable, and over what.
+    ///
+    /// Not privacy-gated on any platform here, which is what lets it be asked
+    /// from an ordinary program and an ordinary test — unlike everything
+    /// behind `device.Permission`.
+    network
+    /// What is running the machine, how full the battery is, and how hot it
+    /// is.
+    ///
+    /// Every platform answers yes, and that is not the same as every question
+    /// having an answer: a machine with no battery refuses `charge`, and only
+    /// Apple's platforms have a scale for heat. What this asks is whether
+    /// there is anything to ask.
+    power
 
     fn code() -> int {
         return match self {
@@ -62,6 +76,8 @@ pub enum Capability {
             popover => host.CAP_POPOVER,
             web => host.CAP_WEB,
             icons => host.CAP_ICONS,
+            network => host.CAP_NETWORK,
+            power => host.CAP_POWER,
         }
     }
 
@@ -78,6 +94,8 @@ pub enum Capability {
             popover => "popover",
             web => "web",
             icons => "icons",
+            network => "network",
+            power => "power",
         }
     }
 
