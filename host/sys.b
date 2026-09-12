@@ -108,6 +108,14 @@ pub extern "C" fn ctd_menu_item_key(menu: u64, index: i32, out: RawPtr<i8>, cap:
 pub extern "C" fn ctd_menu_set_bar(menu: u64) -> i32
 pub extern "C" fn ctd_menu_set_enabled(menu: u64, token: i64, on: i32) -> i32
 pub extern "C" fn ctd_menu_invoke(menu: u64, token: i64) -> i32
+pub extern "C" fn ctd_toolbar_set(surface: u64, menu: u64) -> i32
+pub extern "C" fn ctd_toolbar_clear(surface: u64) -> i32
+pub extern "C" fn ctd_toolbar_count(surface: u64, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_popover_new(content: u64, width: f64, height: f64) -> u64
+pub extern "C" fn ctd_popover_show(popover: u64, anchor: u64, edge: i32) -> i32
+pub extern "C" fn ctd_popover_close(popover: u64) -> i32
+pub extern "C" fn ctd_popover_shown(popover: u64, out: RawPtr<i32>) -> i32
+pub extern "C" fn ctd_popover_release(popover: u64) -> i32
 pub extern "C" fn ctd_dialog_open(parent: u64, kind: i32, title: RawPtr<i8>, title_len: i32, body: RawPtr<i8>, body_len: i32, token: i64) -> i32
 pub extern "C" fn ctd_appearance() -> i32
 pub extern "C" fn ctd_surface_scale(surface: u64, out: RawPtr<f64>) -> i32

@@ -550,6 +550,11 @@ int32_t ctd_capability(int32_t capability) {
         // host" is a decision this host is making and not a key nobody
         // has heard of. src/win32/gpu.c says what would have to land.
         case CTD_CAP_GPU:           return 0;
+        case CTD_CAP_TOOLBAR:       return 1;
+        // No popover. Every Windows application that has one makes a layered
+        // top-level window, gives it a shadow and captures the mouse to
+        // dismiss it — which is cortado drawing a control.
+        case CTD_CAP_POPOVER:       return 0;
         default:                    return 0;
     }
 }

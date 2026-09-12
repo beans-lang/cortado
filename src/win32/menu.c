@@ -349,6 +349,16 @@ int32_t ctd_menu_item_title(ctd_handle handle, int32_t index, char *out, int32_t
     return ctd_copy_out(menu->commands[index].title, out, cap);
 }
 
+// The two things a toolbar needs off a menu item, and the reason they are
+// shared rather than copied: a toolbar here *is* a menu — the same handle, the
+// same tokens — so two lists of the same commands would be the duplication
+// that design exists to avoid.
+const CtdCommand *ctd_menu_command_at(ctd_handle handle, int32_t index) {
+    CtdMenu *menu = ctd_menu_of(handle);
+    if (!menu || index < 0 || index >= menu->count) return NULL;
+    return &menu->commands[index];
+}
+
 int32_t ctd_menu_item_key(ctd_handle handle, int32_t index, char *out, int32_t cap) {
     CtdMenu *menu = ctd_menu_of(handle);
     if (!menu) return ctd_slot(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;

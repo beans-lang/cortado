@@ -267,6 +267,8 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_FILE_DIALOG:   return 1;
         case CTD_CAP_SNAPSHOT:      return 1;
         case CTD_CAP_GPU:           return 1;
+        case CTD_CAP_TOOLBAR:       return 1;
+        case CTD_CAP_POPOVER:       return 1;
         default:                    return 0;
     }
 }

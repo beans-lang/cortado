@@ -52,15 +52,8 @@ static const char *ctd_role_key(int32_t role, const char *fallback) {
     }
 }
 
-// A menu item's token and its shortcut, kept beside the GMenu because a
-// GMenuItem is write-only once added — GTK gives no way to read one back.
-typedef struct {
-    int64_t token;
-    char   *title;
-    char   *key;
-    int     separator;
-    int     enabled;
-} CtdCommand;
+// CtdCommand is in internal.h: the toolbar builds its buttons from the same
+// list, because a toolbar here is a menu.
 
 typedef struct {
     GMenu  *model;
@@ -69,9 +62,19 @@ typedef struct {
 
 static GHashTable *g_menus;   // ctd_handle -> CtdMenu*
 
+
 static CtdMenu *ctd_menu_of(ctd_handle handle) {
     if (!g_menus) return NULL;
     return g_hash_table_lookup(g_menus, GINT_TO_POINTER((int)(handle & 0xffffffffu)));
+}
+
+// The items a menu holds, for the toolbar to build buttons from. Shared rather
+// than copied, because a toolbar *is* a menu here — the same handle, the same
+// tokens — and two lists of the same commands is the duplication that design
+// exists to avoid.
+GArray *ctd_menu_commands(ctd_handle handle) {
+    CtdMenu *menu = ctd_menu_of(handle);
+    return menu ? menu->commands : NULL;
 }
 
 ctd_handle ctd_menu_new(const char *title, int32_t len) {

@@ -242,6 +242,8 @@ int32_t ctd_capability(int32_t capability) {
         // host" is a decision this host is making and not a key nobody
         // has heard of. src/gtk4/gpu.c says what would have to land.
         case CTD_CAP_GPU:           return 0;
+        case CTD_CAP_TOOLBAR:       return 1;
+        case CTD_CAP_POPOVER:       return 1;
         default:                    return 0;
     }
 }

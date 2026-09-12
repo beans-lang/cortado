@@ -104,6 +104,21 @@ void ctd_tag(GtkWidget *widget);
 // ctd_view_content_inset in ../cortado_host.h.
 void ctd_chrome_of(gpointer object, double *out);
 
+// ------------------------------------------------------------------- menu.c
+
+// One menu item's token, words and state. Kept beside the GMenu because a
+// GMenuItem is write-only once added — GTK gives no way to read one back.
+typedef struct {
+    int64_t token;
+    char   *title;
+    char   *key;
+    int     separator;
+    int     enabled;
+} CtdCommand;
+
+// The items a menu holds. NULL for a handle that is not a menu.
+GArray *ctd_menu_commands(ctd_handle handle);
+
 // The GtkNotebook a CTD_W_TAB_VIEW handle stands for; NULL for anything else.
 // A tab view's children are its pages, so the ordinary child walk cannot find
 // them and every path that adds, removes, counts or names one asks here first.

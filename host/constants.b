@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 18
+pub const ABI_VERSION: int = 19
 
 // ---- statuses ----
 
@@ -74,6 +74,8 @@ pub const CAP_RESIZABLE: int = 4
 pub const CAP_FILE_DIALOG: int = 5
 pub const CAP_SNAPSHOT: int = 6
 pub const CAP_GPU: int = 7
+pub const CAP_TOOLBAR: int = 8
+pub const CAP_POPOVER: int = 9
 
 // ---- widget kinds ----
 
@@ -118,6 +120,7 @@ pub const ALLOW_GRANTED: int = 1
 pub const ALLOW_DENIED: int = 2
 pub const ALLOW_UNDECIDED: int = 3
 pub const EV_PERMISSION: int = 25
+pub const EV_DISMISS: int = 26
 
 // ---- property keys ----
 
@@ -215,3 +218,7 @@ pub const SHAPE_POINTS: int = 4
 // whatever this platform's compositor shows a canvas in.
 pub const PIXELS_RGBA8: int = 0
 pub const PIXELS_SCREEN: int = 1
+pub const EDGE_MIN_X: int = 0
+pub const EDGE_MIN_Y: int = 1
+pub const EDGE_MAX_X: int = 2
+pub const EDGE_MAX_Y: int = 3

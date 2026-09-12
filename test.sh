@@ -118,7 +118,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table pickers panes permission opacity clock frames anim gpu triangle canvas shader)
+cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table pickers panes shell permission opacity clock frames anim gpu triangle canvas shader)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -183,7 +183,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled checked controls numbers strings table pickers panes permission opacity clock anim gpu canvas shader)
+cross_host=(roles events text applied leaks enabled checked controls numbers strings table pickers panes shell permission opacity clock anim gpu canvas shader)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -573,7 +573,7 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # display, and a gate must not need one. An example that is not built is an
     # example that goes stale, and the first person to find out is whoever
     # copied it.
-    for example in hello clock shader canvas signin brew ledger finder about settings permissions booking outline notebook panes; do
+    for example in hello clock shader canvas signin brew ledger finder about settings permissions booking outline notebook panes shelf_bar; do
         "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
         pass
     done

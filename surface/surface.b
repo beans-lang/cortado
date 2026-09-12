@@ -117,4 +117,49 @@ pub abstract class Surface {
         }
         return ok(geometry.Size.of(scratch.real(0), scratch.real(1)))
     }
+
+    /// Attaches a row of commands to this surface, described by a `Menu`.
+    ///
+    /// The same handle and the same tokens as the menu bar, which is the whole
+    /// point: a command that is in both places is one command, and disabling
+    /// it through `Menu.set_enabled` disables it in both. Choosing it from
+    /// either raises `EventKind.command` carrying the token.
+    ///
+    /// Where the row goes is the platform's business and differs — AppKit puts
+    /// it in the title bar, GTK a header bar in place of one, Windows a strip
+    /// inside the frame. The last one takes room from the window, and says so
+    /// through `content_size`, so a layout never has to know.
+    ///
+    /// Refused with `unsupported` where `Capability.toolbar` answers no.
+    pub fn set_toolbar(bar: Menu) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_toolbar_set(self.handle().raw, bar.handle().raw) as int,
+                "attach a toolbar")
+        }
+    }
+
+    pub fn clear_toolbar() -> Result<bool> {
+        unsafe {
+            return host.check(host.ctd_toolbar_clear(self.handle().raw) as int,
+                              "take a toolbar away")
+        }
+    }
+
+    /// How many items the toolbar ended up showing.
+    ///
+    /// Not always the menu's count: a submenu is not a toolbar item on any
+    /// platform here, and a separator is one on some and not others. A caller
+    /// that wanted the menu's count should ask the menu.
+    pub fn toolbar_count() -> Result<int> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        var count: i32 = 0
+        unsafe {
+            let slot: RawPtr<i32> = RawPtr.from_address(scratch.ints.address())
+            host.check(host.ctd_toolbar_count(self.handle().raw, slot) as int,
+                       "count a toolbar's items")?
+            count = slot.read()
+        }
+        return ok(count as int)
+    }
 }

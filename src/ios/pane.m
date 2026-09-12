@@ -188,3 +188,68 @@ int32_t ctd_tab_label(ctd_handle widget, int32_t index, char *out, int32_t cap) 
     (void)index; (void)out; (void)cap;
     return ctd_resolve(widget) ? CTD_ERR_KIND : CTD_ERR_STALE;
 }
+
+// ------------------------------------------------------- toolbars and popovers
+//
+// Neither, and both refusals have a reason worth writing down rather than a
+// shrug.
+//
+// A **toolbar** in this ABI is described by a menu — the same handle, the same
+// tokens — so that a program with one command table needs no second one. This
+// host has no menus: `ctd_menu_new` answers 0 and every menu call refuses,
+// because a phone has no menu bar. UIToolbar is a real control and a phone
+// application wants one; what stands between the two is that there is nothing
+// here to describe it *with*. The change that would enable it is a menu object
+// on this host — an array of items with tokens, which `ctd_menu_set_bar` would
+// still refuse — and until that lands, answering CTD_CAP_TOOLBAR yes would
+// mean inventing a second description of a command.
+//
+// A **popover** is not a thing UIKit has as a control.
+// UIPopoverPresentationController presents from a view *controller*, and on a
+// phone UIKit turns the result into a sheet that covers the screen: a
+// different control, with a different dismissal, that a program written
+// against a popover would be surprised by. Handing one back would be the
+// substitution ctd_widget_supports exists to refuse, one layer up.
+
+ctd_status ctd_toolbar_set(ctd_handle surface, ctd_handle menu) {
+    (void)menu;
+    return ctd_resolve(surface) ? CTD_ERR_UNSUPPORTED : CTD_ERR_STALE;
+}
+
+ctd_status ctd_toolbar_clear(ctd_handle surface) {
+    return ctd_resolve(surface) ? CTD_ERR_UNSUPPORTED : CTD_ERR_STALE;
+}
+
+ctd_status ctd_toolbar_count(ctd_handle surface, int32_t *out) {
+    if (!ctd_resolve(surface)) return CTD_ERR_STALE;
+    // Zero rather than a refusal: "how many items does the toolbar have" has
+    // an answer here and it is none. A tree walk asks this of every surface.
+    if (out) *out = 0;
+    return CTD_OK;
+}
+
+ctd_handle ctd_popover_new(ctd_handle content, double width, double height) {
+    (void)content; (void)width; (void)height;
+    return 0;
+}
+
+ctd_status ctd_popover_show(ctd_handle popover, ctd_handle anchor, int32_t edge) {
+    (void)popover; (void)anchor; (void)edge;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_popover_close(ctd_handle popover) {
+    (void)popover;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_popover_shown(ctd_handle popover, int32_t *out) {
+    (void)popover;
+    if (out) *out = 0;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_popover_release(ctd_handle popover) {
+    (void)popover;
+    return CTD_ERR_UNSUPPORTED;
+}

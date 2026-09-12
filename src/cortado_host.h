@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 18
+#define CTD_ABI_VERSION 19
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -164,6 +164,8 @@ void       ctd_post(int64_t token);
 #define CTD_CAP_FILE_DIALOG     5
 #define CTD_CAP_SNAPSHOT        6  /* can read a widget back as pixels       */
 #define CTD_CAP_GPU             7  /* can draw with shaders; see "the GPU"   */
+#define CTD_CAP_TOOLBAR         8  /* a row of commands attached to a window */
+#define CTD_CAP_POPOVER         9  /* a small window anchored to a control   */
 
 int32_t    ctd_capability(int32_t capability);
 
@@ -1173,6 +1175,68 @@ ctd_status ctd_menu_set_enabled(ctd_handle menu, int64_t token, int32_t on);
  * offers the same command from a toolbar. */
 ctd_status ctd_menu_invoke(ctd_handle menu, int64_t token);
 
+/* ---- toolbars ---------------------------------------------------------- */
+
+/* A row of commands attached to a surface, described by a **menu**.
+ *
+ * Not a builder of its own, and that is the whole design. `ctd_menu_invoke`
+ * already says a command may be offered "from a toolbar"; a second list of
+ * titles and tokens would be a second place for the same command to be spelled
+ * differently, and the first thing to drift would be which of the two the
+ * application remembered to disable.
+ *
+ * So a toolbar *is* a menu: the same handle, the same tokens, the same
+ * ctd_menu_set_enabled. Choosing an item raises CTD_EV_COMMAND carrying the
+ * token, exactly as choosing it from the menu bar does, and a program with one
+ * command table needs no second one.
+ *
+ * Where the platform puts it is the platform's business and differs: AppKit
+ * puts an NSToolbar in the title bar, GTK a header bar in place of one, and
+ * Windows and UIKit a real strip inside the frame. The last two take room from
+ * the window, and both report it through ctd_surface_content_size — so a
+ * layout that already asks how much room it has needs to know nothing about
+ * any of this.
+ *
+ * CTD_ERR_UNSUPPORTED where ctd_capability(CTD_CAP_TOOLBAR) answers 0. */
+ctd_status ctd_toolbar_set(ctd_handle surface, ctd_handle menu);
+ctd_status ctd_toolbar_clear(ctd_handle surface);
+/* How many items the toolbar ended up showing. Not always the menu's count: a
+ * submenu is not a toolbar item on any platform here, and a separator is one
+ * on some and not others. A test that asserted the menu's count would be
+ * asserting the menu. */
+ctd_status ctd_toolbar_count(ctd_handle surface, int32_t *out);
+
+/* ---- popovers ---------------------------------------------------------- */
+
+/* A small window anchored to a control, holding a widget subtree.
+ *
+ * It is not a widget and never appears as one's child: a popover is its own
+ * window on every platform here, which is what lets it draw outside the window
+ * that spawned it and take the keyboard while it is up. `content` is an
+ * ordinary widget — usually a container — and the popover owns where it goes.
+ *
+ * **The content is laid out by the caller, into the size that was asked for.**
+ * A popover has no layout of its own and no platform here will size one to fit
+ * a subtree, so ctd_popover_new takes the size it should be and the caller
+ * solves into it. Guessing on the caller's behalf would mean measuring a tree
+ * the host cannot see.
+ *
+ * Dismissing raises CTD_EV_DISMISS with the popover as the target, whether the
+ * program closed it or the user clicked away — because the program cannot tell
+ * the difference from the outside either, and a state that only updates on one
+ * of the two paths is a popover that is shut and thinks it is open.
+ *
+ * CTD_ERR_UNSUPPORTED where ctd_capability(CTD_CAP_POPOVER) answers 0. */
+#define CTD_EDGE_MIN_X  0  /* to the leading side of the anchor  */
+#define CTD_EDGE_MIN_Y  1  /* above it                           */
+#define CTD_EDGE_MAX_X  2  /* to the trailing side               */
+#define CTD_EDGE_MAX_Y  3  /* below it                           */
+ctd_handle ctd_popover_new(ctd_handle content, double width, double height);
+ctd_status ctd_popover_show(ctd_handle popover, ctd_handle anchor, int32_t edge);
+ctd_status ctd_popover_close(ctd_handle popover);
+ctd_status ctd_popover_shown(ctd_handle popover, int32_t *out);
+ctd_status ctd_popover_release(ctd_handle popover);
+
 /* ---- dialogs ----------------------------------------------------------- */
 
 /* Dialogs are **asynchronous**, on every platform, and that is not a style
@@ -1399,6 +1463,9 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row);
 #define CTD_ALLOW_UNDECIDED      3
 
 #define CTD_EV_PERMISSION       25  /* index is CTD_ALLOW_*; token echoes    */
+/* A popover went away, whether the program closed it or the user clicked
+ * elsewhere. `target` is the popover. */
+#define CTD_EV_DISMISS          26
 
 ctd_status ctd_permission_status(int32_t what, int32_t *out);
 /* Asks the user. CTD_ERR_UNSUPPORTED where a prompt cannot appear — which is

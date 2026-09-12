@@ -185,6 +185,21 @@ void ctd_chrome_of(ctd_handle widget, double *out);
 // what the ordinary child calls have to end with.
 void ctd_tab_sync(ctd_handle widget);
 
+// ------------------------------------------------------------------ shell.c
+
+// The toolbar strip a surface carries, and how many items it has. Kept beside
+// the surface rather than inside it because a toolbar is not a widget: it has
+// no handle and never appears in the tree.
+void    ctd_toolbar_remember(ctd_handle surface, HWND bar, int32_t items);
+void    ctd_toolbar_drop(ctd_handle surface);
+HWND    ctd_toolbar_bar(ctd_handle surface);
+int32_t ctd_toolbar_items(ctd_handle surface);
+
+// ------------------------------------------------------------------- menu.c
+
+// One menu item, for the toolbar to build a button from.
+const CtdCommand *ctd_menu_command_at(ctd_handle handle, int32_t index);
+
 // A day, both ways, between CTD_P_DATE's seconds and a SYSTEMTIME.
 //
 // Only the year, month and day cross, which is what makes the conversion

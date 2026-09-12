@@ -335,6 +335,11 @@ int32_t ctd_capability(int32_t capability) {
         // command queue is made. A phone is the platform where drawing
         // on the GPU matters most.
         case CTD_CAP_GPU:           return 1;
+        // Neither, and the reasons are in src/ios/pane.m: a toolbar is
+        // described by a menu and this host has no menus, and UIKit's popover
+        // is a presentation that becomes a full-screen sheet on a phone.
+        case CTD_CAP_TOOLBAR:       return 0;
+        case CTD_CAP_POPOVER:       return 0;
         default:                    return 0;
     }
 }

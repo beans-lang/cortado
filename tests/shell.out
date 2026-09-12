@@ -1,0 +1,10 @@
+-- a toolbar --
+  it shows some of the menu's items and no more: true
+  a command reaches the same handler with the same token: true
+  disabling one does not change what is shown: true
+  and taking the toolbar away leaves nothing: true
+-- a popover --
+  a fresh one is not showing, and asking to show gives an answer: true
+  a size of nothing is refused: true
+  closing it shuts it and leaves its content alone: true
+drove=true

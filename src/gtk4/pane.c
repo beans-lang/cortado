@@ -249,3 +249,145 @@ void ctd_split_chrome(gpointer object, double *out) {
         out[3] = (double)ctd_paned_handle();
     }
 }
+
+// ------------------------------------------------------- toolbars and popovers
+//
+// GTK4 removed GtkToolbar, and it was not replaced by another toolbar: the
+// GNOME shape is a header bar *in place of* the title bar, with the window's
+// commands in it. That is what this builds — a real GtkHeaderBar set as the
+// window's titlebar — so a toolbar here takes no room from the content, the
+// same as AppKit's.
+//
+// A popover is GtkPopover, which is a real widget with a parent rather than a
+// window of its own; GTK positions it over whatever it is attached to.
+
+static GtkWidget *ctd_header_of(GtkWindow *window) {
+    GtkWidget *bar = gtk_window_get_titlebar(window);
+    return (bar && GTK_IS_HEADER_BAR(bar)) ? bar : NULL;
+}
+
+static void ctd_toolbar_clicked(GtkButton *button, gpointer user) {
+    ctd_event event;
+    memset(&event, 0, sizeof event);
+    event.kind = CTD_EV_COMMAND;
+    event.token = (int64_t)(intptr_t)g_object_get_data(G_OBJECT(button), "ctd-token");
+    (void)user;
+    if (g_sink) g_sink(g_sink_context, &event);
+}
+
+ctd_status ctd_toolbar_set(ctd_handle surface, ctd_handle menu_handle) {
+    gpointer window = ctd_resolve(surface);
+    gpointer source = ctd_resolve(menu_handle);
+    if (!window || !source) return CTD_ERR_STALE;
+    if (!GTK_IS_WINDOW(window)) return CTD_ERR_KIND;
+    GArray *items = ctd_menu_commands(menu_handle);
+    if (!items) return CTD_ERR_KIND;
+
+    GtkWidget *bar = gtk_header_bar_new();
+    gtk_header_bar_set_show_title_buttons(GTK_HEADER_BAR(bar), TRUE);
+    int shown = 0;
+    for (guint at = 0; at < items->len; at++) {
+        CtdCommand *item = &g_array_index(items, CtdCommand, at);
+        // A separator is a gap, which a header bar spells by packing nothing.
+        if (item->separator) { shown++; continue; }
+        GtkWidget *button = gtk_button_new_with_label(item->title ? item->title : "");
+        g_object_set_data(G_OBJECT(button), "ctd-token",
+                          (gpointer)(intptr_t)item->token);
+        g_signal_connect(button, "clicked", G_CALLBACK(ctd_toolbar_clicked), NULL);
+        gtk_widget_set_sensitive(button, item->enabled ? TRUE : FALSE);
+        gtk_header_bar_pack_start(GTK_HEADER_BAR(bar), button);
+        shown++;
+    }
+    g_object_set_data(G_OBJECT(bar), "ctd-count", (gpointer)(intptr_t)shown);
+    gtk_window_set_titlebar(GTK_WINDOW(window), bar);
+    return CTD_OK;
+}
+
+ctd_status ctd_toolbar_clear(ctd_handle surface) {
+    gpointer window = ctd_resolve(surface);
+    if (!window) return CTD_ERR_STALE;
+    if (!GTK_IS_WINDOW(window)) return CTD_ERR_KIND;
+    gtk_window_set_titlebar(GTK_WINDOW(window), NULL);
+    return CTD_OK;
+}
+
+ctd_status ctd_toolbar_count(ctd_handle surface, int32_t *out) {
+    gpointer window = ctd_resolve(surface);
+    if (!window) return CTD_ERR_STALE;
+    if (!GTK_IS_WINDOW(window)) return CTD_ERR_KIND;
+    GtkWidget *bar = ctd_header_of(GTK_WINDOW(window));
+    if (out) {
+        *out = bar ? (int32_t)(intptr_t)g_object_get_data(G_OBJECT(bar), "ctd-count") : 0;
+    }
+    return CTD_OK;
+}
+
+// ----------------------------------------------------------------- popovers
+
+static void ctd_popover_closed(GtkPopover *popover, gpointer user) {
+    (void)popover;
+    ctd_emit(CTD_EV_DISMISS, (ctd_handle)(uintptr_t)user, 0, 0);
+}
+
+static GtkPopover *ctd_popover_of(ctd_handle handle) {
+    gpointer object = ctd_resolve(handle);
+    return (object && GTK_IS_POPOVER(object)) ? GTK_POPOVER(object) : NULL;
+}
+
+ctd_handle ctd_popover_new(ctd_handle content, double width, double height) {
+    gpointer inside = ctd_resolve(content);
+    if (!inside || !GTK_IS_WIDGET(inside)) return 0;
+    if (width <= 0.0 || height <= 0.0) return 0;
+    GtkWidget *popover = gtk_popover_new();
+    gtk_popover_set_child(GTK_POPOVER(popover), GTK_WIDGET(inside));
+    gtk_widget_set_size_request(GTK_WIDGET(inside), (int)width, (int)height);
+    gtk_popover_set_autohide(GTK_POPOVER(popover), TRUE);
+    ctd_handle handle = ctd_track(popover, -1);
+    if (!handle) return 0;
+    g_signal_connect(popover, "closed", G_CALLBACK(ctd_popover_closed),
+                     (gpointer)(uintptr_t)handle);
+    return handle;
+}
+
+ctd_status ctd_popover_show(ctd_handle handle, ctd_handle anchor, int32_t edge) {
+    GtkPopover *popover = ctd_popover_of(handle);
+    gpointer view = ctd_resolve(anchor);
+    if (!popover || !view) return CTD_ERR_STALE;
+    if (!GTK_IS_WIDGET(view)) return CTD_ERR_KIND;
+    if (edge < CTD_EDGE_MIN_X || edge > CTD_EDGE_MAX_Y) return CTD_ERR_RANGE;
+    gtk_widget_set_parent(GTK_WIDGET(popover), GTK_WIDGET(view));
+    gtk_popover_set_position(GTK_POPOVER(popover),
+        edge == CTD_EDGE_MIN_X ? GTK_POS_LEFT
+      : edge == CTD_EDGE_MIN_Y ? GTK_POS_TOP
+      : edge == CTD_EDGE_MAX_X ? GTK_POS_RIGHT
+                               : GTK_POS_BOTTOM);
+    gtk_popover_popup(GTK_POPOVER(popover));
+    return CTD_OK;
+}
+
+ctd_status ctd_popover_close(ctd_handle handle) {
+    GtkPopover *popover = ctd_popover_of(handle);
+    if (!popover) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    gtk_popover_popdown(popover);
+    return CTD_OK;
+}
+
+ctd_status ctd_popover_shown(ctd_handle handle, int32_t *out) {
+    GtkPopover *popover = ctd_popover_of(handle);
+    if (!popover) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    if (out) *out = gtk_widget_get_visible(GTK_WIDGET(popover)) ? 1 : 0;
+    return CTD_OK;
+}
+
+ctd_status ctd_popover_release(ctd_handle handle) {
+    GtkPopover *popover = ctd_popover_of(handle);
+    if (!popover) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    // The content goes back to being an ordinary unparented widget, still
+    // named by its own handle: the caller built that tree and may show it
+    // again, so the popover must not take it down.
+    gtk_popover_set_child(popover, NULL);
+    if (gtk_widget_get_parent(GTK_WIDGET(popover)))
+        gtk_widget_unparent(GTK_WIDGET(popover));
+    ctd_untrack(handle);
+    return CTD_OK;
+}

@@ -21,6 +21,20 @@ pub enum Capability {
     file_dialog
     snapshot
     gpu
+    /// A row of commands attached to a window.
+    ///
+    /// Described by a menu — the same handle and the same tokens, so a program
+    /// with one command table needs no second one. A platform with no menus
+    /// therefore has no toolbar either, which is why iOS answers no: what is
+    /// missing there is not the strip, it is anything to describe it with.
+    toolbar
+    /// A small window anchored to a control.
+    ///
+    /// `NSPopover` and `GtkPopover` are real. Windows has no such control —
+    /// every application makes a layered window and captures the mouse — and
+    /// UIKit's is a presentation that becomes a full-screen sheet on a phone,
+    /// which is a different control with a different dismissal.
+    popover
 
     fn code() -> int {
         return match self {
@@ -31,6 +45,8 @@ pub enum Capability {
             file_dialog => host.CAP_FILE_DIALOG,
             snapshot => host.CAP_SNAPSHOT,
             gpu => host.CAP_GPU,
+            toolbar => host.CAP_TOOLBAR,
+            popover => host.CAP_POPOVER,
         }
     }
 
@@ -43,6 +59,8 @@ pub enum Capability {
             file_dialog => "file_dialog",
             snapshot => "snapshot",
             gpu => "gpu",
+            toolbar => "toolbar",
+            popover => "popover",
         }
     }
 
