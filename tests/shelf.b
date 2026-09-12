@@ -103,6 +103,9 @@ fn build() -> Result<bool> {
     drink.select(2)?
     root.add(drink)?
 
+    var manual: widgets.Link = widgets.Link.of("Read the manual", "https://beans-lang.org")?
+    root.add(manual)?
+
     var picture: widgets.ImageView = new widgets.ImageView()
     root.add(picture)?
 
@@ -134,6 +137,7 @@ fn build() -> Result<bool> {
     io.println("combo item 0=\"{drink.item_at(0).or("?")}\" item 2=\"{drink.item_at(2).or("?")}\"")
     io.println("radio chosen={pick.is_chosen().or(false)}")
     io.println("switch on={remember.is_on().or(false)}")
+    io.println("link words=\"{manual.words().or("?")}\" url=\"{manual.url().or("?")}\"")
     io.println("search hint=\"{find.hint().or("?")}\" spinner turning={busy.is_turning().or(false)}")
     io.println("stepper value={shots.value().or(-1.0)} step={shots.step().or(-1.0)} low={shots.low().or(-1.0)} high={shots.high().or(-1.0)}")
     io.println("level {battery.level().or(-1.0)} of {battery.high().or(-1.0)}")

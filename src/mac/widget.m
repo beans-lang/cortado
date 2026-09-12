@@ -31,6 +31,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_TABLE:
         case CTD_W_SEARCH_FIELD:
         case CTD_W_SPINNER:
+        case CTD_W_LINK:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -191,6 +192,25 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // find a search box in.
             view = [[NSSearchField alloc] initWithFrame:NSZeroRect];
             break;
+        case CTD_W_LINK: {
+            // AppKit has no link control, and the native affordance is not a
+            // button: it is an NSTextField holding an attributed string with
+            // NSLinkAttributeName on it. That is what gives the blue
+            // underline, the pointing-hand cursor and the click that opens the
+            // URL in the user's own browser with the user's own handler
+            // registrations — none of which a styled button would have.
+            NSTextField *link = [[NSTextField alloc] initWithFrame:NSZeroRect];
+            [link setBezeled:NO];
+            [link setDrawsBackground:NO];
+            [link setEditable:NO];
+            // Selectable, because an NSTextField only follows a link when its
+            // text can be selected. It is the one thing that makes the control
+            // clickable at all.
+            [link setSelectable:YES];
+            [link setAllowsEditingTextAttributes:YES];
+            view = link;
+            break;
+        }
         case CTD_W_SPINNER: {
             NSProgressIndicator *wheel =
                 [[NSProgressIndicator alloc] initWithFrame:NSZeroRect];

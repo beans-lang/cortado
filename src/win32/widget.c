@@ -30,6 +30,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_STEPPER:
         case CTD_W_TABLE:
         case CTD_W_SEARCH_FIELD:
+        case CTD_W_LINK:
             return 1;
         case CTD_W_SPINNER:
             // The common controls have no spinner. A marquee progress bar is
@@ -88,6 +89,14 @@ ctd_handle ctd_widget_new(int32_t kind) {
             // a spin *field* and a different control.
             class_name = UPDOWN_CLASSW;
             style |= UDS_ARROWKEYS | UDS_ALIGNRIGHT | WS_TABSTOP;
+            break;
+        case CTD_W_LINK:
+            // SysLink, the real one — it draws the blue underline and the
+            // hand cursor and reports the click. What it does *not* do is
+            // follow the URL, so this host opens it; see the note beside
+            // CTD_S_URL in the header.
+            class_name = WC_LINK;
+            style |= WS_TABSTOP;
             break;
         case CTD_W_SEARCH_FIELD:
             // An edit control with a cue banner, which is what a Windows

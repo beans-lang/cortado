@@ -42,6 +42,7 @@ int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
         case CTD_W_TABLE:        role = "grid";        break;
         case CTD_W_SEARCH_FIELD: role = "searchbox";   break;
         case CTD_W_SPINNER:      role = "progressbar"; break;
+        case CTD_W_LINK:         role = "link";        break;
         default:                 role = "group";       break;
     }
     return ctd_copy_out(role, out, cap);

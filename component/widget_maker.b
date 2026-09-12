@@ -84,6 +84,7 @@ pub class WidgetMaker {
             table => { return ok(new widgets.Table()) }
             search_field => { return ok(new widgets.SearchField()) }
             spinner => { return ok(new widgets.Spinner()) }
+            link => { return ok(new widgets.Link()) }
         }
     }
 

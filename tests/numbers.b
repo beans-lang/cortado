@@ -58,6 +58,7 @@ fn carries_a_number(kind: widgets.WidgetKind) -> bool {
         table => { return false }
         search_field => { return false }
         spinner => { return false }
+        link => { return false }
     }
 }
 
@@ -86,6 +87,7 @@ fn takes_a_step(kind: widgets.WidgetKind) -> bool {
         table => { return false }
         search_field => { return false }
         spinner => { return false }
+        link => { return false }
     }
 }
 
@@ -112,6 +114,7 @@ fn reads_its_step(kind: widgets.WidgetKind) -> bool {
         table => { return false }
         search_field => { return false }
         spinner => { return false }
+        link => { return false }
     }
 }
 
@@ -141,6 +144,7 @@ fn moved_by_a_user(kind: widgets.WidgetKind) -> bool {
         table => { return false }
         search_field => { return false }
         spinner => { return false }
+        link => { return false }
     }
 }
 

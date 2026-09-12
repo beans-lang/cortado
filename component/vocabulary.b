@@ -46,6 +46,7 @@ pub class Vocabulary {
         if tag == "Table" { return some(widgets.WidgetKind.table) }
         if tag == "SearchField" { return some(widgets.WidgetKind.search_field) }
         if tag == "Spinner" { return some(widgets.WidgetKind.spinner) }
+        if tag == "Link" { return some(widgets.WidgetKind.link) }
         return none
     }
 

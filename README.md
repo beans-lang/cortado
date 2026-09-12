@@ -362,8 +362,8 @@ mistake.
 `VFlex`, `HFlex`, `Grid`, `Box`, `Container` and `ScrollView`; controls are
 `Label`, `Button`, `TextField`, `SecureField`, `TextArea`, `CheckBox`,
 `RadioButton`, `Switch`, `Slider`, `Stepper`, `ProgressBar`,
-`LevelIndicator`, `ComboBox`, `Table`, `SearchField`, `Spinner`, `Separator`,
-`Image` and `Canvas`. A closed set, and
+`LevelIndicator`, `ComboBox`, `Table`, `SearchField`, `Spinner`, `Link`,
+`Separator`, `Image` and `Canvas`. A closed set, and
 any other capitalised tag is a component. There is no `<div>`, no entity table,
 no escaping and no `$html`: the output is a tree of native objects, and there
 is nothing to inject into.
@@ -420,6 +420,7 @@ ran.
 | `Image` | `NSImageView` | a picture |
 | `Table` | `NSTableView` | rows and columns, filled by asking |
 | `Spinner` | `NSProgressIndicator` | work with no known end — **not everywhere** |
+| `Link` | `NSTextField` + a link attribute | words that go somewhere |
 | `Container` | `CortadoView` | holds children |
 | `ScrollView` | `NSScrollView` | holds children, and scrolls them |
 
@@ -465,6 +466,20 @@ have which key is cortado's rule, in `src/cortado_rules.h`, and
 `tests/strings.out` is that rule as a golden — including that the hint and the
 value are different strings, which a host that stored one where the other goes
 would otherwise pass.
+
+**A link opens its URL and raises nothing.** That is a decision. The four
+platforms disagree about who follows a link — AppKit and GTK do it themselves,
+a `SysLink` reports the click and leaves it to the program — and **none of them
+lets a program intercept the click** and route it somewhere else. So cortado
+does not promise an event it could only raise on some hosts. A screen that
+needs to handle the click itself wants a `Button` with the words in its title,
+which is a different control and says so.
+
+Two hosts keep the target *inside* the control's own text: an attributed string
+on the Mac, `<a href="...">words</a>` markup on Windows. So writing the words
+must not drop the link, and reading the target back must not answer the markup
+— which is what `tests/strings.out` checks, and what caught the first version
+losing every URL to a message sent to a `nil` dictionary.
 
 **A growing child in a stack is refused, not ignored.** `StackLayout` gives
 every child the size it measures; `grow` is `FlexLayout`'s word. Asking for it

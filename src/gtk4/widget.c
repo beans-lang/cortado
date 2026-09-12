@@ -31,6 +31,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_TABLE:
         case CTD_W_SEARCH_FIELD:
         case CTD_W_SPINNER:
+        case CTD_W_LINK:
             return 1;
         default:
             return CTD_ERR_RANGE;
@@ -93,6 +94,12 @@ ctd_handle ctd_widget_new(int32_t kind) {
             break;
         case CTD_W_SPINNER:
             widget = gtk_spinner_new();
+            break;
+        case CTD_W_LINK:
+            // GTK has a real one, and it opens the URI itself through the
+            // portal or the user's own handler — which is what the note beside
+            // CTD_S_URL says a link does.
+            widget = gtk_link_button_new_with_label("", "");
             break;
         case CTD_W_SECURE_FIELD:
             widget = gtk_entry_new();

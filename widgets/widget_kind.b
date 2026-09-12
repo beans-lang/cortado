@@ -50,6 +50,8 @@ pub enum WidgetKind {
     /// Something is happening and nobody knows for how long — and **not on
     /// every platform**: the Win32 common controls have no spinner.
     spinner
+    /// Words that go somewhere.
+    link
 
     /// The number `cortado_host.h` uses for this kind.
     fn code() -> int {
@@ -75,6 +77,7 @@ pub enum WidgetKind {
             table => host.W_TABLE,
             search_field => host.W_SEARCH_FIELD,
             spinner => host.W_SPINNER,
+            link => host.W_LINK,
         }
     }
 
@@ -102,6 +105,7 @@ pub enum WidgetKind {
             table => "Table",
             search_field => "SearchField",
             spinner => "Spinner",
+            link => "Link",
         }
     }
 
@@ -147,6 +151,7 @@ pub enum WidgetKind {
             table => { return false }
             search_field => { return false }
             spinner => { return false }
+            link => { return false }
         }
     }
 
@@ -207,6 +212,7 @@ pub enum WidgetKind {
         every.push(WidgetKind.table)
         every.push(WidgetKind.search_field)
         every.push(WidgetKind.spinner)
+        every.push(WidgetKind.link)
         return move every
     }
 
@@ -232,6 +238,7 @@ pub enum WidgetKind {
         if code == host.W_TABLE { return some(WidgetKind.table) }
         if code == host.W_SEARCH_FIELD { return some(WidgetKind.search_field) }
         if code == host.W_SPINNER { return some(WidgetKind.spinner) }
+        if code == host.W_LINK { return some(WidgetKind.link) }
         return none
     }
 }

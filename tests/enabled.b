@@ -67,6 +67,7 @@ fn takes_input(kind: widgets.WidgetKind) -> bool {
         canvas => { return false }
         table => { return false }
         spinner => { return false }
+        link => { return false }
     }
 }
 

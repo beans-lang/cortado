@@ -1164,6 +1164,31 @@ First working macOS host.
   `shares_space()` — false in the stack, true in the flex — rather than the
   class.
 
+- **`CTD_W_LINK`, and a link that opens rather than reporting.** `GtkLinkButton`
+  and `SysLink` are real controls; AppKit and UIKit have none, so the Mac uses
+  an `NSTextField` holding an attributed string with `NSLinkAttributeName` —
+  which is what gives the blue underline, the pointing-hand cursor and the
+  click that opens the URL through the user's own browser and the user's own
+  handler registrations. None of that follows from drawing blue underlined
+  text.
+
+  It raises nothing, and that is a decision rather than an oversight. The four
+  platforms disagree about who follows a link, and **none of them lets a
+  program intercept the click**, so cortado does not promise an event it could
+  raise on only some of them. A screen that wants the click wants a Button.
+
+- **Two hosts keep the target inside the control's own text.** An attributed
+  string on the Mac, `<a href="...">words</a>` markup on Windows — so writing
+  the words has to not drop the link, and reading the target back has to not
+  answer the markup. Both go through one place on each host, and
+  `tests/strings.out` checks the round trip in both directions.
+
+  Which is how the first version's bug surfaced: the URL was stored into a
+  dictionary that had not been allocated yet, and a message to `nil` in
+  Objective-C is a no-op — so every link drew correctly, opened correctly, and
+  read its target back as `""`. Reverting the one-line fix turns that golden
+  line to `false`.
+
 ### Not done yet, on purpose
 
 - **No Windows or GTK4 host.** Both are bounded work against a header that two

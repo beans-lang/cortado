@@ -36,6 +36,43 @@ NSTextView *ctd_text_view(id object) {
 // three hosts that keep it.
 static int g_spinning[CTD_SLOTS];
 
+// Where each link goes, by handle.
+//
+// Kept here because an attributed string is not a place to read a URL back
+// from: -attribute:atIndex:effectiveRange: answers an NSURL that AppKit
+// normalised, so a program that set "example.com/a b" would read back
+// "example.com/a%20b" and a round-trip test would fail for a reason that is
+// nobody's bug. The control still holds the real link; this holds the words.
+static NSMutableDictionary *g_link_urls;
+
+// The link's text and its target, as one attributed string.
+//
+// Called from both setters, because an NSTextField's attributed value carries
+// the words *and* the link together — writing either one alone would drop the
+// other.
+// The dictionary, made on first use. A message to nil is a no-op in
+// Objective-C, so a -setObject: before it exists loses the URL silently — and
+// that is exactly what happened: the link drew correctly and read back "".
+static NSMutableDictionary *ctd_link_book(void) {
+    if (!g_link_urls) g_link_urls = [[NSMutableDictionary alloc] init];
+    return g_link_urls;
+}
+
+void ctd_link_retitle(NSTextField *link, NSString *words, NSURL *target) {
+    NSString *text = words ? words : @"";
+    NSMutableDictionary *style = [NSMutableDictionary dictionary];
+    if (target) {
+        [style setObject:target forKey:NSLinkAttributeName];
+        [style setObject:[NSNumber numberWithInt:NSUnderlineStyleSingle]
+                  forKey:NSUnderlineStyleAttributeName];
+        [style setObject:[NSColor linkColor] forKey:NSForegroundColorAttributeName];
+    }
+    NSAttributedString *rich =
+        [[NSAttributedString alloc] initWithString:text attributes:style];
+    [link setAttributedStringValue:rich];
+    [rich release];
+}
+
 ctd_status ctd_set_string(ctd_handle widget, int32_t key,
                           const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
@@ -46,6 +83,18 @@ ctd_status ctd_set_string(ctd_handle widget, int32_t key,
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             [(NSTextField *)object setPlaceholderString:ctd_string(utf8, len)];
             return CTD_OK;
+        case CTD_S_URL: {
+            if (!ctd_kind_has_url(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSTextField *link = (NSTextField *)object;
+            NSString *where = ctd_string(utf8, len);
+            NSURL *target = [NSURL URLWithString:where];
+            // A string AppKit cannot read as a URL is refused here rather than
+            // becoming a link that does nothing when clicked.
+            if (len > 0 && !target) return CTD_ERR_RANGE;
+            [ctd_link_book() setObject:where forKey:[NSNumber numberWithUnsignedLongLong:widget]];
+            ctd_link_retitle(link, [link stringValue], target);
+            return CTD_OK;
+        }
         default: return CTD_ERR_UNSUPPORTED;
     }
 }
@@ -59,6 +108,12 @@ int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
             NSString *hint = [(NSTextField *)object placeholderString];
             return ctd_copy_out(hint ? hint : @"", out, cap);
         }
+        case CTD_S_URL: {
+            if (!ctd_kind_has_url(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSString *where = [ctd_link_book() objectForKey:
+                [NSNumber numberWithUnsignedLongLong:widget]];
+            return ctd_copy_out(where ? where : @"", out, cap);
+        }
         default: return CTD_ERR_UNSUPPORTED;
     }
 }
@@ -69,6 +124,15 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     if (!object) return CTD_ERR_STALE;
     NSString *text = ctd_string(utf8, len);
     NSTextView *inner = ctd_text_view(object);
+    if (ctd_slot_kind(widget) == CTD_W_LINK) {
+        // A link's words and its target are one attributed string, so writing
+        // the words alone would drop the link. Both go through one place.
+        NSString *where = [ctd_link_book() objectForKey:
+            [NSNumber numberWithUnsignedLongLong:widget]];
+        ctd_link_retitle((NSTextField *)object, text,
+                         where ? [NSURL URLWithString:where] : nil);
+        return CTD_OK;
+    }
     if (inner)                                           [inner setString:text];
     else if ([object isKindOfClass:[NSButton class]])    [(NSButton *)object setTitle:text];
     else if ([object isKindOfClass:[NSTextField class]]) [(NSTextField *)object setStringValue:text];

@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 11
+#define CTD_ABI_VERSION 12
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -294,6 +294,8 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 /* Something is happening and nobody knows for how long. CTD_P_ANIMATING turns
  * it. Not on every platform: the Win32 common controls have no spinner. */
 #define CTD_W_SPINNER      20
+/* Words that go somewhere. CTD_S_URL is where. */
+#define CTD_W_LINK         21
 
 /* Whether this host can build a control of this kind.
  *
@@ -536,6 +538,20 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  * two-call shape for reading. CTD_ERR_KIND when this control has no such
  * string. */
 #define CTD_S_HINT  1  /* what a field shows while it is empty                */
+/* Where a link goes.
+ *
+ * **A link opens it, and raises nothing.** That is a decision, and the reason
+ * is that the four platforms disagree about who opens a link and cortado
+ * cannot make them agree without taking the behaviour away from all of them.
+ * AppKit opens an NSLinkAttributeName itself, through the user's own browser
+ * and the user's own handler registrations; GTK's link button does the same;
+ * a Win32 SysLink does not, so that host calls ShellExecute. What none of them
+ * can do is let a program *intercept* the click and route it somewhere else,
+ * so cortado does not promise an event it could only raise on some of them.
+ *
+ * A program that wants to handle the click itself wants a Button with a URL
+ * in its title — which is a different control and says so. */
+#define CTD_S_URL   2  /* where a link goes                                   */
 
 ctd_status ctd_set_string(ctd_handle widget, int32_t key,
                           const char *utf8, int32_t len);

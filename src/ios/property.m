@@ -339,6 +339,22 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
 }
 
 
+// Where each link goes, by handle. A UIButton has nowhere to keep it, and the
+// host is what opens it.
+static NSMutableDictionary *g_link_urls;
+
+@implementation CortadoLink
+- (void)follow:(id)sender {
+    (void)sender;
+    NSString *where = [g_link_urls objectForKey:
+        [NSNumber numberWithUnsignedLongLong:_handle]];
+    if (!where || [where length] == 0) return;
+    NSURL *target = [NSURL URLWithString:where];
+    if (!target) return;
+    [[UIApplication sharedApplication] openURL:target options:@{} completionHandler:nil];
+}
+@end
+
 ctd_status ctd_set_string(ctd_handle widget, int32_t key,
                           const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
@@ -349,6 +365,15 @@ ctd_status ctd_set_string(ctd_handle widget, int32_t key,
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             [(UITextField *)object setPlaceholder:ctd_string(utf8, len)];
             return CTD_OK;
+        case CTD_S_URL: {
+            if (!ctd_kind_has_url(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSString *where = ctd_string(utf8, len);
+            if (len > 0 && ![NSURL URLWithString:where]) return CTD_ERR_RANGE;
+            if (!g_link_urls) g_link_urls = [[NSMutableDictionary alloc] init];
+            [g_link_urls setObject:where
+                            forKey:[NSNumber numberWithUnsignedLongLong:widget]];
+            return CTD_OK;
+        }
         default: return CTD_ERR_UNSUPPORTED;
     }
 }
@@ -361,6 +386,12 @@ int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             NSString *hint = [(UITextField *)object placeholder];
             return ctd_copy_out(hint ? hint : @"", out, cap);
+        }
+        case CTD_S_URL: {
+            if (!ctd_kind_has_url(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSString *where = [g_link_urls objectForKey:
+                [NSNumber numberWithUnsignedLongLong:widget]];
+            return ctd_copy_out(where ? where : @"", out, cap);
         }
         default: return CTD_ERR_UNSUPPORTED;
     }

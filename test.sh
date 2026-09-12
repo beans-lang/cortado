@@ -552,7 +552,7 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # display, and a gate must not need one. An example that is not built is an
     # example that goes stale, and the first person to find out is whoever
     # copied it.
-    for example in hello clock shader canvas signin brew ledger finder; do
+    for example in hello clock shader canvas signin brew ledger finder about; do
         "$BEANSC" build "$root/examples/$example.b" -o "$tmp/$example.bin" >/dev/null
         pass
     done

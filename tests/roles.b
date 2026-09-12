@@ -107,6 +107,7 @@ fn build() -> Result<bool> {
     // One column, because that is what every host has — a UITableView is a
     // list. `tests/table.out` is where the second column's answer lives.
     var orders: widgets.Table = widgets.Table.of(["Order"])?
+    var manual: widgets.Link = widgets.Link.of("Read the manual", "https://beans-lang.org")?
     var picture: widgets.ImageView = new widgets.ImageView()
     picture.set_hidden(true)?
     // A canvas is here for the same reason every other control is: it is a
@@ -135,6 +136,7 @@ fn build() -> Result<bool> {
     root.add(find)?
     root.add(secret)?
     root.add(orders)?
+    root.add(manual)?
     root.add(picture)?
     root.add(plot)?
     root.add(buttons)?
@@ -162,6 +164,7 @@ fn build() -> Result<bool> {
     page.add(fixed(sheet, "find", find, 24.0))
     page.add(fixed(sheet, "secret", secret, 24.0))
     page.add(fixed(sheet, "orders", orders, 40.0))
+    page.add(fixed(sheet, "manual", manual, 20.0))
     page.add(fixed(sheet, "picture", picture, 40.0))
     page.add(fixed(sheet, "plot", plot, 32.0))
 

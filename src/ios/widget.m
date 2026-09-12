@@ -35,6 +35,7 @@ int32_t ctd_widget_supports(int32_t kind) {
         case CTD_W_TABLE:
         case CTD_W_SEARCH_FIELD:
         case CTD_W_SPINNER:
+        case CTD_W_LINK:
             return 1;
         case CTD_W_LEVEL_INDICATOR:
             // UIKit has no level indicator. A UIProgressView is a progress
@@ -110,6 +111,16 @@ ctd_handle ctd_widget_new(int32_t kind) {
             UISearchTextField *field =
                 [[UISearchTextField alloc] initWithFrame:CGRectZero];
             view = field;
+            break;
+        }
+        case CTD_W_LINK: {
+            // UIKit has no link control either. A UIButton is the control a
+            // phone user taps, and the host opens the URL itself — see the
+            // note beside CTD_S_URL in the header for why a link opens and
+            // raises nothing.
+            UIButton *link = [UIButton buttonWithType:UIButtonTypeSystem];
+            [link setFrame:CGRectZero];
+            view = [link retain];
             break;
         }
         case CTD_W_SPINNER: {
@@ -192,6 +203,17 @@ ctd_handle ctd_widget_new(int32_t kind) {
     }
     ctd_tag(view);
     ctd_handle handle = ctd_track(view, kind);
+    if (kind == CTD_W_LINK) {
+        // Its own target, so a tap opens the URL rather than reaching the
+        // sink. A link is the one control in cortado that acts on its own.
+        CortadoLink *opener = [[CortadoLink alloc] init];
+        [opener setHandle:handle];
+        [(UIButton *)view addTarget:opener
+                             action:@selector(follow:)
+                   forControlEvents:UIControlEventTouchUpInside];
+        [g_targets addObject:opener];
+        [opener release];
+    }
     if (kind == CTD_W_TABLE) {
         UITableView *rows = ctd_table_view(view);
         CortadoTableSource *source = [[CortadoTableSource alloc] init];

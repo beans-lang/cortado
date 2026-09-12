@@ -152,3 +152,5 @@ link windows library "comdlg32"
 link windows library "gdi32"
 link windows library "user32"
 link windows library "advapi32"
+# ShellExecuteW, which follows a link. See ctd_link_target in src/win32/.
+link windows library "shell32"

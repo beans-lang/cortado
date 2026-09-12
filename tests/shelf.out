@@ -1,4 +1,4 @@
-Container CortadoView role=group "" frame=0,0,480,520 children=19
+Container CortadoView role=group "" frame=0,0,480,520 children=20
   Label NSTextField role=text "Every control" frame=20,20,300,28
   Button NSButton role=button "Press" frame=20,56,300,28
   TextField NSTextField role=textbox "one line" frame=20,92,300,28
@@ -15,9 +15,10 @@ Container CortadoView role=group "" frame=0,0,480,520 children=19
   LevelIndicator NSLevelIndicator role=meter "" frame=20,488,300,28
   Separator NSBox role=separator "" frame=20,524,300,28
   ComboBox NSPopUpButton role=combobox "cortado" frame=20,560,300,28
-  ImageView NSImageView role=image "" frame=20,596,300,28
-  Table NSScrollView role=grid "" frame=20,632,300,28
-  ScrollView NSScrollView role=scrollarea "" frame=20,668,300,28 children=1
+  Link NSTextField role=link "Read the manual" frame=20,596,300,28
+  ImageView NSImageView role=image "" frame=20,632,300,28
+  Table NSScrollView role=grid "" frame=20,668,300,28
+  ScrollView NSScrollView role=scrollarea "" frame=20,704,300,28 children=1
     Label NSTextField role=text "inside the scroller" frame=0,0,0,0
 -- state --
 slider value=4 low=0 high=10
@@ -26,6 +27,7 @@ combo items=3 selected=2 text="cortado"
 combo item 0="flat white" item 2="cortado"
 radio chosen=true
 switch on=true
+link words="Read the manual" url="https://beans-lang.org"
 search hint="Search the menu" spinner turning=true
 stepper value=4 step=2 low=0 high=8
 level 7 of 10

@@ -48,6 +48,13 @@ enum { CTD_SLOTS = 8192 };
 @property (retain) NSString *title;
 @end
 
+// A link's own target. A tap opens the URL; see the note beside CTD_S_URL in
+// the header for why a link raises nothing.
+@interface CortadoLink : NSObject
+@property (assign) ctd_handle handle;
+- (void)follow:(id)sender;
+@end
+
 @interface CortadoTarget : NSObject
 @property (assign) ctd_handle handle;
 - (void)fire:(id)sender;

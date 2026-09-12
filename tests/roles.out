@@ -1,4 +1,4 @@
-Container role=group "" children=16
+Container role=group "" children=17
   Label role=text "Order a coffee"
   TextField role=textbox "flat white"
   TextArea role=textbox "no sugar"
@@ -12,6 +12,7 @@ Container role=group "" children=16
   SearchField role=searchbox ""
   SecureField role=password ""
   Table role=grid ""
+  Link role=link "Read the manual"
   ImageView role=image "" hidden
   Canvas role=group ""
   Container role=group "" children=2

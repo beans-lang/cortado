@@ -51,6 +51,7 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "Table" { return true }
     if tag == "SearchField" { return true }
     if tag == "Spinner" { return true }
+    if tag == "Link" { return true }
     return false
 }
 
@@ -141,7 +142,7 @@ pub fn attribute_names() -> List<string> {
 /// Every control tag, for the same reason.
 pub fn widget_tags() -> List<string> {
     return ["Box", "Button", "Canvas", "CheckBox", "ComboBox", "Container",
-            "Grid", "HFlex", "HStack", "Image", "Label", "LevelIndicator",
+            "Grid", "HFlex", "HStack", "Image", "Label", "LevelIndicator", "Link",
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",
             "SearchField", "Separator", "Slider", "Spinner", "Stepper",
             "Switch", "Table", "TextArea", "TextField", "VFlex", "VStack"]

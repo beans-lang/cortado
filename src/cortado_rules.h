@@ -70,6 +70,11 @@ static inline int ctd_kind_has_range(int32_t kind) {
         || kind == CTD_W_LEVEL_INDICATOR;
 }
 
+/* Whether a kind carries somewhere to go. Only a link. */
+static inline int ctd_kind_has_url(int32_t kind) {
+    return kind == CTD_W_LINK;
+}
+
 /* Whether a kind can be turning. Only a spinner: a progress bar's
  * indeterminate mode is CTD_P_INDETERMINATE and means something else — that
  * the *total* is unknown, not that the control is animating. */

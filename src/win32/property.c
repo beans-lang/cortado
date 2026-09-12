@@ -400,12 +400,65 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
 }
 
 
+// A SysLink holds one string with the URL *inside* it —
+// `<a href="where">words</a>` — so the words and the target have to be kept
+// apart here and composed on every write. Reading the markup back would be
+// parsing HTML to answer a question cortado already knows the answer to.
+static WCHAR *g_link_words[CTD_SLOTS];
+static WCHAR *g_link_where[CTD_SLOTS];
+
+static void ctd_link_hold(WCHAR **slot, const char *utf8, int32_t len) {
+    free(*slot);
+    *slot = ctd_wide(utf8 ? utf8 : "", utf8 ? len : 0);
+}
+
+// The control's one string, rebuilt from the two halves.
+static ctd_status ctd_link_compose(HWND view, uint32_t slot) {
+    const WCHAR *words = g_link_words[slot] ? g_link_words[slot] : L"";
+    const WCHAR *where = g_link_where[slot] ? g_link_where[slot] : L"";
+    size_t room = lstrlenW(words) + lstrlenW(where) + 32;
+    WCHAR *markup = (WCHAR *)malloc(room * sizeof(WCHAR));
+    if (!markup) return CTD_ERR_PLATFORM;
+    if (where[0] == L'\0') {
+        lstrcpynW(markup, words, (int)room);
+    } else {
+        wsprintfW(markup, L"<a href=\"%s\">%s</a>", where, words);
+    }
+    BOOL done = SetWindowTextW(view, markup);
+    free(markup);
+    return done ? CTD_OK : CTD_ERR_PLATFORM;
+}
+
+// A SysLink's words and target, for ctd_set_text and ctd_get_text.
+ctd_status ctd_link_set_words(ctd_handle widget, HWND view,
+                              const char *utf8, int32_t len) {
+    uint32_t slot = ctd_slot(widget);
+    ctd_link_hold(&g_link_words[slot], utf8, len);
+    return ctd_link_compose(view, slot);
+}
+
+int32_t ctd_link_words_out(ctd_handle widget, char *out, int32_t cap) {
+    uint32_t slot = ctd_slot(widget);
+    return ctd_copy_wide_out(g_link_words[slot] ? g_link_words[slot] : L"", out, cap);
+}
+
+// Where a link goes, for the host's own click handler.
+const WCHAR *ctd_link_target(ctd_handle widget) {
+    return g_link_where[ctd_slot(widget)];
+}
+
 ctd_status ctd_set_string(ctd_handle widget, int32_t key,
                           const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
     HWND view = ctd_window(widget);
     if (!view) return CTD_ERR_STALE;
     switch (key) {
+        case CTD_S_URL: {
+            if (!ctd_kind_has_url(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            uint32_t slot = ctd_slot(widget);
+            ctd_link_hold(&g_link_where[slot], utf8, len);
+            return ctd_link_compose(view, slot);
+        }
         case CTD_S_HINT: {
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             WCHAR *text = ctd_wide(utf8, len);
@@ -424,6 +477,11 @@ int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
     HWND view = ctd_window(widget);
     if (!view) return CTD_ERR_STALE;
     switch (key) {
+        case CTD_S_URL: {
+            if (!ctd_kind_has_url(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            const WCHAR *where = g_link_where[ctd_slot(widget)];
+            return ctd_copy_wide_out(where ? where : L"", out, cap);
+        }
         case CTD_S_HINT: {
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             WCHAR room[512];
@@ -441,6 +499,10 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
     HWND view = ctd_window(widget);
     if (!view) return CTD_ERR_STALE;
     switch (ctd_slot_kind(widget)) {
+        // A link's words and its target are one string to the control, so the
+        // words go through the place that composes both.
+        case CTD_W_LINK:
+            return ctd_link_set_words(widget, view, utf8, len);
         case CTD_W_CONTAINER:
         case CTD_W_SCROLL_VIEW:
         case CTD_W_SLIDER:
@@ -462,6 +524,11 @@ ctd_status ctd_set_text(ctd_handle widget, const char *utf8, int32_t len) {
 int32_t ctd_get_text(ctd_handle widget, char *out, int32_t cap) {
     HWND view = ctd_window(widget);
     if (!view) return CTD_ERR_STALE;
+    if (ctd_slot_kind(widget) == CTD_W_LINK) {
+        // The control's own text is markup with the URL inside it, so the
+        // words come back from where they were kept rather than by parsing it.
+        return ctd_link_words_out(widget, out, cap);
+    }
     if (ctd_slot_kind(widget) == CTD_W_COMBO_BOX) {
         // A drop-down list keeps no window text of its own: the answer is the
         // chosen item, and `GetWindowText` on one returns nothing at all.

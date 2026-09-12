@@ -374,6 +374,13 @@ ctd_status ctd_set_string(ctd_handle widget, int32_t key,
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     switch (key) {
+        case CTD_S_URL: {
+            if (!ctd_kind_has_url(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            char *where = g_strndup(utf8, (gsize)(len < 0 ? 0 : len));
+            gtk_link_button_set_uri(GTK_LINK_BUTTON(object), where);
+            g_free(where);
+            return CTD_OK;
+        }
         case CTD_S_HINT: {
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             // By property name rather than by a typed setter: a GtkEntry and a
@@ -392,6 +399,11 @@ int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     switch (key) {
+        case CTD_S_URL: {
+            if (!ctd_kind_has_url(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            const char *where = gtk_link_button_get_uri(GTK_LINK_BUTTON(object));
+            return ctd_copy_out(where ? where : "", out, cap);
+        }
         case CTD_S_HINT: {
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             char *text = NULL;

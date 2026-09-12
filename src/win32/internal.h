@@ -40,6 +40,8 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <commdlg.h>
+// ShellExecuteW, which is how a link is followed: see ctd_link_target.
+#include <shellapi.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -158,6 +160,12 @@ void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 // A list view asking for a cell it is about to paint, and a selection that
 // moved. Both arrive as WM_NOTIFY on the *parent*, which is where every Win32
 // control reports, so app.c routes them here.
+// A SysLink's two halves: the words it shows and where it goes. The control
+// holds them as one markup string, so they are kept apart in property.c and
+// composed on every write.
+ctd_status ctd_link_set_words(ctd_handle widget, HWND view, const char *utf8, int32_t len);
+int32_t ctd_link_words_out(ctd_handle widget, char *out, int32_t cap);
+const WCHAR *ctd_link_target(ctd_handle widget);
 void ctd_table_disp_info(NMLVDISPINFOW *info);
 void ctd_table_item_changed(NMLISTVIEW *info);
 void ctd_emit_control(ctd_handle target);

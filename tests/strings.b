@@ -20,6 +20,34 @@ import cortado.component
 import cortado.host
 import std.io
 
+/// Which kinds carry somewhere to go. Only a link.
+fn goes_somewhere(kind: widgets.WidgetKind) -> bool {
+    match kind {
+        link => { return true }
+        text_field => { return false }
+        secure_field => { return false }
+        search_field => { return false }
+        container => { return false }
+        label => { return false }
+        button => { return false }
+        check_box => { return false }
+        radio_button => { return false }
+        switch => { return false }
+        image_view => { return false }
+        slider => { return false }
+        stepper => { return false }
+        progress_bar => { return false }
+        level_indicator => { return false }
+        separator => { return false }
+        text_area => { return false }
+        combo_box => { return false }
+        scroll_view => { return false }
+        canvas => { return false }
+        table => { return false }
+        spinner => { return false }
+    }
+}
+
 /// Which kinds show words while they are empty.
 ///
 /// Every single-line field, and nothing else. A text area could — NSTextView
@@ -49,6 +77,7 @@ fn shows_a_hint(kind: widgets.WidgetKind) -> bool {
         canvas => { return false }
         table => { return false }
         spinner => { return false }
+        link => { return false }
     }
 }
 
@@ -69,6 +98,9 @@ fn drive() -> Result<bool> {
     var carries_it_correctly: int = 0
     var round_trips: int = 0
     var survives_a_value: int = 0
+    var url_correct: int = 0
+    var linked: int = 0
+    var url_survives_words: int = 0
 
     for kind: widgets.WidgetKind in every {
         if !kind.available() { continue }
@@ -79,6 +111,27 @@ fn drive() -> Result<bool> {
         if wrote(control, host.S_HINT, "Search orders") == wanted {
             carries_it_correctly = carries_it_correctly + 1
         }
+        // The other key, on the same walk. A link's target is a string that
+        // two hosts keep *inside* the control's own text — an attributed
+        // string on the Mac, `<a href=...>` markup on Windows — so writing the
+        // words must not drop it and reading it back must not answer the
+        // markup.
+        let url_ok: bool = wrote(control, host.S_URL, "https://example.com/a")
+        if url_ok == goes_somewhere(kind) { url_correct = url_correct + 1 }
+        else { io.println("  ...{kind.name()} answered {url_ok} to a URL") }
+        if goes_somewhere(kind) {
+            linked = linked + 1
+            control.set_display_text("the manual")?
+            var back: string = ""
+            match control.string_at_key(host.S_URL) {
+                ok(where) => { back = where }
+                err(problem) => {}
+            }
+            if back == "https://example.com/a" && control.display_text().or("") == "the manual" {
+                url_survives_words = url_survives_words + 1
+            }
+        }
+
         if !wanted { continue }
         hinted = hinted + 1
 
@@ -110,6 +163,11 @@ fn drive() -> Result<bool> {
     io.println("  this many kinds have one: {hinted > 0}")
     io.println("  each reads back the words it was given: {round_trips == hinted}")
     io.println("  and the hint and the value are different strings: {survives_a_value == hinted}")
+
+    io.println("-- where a link goes --")
+    io.println("  exactly the kinds that go somewhere take a URL: {url_correct == here}")
+    io.println("  this many kinds go somewhere: {linked}")
+    io.println("  and the target survives writing the words: {url_survives_words == linked}")
 
     io.println("-- a key that is not a string --")
     var field: widgets.TextField = new widgets.TextField()

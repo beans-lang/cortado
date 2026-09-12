@@ -156,6 +156,21 @@ static LRESULT ctd_common_message(HWND window, UINT message,
                 ctd_table_disp_info((NMLVDISPINFOW *)lparam);
                 return 0;
             }
+            if (note->code == NM_CLICK || note->code == NM_RETURN) {
+                // A SysLink reports the click and does not follow it, so this
+                // host is what opens the URL — with the user's own browser and
+                // the user's own handler registrations, which is what the note
+                // beside CTD_S_URL says a link does.
+                ctd_handle link = ctd_handle_of(note->hwndFrom);
+                if (link && ctd_slot_kind(link) == CTD_W_LINK) {
+                    const WCHAR *where = ctd_link_target(link);
+                    if (where && where[0] != L'\0') {
+                        ShellExecuteW(NULL, L"open", where, NULL, NULL, SW_SHOWNORMAL);
+                    }
+                    return 0;
+                }
+                break;
+            }
             if (note->code == LVN_ITEMCHANGED) {
                 ctd_table_item_changed((NMLISTVIEW *)lparam);
                 return 0;
