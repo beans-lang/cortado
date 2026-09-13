@@ -108,6 +108,54 @@ if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.kinded" >"$root/bui
     fail "attribute_names() and attribute_call() disagree about which names exist:"
 fi
 
+# ---- the framework's own attributes ----
+#
+# `bx/widgets.b` decides which names the *compiler* treats as the framework's
+# and which are true by being present; `bx/vocabulary.b` publishes both lists to
+# an editor. Nothing held the two together until now, and the cost was already
+# on the shelf: `indeterminate`, `open` and `animating` had been boolean
+# attributes in the compiler for three controls' worth of work and were missing
+# from the published list the whole time, so every editor reading it believed
+# `<ProgressBar indeterminate />` needed a value.
+#
+# The pattern is the one above: a hand-written list beside a predicate that
+# cannot be enumerated, and a hand-written list goes one short and stays that
+# way. Each comparison refuses an empty read first, because a grep that matched
+# nothing would make this leg pass by covering nothing at all.
+vocabulary="$root/bx/vocabulary.b"
+
+sed -n '/pub fn is_reserved_attribute(/,/^}/p' "$markup" \
+    | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.reserved.markup"
+sed -n '/pub fn reserved_attributes(/,/^}/p' "$vocabulary" \
+    | grep -o 'new VocabRow("[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.reserved.listed"
+if [[ ! -s "$root/build/.reserved.markup" ]]; then
+    fail "no reserved attributes were read from bx/widgets.b, so this check covered nothing:" \
+         "Look for 'pub fn is_reserved_attribute(' in bx/widgets.b."
+fi
+if ! diff -u "$root/build/.reserved.markup" "$root/build/.reserved.listed" \
+        >"$root/build/.reserved.diff"; then
+    cat "$root/build/.reserved.diff" >&2
+    echo "  < answered by is_reserved_attribute      > listed by reserved_attributes()" >&2
+    fail "reserved_attributes() does not list what is_reserved_attribute() answers:" \
+         "bx/widgets.b and bx/vocabulary.b have drifted."
+fi
+
+sed -n '/pub fn is_boolean_attribute(/,/^}/p' "$markup" \
+    | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.bools.markup"
+sed -n '/pub fn boolean_attributes(/,/^}/p' "$vocabulary" \
+    | grep -o '"[a-z_]*"' | sed 's/"//g' | sort -u >"$root/build/.bools.listed"
+if [[ ! -s "$root/build/.bools.markup" ]]; then
+    fail "no boolean attributes were read from bx/widgets.b, so this check covered nothing:" \
+         "Look for 'pub fn is_boolean_attribute(' in bx/widgets.b."
+fi
+if ! diff -u "$root/build/.bools.markup" "$root/build/.bools.listed" \
+        >"$root/build/.bools.diff"; then
+    cat "$root/build/.bools.diff" >&2
+    echo "  < answered by is_boolean_attribute      > listed by boolean_attributes()" >&2
+    fail "boolean_attributes() does not list what is_boolean_attribute() answers:" \
+         "bx/widgets.b and bx/vocabulary.b have drifted."
+fi
+
 # ---- widget kinds ----
 #
 # `WidgetKind.all()` is a hand-written list of the enum's own cases, and it is
@@ -199,4 +247,4 @@ if [[ $hosts_read -eq 0 ]]; then
          "src/ has no platform directories, so this check covered nothing."
 fi
 
-echo "ok vocabulary: $(wc -l <"$root/build/.kinds.declared" | tr -d ' ') kinds, $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes, $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles and as many yes-or-no answers in $hosts_read hosts, in both tables"
+echo "ok vocabulary: $(wc -l <"$root/build/.kinds.declared" | tr -d ' ') kinds, $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes ($(wc -l <"$root/build/.bools.markup" | tr -d ' ') boolean, $(wc -l <"$root/build/.reserved.markup" | tr -d ' ') reserved), $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles and as many yes-or-no answers in $hosts_read hosts, in both tables"

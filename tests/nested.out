@@ -1,0 +1,7 @@
+-- three deep, two wide --
+  it mounted: true
+  every Leaf rendered once, as itself: true
+  what they wrote: inner,left,right
+  and the same three after a refresh: true
+-- one key used twice in one render --
+  refused: bad_render

@@ -114,8 +114,41 @@ pub fn is_xml_namespace(prefix: string) -> bool {
 }
 
 /// An attribute the framework reads, rather than one the control carries.
+///
+/// Two, and `Parser.classify` routes both through `classify_reserved` — so
+/// this list and the behaviour cannot drift apart, and
+/// `vocabulary.reserved_attributes()`, which is what an editor offers, mirrors
+/// exactly these names.
+///
+/// The cost of reserving a name is real and worth stating: a component with a
+/// field of its own called `key` or `ref` cannot have it set from markup. That
+/// is the trade every framework attribute makes, and two is as many as cortado
+/// takes.
 pub fn is_reserved_attribute(name: string) -> bool {
-    return name == "key"
+    return name == "key" || name == "ref"
+}
+
+/// Why an attribute that only means something in an HTML document is refused,
+/// or `""` for every other name.
+///
+/// Both of these are real attributes in the markup language cortado's grew out
+/// of, and neither has anything here to act on. They are answered by name
+/// rather than left to fall through to "there is no attribute called attrs",
+/// because that message sends the author looking for a spelling mistake when
+/// what they have is a concept cortado has not got.
+///
+/// Reserving them costs the same thing `is_reserved_attribute` costs: a
+/// component whose own field is called `attrs` or `preserve` cannot have it
+/// set from markup. That is the price of answering the question the author
+/// actually asked, and these are the only two names it is charged on.
+pub fn html_only_attribute(name: string) -> string {
+    if name == "attrs" {
+        return "attrs= spreads a bag of pass-through attributes onto an element, which means something only where an element carries arbitrary attributes. A cortado control has a closed set of typed properties and a component takes its parameters by their Beans names, so there is no bag here and nothing to spread into — write the parameters you mean"
+    }
+    if name == "preserve" {
+        return "preserve keeps a subtree out of the diff, which a page needs because something outside the framework can write into its DOM. Nothing outside cortado writes into a control tree, and the differ only ever touches what the markup describes — so a control's rows, pages or contents, set through Stage.widget(key) in on_mount, are already left alone"
+    }
+    return ""
 }
 
 /// Which `Builder` method an attribute becomes, or `""` when the name is not

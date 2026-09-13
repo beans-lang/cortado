@@ -73,6 +73,18 @@ pub enum Capability {
     /// Cameras and microphones. Gated the same way, and separately for each:
     /// a program that only wants to hear should not be asking to see.
     capture
+    /// Dressing a control: a background colour, rounded corners, a border.
+    ///
+    /// One member and not three, because they are one mechanism — a layer on
+    /// Apple's platforms, a CSS box on GTK — and a platform that has one has
+    /// all three. Only macOS answers yes today; iOS and GTK4 could, and their
+    /// hosts say so beside the answer.
+    ///
+    /// Which *controls* take a background is a different question, and
+    /// `Widget.set_background` answers it by name: the bezelled text-entry
+    /// controls refuse, because the only way to show a colour behind one is to
+    /// take away the bezel that makes it the platform's.
+    layer_style
     /// Recording the screen.
     ///
     /// No on a phone, and not for want of trying: ReplayKit is a broadcast the
@@ -97,6 +109,7 @@ pub enum Capability {
             location => host.CAP_LOCATION,
             bluetooth => host.CAP_BLUETOOTH,
             capture => host.CAP_CAPTURE,
+            layer_style => host.CAP_LAYER_STYLE,
             screen => host.CAP_SCREEN,
         }
     }
@@ -119,6 +132,7 @@ pub enum Capability {
             location => "location",
             bluetooth => "bluetooth",
             capture => "capture",
+            layer_style => "layer_style",
             screen => "screen",
         }
     }

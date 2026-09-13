@@ -118,7 +118,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events bridge mount shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity clock frames anim gpu triangle canvas shader)
+cases=(tree events bridge mount nested slots shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -163,6 +163,17 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # description to Core Animation and the other walks the curve itself is the
 # strongest thing this suite says.
 #
+# `slots` is here with `nested` and for the same reason. Which component a
+# child key belongs to is arithmetic on strings — the component that is
+# rendering, and the fragment placement the key was asked for inside — and a
+# platform gets no say in it. Its golden is what each component wrote as it
+# rendered plus the text that reached the controls, so a host that collapsed
+# two children into one would print the wrong words rather than a wrong class
+# name. It is also the case that cannot be built from one of anything: one
+# placement, one component or one level of nesting each passes against a scheme
+# that is wrong, which is why it places one template twice, puts a fragment
+# between two sibling tags, and places a fragment inside a fragment.
+#
 # `clock` is here for the same kind of reason as `enabled`: a frame clock is
 # arithmetic — a number, a token, an elapsed time, and a set of refusals — and
 # arithmetic is not allowed to differ between platforms. It can be in this list
@@ -183,7 +194,7 @@ cases=(tree events bridge mount shelf menu system roles text pixels applied leak
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock anim gpu canvas shader)
+cross_host=(roles nested slots styled custom events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock clocks anim gpu canvas shader)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -198,7 +209,7 @@ cross_host=(roles events text applied leaks enabled checked controls numbers str
 # GTK4 and Win32 are not missing from it by omission. They have no GPU host,
 # `tests/gpu.b` is where that is checked, and a case that asserted a green
 # pixel could only ever print a refusal there.
-apple_only=(triangle)
+apple_only=(triangle shapes)
 
 # Cases the iOS leg builds but does not run, and why.
 #
@@ -218,18 +229,26 @@ apple_only=(triangle)
 # window — animates exactly as macOS does.
 ios_builds_only=(anim)
 
-# Cases that need nothing but the language. These are the layout engine and the
-# reconciler, both pure Beans with no foreign call in them at all, so they run
-# on every operating system cortado will ever target — including the ones whose
-# host has not been written. A layout or differ bug is therefore found by any
-# runner, not only by a Mac.
+# Cases that need nothing but the language. These are the layout engine, the
+# reconciler and the markup compiler, all pure Beans with no foreign call in
+# them at all, so they run on every operating system cortado will ever target —
+# including the ones whose host has not been written. A layout, differ or
+# markup bug is therefore found by any runner, not only by a Mac.
 #
 # `sweep` is the randomized one: four hundred generated tree pairs, diffed and
 # then re-applied by a second implementation written inside the test, asserting
 # that applying a diff to the old tree reaches the new one. Its golden carries
 # the tally of edits it produced, so a sweep that stopped generating moves is
 # visible rather than quietly green.
-portable=(layout diff sweep)
+#
+# `markup_refusals` is the one that reads `cortado.bx` directly, because what it
+# asserts has no other way in: a refusal's *message*. Half of these forms were
+# refused before and after the change — `attrs=` on a control was already an
+# unknown attribute — so a check that counted refusals would pass with the whole
+# thing reverted. It is here rather than beside the `markup` leg because the
+# markup compiler links no platform host, which is the property that lets a
+# Windows machine regenerate a project's screens.
+portable=(layout diff sweep markup_refusals)
 
 # `--case` narrows every list to the one name, and leaves the lists it is not
 # in empty — so a case that is macOS-only runs on macOS and the GTK4 loop runs
@@ -310,7 +329,7 @@ done
 if [[ ${#portable[@]} -eq 0 ]]; then
     echo "-- no portable suite in this run"
 else
-    echo "ok portable: ${#portable[@]} suites, $(cat "$root/tests/layout.out" "$root/tests/diff.out" | grep -c '^== ') recorded cases and a $(grep -oE '^sweep: [0-9]+' "$root/tests/sweep.out" | grep -oE '[0-9]+')-case sweep, no display and no FFI"
+    echo "ok portable: ${#portable[@]} suites, $(cat "$root/tests/layout.out" "$root/tests/diff.out" | grep -c '^== ') recorded cases, $(grep -c '^  ' "$root/tests/markup_refusals.out") markup forms and a $(grep -oE '^sweep: [0-9]+' "$root/tests/sweep.out" | grep -oE '[0-9]+')-case sweep, no display and no FFI"
 fi
 
 # ------------------------------------------------------------- interpreter leg

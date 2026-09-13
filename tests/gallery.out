@@ -49,8 +49,8 @@ Container CortadoView role=group "" frame=0,0,460,460 children=1
           Label NSTextField role=text "Marker" frame=0,0,110,16
           ColorWell NSColorWell role=button "" frame=120,0,60,24
         Label NSTextField role=text "2026-01-01, marker #3b82f6" frame=8,74,412,16
-    Disclosure CortadoDisclosure role=group "Boxes and pictures" frame=16,740,428,225 children=1
-      Container CortadoView role=group "" frame=0,0,428,204 children=4
+    Disclosure CortadoDisclosure role=group "Boxes and pictures" frame=16,740,428,277 children=1
+      Container CortadoView role=group "" frame=0,0,428,256 children=5
         GroupBox NSBox role=group "Brewing" frame=8,8,412,80 children=1
           Container CortadoView role=group "" frame=0,0,402,58 children=2
             CheckBox NSButton role=checkbox "Grind fresh" frame=10,10,382,16
@@ -58,7 +58,8 @@ Container CortadoView role=group "" frame=0,0,460,460 children=1
         ImageView NSImageView role=image "" frame=8,96,412,20
         Canvas CortadoView role=group "" frame=8,124,412,20
         Canvas CortadoView role=group "" frame=8,152,412,44
-    Disclosure CortadoDisclosure role=group "Rows" frame=16,975,428,185 children=1
+        Canvas CortadoView role=group "" frame=8,204,412,44
+    Disclosure CortadoDisclosure role=group "Rows" frame=16,1027,428,185 children=1
       Container CortadoView role=group "" frame=0,0,428,164 children=2
         Table NSScrollView role=grid "" frame=8,8,412,80
         ScrollView NSScrollView role=scrollarea "" frame=8,96,412,60 children=1
@@ -66,7 +67,7 @@ Container CortadoView role=group "" frame=0,0,460,460 children=1
             Label NSTextField role=text "More than fits" frame=4,4,404,16
             Label NSTextField role=text "so the rest scrolls" frame=4,24,404,16
             Label NSTextField role=text "and nothing is clipped away" frame=4,44,404,16
-    Disclosure CortadoDisclosure role=group "Pages, panes and a browser" frame=16,1170,428,401 children=1
+    Disclosure CortadoDisclosure role=group "Pages, panes and a browser" frame=16,1222,428,401 children=1
       Container CortadoView role=group "" frame=0,0,428,380 children=4
         TabView NSTabView role=tablist "" frame=8,8,412,90 children=2
           Container CortadoView role=group "" frame=10,33,392,44
@@ -78,6 +79,6 @@ Container CortadoView role=group "" frame=0,0,460,460 children=1
             Label NSTextField role=text "and this one" frame=4,4,196,16
         OutlineView NSScrollView role=treegrid "" frame=8,184,412,90
         WebView WKWebView role=document "" frame=8,282,412,90
-    Container CortadoView role=group "" frame=16,1581,428,24 children=1
+    Container CortadoView role=group "" frame=16,1633,428,24 children=1
       Button NSButton role=button "Order" frame=369,0,59,24
-    Label NSTextField role=text "Nothing ordered yet" frame=16,1615,428,16
+    Label NSTextField role=text "Nothing ordered yet" frame=16,1667,428,16

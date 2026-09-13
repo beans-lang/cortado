@@ -1,0 +1,41 @@
+-- what this platform promised --
+  it has a GPU: true
+-- refusals --
+a figure cortado does not draw refused, saying so: true
+a fill cortado does not have refused, saying so: true
+a radius on an ellipse refused, saying so: true
+a thickness on a capsule refused, saying so: true
+a ring with no thickness refused, saying so: true
+a stroke width with no colour refused, saying so: true
+a stroke with no width refused, saying so: true
+a shadow with no room refused, saying so: true
+  the same shadow with room is allowed: true
+a colour that is not one refused: not_a_colour
+-- a rectangle whose edges land on pixel boundaries --
+  sixteen pixels are the fill, exactly: true
+  forty-eight are the background, exactly: true
+  and none is part-covered: true
+-- the same rectangle, stroked --
+  twelve pixels are the stroke: true
+  four are still the fill: true
+  and forty-eight are untouched: true
+-- a circle, where the edge does not land on a boundary --
+  four pixels are wholly inside: true
+  twelve straddle the edge: true
+  and forty-eight are wholly outside: true
+-- the colour you name is the colour that lands --
+  #40a0c0 reads back as rgba(64,160,192,255)
+-- a radius is in points, so the backing scale moves it --
+  a bigger radius covers fewer whole pixels: true
+  and the two are not the same picture: true
+-- mounted, the canvas reads the scale from its own surface --
+  it is drawing at the surface's own scale: true
+  it wants its first frame: true
+  and draws one when asked: true
+  with nothing to complain about: true
+  then asks for no more: true
+  and the pixels are the shape those numbers describe: true
+  and one clock carries it: true
+-- every figure cortado names --
+  cortado names this many figures: 4
+  every one compiles and draws something: true

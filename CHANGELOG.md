@@ -175,6 +175,195 @@ First working macOS host.
 - `tools/check_vocabulary.sh` — holds `bx/widgets.b` against
   `component/vocabulary.b`. Two tables exist because `cortado.bx` must build
   where there is no platform host, and two tables drift.
+- **`$slot` works: a component can take a template.** `Builder.fragment(site,
+  body)` is the method all five `$slot` forms compile to, and it was the one
+  the emitter called and the `Builder` had never had — so every `.bx` file that
+  used a slot produced a generated file `beansc` refused, naming a method of
+  cortado's in a file the author never opened. A template is a `fn(Builder)`
+  field the parent assigns and the child places; a default that draws nothing
+  is the field's own initializer, so cortado needs no concept for "no
+  template".
+- **A template's keys are scoped by the `$slot` that placed it**, which is why
+  `fragment` takes the placement site and not only the body. A template is
+  emitted at its definition site and run against the *placing* component's
+  builder, and cortado-bx restarts key numbering inside one — so its first
+  component tag asks for `c0`, exactly what the placing component's own first
+  component tag asks for. Two things went wrong without a scope, and neither is
+  visible from one placement or one component: one template placed twice became
+  one child rather than two, and a component inside a template collided with a
+  sibling outside it. `examples/markup` is now built so that it would: the tile
+  has a `<Badge>` where the screen's template has a `<Price>`, both `c1`, and
+  reverting the scope tells the author `<Price> came back as something else`.
+- **A `$slot` inside a `$for` carries the row**, so the site is a string and
+  not the sequence number alone. A loop body is one emitted call run once per
+  turn, so its number is the same on every row — a table whose cells are a
+  template the screen supplies would have placed every row under one site, and
+  the second row's cell would have collided with the first's. `emit_component`
+  had carried the row from the start and `emit_slot` had not; both now ask
+  `Emitter.site_of`, which is the one place that knows a child's identity has
+  two halves.
+- **`ref={self.tile}` is reachable.** It had a complete implementation, a
+  careful doc comment and no parser path at all — nothing ever built the
+  attribute, so nothing ever emitted it. It is wired up on component tags,
+  where an instance exists to hand back, and refused by name on a control,
+  which is made and owned by the mount: a control is named with `key="..."` and
+  reached through `Stage.control(key)` or `Stage.widget(key)`.
+- **Four forms that only mean something in an HTML document are refused by
+  name.** `<!DOCTYPE>` and `$html` compiled to `b.constant(...)` and
+  `b.raw(...)`, which `Builder` has not got; `attrs=` and `preserve` on a
+  component tag became `c.attrs = ...`, so beansc reported a field of the
+  author's own class that the author never wrote. All four are refused in the
+  parser now, each with a sentence about the program.
+  `tests/markup_refusals.b` asserts the **message** rather than the refusal,
+  because `attrs` on a control was refused before and after — as a spelling
+  mistake, which sent the author looking for a typo.
+- **`tools/check_vocabulary.sh` holds `bx/vocabulary.b`'s hand-written lists to
+  the predicates they mirror**, which nothing did before — and the first run
+  found the cost already on the shelf. `indeterminate`, `open` and `animating`
+  arrived as boolean attributes with the progress bar, the disclosure and the
+  spinner, and never reached the published list, so every editor reading
+  `bx/vocabulary.json` believed `<ProgressBar indeterminate />` needed a value.
+  The same leg holds `reserved_attributes()` to `is_reserved_attribute`, which
+  is what `ref=` had just added a second name to. The file's own header claimed
+  a gate — in `tests/markup.b`, which does not exist here — so the guarantee
+  read as kept for as long as nobody looked.
+- `bx/ast.b` lost `SplatAttr`, `PreserveAttr`, `LiveAttr`, `RawTextNode`,
+  `DoctypeNode` and `RawHtmlNode`, and `bx/parse.b` lost `parse_html`, which
+  nothing called. An AST class nothing constructs is a feature the editor's
+  vocabulary can advertise and the emitter can carry a whole implementation of,
+  with no `.bx` file able to reach it — which is exactly what `ref=` was.
+- **Two things can move on one surface.** A frame clock was one per window in
+  the host — `ctd_clock_start` refuses a second on a surface that already has
+  one — so the second `<ShaderCanvas>` on a screen simply never animated, and
+  said so only into a field nothing printed. The host's reasoning is right and
+  did not move: a `CVDisplayLink` belongs to a display, so a clock belongs to a
+  surface, and re-keying it per widget would open N display links on one
+  screen. The fan-out belongs above the ABI, and now lives there:
+  `motion.ClockDesk` holds one host clock per surface and a register of
+  listeners keyed by token, delivers in join order, and overwrites
+  `frame.token` with the listener's own so a handler is told which thing it is
+  moving. No host changed and no symbol was added. `tests/clocks.b` runs
+  **three** canvases rather than two — with two, an off-by-one in the fan-out
+  still passes — removes the middle one, and asserts the survivors kept
+  counting and the host clock stopped only when the last listener left.
+- **`FrameClock.stop` asks the host even for a clock that never started**, and
+  the early return that looks obviously right is a real bug: that call is what
+  reports a released widget, so returning early turned `tests/clock.b`'s
+  "a clock on a released widget refused: stale_handle" into "was allowed". The
+  check belongs in `ClockDesk.leave`'s no-listeners branch. `FrameClock.start`
+  still refuses **this** clock being started twice even though a surface may
+  now carry several, because the object holds the one token it will leave
+  under.
+- **A component inside a component was a different component.** `Mount` numbered
+  composer keys in one map for the whole tree while each `render` numbered its
+  own tags from `c0`, so a `<Leaf>` inside a `<Branch>` asked for the key the
+  screen's own first component tag already held, and got the other one's
+  instance — reported as `<Leaf> came back as something else`, which sends the
+  author looking at the leaf. Keys are now scoped by the component doing the
+  rendering. Every `.bx` file with a component inside a component was broken;
+  none existed, which is the only reason this shipped. `tests/nested.b` is two
+  levels deep with a sibling at each, and reverting the scope fails it by name.
+- **A shape is a mask and a fill is a material, and `<ShapeCanvas>` multiplies
+  them.** `gpu.Figure` is four cases — `rounded_rect`, `ellipse`, `ring`,
+  `capsule` — and not seven, because a rectangle is a rounded rect with radius
+  0, a circle is an ellipse with equal halves and a border is a stroke; naming
+  those separately would be four ways to write two things. The fill is an
+  existing `Effect`, hoisted into a function and called, so all six effects
+  became six fills for every figure with **no new `Effect` case and no edit to
+  `gpu/effect.b`**. Adding shapes to the effect enum instead would have given
+  13 names for 6 materials × 4 shapes and no way to say "a circle with a
+  gradient in it", which is the first thing anybody asks for.
+- **The coverage ramp is fixed at one pixel and deliberately not `fwidth`.**
+  The textbook signed-distance antialias divides by a screen-space derivative,
+  which is computed from a hardware quad — so the width of the band is the
+  GPU's business and a boundary pixel is not the same byte on two devices.
+  `tests/triangle.b` exists because the same triangle gave the same checksum on
+  this Mac and in the iOS Simulator, and a derivative throws that away.
+  `clamp(0.5 - d, 0, 1)` keeps it: an edge on a pixel boundary gives coverage
+  exactly 1 on one side and exactly 0 on the other, so a boundary-aligned
+  rectangle has **zero** part-covered pixels and exact colours, and the same
+  code still antialiases a circle. `tests/shapes.b` asserts all three counts —
+  fill, stroke and background — because a test that only asks whether *some*
+  pixel was drawn passes for a shape of the wrong shape.
+- **A shader was told the drawable's size in pixels and the program's numbers
+  in points**, so `radius={12}` drew at 6 points on a Retina screen and nobody
+  had looked yet. The fourth uniform was spare on purpose — "a named spare is
+  clearer than a comment about padding somebody will one day remove" — and now
+  carries the backing scale, in `ShaderCanvas` too so a hand-written `shader={}`
+  body sees the same four names.
+- **A shape cannot draw when it is mounted.** `on_mount` runs inside
+  `Mount.refresh` *before* layout, so the canvas has no frame yet and drawing
+  there reports `this canvas is 0 by 0`. The first frame is the earliest it has
+  a size, so a still shape rides the shared clock and redraws only when its size
+  or scale changed — cheap precisely because one host clock now serves every
+  listener on a surface. A component cannot watch its own resize either:
+  `EventRouter.watch` replaces per (target, kind) and `Mount` already watches
+  the surface, so a component that watched it would take the mount's watcher
+  off and the whole tree would stop following its window. What would remove
+  both: a per-widget resize event, or a lifecycle hook that runs after layout.
+- **You can repaint a stock button.** The plan this work followed said you could
+  not — that a bezelled `NSButton` draws over anything behind it — and a screen
+  said otherwise in one look: a push button takes a layer background, keeps its
+  bezel's shape and draws its title on top. So do the check box, slider,
+  progress bar, switch, stepper, separator, combo box and group box. Three
+  offscreen probes had each given a different answer, because a control rendered
+  outside a window does not draw its chrome; `examples/styled.b` puts every
+  control on a window twice, plain and dressed, and is kept for the next time
+  this question comes up.
+- **What actually refuses a background is the four bezelled text-entry
+  controls** — `TextField`, `SecureField`, `SearchField`, `TextArea` — and the
+  control that proves it is the bezel and not the class is `Label`, which is an
+  `NSTextField` too, has no bezel, and takes one fine. Making those four show a
+  colour means removing the bezel, and then it is not the platform's text field.
+  The rule is `ctd_kind_has_background` in `src/cortado_rules.h`, beside the
+  other questions whose answer is cortado's rather than any platform's, and the
+  refusal names the control. Corner radius and border have no such rule at all:
+  every control took both, the four text ones included.
+- `Widget.set_background`, `set_corner_radius` and `set_border` — four property
+  keys rather than four entry points, so no host gained a symbol.
+  `wantsLayer` is set on the first one that arrives, the way animation already
+  did it and for the same reason: a layer costs memory on every control in a
+  window. `CTD_CAP_LAYER_STYLE` answers the question once, and `tests/styled.b`
+  is written as agreement — GTK4, which does none of this, prints the same bytes
+  as macOS, which does all of it.
+- **A canvas already heard a pointer**, which the plan said to test rather than
+  assume. A synthesised press arrives once, at the point it was sent to, in the
+  control's own points, top-left and y down — through the platform's dispatch
+  and not cortado's handler. So a canvas with an `on:pointer_down` worked before
+  any of this, and what was missing was three smaller things.
+- **A canvas can take the keyboard, when it asks.** `CTD_P_FOCUSABLE` is off by
+  default, so no existing screen changes its tab order, and a `CortadoView`
+  answers `acceptsFirstResponder` and `canBecomeKeyView` from it. `focus()` now
+  tells `wrong_moment` — this platform can, and you have not asked — apart from
+  `unsupported`, which is a different fact about a different thing.
+- **A canvas can say what it is.** `ctd_a11y_role` hardcoded `group`, and the
+  comment was right that inventing a word would be a word no screen reader
+  knows — but a clickable canvas can claim one that already exists.
+  `CTD_P_A11Y_ROLE` takes `button`, `image` or `group` out of the set
+  `ctd_a11y_role` already publishes, and it is set on the view rather than only
+  remembered, because a role cortado prints in a golden and a role VoiceOver
+  says out loud are different things. Both keys are carried by the canvas
+  alone: every other control's answer to "can it take the keyboard" and "what
+  is it" belongs to the platform.
+- **`CTD_S_A11Y_LABEL` is carried by every kind**, because a label on a button
+  is what makes a toolbar of icons usable at all. Reading it back answers **what
+  a screen reader will say**, not what cortado was told — an unnamed button is
+  announced by its title, and `""` means genuinely silent. The header claimed
+  the other contract; keeping it would have meant a side table remembering which
+  labels cortado wrote, for a worse answer.
+- `gpu.uv_of(control, at)` — the conversion from a pointer's position to the
+  `uv` the shader was given, named once so nobody re-derives it and gets the
+  flip wrong. It is a division and nothing else: a pointer arrives in points,
+  `ctd_view_frame` is points, and the 2× lives only inside `size`. A canvas with
+  no size has no answer rather than a division by zero.
+- **No `Capability` for focus or roles, on purpose.** A `UIView` and a
+  `GtkWidget` both take focus and both could carry a role — the cases are
+  simply not written for those hosts. A capability would say "this platform
+  cannot", which is untrue of UIKit. So `tests/custom.b` asks once and holds
+  every later line to that answer, which is what lets one golden hold every
+  host. The four layer-style keys are the same shape of deferral: iOS, GTK4 and
+  Win32 answer `unsupported` today, each beside a comment saying what would
+  remove it.
 
 - Seven more controls: `Slider`, `ProgressBar`, `Separator`, `TextArea`,
   `ComboBox`, `ScrollView` and `RadioButton`. Twelve in all, every one a real

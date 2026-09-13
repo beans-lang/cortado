@@ -431,9 +431,12 @@ A screen is a `.bx` file: markup on top, Beans underneath, one class.
 ```
 <VStack spacing={14} padding={24} align="stretch">
   <Label font_size={17} text="Order a coffee" />
-  <Label>$self.shots × $self.drink</Label>
 
-  <Price drink={self.drink} />
+  <Tile title="Your order" rush={self.rush}>
+    $slot:cap as t: string { <Label font_size={13} text={t} /> }
+    <Label>$self.shots × $self.drink</Label>
+    <Price drink={self.drink} />
+  </Tile>
 
   $if self.shots > 2 {
     <Label text="That is a lot of caffeine" />
@@ -495,19 +498,21 @@ examples/markup/
 ├── site/                  markup only; not a Beans package
 │   ├── checkout.bx
 │   ├── price.bx
+│   ├── tile.bx
 │   └── parts/
 │       └── badge.bx
 └── generated/
     └── site/              package site → markup.generated.site
         ├── checkout.b
         ├── price.b
+        ├── tile.b
         └── parts/         package parts → markup.generated.site.parts
             └── badge.b
 ```
 
 **A component in a nested folder needs one import line and nothing else.**
 `parts/badge.bx` generates into `generated/site/parts/`, which is the package
-`parts`, so the screen above it writes
+`parts`, so `tile.bx` — the file whose markup names the tag — writes
 
 ```beans
 import {Badge} from markup.generated.site.parts
@@ -554,6 +559,90 @@ attributes are strings. A control's properties are not: `spacing` is a number,
 `enabled` a flag, `align` one word out of four. So the emitted call is typed
 too, and `spacing={self.name}` is `expected f64, got string` at the author's
 own expression rather than a string that parses to something unintended.
+
+**A component can take a template, and `$slot` is where it puts it.** A `<Tile>`
+decides *where* its content goes; the screen around it decides *what* the
+content is. The children of a component tag are its default template, and a
+named one is written with a body:
+
+```
+<Tile title="Your order" rush={self.rush}>
+  $slot:cap as t: string { <Label font_size={13} text={t} /> }
+  <Label>$self.shots × $self.drink</Label>
+  <Price drink={self.drink} />
+</Tile>
+```
+
+The component declares each template as an ordinary field and places it:
+
+```
+<VStack spacing={6}>
+  $slot:cap as self.title
+  <Badge rush={self.rush} />
+  $slot
+</VStack>
+<beans>
+@view
+pub partial class Tile extends component.Component {
+    @param pub title: string = ""
+    @param pub rush: bool = false
+
+    pub body: fn(Builder) = fn(_b: Builder) {}
+    pub cap: fn(Builder, string) = fn(_b: Builder, _t: string) {}
+
+    pub fn init() { super.init() }
+}
+</beans>
+```
+
+A default that draws nothing is the author's own field initializer, so a tile
+nobody gave a template to is empty rather than broken and cortado needs no
+concept for "no template". Six forms: four place a template —
+
+```
+$slot                       the tag's children, as `self.body`
+$slot(<expr>)               any fn(Builder) expression
+$slot:<name>                the field of that name
+$slot:<name> as <expr>      that field, handed a value
+```
+
+and two define one, which only reads that way inside a component tag:
+
+```
+$slot:<name> { ... }              a template taking nothing
+$slot:<name> as <p>: <Type> { }   one taking a parameter
+```
+
+**A template is written in one component's file and run in another's**, and
+that is the part worth knowing about. The body above is *written* in
+`checkout.bx`, so `self` inside it is the screen and it reads the screen's
+fields; it is *run* against the tile's builder, so its controls land where the
+tile put the `$slot`. That makes the placement site part of a child's identity:
+`<Price>` inside the template and `<Badge>` in the tile's own markup would
+otherwise be one child asking for one key, and placing a template twice would
+make one child rather than two. `Builder.fragment` keys everything a template
+writes by the site that placed it — the `$slot`'s place in the file *and* the
+row of the `$for` around it, the same two-part identity a component tag has —
+and `tests/slots.b` is the case: the same template at two sites, a template
+between two sibling tags, a template placed inside a template, and a template
+placed once per row of a loop.
+
+**`ref={self.tile}`** on a component tag hands back the instance the tag built,
+into a field declared `Option<Tile>`, once every parameter and template on it
+is set. On a *control* it is refused: a control is made and owned by the mount,
+not by the render that described it, so a control is named with `key="..."` and
+reached from `on_mount` through `Stage.control(key)` or `Stage.widget(key)`.
+
+**What cortado's markup refuses, it refuses by name.** `<!DOCTYPE>`, `$html`,
+`attrs={...}` and `preserve` are all real in the HTML-shaped markup language
+this one grew out of, and none of them has anything here to act on — there is
+no document to declare, nothing to inject into, no bag of pass-through
+attributes, and nothing outside cortado that writes into a control tree. Each
+is answered with a sentence about the program rather than left to fall through
+to "no such attribute" or, worse, emitted as a `Builder` call that does not
+exist. `tests/markup_refusals.b` asserts the *message*, not the refusal,
+because most of these were refused either way and the whole value is which
+sentence the author reads.
 
 **The compiler is pure Beans over `std.fs`.** It links no platform host, so it
 builds and runs on every operating system — including the ones whose host has
@@ -747,6 +836,42 @@ that opened a tree node and selected it heard the selection as a click and
 shut the node again. Each host now carries one counter, `g_writing`, and
 `tests/panes.b` and `tests/table.b` fail when it is taken out.
 
+### Dressing a control
+
+A control can be given a background, rounded corners and a border without
+ceasing to be the platform's own control:
+
+```beans
+card.set_background(widgets.Rgba { red: 245, green: 245, blue: 247, alpha: 255 })?
+card.set_corner_radius(10.0)?
+card.set_border(1.0, widgets.Rgba { red: 0, green: 0, blue: 0, alpha: 30 })?
+```
+
+**A push button takes a background.** That is the surprise, and it was settled
+by looking at a screen rather than by reasoning: `examples/styled.b` puts every
+control on a window twice, plain on the left and dressed on the right, and a
+bezelled `NSButton` shows the colour, keeps its bezel's shape and draws its
+title on top. So do the check box, slider, progress bar, switch, stepper,
+separator, combo box and group box. Three offscreen probes had each given a
+different answer, because a control rendered outside a window does not draw its
+chrome.
+
+**Four controls refuse a background, and they are refused by name.**
+`TextField`, `SecureField`, `SearchField` and `TextArea` have an opaque bezel
+drawn over anything behind them. The one that shows this is about the bezel and
+not the class is `Label` — also an `NSTextField`, no bezel, takes a background
+fine. Making those four show a colour means taking the bezel off, and then it
+is not the platform's text field any more, which is the substitution cortado
+exists to refuse. Corner radius and border have no such rule: every control
+takes both.
+
+These are properties rather than entry points, so no host gained a symbol for
+them, and the layer they need is created on the first one that arrives rather
+than on every control in the window. `Capability.layer_style` answers whether
+the platform does any of it; today macOS does, and iOS, GTK4 and Win32 say
+`unsupported` — a `UIView` has every one of these properties and GTK4 has a CSS
+box, so what would remove that is the cases, not a redesign.
+
 ## Trees
 
 **A table asks "what is at row 7"; an outline asks about a node.** That one
@@ -910,6 +1035,14 @@ The host counts the frames it hands over, and `clock.state()` reads that count
 back. `tests/frames.b` compares it with the number Beans received: two
 independent tallies of the same frames, so a delivery path that lost one is a
 failing test rather than an animation that ends slightly early.
+
+**Many things can move on one surface.** The platform gives a surface one
+display link and refuses a second, which is right — a `CVDisplayLink` belongs
+to a display, and a window that opened one per moving control would open a
+dozen. So the fan-out lives above it: every `FrameClock` on a surface joins one
+host clock, is delivered in the order it joined, and is told its own token
+rather than the host's. Two `<ShaderCanvas>` on one screen both animate.
+Nothing in a host changed for this.
 
 **An animation is described, not driven.** The frame clock is for something
 whose next value you have to work out; an animation is for a value you already
@@ -1167,6 +1300,89 @@ measured, and a control that paints nothing of its own measures nothing. That
 used to be a silent black rectangle. Now it is
 `this canvas is 0 by 32, so there is nothing to draw into — give it a size, or
 put it in a run that stretches its children`.
+
+### A shape, with no shader in it
+
+`<ShapeCanvas>` is the other half of `<ShaderCanvas>`: the shapes people
+actually want, without writing a line of Metal.
+
+```
+<ShapeCanvas height={44} figure="rounded_rect" radius={10} inset={6}
+             fill="gradient" color="#4088bf" color_to="#0d1b2a"
+             stroke="#8fb7d4" stroke_width={1} />
+```
+
+**Four figures, not seven.** `rounded_rect`, `ellipse`, `ring` and `capsule` —
+because a rectangle is a rounded rect with radius 0, a circle is an ellipse with
+equal halves, and a border is a stroke. Naming those separately would be four
+ways to write two things.
+
+**The fill is an `Effect`, unchanged.** A shape is a mask and an effect is a
+material, and masks and materials multiply: `solid`, `gradient`, `ripple`,
+`checker` and the rest each work with each figure, because the effect's body is
+hoisted into a function and called rather than replaced. Putting shapes into
+the effect enum instead would have meant 13 names for 6 × 4 combinations, and
+no way at all to say "a circle with a gradient in it".
+
+**The edge is a fixed one-pixel ramp, deliberately not `fwidth`.** The textbook
+signed-distance antialias divides by a screen-space derivative, which the
+hardware computes per quad — so the width of the blended band is the GPU's
+business, and a boundary pixel is not the same byte on two devices. That is
+exactly the property `tests/triangle.out` exists to hold. With a fixed ramp an
+edge landing on a pixel boundary gives coverage exactly 1 on one side and
+exactly 0 on the other, so `tests/shapes.b` can assert that a rectangle has
+16 fill pixels, 48 background and **zero** part-covered — and the same code
+still antialiases a circle properly, with no mode to switch.
+
+**A shape knows where it is on screen.** `radius={12}` is 12 points on every
+display, which needed the backing scale to reach the shader: the drawable's
+size is in pixels and everything the program writes is in points, so on a
+Retina screen the two disagree by a factor of two. It rides the fourth uniform,
+which was reserved for something like this.
+
+### A canvas a person can use
+
+A canvas already hears a pointer — the hit test finds it like any other view,
+and `event.position` arrives in the control's own points, top-left and y down.
+Three things were missing, and are there now.
+
+```beans
+plot.set_focusable(true)?                        // and it joins the tab order
+plot.set_a11y_role(widgets.A11yRole.button)?     // and says what it is
+plot.set_a11y_label("Sales, last twelve months")?
+let uv: geometry.Point = gpu.uv_of(plot.handle(), event.position)?
+```
+
+**Focus is asked for, not assumed.** A decorative canvas must stay out of the
+tab order, so `set_focusable` is off by default and `focus()` on a canvas that
+has not asked says `wrong_moment` — this platform can, and you have not asked —
+rather than `unsupported`, which is a different fact about a different thing.
+
+**A canvas may claim a role that already exists** — `button`, `image` or
+`group` — and not invent one, because a word no screen reader knows is worse
+than the truthful `group`. It is set on the view rather than only remembered,
+since a role cortado prints in a golden and a role VoiceOver says out loud are
+different things. Both keys are the canvas's alone: for every other control,
+"can it take the keyboard" and "what is it" are the platform's answers.
+
+**An accessibility label is carried by every control**, because a toolbar of
+icons is unusable without one. Reading it back answers **what a screen reader
+will say**, not what cortado was told: an unnamed button is announced by its
+own title, and `""` means genuinely silent.
+
+**`gpu.uv_of` is the conversion, written once.** A pointer's position divided
+by the canvas's size in points is exactly the `uv` the shader was given — no
+flip, because `quad_corners` already does it in the vertex data, and no scale,
+because the 2× lives only inside `size`. It is a division and nothing else, and
+it exists so that nobody re-derives it and gets the flip wrong.
+
+**Hit-testing what the GPU drew has one honest answer.** Reading the pixel back
+is a round trip to a drawable the compositor owns, per click. Guessing is
+worse. With `<ShapeCanvas>` the program *described* the geometry, so the same
+signed distance can be evaluated in Beans from the same parameters that
+generated the shader — two implementations of one rule, which is only
+trustworthy because `tests/shapes.b` checks them against each other pixel by
+pixel. A `<ShaderCanvas shader={...}>` has no such thing and cannot.
 
 ### What the tests can say
 

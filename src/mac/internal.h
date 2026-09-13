@@ -33,8 +33,16 @@ enum { CTD_SLOTS = 8192 };
 
 // ---------------------------------------------------- the classes this host owns
 
-// A container that agrees with cortado about which way y grows.
+// A container that agrees with cortado about which way y grows, and — for the
+// one kind whose contents are the program's — whether it takes the keyboard
+// and what it calls itself.
+//
+// The flags live on this class rather than in a side table because a canvas is
+// one of these already; a table keyed by handle would be a second lifetime to
+// keep in step with the first.
 @interface CortadoView : NSView
+@property (nonatomic) BOOL ctdFocusable;
+@property (nonatomic) int32_t ctdRole;
 @end
 
 // AppKit's target/action wants an object with a selector. One of these sits
@@ -267,6 +275,19 @@ void        ctd_focus_moved(ctd_handle left, ctd_handle took);
 void        ctd_surface_event(uint32_t kind, ctd_handle surface,
                               double a, double b);
 
+// -------------------------------------------------------------- property.m
+
+// The view's layer, making it layer-backed if it is not already.
+//
+// Lazy for the reason ctd_anim_start's comment gives, and in one place now
+// that more than one caller wants it: a layer costs memory on every control in
+// a window, and only a control that actually uses one needs it. It costs more
+// than the one view, too — AppKit makes every ancestor of a layer-backed view
+// layer-backed as well, so styling one control deep in a window backs the
+// branch above it. That is AppKit's rule and not cortado's to change; it is
+// written down here so nobody meets it as a mystery in a memory graph.
+CALayer    *ctd_layer_of(NSView *view);
+
 // --------------------------------------------------------------- machine.m
 
 // The platform's own watchers, up when the first handler for their kind
@@ -286,6 +307,19 @@ void        ctd_forget_size(ctd_handle widget);
 // All of them, for the one thing that changes every control at once and writes
 // to none of them: the system font.
 void        ctd_forget_all_sizes(void);
+
+// -------------------------------------------------------------- property.m
+
+// The view's layer, making it layer-backed if it is not already.
+//
+// Lazy for the reason ctd_anim_start's comment gives, and in one place now
+// that more than one caller wants it: a layer costs memory on every control in
+// a window, and only a control that actually uses one needs it. It costs more
+// than the one view, too — AppKit makes every ancestor of a layer-backed view
+// layer-backed as well, so styling one control deep in a window backs the
+// branch above it. That is AppKit's rule and not cortado's to change; it is
+// written down here so nobody meets it as a mystery in a memory graph.
+CALayer    *ctd_layer_of(NSView *view);
 
 // --------------------------------------------------------------- machine.m
 

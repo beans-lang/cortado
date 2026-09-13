@@ -1,0 +1,25 @@
+-- one template placed at two sites --
+  two placements mounted: true
+  what rendered: body#1,body#2
+  two separate children: true
+  what is on screen: body#1,body#2
+  and the same two after a refresh: true
+-- a fragment with a sibling tag on either side --
+  host mounted: true
+  what rendered: before#3,given#4,after#5
+  three separate children: true
+  what is on screen: before#3,given#4,after#5
+-- a fragment placed inside a fragment --
+  relay mounted: true
+  what rendered: deep#6,deep#7
+  two separate children: true
+  what is on screen: deep#6,deep#7
+-- one template placed once per row of a loop --
+  rows mounted: true
+  what rendered: one#8,two#9,three#10
+  one child per row: true
+  what is on screen: one#8,two#9,three#10
+-- one key used twice inside one fragment body --
+  refused: bad_render
+  naming the key the author wrote: true
+  and no key the author did not write: true

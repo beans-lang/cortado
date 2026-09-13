@@ -18,6 +18,10 @@ import cortado.events
 pub class FrameClock {
     priv surface: host.Handle = host.Handle.none()
     priv router: events.EventRouter
+    /// The token this clock joined under, so `stop` takes off the listener
+    /// this object started and not somebody else's.
+    priv token: int = 0
+    priv started: bool = false
 
     pub fn init(surface: host.Handle, router: events.EventRouter) {
         self.surface = surface
@@ -26,38 +30,50 @@ pub class FrameClock {
 
     /// Starts the clock, calling `handler` before every frame.
     ///
-    /// `token` comes back on every frame. Nothing routes by it — the router
-    /// already knows which surface a frame belongs to — so it is free for a
-    /// caller to say which *run* of the clock a frame came from, which is the
-    /// question a program that starts and stops one has.
+    /// `token` comes back on every frame, and it now also says *which
+    /// listener* the frame is for: a surface may have several, and
+    /// `ClockDesk` hands each one its own token rather than the host's. Two
+    /// clocks on one surface under the same token is refused rather than one
+    /// replacing the other.
     ///
-    /// The host is asked first and the handler registered only once it agrees.
-    /// The other order looks the same until somebody calls this twice: the
-    /// second call would replace a running clock's handler and only then be
-    /// refused, leaving the frames arriving at a handler nobody meant to
-    /// install.
+    /// **The host still has one clock per surface**, and that is not worked
+    /// around here — a display link belongs to a display, so several listeners
+    /// share one link. `ClockDesk` is what shares it; before it existed, the
+    /// second thing to ask for frames in a window simply never moved.
     pub fn start(token: int, handler: fn(Frame)) -> Result<bool> {
-        unsafe {
-            host.check(host.ctd_clock_start(self.surface.raw, token as i64) as int,
-                       "start a frame clock")?
+        // Starting *this* clock twice is still refused, even though a surface
+        // may now carry several. The object holds the one token it will leave
+        // under, so a second start would forget the first and strand that
+        // listener on the surface with nothing able to take it off again.
+        // Two things moving in one window is two FrameClocks, not one started
+        // twice — which is what the message says, because the caller who hit
+        // this is one line away from the arrangement that works.
+        if self.started {
+            return err("this frame clock is already running under token {self.token} — a second thing moving on the same surface is its own FrameClock, not this one started again",
+                       "wrong_moment")
         }
-        self.router.on(self.surface, events.EventKind.frame, fn(event: events.UiEvent) {
-            handler(Frame.of(event))
-        })
+        ClockDesk.instance.join(self.surface, self.router, token, handler)?
+        self.token = token
+        self.started = true
         return ok(true)
     }
 
-    /// Stops it, and takes the handler off with it.
+    /// Stops it, and takes this clock's handler off with it.
     ///
     /// Stopping a clock that is not running succeeds. A teardown path should
     /// not have to ask first, and there is nothing for a caller to do
     /// differently about a clock that had already stopped.
+    ///
+    /// The host's clock stops when the *last* listener on the surface leaves,
+    /// not when this one does — which is what lets one canvas be taken off a
+    /// screen while another keeps moving.
     pub fn stop() -> Result<bool> {
-        unsafe {
-            host.check(host.ctd_clock_stop(self.surface.raw) as int,
-                       "stop a frame clock")?
-        }
-        self.router.off(self.surface, events.EventKind.frame)
+        // Asked unconditionally, even for a clock that never started: the
+        // host is what knows whether this handle is still a surface, and a
+        // teardown call that answered `ok` about a released widget would be
+        // hiding exactly what it exists to report.
+        ClockDesk.instance.leave(self.surface, self.router, self.token)?
+        self.started = false
         return ok(true)
     }
 

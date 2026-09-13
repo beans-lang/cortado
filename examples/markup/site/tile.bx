@@ -1,0 +1,50 @@
+<VStack spacing={6}>
+  $slot:cap as self.title
+  <Badge rush={self.rush} />
+  $slot
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import {view, param} from cortado.annotations
+import {Badge} from markup.generated.site.parts
+
+/// A section of a screen: the caption the screen draws for it, how the order
+/// is going, and whatever the screen wrote inside the tag.
+///
+/// **This is the `$slot` component.** A tile decides *where* its content goes;
+/// the screen around it decides *what* the content is. The two halves meet in
+/// two fields:
+///
+///   * `body` is the tag's children, as a template. `$slot` places it.
+///   * `cap` is the template the screen wrote as `$slot:cap ... { ... }`,
+///     handed the tile's own title. `$slot:cap as self.title` places it.
+///
+/// Both are ordinary `fn(Builder)` fields with a default that draws nothing,
+/// so a tile nobody gave a template to is empty rather than broken — the
+/// author chooses the default, and cortado does not need a concept for "no
+/// template".
+///
+/// The `<Badge>` between them is not decoration in this example. A template is
+/// written in the *screen's* file and run against the *tile's* builder, so a
+/// component tag inside the template asks for a key in the tile's render — and
+/// cortado-bx restarts key numbering inside a template, so that key can be one
+/// the tile has already used for a component of its own. Here it is exactly
+/// that: the badge is `c1` in this file and `<Price>` is `c1` in the template
+/// `checkout.bx` supplies. `Builder.fragment` is what keeps them apart, and
+/// without it this screen tells its author that `<Price> came back as
+/// something else`.
+@view
+pub partial class Tile extends component.Component {
+    @param pub title: string = ""
+    @param pub rush: bool = false
+
+    /// The screen's children, as a template this component places.
+    pub body: fn(Builder) = fn(_b: Builder) {}
+    /// How the screen draws a caption, given the title to draw.
+    pub cap: fn(Builder, string) = fn(_b: Builder, _t: string) {}
+
+    pub fn init() { super.init() }
+}
+</beans>

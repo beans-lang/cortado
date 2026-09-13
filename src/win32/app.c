@@ -581,6 +581,7 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_RESIZABLE:     return 1;
         case CTD_CAP_FILE_DIALOG:   return 1;
         case CTD_CAP_SNAPSHOT:      return 0;
+        case CTD_CAP_LAYER_STYLE:   return 0;  /* Win32 would need owner-draw, which this host refuses. */
         // Written out rather than left to the default, because "no GPU
         // host" is a decision this host is making and not a key nobody
         // has heard of. src/win32/gpu.c says what would have to land.

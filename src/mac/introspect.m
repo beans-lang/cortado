@@ -16,7 +16,20 @@ int32_t ctd_native_class(ctd_handle widget, char *out, int32_t cap) {
 
 int32_t ctd_a11y_role(ctd_handle widget, char *out, int32_t cap) {
     int32_t kind = ctd_slot_kind(widget);
-    if (kind < 0 && !ctd_resolve(widget)) return CTD_ERR_STALE;
+    id resolved = ctd_resolve(widget);
+    if (kind < 0 && !resolved) return CTD_ERR_STALE;
+    // A control the program draws itself may say what it is, because cortado
+    // cannot know. Only out of the words below — inventing one would be a word
+    // no screen reader knows, which is the argument the canvas's own case
+    // makes.
+    if (ctd_kind_is_drawn(kind) && [resolved isKindOfClass:[CortadoView class]]) {
+        switch ([(CortadoView *)resolved ctdRole]) {
+            case CTD_A11Y_BUTTON: return ctd_copy_out(@"button", out, cap);
+            case CTD_A11Y_IMAGE:  return ctd_copy_out(@"image", out, cap);
+            case CTD_A11Y_GROUP:  return ctd_copy_out(@"group", out, cap);
+            default: break;
+        }
+    }
     NSString *role;
     switch (kind) {
         case CTD_W_CONTAINER:    role = @"group";       break;

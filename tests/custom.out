@@ -1,0 +1,26 @@
+-- a canvas already hears a pointer --
+  the press arrived: true
+  in the canvas's own points: true
+  and the platform carried it: true
+-- the same point, as the shader sees it --
+  a quarter across and three tenths down: true
+  a canvas with no size says so: true
+-- taking the keyboard is asked for, not assumed --
+  one that has not asked is refused: true
+  one that asked says so: true
+  then it takes the keyboard: true
+  and knows it has it: true
+  turning it off puts it back: true
+-- and only a canvas may be told --
+  a button is refused: true
+-- what a canvas calls itself --
+  by default, what its kind says: true
+  told it is a button, it says button: true
+  told it is an image, it says image: true
+  and put back, its kind answers again: true
+  a button may not claim one: true
+-- and what it is called --
+  a canvas can be named: true
+  and so can a button: true
+  an unnamed button is announced by its title: true
+  an unnamed canvas is announced by nothing: true

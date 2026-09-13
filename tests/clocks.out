@@ -1,0 +1,22 @@
+-- three clocks on one window --
+  all three joined: true
+  the host started exactly one clock: true
+  every listener saw every frame: true
+  the host counted them once: true
+  each was told its own token: true
+  and told in the order they joined: true
+-- the middle one leaves --
+  two are left: true
+  the host clock is still running: true
+  the survivors kept getting frames: true
+  the one that left stopped getting them: true
+  and they are still the two that stayed: true
+-- the last two leave --
+  nobody is left: true
+  and the host clock stopped with them: true
+-- refusals --
+a second listener under a token already joined refused: token_taken
+one clock started twice refused: wrong_moment
+  the surface is clear again: true
+a clock on a button refused: wrong_widget
+a clock on a released widget refused: stale_handle

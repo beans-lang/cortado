@@ -8,10 +8,13 @@
 //
 // **Why the lists are written out and not derived.** The predicates in
 // `widgets.b` and `events.b` are chains of `==`, and a chain cannot be
-// enumerated. `tests/markup.b` asks each predicate about **every name listed
-// here** and about a control corpus of names that must *not* be in it, so a
-// row added to `widgets.b` and forgotten here fails the gate rather than
-// shipping an editor that has never heard of it — and the reverse fails too.
+// enumerated. So `tools/check_vocabulary.sh` reads both the predicate and the
+// list out of the source and diffs them: a row added to `widgets.b` and
+// forgotten here fails the build rather than shipping an editor that has never
+// heard of it, and the reverse fails too. Every list in this file that mirrors
+// a predicate is in that gate — `controls`, `attributes`,
+// `boolean_attributes`, `reserved_attributes` and the events — and a new one
+// belongs there the day it is written, not the day it is found wrong.
 //
 // Nothing under cortado's module root imports this file, and neither does the
 // emitter. It is data about the language, for a reader outside it.
@@ -46,8 +49,8 @@ pub fn blocks() -> List<VocabRow> {
                      r#"A loop, emitted as a Beans for. A child carrying key={ } keeps its control across reordering; without one, rows match by position."#),
         new VocabRow("$match", r#"$match <expr> { <pattern> => { ... } }"#,
                      "A branch with more than two arms. At least one arm is required."),
-        new VocabRow("$slot", r#"$slot | $slot(<expr>) | $slot:<name> | $slot:<name> as <expr> | $slot:<name> as <p>: <Type> { ... }"#,
-                     "Places or defines a fragment. A body makes it a definition and only reads that way inside a component tag."),
+        new VocabRow("$slot", r#"$slot | $slot(<expr>) | $slot:<name> | $slot:<name> as <expr> | $slot:<name> { ... } | $slot:<name> as <p>: <Type> { ... }"#,
+                     "Places or defines a template. A body makes it a definition and only reads that way inside a component tag; the other four place one, and a component declares each template as an fn(Builder) field."),
 
     ]
 }
@@ -103,10 +106,16 @@ pub fn conversions() -> List<string> {
 }
 
 /// Attribute names the framework reads rather than the control.
+///
+/// Exactly the names `is_reserved_attribute` answers yes to, which is what
+/// `Parser.classify` routes on — so an editor can never offer one the compiler
+/// does not handle, or miss one it does.
 pub fn reserved_attributes() -> List<VocabRow> {
     return [
         new VocabRow("key", r#"key={<expr>}"#,
-                     "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position."),
+                     "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position. It also names the control for Stage.control(key) and Stage.widget(key) in on_mount."),
+        new VocabRow("ref", r#"ref={<place>}"#,
+                     "On a component tag only: the instance the tag built, assigned to a place of type Option<T> once the tag is fully configured. A control has no instance to hand back — name it with key= instead."),
     ]
 }
 
@@ -123,8 +132,17 @@ pub fn controls() -> List<string> {
 }
 
 /// Attributes that are true by being there: `<CheckBox checked />`.
+///
+/// Exactly the names `is_boolean_attribute` answers yes to, and
+/// `tools/check_vocabulary.sh` is what keeps it that way. It was four names for
+/// a long time while the compiler had seven: `indeterminate`, `open` and
+/// `animating` arrived with the progress bar, the disclosure and the spinner
+/// and never reached this list, so every editor reading it believed
+/// `<ProgressBar indeterminate />` needed a value. Nothing said so, because
+/// nothing compared the two.
 pub fn boolean_attributes() -> List<string> {
-    return ["checked", "editable", "enabled", "hidden"]
+    return ["animating", "checked", "editable", "enabled", "hidden",
+            "indeterminate", "open"]
 }
 
 /// Every attribute, with the kind of value it takes.

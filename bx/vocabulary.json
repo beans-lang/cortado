@@ -7,7 +7,7 @@
     {"name": "else", "detail": "$if <expr> { ... } else if <expr> { ... } else { ... }", "note": "Written without a $, because it continues the $if that opened the block."},
     {"name": "$for", "detail": "$for <name> in <expr> { ... }", "note": "A loop, emitted as a Beans for. A child carrying key={ } keeps its control across reordering; without one, rows match by position."},
     {"name": "$match", "detail": "$match <expr> { <pattern> => { ... } }", "note": "A branch with more than two arms. At least one arm is required."},
-    {"name": "$slot", "detail": "$slot | $slot(<expr>) | $slot:<name> | $slot:<name> as <expr> | $slot:<name> as <p>: <Type> { ... }", "note": "Places or defines a fragment. A body makes it a definition and only reads that way inside a component tag."}
+    {"name": "$slot", "detail": "$slot | $slot(<expr>) | $slot:<name> | $slot:<name> as <expr> | $slot:<name> { ... } | $slot:<name> as <p>: <Type> { ... }", "note": "Places or defines a template. A body makes it a definition and only reads that way inside a component tag; the other four place one, and a component declares each template as an fn(Builder) field."}
   ],
   "interpolations": [
     {"name": "$<chain>", "detail": "$self.count, $row.title, $self.rows[0]", "note": "An implicit chain. It ends where the chain ends, so $5.00 and US$ are ordinary text."},
@@ -39,7 +39,8 @@
   ],
   "conversions": [],
   "reservedAttributes": [
-    {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position."}
+    {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position. It also names the control for Stage.control(key) and Stage.widget(key) in on_mount."},
+    {"name": "ref", "detail": "ref={<place>}", "note": "On a component tag only: the instance the tag built, assigned to a place of type Option<T> once the tag is fully configured. A control has no instance to hand back — name it with key= instead."}
   ],
   "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Disclosure", "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper", "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack", "OutlineView", "WebView"],
   "attributes": [
@@ -72,5 +73,5 @@
     {"name": "value", "detail": "number", "note": "a slider or progress value"},
     {"name": "width", "detail": "number", "note": "pins the width"}
   ],
-  "booleanAttributes": ["checked", "editable", "enabled", "hidden"]
+  "booleanAttributes": ["animating", "checked", "editable", "enabled", "hidden", "indeterminate", "open"]
 }

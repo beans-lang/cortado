@@ -49,6 +49,12 @@ pub class Builder {
     /// quietly dropping the child.
     composer: Option<Composer> = none
 
+    /// The prefix every child key is qualified by while a fragment body is
+    /// running, or `""` outside every fragment. `fragment` maintains it; see
+    /// the note there for why it exists and how it composes with the mount's
+    /// own scoping.
+    fragment_scope: string = ""
+
     pub fn init() {}
 
     /// Framework use: the mount that will render child components.
@@ -243,7 +249,10 @@ pub class Builder {
                 self.faults.push("child \"{key}\" cannot be rendered: this builder is not attached to a mount")
             }
             some(who) => {
-                match who.compose(key, sub) {
+                // The composer is handed the qualified key and the fault names
+                // the one the author wrote, which is why the qualifying
+                // happens here and not inside the mount.
+                match who.compose(self.scoped_key(key), sub) {
                     ok(subtree) => { self.embed(subtree) }
                     err(problem) => { self.faults.push("child \"{key}\": {problem.msg}") }
                 }
@@ -275,7 +284,10 @@ pub class Builder {
                 return
             }
             some(who) => {
-                match who.obtain(key, type_of(T)) {
+                // The same qualification `show` applies below, so the instance
+                // this obtains and the subtree that gets composed are one
+                // child and not two.
+                match who.obtain(self.scoped_key(key), type_of(T)) {
                     err(problem) => {
                         self.faults.push("<{type_of(T).name()}>: {problem.msg}")
                     }
@@ -298,6 +310,85 @@ pub class Builder {
                 }
             }
         }
+    }
+
+    // ---- fragments ----
+
+    /// Places a template this component's parent supplied: what `$slot`
+    /// compiles to.
+    ///
+    /// A fragment is a `fn(Builder)` the parent wrote and the child places.
+    /// The body is **written** in the parent's markup — so `self` inside it is
+    /// the parent, and it reads the parent's fields — and **run** here,
+    /// against this builder, so the controls it describes land wherever the
+    /// child put its `$slot`. That split is the whole feature: a `<Tile>`
+    /// decides where its content goes and the screen around it decides what
+    /// the content is.
+    ///
+    /// ### `site` is load-bearing, not decoration
+    ///
+    /// `site` names **where this placement is** — which `$slot` of this render,
+    /// and which turn of the `$for` around it. cortado-bx writes `"2"` for the
+    /// third placement in a render and `"2.{row}"` for one inside a loop, the
+    /// same two-part identity it gives a component tag. It is what makes
+    /// placing one template at two sites — or on two rows — produce two
+    /// independent children rather than one shared between them, and it is
+    /// needed because **a fragment body restarts key numbering at 0**:
+    /// cortado-bx emits a fragment body in a counter scope of its own, so the
+    /// first component tag inside any fragment body asks for the key `c0` —
+    /// which is exactly what the placing component's own first component tag
+    /// asks for.
+    ///
+    /// So every child key written while the body runs is qualified with
+    /// `$f{site}/`. A `$` can never begin a key cortado-bx generates — those
+    /// are `c{n}` and `c{n}.{row}` — so a qualified key can never collide with
+    /// an unqualified one, and two placements differ because their site does.
+    /// It is the move `$for` already makes with the row index, which is a
+    /// suffix for the same reason: a counter that restarts needs something
+    /// from outside it to tell its numbers apart.
+    ///
+    /// A string rather than a number, and the loop is why: a `$slot` in a
+    /// `$for` body is *one* emitted call run once per row, so the number in it
+    /// is the same on every turn and only the row tells the turns apart. A
+    /// number could carry the site or the row and not both.
+    ///
+    /// ### Two layers of scoping, and why neither covers the other
+    ///
+    /// `Mount.scoped_key` qualifies a key by the component whose `render` is
+    /// running, because cortado-bx numbers from 0 in every render it writes.
+    /// This qualifies a key by the fragment placement it was asked for inside,
+    /// because cortado-bx numbers from 0 *again* inside every fragment body.
+    /// The mount cannot do this one: a fragment body is a closure it never
+    /// sees, called from inside a render it has already entered. The builder
+    /// cannot do the mount's: it does not know which component it is building
+    /// for, and must not — it is the same object whether it is building a real
+    /// window or a tree for a test. The mount applies its layer to whatever
+    /// this hands it, so a component inside the first `$slot` of a `<Tile>`
+    /// ends up under `<the tile>/$f0/c0`.
+    ///
+    /// ### Element keys are deliberately *not* qualified
+    ///
+    /// `key=` on a control is not identity for state; it is the name
+    /// `Stage.control` and `Stage.widget` look a control up by once it is
+    /// real. Qualifying it would make that name unreachable — the author
+    /// writes `key="plot"` and would have to ask for `$f0/plot`, a string they
+    /// have no way to know. So two placements of one body do produce two
+    /// siblings carrying one key: the differ matches keyed siblings
+    /// first-untaken, which leaves each in its own place, and `Stage.control`
+    /// answers the first of them.
+    pub fn fragment(site: string, body: fn(Builder)) {
+        let outer: string = self.fragment_scope
+        self.fragment_scope = "{outer}$f{site}/"
+        body(self)
+        self.fragment_scope = outer
+    }
+
+    /// A child's key, qualified by the fragment placement it was asked for
+    /// inside. Outside every fragment it is the key itself, so nothing that
+    /// places no fragment is affected at all.
+    fn scoped_key(key: string) -> string {
+        if self.fragment_scope == "" { return key }
+        return "{self.fragment_scope}{key}"
     }
 
     /// Splices an already-built subtree in as a child.

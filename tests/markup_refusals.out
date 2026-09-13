@@ -1,0 +1,38 @@
+-- what the scanners must not mistake --
+  braces inside a raw string compiled, emitting it: true
+  braces inside an ordinary string compiled, emitting it: true
+  a brace inside a line comment compiled, emitting it: true
+  a nested block comment compiled, emitting it: true
+  a quote inside a comment compiled, emitting it: true
+-- markup about an HTML document --
+  <!DOCTYPE html> refused, saying so: true
+  <!ENTITY ...> refused, saying so: true
+  $html(...) refused, saying so: true
+  <!-- a note --> compiled, writing nothing: true
+-- attributes an HTML element has and a control has not --
+  attrs= on a control refused, saying so: true
+  attrs= on a component refused, saying so: true
+  preserve on a control refused, saying so: true
+  preserve on a component refused, saying so: true
+  a component parameter that happens to be called attrs refused, saying so: true
+-- ref= --
+  ref= on a component tag compiled, emitting it: true
+  ref= is written after the parameters: true
+  ref= on a control refused, saying so: true
+  ref with no place to put the child refused, saying so: true
+  key= with a literal rather than an expression refused, saying so: true
+  key= with an expression compiled, emitting it: true
+  key= on a component tag refused, saying so: true
+-- $slot --
+  $slot compiled, emitting it: true
+  $slot(<expr>) compiled, emitting it: true
+  $slot:<name> compiled, emitting it: true
+  $slot:<name> as <expr> compiled, emitting it: true
+  the first of two placements compiled, emitting it: true
+  the second of two placements compiled, emitting it: true
+  a placement inside a $for compiled, emitting it: true
+  a component tag inside a $for, for comparison compiled, emitting it: true
+  a template defined on a component tag compiled, emitting it: true
+  a template with no parameter compiled, emitting it: true
+  a component tag's children become its body compiled, emitting it: true
+  a template defined outside a component tag refused, saying so: true

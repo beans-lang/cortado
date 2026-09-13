@@ -113,6 +113,47 @@ static inline int ctd_kind_has_color(int32_t kind) {
     return kind == CTD_W_COLOR_WELL;
 }
 
+/* Whether a kind can show a background colour behind its own drawing.
+ *
+ * **This list was read off a screen, not reasoned about.** `examples/styled.b`
+ * puts every control on a window twice, plain and dressed, and the four below
+ * are the ones that came back looking exactly as they started. They are the
+ * bezelled text-entry controls, and they are alike for one reason: the bezel
+ * the platform draws is opaque and it is drawn over anything behind it. A
+ * label is the control that proves it is the bezel and not the class — a label
+ * is an NSTextField too, has no bezel, and takes a background fine.
+ *
+ * The only way to make one of these show a colour is to take its bezel away,
+ * and then it is not the platform's text field any more: no focus ring, no
+ * find bar, none of the appearance a person recognises. That is the
+ * substitution ctd_widget_supports exists to refuse, so this refuses it one
+ * layer up and says which control it was about.
+ *
+ * Everything else takes one — a push button included, which is worth saying
+ * because the opposite was assumed for a long time: a bezelled NSButton shows
+ * a layer colour perfectly well and keeps drawing its title on top.
+ *
+ * Corner radius and border are deliberately *not* here. Every control took
+ * both, these four included, so there is nothing for a rule to refuse. */
+static inline int ctd_kind_has_background(int32_t kind) {
+    return !(kind == CTD_W_TEXT_FIELD
+          || kind == CTD_W_SECURE_FIELD
+          || kind == CTD_W_SEARCH_FIELD
+          || kind == CTD_W_TEXT_AREA);
+}
+
+/* Whether a kind carries the two keys that belong to a control a program draws
+ * itself: can it take the keyboard, and what does it call itself.
+ *
+ * A canvas and nothing else. Every other control's answer to both is the
+ * platform's — a text field takes the keyboard everywhere and is a textbox
+ * everywhere, and cortado overriding either would be cortado inventing a
+ * control rather than using one. A canvas is the one kind whose contents
+ * cortado did not author, so it is the one kind that has to be told. */
+static inline int ctd_kind_is_drawn(int32_t kind) {
+    return kind == CTD_W_CANVAS;
+}
+
 /* Midnight UTC of the day `seconds` falls in.
  *
  * The rule stated beside CTD_W_DATE_PICKER: a date picker holds a day, so a

@@ -347,7 +347,14 @@ ctd_status ctd_widget_focus(ctd_handle widget) {
     if (!object) return CTD_ERR_STALE;
     if (![object isKindOfClass:[NSView class]]) return CTD_ERR_UNSUPPORTED;
     NSView *view = (NSView *)object;
-    if (![view acceptsFirstResponder]) return CTD_ERR_UNSUPPORTED;
+    if (![view acceptsFirstResponder]) {
+        // Two different answers to two different questions. A canvas *can*
+        // take the keyboard on this platform and simply has not been asked to;
+        // a label cannot on any. Telling them apart is the difference between
+        // "turn CTD_P_FOCUSABLE on" and "stop trying".
+        if (ctd_kind_is_drawn(ctd_slot_kind(widget))) return CTD_ERR_STATE;
+        return CTD_ERR_UNSUPPORTED;
+    }
     NSWindow *window = [view window];
     // A view that is in no window would still take first responder from a
     // window it does not belong to — AppKit does not check — and the program

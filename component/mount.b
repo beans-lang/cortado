@@ -56,6 +56,10 @@ pub class Mount implements Composer {
     /// Which keys this render has used, so a duplicate is reported rather than
     /// silently making two components share one identity.
     used: Map<string, bool> = {}
+    /// The scoped key of the component whose `render` is running, or "" for
+    /// the one at the top. Every key asked for while it runs is qualified by
+    /// it — see `scoped_key`.
+    rendering: string = ""
 
     /// Which element each live control stands for. Rebuilt after every apply.
     by_handle: Map<u64, Element> = {}
@@ -242,7 +246,7 @@ pub class Mount implements Composer {
             none => { return err("this mount has nothing to show", "not_mounted") }
             some(component) => {
                 self.used = {}
-                let next: Element = self.render_one(component)?
+                let next: Element = self.render_one(component, "")?
                 var differ: Differ = new Differ()
                 let changes: List<Change> = differ.diff(self.shown, next)
                 var applier: Applier = new Applier(self.root, self.router, self)
@@ -349,12 +353,44 @@ pub class Mount implements Composer {
 
     // ---- rendering ----
 
-    fn render_one(component: Component) -> Result<Element> {
+    fn render_one(component: Component, path: string) -> Result<Element> {
         var into: Builder = new Builder()
         into.set_composer(self)
+        // Whose render this is, so the keys it asks for are scoped to it. Saved
+        // and restored rather than cleared: a child renders inside its
+        // parent's render, and the parent has more children to compose after
+        // this one comes back.
+        let outer: string = self.rendering
+        self.rendering = path
         component.render(into)
+        self.rendering = outer
         self.renders = self.renders + 1
         return into.finish()
+    }
+
+    /// A child's key, qualified by the component that asked for it.
+    ///
+    /// **The keys a markup file generates are per render, and this map is per
+    /// mount.** `cortado-bx` numbers component tags from zero in every
+    /// `render` it writes, so the first component tag in *any* `.bx` file is
+    /// `c0`. Without this, a screen whose component contains a component — a
+    /// `<Card>` with a `<Badge>` in it — had both asking for `c0`, and
+    /// `obtain` handed the inner one the outer one's instance. It did not even
+    /// reach the duplicate-key refusal below: the downcast failed first, and
+    /// the author was told `<Badge> came back as something else`.
+    ///
+    /// Nothing in this repository nested two component tags, which is the only
+    /// reason it went unseen — `checkout.bx` has two component tags as
+    /// siblings, where the numbering already differs.
+    ///
+    /// The rule is the one `stage_for` already states for a `Stage`: two
+    /// components may both use the key "plot" and neither finds the other's.
+    /// This is the composer finally saying the same thing.
+    fn scoped_key(key: string) -> string {
+        if self.rendering == "" {
+            return key
+        }
+        return "{self.rendering}/{key}"
     }
 
     /// `Composer`: renders a child on its parent's behalf.
@@ -367,40 +403,49 @@ pub class Mount implements Composer {
     /// And a key used twice in one render is refused, because two components
     /// sharing an identity would take each other's state.
     pub fn compose(key: string, child: Component) -> Result<Element> {
-        match self.used.get(key) {
+        let scoped: string = self.scoped_key(key)
+        match self.used.get(scoped) {
             some(already) => {
-                return err("two children in one render both use the key \"{key}\"", "duplicate_key")
+                // The key is not quoted here, and that is deliberate: since
+                // `Builder.fragment` landed, the key this is handed may carry a
+                // placement prefix the author never wrote. Every caller already
+                // knows the key it passed — `Builder.show` puts it in front of
+                // this sentence — so naming it here could only ever name it
+                // twice, once in a spelling nobody typed.
+                return err("this key is already taken by another child of the same render",
+                           "duplicate_key")
             }
             none => {}
         }
-        self.used[key] = true
+        self.used[scoped] = true
 
         var first: bool = false
-        match self.prepared.get(key) {
+        match self.prepared.get(scoped) {
             none => {
                 self.prepare(child)?
-                self.prepared[key] = child
+                self.prepared[scoped] = child
                 first = true
             }
             some(held) => {}
         }
 
         if !first && !child.is_dirty() && !child.should_render() {
-            match self.cached.get(key) {
+            match self.cached.get(scoped) {
                 some(before) => { return ok(before) }
                 none => {}
             }
         }
 
-        let subtree: Element = self.render_one(child)?
-        self.cached[key] = subtree
+        let subtree: Element = self.render_one(child, scoped)?
+        self.cached[scoped] = subtree
         return ok(subtree)
     }
 
     /// `Composer`: the child under `key`, built the first time it is asked
     /// for.
     pub fn obtain(key: string, described: reflect.Type) -> Result<reflect.Value> {
-        match self.prepared.get(key) {
+        let scoped: string = self.scoped_key(key)
+        match self.prepared.get(scoped) {
             some(held) => { return ok(reflect.value(held)) }
             none => {}
         }
@@ -412,7 +457,7 @@ pub class Mount implements Composer {
             }
             some(built) => {
                 self.prepare(built)?
-                self.prepared[key] = built
+                self.prepared[scoped] = built
                 return ok(reflect.value(built))
             }
         }

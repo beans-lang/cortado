@@ -1,34 +1,40 @@
 Container CortadoView role=group "" frame=0,0,380,300 children=1
-  Container CortadoView role=group "" frame=0,0,380,300 children=6
+  Container CortadoView role=group "" frame=0,0,380,300 children=4
     Label NSTextField role=text "Order a coffee" frame=24,24,332,20
-    Label NSTextField role=text "1 × flat white" frame=24,58,332,16
-    Label NSTextField role=text "380p" frame=24,88,332,26
-    Label NSTextField role=text "steady" frame=24,128,332,15
-    CheckBox NSButton role=checkbox "Rush it" frame=24,157,332,16
-    Container CortadoView role=group "" frame=24,187,332,24 children=2
+    Container CortadoView role=group "" frame=24,58,332,91 children=4
+      Label NSTextField role=text "Your order" frame=0,0,68,16
+      Label NSTextField role=text "steady" frame=0,22,42,15
+      Label NSTextField role=text "1 × flat white" frame=0,43,81,16
+      Label NSTextField role=text "380p" frame=0,65,57,26
+    CheckBox NSButton role=checkbox "Rush it" frame=24,163,332,16
+    Container CortadoView role=group "" frame=24,193,332,24 children=2
       Button NSButton role=button "Another shot" frame=114,0,103,24
       Button NSButton role=button "Change drink" frame=227,0,105,24
 -- after three shots --
 Container CortadoView role=group "" frame=0,0,380,300 children=1
-  Container CortadoView role=group "" frame=0,0,380,300 children=7
+  Container CortadoView role=group "" frame=0,0,380,300 children=5
     Label NSTextField role=text "Order a coffee" frame=24,24,332,20
-    Label NSTextField role=text "3 × flat white" frame=24,58,332,16
-    Label NSTextField role=text "380p" frame=24,88,332,26
-    Label NSTextField role=text "steady" frame=24,128,332,15
-    CheckBox NSButton role=checkbox "Rush it" frame=24,157,332,16
-    Label NSTextField role=text "That is a lot of caffeine" frame=24,187,332,16
-    Container CortadoView role=group "" frame=24,217,332,24 children=2
+    Container CortadoView role=group "" frame=24,58,332,91 children=4
+      Label NSTextField role=text "Your order" frame=0,0,68,16
+      Label NSTextField role=text "steady" frame=0,22,42,15
+      Label NSTextField role=text "3 × flat white" frame=0,43,84,16
+      Label NSTextField role=text "380p" frame=0,65,57,26
+    CheckBox NSButton role=checkbox "Rush it" frame=24,163,332,16
+    Label NSTextField role=text "That is a lot of caffeine" frame=24,193,332,16
+    Container CortadoView role=group "" frame=24,223,332,24 children=2
       Button NSButton role=button "Another shot" frame=114,0,103,24
       Button NSButton role=button "Change drink" frame=227,0,105,24
 -- after rushing it --
 Container CortadoView role=group "" frame=0,0,380,300 children=1
-  Container CortadoView role=group "" frame=0,0,380,300 children=7
+  Container CortadoView role=group "" frame=0,0,380,300 children=5
     Label NSTextField role=text "Order a coffee" frame=24,24,332,20
-    Label NSTextField role=text "3 × flat white" frame=24,58,332,16
-    Label NSTextField role=text "380p" frame=24,88,332,26
-    Label NSTextField role=text "rushing" frame=24,128,332,15
-    CheckBox NSButton role=checkbox "Rush it" frame=24,157,332,16
-    Label NSTextField role=text "That is a lot of caffeine" frame=24,187,332,16
-    Container CortadoView role=group "" frame=24,217,332,24 children=2
+    Container CortadoView role=group "" frame=24,58,332,91 children=4
+      Label NSTextField role=text "Your order" frame=0,0,68,16
+      Label NSTextField role=text "rushing" frame=0,22,47,15
+      Label NSTextField role=text "3 × flat white" frame=0,43,84,16
+      Label NSTextField role=text "380p" frame=0,65,57,26
+    CheckBox NSButton role=checkbox "Rush it" frame=24,163,332,16
+    Label NSTextField role=text "That is a lot of caffeine" frame=24,193,332,16
+    Container CortadoView role=group "" frame=24,223,332,24 children=2
       Button NSButton role=button "Another shot" frame=114,0,103,24
       Button NSButton role=button "Change drink" frame=227,0,105,24

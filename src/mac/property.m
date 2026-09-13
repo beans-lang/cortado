@@ -73,6 +73,18 @@ void ctd_link_retitle(NSTextField *link, NSString *words, NSURL *target) {
     [rich release];
 }
 
+CALayer *ctd_layer_of(NSView *view) {
+    if (![view wantsLayer]) [view setWantsLayer:YES];
+    return [view layer];
+}
+
+static CGColorRef ctd_cg_color(int64_t value) {
+    return [[NSColor colorWithSRGBRed:ctd_color_red(value)   / 255.0
+                                green:ctd_color_green(value) / 255.0
+                                 blue:ctd_color_blue(value)  / 255.0
+                                alpha:ctd_color_alpha(value) / 255.0] CGColor];
+}
+
 ctd_status ctd_set_string(ctd_handle widget, int32_t key,
                           const char *utf8, int32_t len) {
     if (ctd_has_nul(utf8, len)) return CTD_ERR_RANGE;
@@ -86,6 +98,15 @@ ctd_status ctd_set_string(ctd_handle widget, int32_t key,
     ctd_forget_size(widget);
 
     switch (key) {
+        case CTD_S_A11Y_LABEL: {
+            // Carried by every kind: a label on a button is a legitimate
+            // override, and it is how a toolbar of icons is usable at all.
+            [(NSView *)object setAccessibilityLabel:
+                len == 0 ? nil : [[NSString alloc] initWithBytes:utf8
+                                                          length:(NSUInteger)len
+                                                        encoding:NSUTF8StringEncoding]];
+            return CTD_OK;
+        }
         case CTD_S_HINT:
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             [(NSTextField *)object setPlaceholderString:ctd_string(utf8, len)];
@@ -110,6 +131,12 @@ int32_t ctd_get_string(ctd_handle widget, int32_t key, char *out, int32_t cap) {
     id object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
     switch (key) {
+        case CTD_S_A11Y_LABEL: {
+            // What was set, never the control's own text: "" means no label
+            // was given, not "this control has no words".
+            NSString *said = [(NSView *)object accessibilityLabel];
+            return ctd_copy_out(said ? said : @"", out, cap);
+        }
         case CTD_S_HINT: {
             if (!ctd_kind_has_hint(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             NSString *hint = [(NSTextField *)object placeholderString];
@@ -251,6 +278,39 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
                                     alpha:ctd_color_alpha(value) / 255.0]];
             return CTD_OK;
         }
+        case CTD_P_BG_COLOR: {
+            if (!ctd_kind_has_background(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            [ctd_layer_of((NSView *)object) setBackgroundColor:ctd_cg_color(value)];
+            return CTD_OK;
+        }
+        case CTD_P_BORDER_COLOR: {
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            [ctd_layer_of((NSView *)object) setBorderColor:ctd_cg_color(value)];
+            return CTD_OK;
+        }
+        case CTD_P_FOCUSABLE: {
+            if (!ctd_kind_is_drawn(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0 || value > 1) return CTD_ERR_RANGE;
+            [(CortadoView *)object setCtdFocusable:value ? YES : NO];
+            return CTD_OK;
+        }
+        case CTD_P_A11Y_ROLE: {
+            if (!ctd_kind_is_drawn(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < CTD_A11Y_AUTO || value > CTD_A11Y_GROUP) return CTD_ERR_RANGE;
+            [(CortadoView *)object setCtdRole:(int32_t)value];
+            // Told to the accessibility system too, and not only reported back
+            // through ctd_a11y_role: a role cortado prints in a golden and a
+            // role VoiceOver hears are two different things, and a program that
+            // set one and got the other would be worse off than one that could
+            // set neither.
+            NSString *ax = nil;
+            if (value == CTD_A11Y_BUTTON) ax = NSAccessibilityButtonRole;
+            else if (value == CTD_A11Y_IMAGE) ax = NSAccessibilityImageRole;
+            else if (value == CTD_A11Y_GROUP) ax = NSAccessibilityGroupRole;
+            [(NSView *)object setAccessibilityRole:ax];
+            return CTD_OK;
+        }
         case CTD_P_CHECKED: {
             // By kind, not by class. AppKit makes a push button, a check box
             // and a radio out of one class, so asking the object said yes to
@@ -362,6 +422,16 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = [[(CortadoDisclosure *)object triangle] state] ==
                         NSControlStateValueOn ? 1 : 0;
             break;
+        case CTD_P_FOCUSABLE: {
+            if (!ctd_kind_is_drawn(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = [(CortadoView *)object ctdFocusable] ? 1 : 0;
+            break;
+        }
+        case CTD_P_A11Y_ROLE: {
+            if (!ctd_kind_is_drawn(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = [(CortadoView *)object ctdRole];
+            break;
+        }
         case CTD_P_COLOR: {
             if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             NSColor *shown = [[(NSColorWell *)object color]
@@ -466,6 +536,14 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
             [(NSControl *)object setFont:[NSFont systemFontOfSize:value]];
             return CTD_OK;
+        case CTD_P_CORNER_RADIUS:
+            if (value < 0.0) return CTD_ERR_RANGE;
+            [ctd_layer_of((NSView *)object) setCornerRadius:value];
+            return CTD_OK;
+        case CTD_P_BORDER_WIDTH:
+            if (value < 0.0) return CTD_ERR_RANGE;
+            [ctd_layer_of((NSView *)object) setBorderWidth:value];
+            return CTD_OK;
         case CTD_P_MIN: {
             id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;
@@ -549,6 +627,14 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
             value = (double)[[(NSControl *)object font] pointSize];
             break;
+        case CTD_P_CORNER_RADIUS:
+            if (value < 0.0) return CTD_ERR_RANGE;
+            [ctd_layer_of((NSView *)object) setCornerRadius:value];
+            return CTD_OK;
+        case CTD_P_BORDER_WIDTH:
+            if (value < 0.0) return CTD_ERR_RANGE;
+            [ctd_layer_of((NSView *)object) setBorderWidth:value];
+            return CTD_OK;
         case CTD_P_MIN: {
             id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;

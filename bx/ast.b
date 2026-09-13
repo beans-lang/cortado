@@ -1,22 +1,23 @@
 // ast.b — what a `.bx` file means, as a class hierarchy.
 //
-// This file is the contract the rest of `latte.bx` is written against: the
+// This file is the contract the rest of `cortado.bx` is written against: the
 // lexer and parser build these, the emitter walks them, and neither knows
 // anything about the other. It is the first file in the package and the only
 // one that may not depend on another file in it.
 //
-// A hierarchy rather than an enum, kept from crema for the reason crema gave:
-// an enum would be shorter today and would fight us at the first extension.
-// `$slot`, a `live` subtree, a desktop-only node — each is a new variant, and
-// a new variant is a compile error in every `match` that ever looked at a
-// `Node`. A subclass is additive. The emitter recovers the concrete type with
-// `as?`, and an unrecognised node is a diagnostic rather than a non-exhaustive
-// match.
+// A hierarchy rather than an enum: an enum would be shorter today and would
+// fight us at the first extension. Each new form is a new variant, and a new
+// variant is a compile error in every `match` that ever looked at a `Node`. A
+// subclass is additive. The emitter recovers the concrete type with `as?`, and
+// an unrecognised node is a diagnostic rather than a non-exhaustive match.
 //
-// What changed from crema's version: `RampAttr` and the colour table are gone
-// (latte passes `class` through untouched), and the block nodes latte's markup
-// language actually has — `$if`, `$for`, `$match`, `${}`, `$slot`, `$html`,
-// `<beans>` — are here instead.
+// **Every class here is built by the parser.** A form cortado does not have is
+// not a node with no parser path — it is a refusal in `parse.b` with a message
+// about the program, and nothing in this file at all. `<!DOCTYPE>`, `$html`, a
+// `<script>` body, `attrs=`, `preserve` and `live` were all carried in from
+// latte and all of them left that way: an AST class nothing constructs is a
+// feature the editor's vocabulary can advertise, the emitter can carry a whole
+// implementation of, and no `.bx` file can ever reach.
 
 package bx
 
@@ -47,8 +48,8 @@ pub struct Span {
 
 /// One attribute on a tag.
 ///
-/// Nine forms, and the parser decides which by shape alone — it never consults
-/// the HTML tables. That separation is what lets `html.b` change without
+/// Seven forms, and the parser decides which by shape alone — it never consults
+/// the control tables. That separation is what lets `widgets.b` change without
 /// touching the parser.
 pub abstract class Attr {
     /// Where it sat.
@@ -67,11 +68,10 @@ pub abstract class Attr {
     pub abstract fn show() -> string
 }
 
-/// `class="counter"` — a literal attribute, passed through byte for byte.
+/// `text="Buy"` — a literal attribute, passed through byte for byte.
 ///
-/// `value` has HTML character references already resolved, because it is
-/// re-escaped on the way out and resolving twice would double-encode. See
-/// `resolve_references` in html.b.
+/// `value` has character references already resolved, because it is re-escaped
+/// on the way out and resolving twice would double-encode.
 pub class LiteralAttr extends Attr {
     pub attr_name: string = ""
     pub value: string = ""
@@ -240,68 +240,6 @@ pub class RefAttr extends Attr {
     }
 }
 
-/// `attrs={extra}` — splat a `Map<string, string>` of pass-through attributes.
-pub class SplatAttr extends Attr {
-    pub code: string = ""
-
-    pub fn init(code: string, span: Span) {
-        self.code = code
-        super.init(span)
-    }
-
-    pub static fn of(code: string, span: Span) -> SplatAttr {
-        return new SplatAttr(code, span)
-    }
-
-    pub override fn name() -> string { return "attrs" }
-
-    pub override fn show() -> string {
-        return "attrs=\{{self.code}\} @{self.span.show()}"
-    }
-}
-
-/// `preserve` — render this subtree once and never diff into it.
-pub class PreserveAttr extends Attr {
-    pub fn init(span: Span) {
-        super.init(span)
-    }
-
-    pub static fn of(span: Span) -> PreserveAttr {
-        return new PreserveAttr(span)
-    }
-
-    pub override fn name() -> string { return "preserve" }
-
-    pub override fn show() -> string {
-        return "preserve @{self.span.show()}"
-    }
-}
-
-/// `live` — the expressions in this subtree are signal-bound.
-///
-/// Every interpolated text run under it compiles to `b.live_text` instead of
-/// `b.text`: the expression is kept as a thunk, the signals it reads subscribe
-/// to it, and a write patches that one text node with no render and no diff.
-///
-/// It carries nothing and emits nothing of its own. Like `preserve` and `ref`
-/// it is an instruction to the framework rather than an attribute the wire
-/// ever sees.
-pub class LiveAttr extends Attr {
-    pub fn init(span: Span) {
-        super.init(span)
-    }
-
-    pub static fn of(span: Span) -> LiveAttr {
-        return new LiveAttr(span)
-    }
-
-    pub override fn name() -> string { return "live" }
-
-    pub override fn show() -> string {
-        return "live @{self.span.show()}"
-    }
-}
-
 // --------------------------------------------------------------------- nodes
 
 /// One node in a `.bx` tree.
@@ -326,7 +264,7 @@ pub abstract class Node {
 /// One class for both an HTML element and a component tag, because everything
 /// but the emission is identical: the same attribute grammar, the same
 /// children, the same close rules. `component` says which, and it is decided
-/// by the tag's spelling (see `names_a_component` in html.b), not by a table
+/// by the tag's spelling (see `names_a_component` in widgets.b), not by a table
 /// of known types — there is no component registry and none is needed.
 pub class ElementNode extends Node {
     /// The tag as written, e.g. `div`, `Hint`, `ui.Button`.
@@ -397,60 +335,6 @@ pub class TextNode extends Node {
     }
 }
 
-/// The body of a `<script>` or `<style>`: text that is not escaped.
-///
-/// A raw-text element's content is not HTML text — `<` in a script is a
-/// less-than sign to JavaScript and escaping it would break the program. It
-/// reaches the frame stream as `constant`, which is the trusted path and is
-/// correct here because the bytes are the author's literal source with no
-/// expression in them: interpolation inside a `<script>` is refused at parse
-/// time, so there is nothing in one that a value could reach.
-pub class RawTextNode extends Node {
-    pub text: string = ""
-
-    pub fn init(text: string, span: Span) {
-        self.text = text
-        super.init(span)
-    }
-
-    pub static fn of(text: string, span: Span) -> RawTextNode {
-        return new RawTextNode(text, span)
-    }
-
-    pub override fn kind() -> string { return "rawtext" }
-
-    pub override fn show(depth: int) -> string {
-        return "{indent(depth)}rawtext {self.text.len()} bytes @{self.span.show()}\n"
-    }
-}
-
-/// `<!DOCTYPE html>`.
-///
-/// Its own node because it is neither an element nor text, and because a
-/// layout component genuinely needs one: a page whose shell has no doctype is
-/// a page in quirks mode, which is a rendering difference nobody would trace
-/// back to the markup compiler. It is constant by construction and folds into
-/// an enclosing constant subtree like anything else.
-pub class DoctypeNode extends Node {
-    /// The declaration exactly as written, angle brackets and all.
-    pub text: string = ""
-
-    pub fn init(text: string, span: Span) {
-        self.text = text
-        super.init(span)
-    }
-
-    pub static fn of(text: string, span: Span) -> DoctypeNode {
-        return new DoctypeNode(text, span)
-    }
-
-    pub override fn kind() -> string { return "doctype" }
-
-    pub override fn show(depth: int) -> string {
-        return "{indent(depth)}doctype {self.text} @{self.span.show()}\n"
-    }
-}
-
 /// `$self.count` or `$(self.a + self.b)` — an escaped expression.
 pub class ExprNode extends Node {
     /// The Beans expression, verbatim, without any `$` or parentheses.
@@ -474,26 +358,6 @@ pub class ExprNode extends Node {
 
     pub override fn show(depth: int) -> string {
         return "{indent(depth)}{self.form} \{{self.code}\} @{self.span.show()}\n"
-    }
-}
-
-/// `$html(self.rendered)` — raw HTML, unescaped. The only bypass there is.
-pub class RawHtmlNode extends Node {
-    pub code: string = ""
-
-    pub fn init(code: string, span: Span) {
-        self.code = code
-        super.init(span)
-    }
-
-    pub static fn of(code: string, span: Span) -> RawHtmlNode {
-        return new RawHtmlNode(code, span)
-    }
-
-    pub override fn kind() -> string { return "html" }
-
-    pub override fn show(depth: int) -> string {
-        return "{indent(depth)}html \{{self.code}\} @{self.span.show()}\n"
     }
 }
 

@@ -12,6 +12,12 @@
 @implementation CortadoView
 - (BOOL)isFlipped { return YES; }
 
+// Off unless the program asked. A decorative canvas must stay out of the tab
+// order, so this is the one control whose focusability cortado decides and the
+// default is the one that changes nothing.
+- (BOOL)acceptsFirstResponder { return self.ctdFocusable; }
+- (BOOL)canBecomeKeyView { return self.ctdFocusable; }
+
 // The one route AppKit offers for "the system went dark".
 //
 // There is no notification and no delegate method for it: NSApplication's
@@ -287,6 +293,7 @@ int32_t ctd_capability(int32_t capability) {
         case CTD_CAP_RESIZABLE:     return 1;
         case CTD_CAP_FILE_DIALOG:   return 1;
         case CTD_CAP_SNAPSHOT:      return 1;
+        case CTD_CAP_LAYER_STYLE:   return 1;
         case CTD_CAP_GPU:           return 1;
         case CTD_CAP_TOOLBAR:       return 1;
         case CTD_CAP_POPOVER:       return 1;

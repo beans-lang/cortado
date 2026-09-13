@@ -129,6 +129,12 @@
       <!-- And the easy road: no shader code at all. The effect is named and
            cortado writes the shader, the pipeline, the quad and the clock. -->
       <ShaderCanvas height={44} effect="ripple" color="#4088bf" color_to="#0d1b2a" detail={26} />
+      <!-- A shape, which is the same road again with a mask on it: the fill is
+           one of those same named effects, and the figure is what it is drawn
+           through. Still, so it costs no frame after the first. -->
+      <ShapeCanvas height={44} figure="rounded_rect" radius={10} inset={6}
+                   fill="gradient" color="#4088bf" color_to="#0d1b2a"
+                   stroke="#8fb7d4" stroke_width={1} />
     </VStack>
   </Disclosure>
 
@@ -212,7 +218,7 @@ package site
 import cortado.component
 import cortado.events
 import cortado.widgets
-import {ShaderCanvas} from cortado.gpu
+import {ShaderCanvas, ShapeCanvas} from cortado.gpu
 import {view} from cortado.annotations
 
 /// The order screen, showing one of every control cortado has.

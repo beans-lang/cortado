@@ -169,6 +169,17 @@ pub const P_EXPANDED: int = 17
 pub const P_AXIS: int = 18
 pub const P_DIVIDER: int = 19
 pub const P_ICON: int = 20
+pub const CAP_LAYER_STYLE: int = 18
+pub const P_BG_COLOR: int = 21
+pub const P_CORNER_RADIUS: int = 22
+pub const P_BORDER_WIDTH: int = 23
+pub const P_BORDER_COLOR: int = 24
+pub const P_FOCUSABLE: int = 25
+pub const P_A11Y_ROLE: int = 26
+pub const A11Y_AUTO: int = 0
+pub const A11Y_BUTTON: int = 1
+pub const A11Y_IMAGE: int = 2
+pub const A11Y_GROUP: int = 3
 
 // What an outline's source is being asked. See "outlines" in
 // src/cortado_host.h.
@@ -208,6 +219,7 @@ pub const ICON_TABLE: int = 26
 pub const ICON_COUNT: int = 27
 pub const S_HINT: int = 1
 pub const S_URL: int = 2
+pub const S_A11Y_LABEL: int = 3
 
 // ---- animation curves ----
 

@@ -23,8 +23,10 @@
 //
 // crema's driver walked strings with a simpler rule and mis-scanned a raw
 // literal. That walker is deleted; this one has raw strings, nested block
-// comments and interpolation in the same stack, and `tests/markup.b` puts each
-// one through a header.
+// comments and interpolation in the same stack, and
+// `tests/markup_refusals.b`'s "what the scanners must not mistake" section
+// puts each one through a compile: a brace inside a raw string, a brace inside
+// an interpolation, and a brace and a quote inside comments that nest.
 //
 // **What is deliberately not here: a Beans parser.** These scanners find the
 // *end* of a construct and nothing else. They never decide what the code

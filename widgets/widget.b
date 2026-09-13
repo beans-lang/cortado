@@ -149,6 +149,109 @@ pub abstract class Widget {
                               "read the opacity of a {self.kind_value.name()}")
     }
 
+    // ---- how a control is dressed ----
+    //
+    // **No control refuses any of these yet, and that is the honest state.**
+    // A platform draws its own chrome and may cover a background cortado set
+    // behind it; which controls do is a question about AppKit, UIKit, GTK and
+    // Win32 rather than about cortado, and the answer belongs in
+    // `src/cortado_rules.h` beside the other per-kind rules once somebody has
+    // *looked* at all of them on a screen. Guessing it would put a refusal in
+    // four hosts that might be denying something that works.
+
+    /// The colour behind this control's own drawing.
+    ///
+    /// Refused on the four bezelled text-entry controls, by name. Their bezel
+    /// is opaque and drawn over anything behind it, so the only way to show a
+    /// colour there is to take the bezel away — and then it is not the
+    /// platform's text field any more. See `ctd_kind_has_background`, whose
+    /// list was read off a screen rather than reasoned about.
+    pub fn set_background(shade: Rgba) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_set_int(self.slot.raw, host.P_BG_COLOR as i32,
+                                 ColorWell.pack(shade) as i64) as int,
+                "give a {self.kind_value.name()} a background")
+        }
+    }
+
+    pub fn background() -> Result<Rgba> {
+        let packed: int = self.read_property(host.P_BG_COLOR)?
+        return ok(ColorWell.unpack(packed))
+    }
+
+    /// Corner rounding in points. Zero is square.
+    pub fn set_corner_radius(points: f64) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_set_real(self.slot.raw, host.P_CORNER_RADIUS as i32, points) as int,
+                "round the corners of a {self.kind_value.name()}")
+        }
+    }
+
+    pub fn corner_radius() -> Result<f64> {
+        return self.read_real(host.P_CORNER_RADIUS,
+                              "read the corner radius of a {self.kind_value.name()}")
+    }
+
+    /// An outline, drawn **inside** the control's bounds — the way CALayer,
+    /// CSS and every design tool mean a border, and because an outside one
+    /// would need room the layout never gave it.
+    pub fn set_border(points: f64, shade: Rgba) -> Result<bool> {
+        self.set_property(host.P_BORDER_COLOR, ColorWell.pack(shade))?
+        unsafe {
+            return host.check(
+                host.ctd_set_real(self.slot.raw, host.P_BORDER_WIDTH as i32, points) as int,
+                "put a border on a {self.kind_value.name()}")
+        }
+    }
+
+    pub fn border_width() -> Result<f64> {
+        return self.read_real(host.P_BORDER_WIDTH,
+                              "read the border width of a {self.kind_value.name()}")
+    }
+
+    // ---- a control a program draws itself ----
+
+    /// Whether this control can take the keyboard.
+    ///
+    /// A canvas and nothing else: every other control's answer is the
+    /// platform's, and cortado overriding it would be cortado inventing a
+    /// control. Off by default, so a decorative canvas stays out of the tab
+    /// order and a program that draws something usable turns it on.
+    pub fn set_focusable(on: bool) -> Result<bool> {
+        return self.set_flag(host.P_FOCUSABLE, on,
+                             "let a {self.kind_value.name()} take the keyboard")
+    }
+
+    pub fn is_focusable() -> Result<bool> {
+        return self.read_flag(host.P_FOCUSABLE,
+                              "read whether a {self.kind_value.name()} takes the keyboard")
+    }
+
+    /// What a screen reader calls this control, when the control's own text is
+    /// not it — an icon-only button, or a canvas, which says nothing at all
+    /// because nothing it draws is text cortado wrote.
+    ///
+    /// Carried by every kind. Reading it back answers **what a screen reader
+    /// will say** — the label when one was set, and the control's own text
+    /// when none was — so `""` means genuinely silent rather than merely
+    /// unnamed.
+    pub fn set_a11y_label(said: string) -> Result<bool> {
+        return self.set_string(host.S_A11Y_LABEL, said,
+                               "name a {self.kind_value.name()} for a screen reader")
+    }
+
+    pub fn a11y_label() -> Result<string> {
+        return self.string_at(host.S_A11Y_LABEL,
+                              "read what a {self.kind_value.name()} is called")
+    }
+
+    /// What kind of thing a canvas is, to a screen reader. See `A11yRole`.
+    pub fn set_a11y_role(role: A11yRole) -> Result<bool> {
+        return self.set_property(host.P_A11Y_ROLE, role.code())
+    }
+
     pub fn set_hidden(on: bool) -> Result<bool> {
         return self.set_flag(host.P_HIDDEN, on, "hide a {self.kind_value.name()}")
     }

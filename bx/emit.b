@@ -38,17 +38,27 @@
 // which is what makes the debug switch comparable. The folded string is built
 // by serializing the run's **own frame list** — the same list the unfolded
 // calls are generated from, in one walk — so the two cannot describe different
-// markup. They are still gated: `tests/markup.b` renders every case with
-// `b.fold` on and off through the real `latte.Serializer` and compares bytes.
+// markup. They are still gated there by latte's own `tests/markup.b`, which
+// renders every case with `b.fold` on and off through the real
+// `latte.Serializer` and compares bytes. **That file is latte's, not this
+// repository's** — said plainly because a reader who greps for it here finds
+// nothing and cannot tell a missing gate from a borrowed sentence.
 //
-// **Refusals.** Everything `latte.Builder` refuses at run time is refused here
-// at compile time — an unsafe tag name, an unsafe attribute name, an `on*`
-// attribute, a `javascript:` URL, a `<script>` body that could close itself.
-// Not for tidiness: the Builder *substitutes or drops*, and a folded constant
-// subtree is serialized here where no Builder ever sees it, so anything
-// refused there and accepted here would make one page say two different things
-// depending on `b.fold`. The mirrored predicates live in `html.b` with the gate
-// that keeps them in step.
+// **Refusals.** latte's refusals are about HTML as a document a browser will
+// execute — an `on*` attribute, a `javascript:` URL, a `<script>` body that
+// could close itself. None of that reaches here, because cortado's output is
+// objects rather than bytes and there is nothing to inject into. What is
+// refused here instead is a name that is not a name: a tag becomes a type or a
+// table lookup in generated Beans, and a bad one produces a file that does not
+// parse, with the error landing on a line the author never wrote.
+//
+// The refusals that matter most are the ones for things latte *has* and
+// cortado has not. `<!DOCTYPE>`, `$html`, `attrs=` and `preserve` are all
+// refused in `parse.b`, by name, with a message about the program — never left
+// to fall through to a generic "no such attribute", and never emitted as a
+// `Builder` call that does not exist. A markup compiler whose output only
+// fails at `beansc` time is a markup compiler that reports its own bugs as the
+// author's.
 
 package bx
 
@@ -56,11 +66,17 @@ package bx
 
 /// The sequence-number stack: one counter per scope that restarts at 0.
 ///
-/// A scope is pushed by a region (`$for`) and by a fragment body (a `$slot`
-/// define), because `latte.Builder` restarts numbering inside both. An element
-/// does **not** push one: `open` enters a scope in the Builder for the
-/// *sibling-ordering* check, but the numbers keep climbing, which is what
-/// `probes/p8_builder/pages/counter_gen.b` shows.
+/// A scope is pushed by a loop body (`$for`) and by a fragment body (a `$slot`
+/// define), because both are emitted once and run many times — so a number
+/// from the enclosing scope would name every turn or every placement. An
+/// element does **not** push one: the numbers keep climbing across `open`.
+///
+/// A restart on its own is not enough, and this is the half that is easy to
+/// miss: two scopes that both start at 0 hand out the same numbers. What tells
+/// them apart is something from outside, added by whoever runs the body —
+/// `emit_for` sets `row_name` so a key becomes `c{seq}.{row}`, and
+/// `Builder.fragment` qualifies by the placement site. A `push()` without one
+/// of those is a collision waiting for the second caller.
 pub class Counters {
     values: List<int> = [0]
 
@@ -113,12 +129,6 @@ pub class Emitter {
     lines: List<string> = []
     /// The `.bx` file's name, as it should read in the line map.
     file: string = ""
-    /// How deep inside a `live` element the emitter is. Non-zero means every
-    /// interpolated text run below compiles to `live_text` instead of `text`.
-    ///
-    /// A counter and not a flag, because `live` nests: an inner one closing
-    /// must not switch the outer one off.
-    live_depth: int = 0
     /// The type parameters of a generic component. Markup inside one may not
     /// spell them: `partial class Grid<T>` may carry `<T>` on exactly one part,
     /// so the generated part is `partial class Grid` and `T` is not a name it
@@ -296,11 +306,6 @@ pub class Emitter {
 
     /// `list[from .. to)` — text and expressions, at least one of them an
     /// expression — as one interpolated `text` frame.
-    /// How deep inside a `live` element this run is. Non-zero means every
-    /// interpolated text run below compiles to `live_text`.
-    ///
-    /// A counter and not a flag, because `live` nests: an inner one must not
-    /// switch the outer one off when it closes.
     fn text_run(list: List<Node>, from: int, to: int, indent: int) {
         let seq: int = self.counters.next()
         let parts: List<string> = []
@@ -338,37 +343,12 @@ pub class Emitter {
             }
             none => {}
         }
-        match node as? RawTextNode {
-            some(raw) => {
-                let seq: int = self.counters.next()
-                self.write(indent, "{b}.constant({seq}, \"{escape_beans_string(raw.text)}\")")
-                return
-            }
-            none => {}
-        }
-        match node as? DoctypeNode {
-            some(doctype) => {
-                let seq: int = self.counters.next()
-                self.write(indent, "{b}.constant({seq}, \"{escape_beans_string(doctype.text)}\")")
-                return
-            }
-            none => {}
-        }
         match node as? ExprNode {
             some(expr) => {
                 self.check_code(expr.code, expr.span, "an interpolated expression")
                 let seq: int = self.counters.next()
                 if !self.check_interpolated(expr.code, expr.span, "an interpolated expression") { return }
                 self.write(indent, "{b}.text(\"\{{expr.code}\}\"){self.trace(expr.span)}")
-                return
-            }
-            none => {}
-        }
-        match node as? RawHtmlNode {
-            some(html) => {
-                self.check_code(html.code, html.span, "$html")
-                let seq: int = self.counters.next()
-                self.write(indent, "{b}.raw({seq}, {html.code}){self.trace(html.span)}")
                 return
             }
             none => {}
@@ -494,16 +474,7 @@ pub class Emitter {
             }
             self.write(indent, "{b}.text(\"\{{bound_value}\}\")")
         }
-        var live: bool = false
-        for attr: Attr in element.attrs {
-            match attr as? LiveAttr {
-                some(_) => { live = true }
-                none => {}
-            }
-        }
-        if live { self.live_depth = self.live_depth + 1 }
         self.nodes(element.children, indent)
-        if live { self.live_depth = self.live_depth - 1 }
         self.write(indent, "{b}.close()")
     }
 
@@ -575,14 +546,6 @@ pub class Emitter {
         }
         match attr as? BindAttr {
             some(bind) => { return self.emit_bind(element, bind, indent, bound) }
-            none => {}
-        }
-        match attr as? LiveAttr {
-            // Nothing to emit. `live` changes how the children below it are
-            // compiled — see `emit_element` and `text_run` — and takes no
-            // sequence number, because a frame it does not write cannot have
-            // one.
-            some(_) => { return bound }
             none => {}
         }
         self.report(attr.span, "cortado-bx does not know how to emit the attribute {attr.name()} — this is a cortado-bx bug, please report it")
@@ -693,10 +656,7 @@ pub class Emitter {
         // loop. That is what makes a child component keep its own state: the
         // same site on the next render is the same child, and the third row is
         // not handed the second row's.
-        var key: string = "\"c{seq}\""
-        if self.row_name != "" {
-            key = "\"c{seq}.\{{self.row_name}\}\""
-        }
+        let key: string = "\"c{self.site_of(seq)}\""
         self.write(indent, "{b}.child<{element.tag}>({key}, fn({c}: {element.tag}) \{{self.trace(element.span)}")
         for attr: Attr in element.attrs {
             self.emit_parameter(element, attr, c, indent + 1)
@@ -769,6 +729,26 @@ pub class Emitter {
         self.write(indent, "{handle.code} = some({c})")
     }
 
+    /// The identity of one emission site, as the *contents* of a Beans string
+    /// literal.
+    ///
+    /// Two parts, and neither is enough on its own. The sequence number says
+    /// where in the file the site is, so two sites in one render differ. The
+    /// row says which turn of the enclosing `$for` is running, so two turns of
+    /// one site differ — a loop body is emitted once and run many times, and
+    /// the number in it is the same on every turn.
+    ///
+    /// One helper for a component tag and for a `$slot` placement because they
+    /// ask the same question — *which child is this?* — and they were not
+    /// answered the same way. `emit_component` had the row from the start;
+    /// `emit_slot` wrote the bare number, so a `$slot` inside a `$for` handed
+    /// every row one placement site, and a template with a component tag in it
+    /// collided with itself on the second row.
+    fn site_of(seq: int) -> string {
+        if self.row_name == "" { return "{seq}" }
+        return "{seq}.\{{self.row_name}\}"
+    }
+
     fn note_component(tag: string) {
         for seen: string in self.components {
             if seen == tag { return }
@@ -810,23 +790,31 @@ pub class Emitter {
             some(_) => { return }
             none => {}
         }
-        // Unreachable by construction: `Parser.classify` sends every attribute
-        // on a component tag to `classify_parameter`, which refuses `attrs`,
-        // `preserve` and any name that is not a Beans field, and refuses `on:`
-        // and `bind:` in `classify_event`/`classify_bind` before that. So no
-        // Splat, Preserve, Event or Bind attribute can reach a component tag.
-        // Deleting this line leaves `tests/markup_refusals.b`'s golden
-        // unchanged, which is the evidence, and it stays for the same reason
-        // the BeansNode branch above does.
+        // Unreachable by construction. `Parser.classify` refuses `attrs` and
+        // `preserve` by name before it splits on the tag kind, sends `on:` and
+        // `bind:` to `classify_event`/`classify_bind`, which refuse both on a
+        // component tag, and sends everything else on a component tag to
+        // `classify_parameter`, which takes only a Beans identifier. `key=` and
+        // `ref=` are handled above. So nothing reaches this line today; it
+        // stays for the reason the `BeansNode` branch in `node` does — it costs
+        // nothing, and the day that invariant changes it is the difference
+        // between a diagnostic about the program and one about the emitter.
         self.report(attr.span, "{attr.name()} is not something a component tag can take — a component takes its parameters by their Beans names")
     }
 
     /// `c.row = fn(inner: Builder, order: Order) { ... }`.
     ///
-    /// A fragment body restarts numbering at 0, the way a region does: the
-    /// frames it writes are separated from their surroundings by
-    /// `fragment_open`/`fragment_close`, and `latte.Builder.fragment` enters a
-    /// scope around the call.
+    /// **A fragment body restarts numbering at 0**, the way a `$for` body
+    /// does, because the body is emitted here — at its definition site — and
+    /// run somewhere else entirely: against the builder of whichever component
+    /// places it, at whatever depth that component's own render had reached.
+    /// There is no number from this file that would mean anything over there.
+    ///
+    /// The restart is what makes the placement site load-bearing.
+    /// `Builder.fragment(seq, body)` qualifies every child key the body writes
+    /// with its own `seq`, exactly as `emit_for` qualifies with the row — a
+    /// counter that starts again needs something from outside it to tell its
+    /// numbers apart, and `seq` is the only thing the placing side has.
     fn emit_fragment_field(c: string, field: string, param: string,
                            param_type: string, body: List<Node>, indent: int,
                            at: Span) {
@@ -925,27 +913,37 @@ pub class Emitter {
 
     fn emit_slot(slot: SlotNode, indent: int) {
         let b: string = self.builder_name()
+        // Unreachable by construction: `parse_slot_define` refuses a body
+        // outside a component tag, and `emit_component` takes the defines that
+        // *are* direct children out of the run before it walks it, so no define
+        // node ever reaches `node()`. Kept, with a message of its own, for the
+        // reason the `BeansNode` branch there is.
         if slot.mode == "define" {
             self.report(slot.span, "$slot:{slot.field()} \{ ... \} supplies a template to a component, so it only reads that way as a direct child of a component tag")
             return
         }
+        // The placement site, the same two-part identity a component tag gets:
+        // where in the file, and which turn of the enclosing loop. Both halves
+        // are needed — `Builder.fragment` keys everything the template writes
+        // by this string, and a `$slot` in a `$for` is one emitted call run
+        // once per row, so the number alone would hand every row one site.
         if slot.mode == "place_expr" {
             self.check_code(slot.code, slot.span, "a $slot expression")
-            let seq: int = self.counters.next()
-            self.write(indent, "{b}.fragment({seq}, {slot.code}){self.trace(slot.span)}")
+            let site: string = self.site_of(self.counters.next())
+            self.write(indent, "{b}.fragment(\"{site}\", {slot.code}){self.trace(slot.span)}")
             return
         }
         if slot.mode == "place_arg" {
             self.check_code(slot.code, slot.span, "a $slot argument")
-            let seq: int = self.counters.next()
+            let site: string = self.site_of(self.counters.next())
             self.inner_depth = self.inner_depth + 1
             let inner: string = self.builder_name()
             self.inner_depth = self.inner_depth - 1
-            self.write(indent, "{b}.fragment({seq}, fn({inner}: Builder) \{ self.{slot.field()}({inner}, {slot.code}) \}){self.trace(slot.span)}")
+            self.write(indent, "{b}.fragment(\"{site}\", fn({inner}: Builder) \{ self.{slot.field()}({inner}, {slot.code}) \}){self.trace(slot.span)}")
             return
         }
-        let seq: int = self.counters.next()
-        self.write(indent, "{b}.fragment({seq}, self.{slot.field()}){self.trace(slot.span)}")
+        let site: string = self.site_of(self.counters.next())
+        self.write(indent, "{b}.fragment(\"{site}\", self.{slot.field()}){self.trace(slot.span)}")
     }
 }
 

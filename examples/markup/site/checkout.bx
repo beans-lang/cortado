@@ -1,12 +1,16 @@
 <VStack spacing={14} padding={24} align="stretch">
   <Label font_size={17} text="Order a coffee" />
-  <Label>$self.shots × $self.drink</Label>
 
-  <Price drink={self.drink} />
-
-  <!-- A component from a nested package. The tag is spelled the same as any
-       other; what makes it reachable is the import in the <beans> block. -->
-  <Badge rush={self.rush} />
+  <!-- A component that takes a template. Everything between the tags is
+       `$slot` inside <Tile>, and the $slot:cap block is the second template —
+       the tile hands it the title and this file decides how a caption looks.
+       `<Price>` is a component tag inside a template, which is the case that
+       needs Builder.fragment to keep its key apart from the tile's own. -->
+  <Tile title="Your order" rush={self.rush}>
+    $slot:cap as t: string { <Label font_size={13} text={t} /> }
+    <Label>$self.shots × $self.drink</Label>
+    <Price drink={self.drink} />
+  </Tile>
 
   <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>
     Rush it
@@ -28,12 +32,6 @@ package site
 
 import cortado.component
 import {view, param, inject} from cortado.annotations
-// `site/parts/badge.bx` generates into `generated/site/parts/`, and a Beans
-// package is its folder — so the component one level down is one segment
-// further along the import path. cortado-bx copies this line through, so a
-// nested component needs nothing from the markup compiler that a flat one
-// does not.
-import {Badge} from markup.generated.site.parts
 
 /// What a drink costs.
 pub class Menu {

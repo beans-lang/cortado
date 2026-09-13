@@ -351,7 +351,7 @@ pub class Parser {
         }
     }
 
-    /// `<!-- ... -->` and `<!DOCTYPE ...>`.
+    /// `<!-- ... -->`, and the refusal of everything else that starts `<!`.
     fn parse_bang(at: Span) -> Option<Node> {
         let src: string = self.lex.src
         if src.range_equals(self.lex.off, clamp_offset(self.lex.off + 4, src.len()), "<!--") {
@@ -362,10 +362,10 @@ pub class Parser {
                 return none
             }
             self.lex.advance_to(close + 3)
-            // A markup comment is a note to the reader of the `.bx` file. It
-            // is not emitted: an HTML comment that reaches the browser is
-            // bytes on every render for something no user sees, and a
-            // component that wants one can write `$html("<!-- … -->")`.
+            // A markup comment is a note to the reader of the `.bx` file, and
+            // it is not emitted. There is nowhere for it to go: cortado's
+            // output is a tree of native controls, and a control tree has no
+            // place to write a remark into.
             return none
         }
         let close: int = src.find_byte(62, self.lex.off)
@@ -376,11 +376,19 @@ pub class Parser {
         }
         let text: string = src.slice(self.lex.off, close + 1)
         self.lex.advance_to(close + 1)
-        if !text.to_lower().starts_with("<!doctype") {
-            self.report(at, "{text} is not markup latte knows — only <!-- comments --> and <!DOCTYPE ...> may start with <!")
+        // Consumed first so the rest of the file still parses, then refused.
+        //
+        // A doctype declares which grammar a *document* is written in, and
+        // cortado's output is not a document: `render` produces a tree of
+        // native controls, and there is no file for a declaration to sit at
+        // the top of. A page whose shell has no doctype is a page in quirks
+        // mode; a window has no such thing to be wrong about.
+        if text.to_lower().starts_with("<!doctype") {
+            self.report(at, "{text} declares the grammar of an HTML document, and cortado draws native controls — there is no document for it to be the first line of. Delete it; the window a component renders into is made by the application, not by the markup")
             return none
         }
-        return some(DoctypeNode.of(text, at))
+        self.report(at, "{text} is not markup cortado knows — only <!-- comments --> may start with <!")
+        return none
     }
 
     /// The `<beans>` element: raw text, copied through byte for byte.
@@ -419,26 +427,6 @@ pub class Parser {
         self.beans = some(block)
         return none
     }
-
-    /// The body of a `<script>` or `<style>`: raw text, and no interpolation.
-    ///
-    /// **Interpolation here is refused, and that is a security control rather
-    /// than a diagnostic.** The serializer escapes for HTML text; HTML
-    /// escaping inside a script is not a defence, because `</script>` closes
-    /// the element from inside a JavaScript string and `&lt;` does not help.
-    /// The compiler knows the tag and the serializer does not, so the refusal
-    /// belongs here.
-    ///
-    /// The transition rule is the file's own, applied unchanged: a `$` starts
-    /// one when the byte **after** it starts an identifier or is `(` or `{`.
-    /// So `$5.00`, `US$`, `$ 20` and a trailing `$` are ordinary script bytes
-    /// needing no escape, and `$$` writes one dollar, the same escape the rest
-    /// of the file has.
-    ///
-    /// `a$b` **is** a transition: the classifier never looks at the byte
-    /// before the `$`, only the one after it. So a JavaScript identifier
-    /// holding a dollar is refused here and has to be written `a$$b`.
-    /// `tests/markup_refusals.b` has the case.
 
     // -------------------------------------------------------- attributes
 
@@ -527,12 +515,22 @@ pub class Parser {
                 return none
             }
         }
-        if name == "key" {
-            if !is_code {
-                self.report(at, "key needs an expression: key=\{row.id\}")
-                return none
-            }
-            return some(KeyAttr.of(code, at))
+        if is_reserved_attribute(name) {
+            return self.classify_reserved(node, name, at, has_value, is_code, code)
+        }
+        // A name that means something in HTML-shaped markup and nothing here.
+        // Refused before the component/control split, because both halves can
+        // be written and both are the same mistake — and refused by name,
+        // because falling through sends the author looking for a spelling
+        // mistake when what they have is a concept cortado has not got. On a
+        // component tag it is worse than useless: `classify_parameter` takes
+        // any Beans identifier, so `<Grid attrs={extra}/>` would emit
+        // `c.attrs = extra` and the refusal would arrive from beansc, naming a
+        // field of the author's own class that the author never wrote.
+        let html_only: string = html_only_attribute(name)
+        if html_only != "" {
+            self.report(at, html_only)
+            return none
         }
         if node.component {
             return self.classify_parameter(node, name, at, has_value, is_code, literal, code)
@@ -568,6 +566,43 @@ pub class Parser {
             return some(ExprAttr.of(name, code, at))
         }
         return some(LiteralAttr.of(name, literal, at))
+    }
+
+    /// `key=` and `ref=`: the two attributes the framework reads rather than
+    /// the control.
+    ///
+    /// They are routed together because `is_reserved_attribute` is the one
+    /// place that says which names are the framework's, and
+    /// `vocabulary.reserved_attributes()` — what an editor offers — mirrors
+    /// that list. Two names reserved in one place rather than two ifs in two.
+    ///
+    /// They land on opposite tags. `key=` names an element among its siblings,
+    /// so it belongs on a control and `emit_component` refuses it on a
+    /// component tag, where it would name nothing the differ can use. `ref=`
+    /// hands back the instance a component tag built, so it belongs on a
+    /// component tag and is refused here on a control.
+    fn classify_reserved(node: ElementNode, name: string, at: Span, has_value: bool,
+                         is_code: bool, code: string) -> Option<Attr> {
+        if name == "key" {
+            if !is_code {
+                self.report(at, "key needs an expression: key=\{row.id\}")
+                return none
+            }
+            return some(KeyAttr.of(code, at))
+        }
+        // `ref=`. A control is not an object a render owns — the mount makes
+        // it, keeps it and destroys it — so there is nothing on a control tag
+        // for a reference to be a reference *to*. What the author wants there
+        // is the control once it is real, which is what `Stage` is for.
+        if !node.component {
+            self.report(at, "ref=\{ \} hands back the component instance a tag built, and <{node.tag}> is a control — a control is made and owned by the mount, not by the render that described it. Name it with key=\"...\" and reach it once it exists: Stage.control(key) for its handle, Stage.widget(key) for the control itself, both from on_mount")
+            return none
+        }
+        if !has_value || !is_code {
+            self.report(at, "ref needs somewhere to put the child: ref=\{self.grid\}, where the field is declared Option<{node.tag}> — a branch that never ran leaves it none rather than leaving a stale instance you cannot tell from a live one")
+            return none
+        }
+        return some(RefAttr.of(code, at))
     }
 
     /// One parameter on a component tag: its Beans field, by its Beans name.
@@ -721,24 +756,6 @@ pub class Parser {
         let code: string = self.lex.src.slice(self.lex.off, stop)
         self.lex.advance_to(stop)
         return some(ExprNode.of(code, "implicit", at))
-    }
-
-    /// `$html(expr)` — the only bypass there is, named so it greps.
-    fn parse_html(at: Span) -> Option<Node> {
-        self.lex.skip_space()
-        if self.peek() != 40 {
-            self.report(at, "$html is the raw-HTML form and needs an expression in parentheses: $html(self.rendered)")
-            return none
-        }
-        let stop: int = end_of_group(self.lex.src, self.lex.off)
-        if stop < 0 {
-            self.report(at, "$html( was never closed — add the missing )")
-            self.lex.advance_to(self.lex.src.len())
-            return none
-        }
-        let code: string = self.lex.src.slice(self.lex.off + 1, stop - 1)
-        self.lex.advance_to(stop)
-        return some(RawHtmlNode.of(code.trim(), at))
     }
 
     /// Read a block header and step past its `{`.
