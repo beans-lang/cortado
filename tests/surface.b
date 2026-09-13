@@ -85,13 +85,32 @@ fn drive() -> Result<bool> {
 
     io.println("-- a resize --")
     window.resize_as_user(geometry.Size.of(280.0, 180.0))?
-    // A turn of the loop, because one host reports the size a turn later and
+    // Turns of the loop, because one host reports the size a turn later and
     // has to. GTK notifies once per dimension, so 300x200 becoming 280x180
     // fires a notification for a window 280 wide and still 200 tall — a shape
     // it was never at — and then one for the real size. Deferring is what
     // turns those two into the one event AppKit's single notification gives
     // for free, and what stops a layout solving against a phantom.
-    app.run_for(0.05)?
+    //
+    // **Waited for, not waited out.** This was one `run_for(0.05)`, and what
+    // that asserts is not that the host reports a resize — it is that the
+    // host reports one within a fiftieth of a second on the machine running
+    // the gate. *When* GTK runs a queued idle source is GTK's business, and a
+    // full gate has a great deal else going on, so this failed about once in
+    // fifty runs with the two lines below reading false and nothing wrong.
+    // Proven rather than guessed: the same two lines flip, byte for byte, on
+    // an untouched tree with nothing changed but this number.
+    //
+    // Bounded, because a host that never reports must still fail. Two seconds
+    // of turns is far past any real deferral and far short of hanging a gate,
+    // and the loop stops the moment the event lands — so the macOS leg, where
+    // the report is synchronous and `resizes` is already 1, takes no turn at
+    // all and this costs it nothing.
+    var turns: int = 0
+    for tally.resizes == 0 && turns < 200 {
+        app.run_for(0.01)?
+        turns = turns + 1
+    }
     io.println("  the user dragging the corner is reported: {tally.resizes == 1}")
     io.println("  and it says how big the window is now: {tally.width == 280.0 && tally.height == 180.0}")
     io.println("  a negative size is refused: {refused_as(window.resize_as_user(geometry.Size.of(-1.0, 10.0)), "out_of_range")}")

@@ -772,6 +772,124 @@ fn asymmetric_tree() -> layout.LayoutNode {
     return root
 }
 
+// ---- what a solve costs ----
+
+/// A ruler that answers a constant size and counts how often it is asked.
+class Counting implements layout.Measure {
+    pub asked: int = 0
+    pub fn init() {}
+    pub fn measure(key: int, available: geometry.Size) -> Result<geometry.Size> {
+        self.asked = self.asked + 1
+        return ok(geometry.Size.of(40.0, 20.0))
+    }
+}
+
+/// A column of `wide` children, nested `deep` levels, with a leaf at the
+/// bottom of every branch.
+fn ladder(deep: int, wide: int, inout next_key: int) -> layout.LayoutNode {
+    var node: layout.LayoutNode = layout.LayoutNode.group("g{deep}", column(4.0))
+    for index: int in 0..wide {
+        if deep <= 1 {
+            node.add(leaf("leaf{next_key}", next_key))
+            next_key = next_key + 1
+        } else {
+            node.add(ladder(deep - 1, wide, inout next_key))
+        }
+    }
+    return node
+}
+
+fn leaves_of(deep: int, wide: int) -> int {
+    var total: int = 1
+    for index: int in 0..deep { total = total * wide }
+    return total
+}
+
+/// How many times one solve asks the ruler, per leaf in the tree.
+fn asks_per_leaf(deep: int, wide: int) -> int {
+    var next_key: int = 1
+    var tree: layout.LayoutNode = ladder(deep, wide, inout next_key)
+    var counter: Counting = new Counting()
+    var solver: layout.Solver = new layout.Solver(counter)
+    match solver.solve(tree, geometry.Rect.of(0.0, 0.0, 400.0, 40000.0)) {
+        ok(done) => {}
+        err(problem) => { io.println("  FAILED {problem.msg}") }
+    }
+    return counter.asked / leaves_of(deep, wide)
+}
+
+/// **What a solve costs must not depend on how deep the tree is.**
+///
+/// A two-pass layout asks the same node the same question more than once by
+/// construction — a run measures its children to size itself, then arranges
+/// them, and arranging one means placing it, which measures its children
+/// again. Without a memo that repetition compounds down the tree: this
+/// measured 2, 4, 6, 8, 10 and 12 asks per leaf at depths one to six, so a
+/// screen five containers deep reached the platform ten times for every label
+/// on it. The engine is `O(nodes)`, or it is not, and the only way to tell
+/// from the outside is to count.
+///
+/// Three depths, not two: two points fit any line, and the shape being ruled
+/// out here is growth.
+fn cost() {
+    io.println("== cost ==")
+    let shallow: int = asks_per_leaf(2, 3)
+    let middling: int = asks_per_leaf(4, 3)
+    let deep: int = asks_per_leaf(6, 3)
+    io.println("  asks per leaf at depth 2: {shallow}")
+    io.println("  asks per leaf at depth 4: {middling}")
+    io.println("  asks per leaf at depth 6: {deep}")
+    io.println("  and it does not grow with depth: {shallow == middling && middling == deep}")
+}
+
+/// **A remembered measurement must not outlive the pass that took it.**
+///
+/// The memo above is what stops a solve asking the same node the same question
+/// ten times; a memo that survived into the next solve would lay the screen
+/// out for the words a label used to have. Nothing on the platform side can
+/// see the difference — the frames are self-consistent either way — so the
+/// only way to catch it is to change what a leaf measures between two solves
+/// and look at where it lands.
+///
+/// A leaf that got wider, not one that got narrower: a narrower one still fits
+/// the room the stale answer reserved, and a stale layout would look right.
+fn remeasuring() {
+    io.println("== remeasuring ==")
+    var table: layout.TableMeasure = new layout.TableMeasure()
+    table.put(1, 100.0, 20.0)
+    // Stretched, and that is not a detail. A run whose children are not
+    // stretched measures each one a second time once its main size is settled,
+    // and a memo of one answer per node keeps only the last question — so the
+    // next pass asks a *different* question first and misses the stale answer
+    // by luck. This case was written unstretched, passed with the clear taken
+    // out, and proved nothing at all.
+    var bar: layout.StackLayout = row(0.0)
+    bar.set_align(geometry.Align.stretch)
+    var strip: layout.LayoutNode = layout.LayoutNode.group("root", bar)
+    strip.add(leaf("a", 1))
+    strip.add(leaf("b", 1))
+    var solver: layout.Solver = new layout.Solver(table)
+    let room: geometry.Rect = geometry.Rect.of(0.0, 0.0, 600.0, 60.0)
+
+    match solver.solve(strip, room) {
+        ok(done) => {} err(problem) => { io.println("  FAILED {problem.msg}") }
+    }
+    let first: f64 = strip.at(0).frame().width
+    let first_x: f64 = strip.at(1).frame().x
+
+    // The same tree, the same solver, a leaf that now wants more room.
+    table.put(1, 250.0, 20.0)
+    match solver.solve(strip, room) {
+        ok(done) => {} err(problem) => { io.println("  FAILED {problem.msg}") }
+    }
+    let second: f64 = strip.at(0).frame().width
+    let second_x: f64 = strip.at(1).frame().x
+
+    io.println("  first solve sizes it at what it measured: {first == 100.0}")
+    io.println("  a leaf that grew is solved again, not remembered: {second == 250.0}")
+    io.println("  and its neighbour moved with it: {first_x == 100.0 && second_x == 250.0}")
+}
+
 fn main() {
     stacks()
     alignment()
@@ -786,4 +904,6 @@ fn main() {
     mirroring()
     snapping()
     checks()
+    cost()
+    remeasuring()
 }

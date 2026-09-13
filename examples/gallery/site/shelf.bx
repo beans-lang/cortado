@@ -167,9 +167,19 @@
         <Label text="no tab view on this platform" />
       }
       $if self.has_split {
+        <!-- A word in each pane, and they are here to be *measured*. A split
+             view's panes are divided by the control and not by the arranger
+             around it, so a mount that laid its children out as a plain box
+             would give both of these the whole width — and two empty
+             containers, which is what stood here, could not show it. The
+             frames in tests/gallery.out are what catches it now. -->
         <SplitView height={70}>
-          <Container />
-          <Container />
+          <VStack padding={4} align="stretch">
+            <Label text="this pane" />
+          </VStack>
+          <VStack padding={4} align="stretch">
+            <Label text="and this one" />
+          </VStack>
         </SplitView>
       }
       $if !self.has_split {

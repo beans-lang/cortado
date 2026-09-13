@@ -67,6 +67,18 @@ pub class Mount implements Composer {
     bounds: geometry.Size = geometry.Size.zero()
     renders: int = 0
 
+    /// The surface this mount fills, once it has one, so the layout can follow
+    /// it. `Handle.none()` for a mount on a container that is in no surface —
+    /// a headless test measuring a tree, which has nothing to follow.
+    surface: host.Handle = host.Handle.none()
+
+    /// The two settings the solver takes, kept here rather than only on the
+    /// solver. A solve rebuilds the solver, and a setting that lived only on
+    /// the solver was therefore back at its default on the very next refresh:
+    /// `scale` and `reading` did nothing at all after the first one.
+    scaling: f64 = 1.0
+    reading_order: layout.TextDirection = layout.TextDirection.ltr
+
     pub fn init(root: widgets.Widget, router: events.EventRouter) {
         self.root = root
         self.router = router
@@ -91,18 +103,36 @@ pub class Mount implements Composer {
         self.builder_of_types = some(who)
     }
 
-    /// The room the tree is laid out in. Set it from the surface's content
-    /// size, and again whenever the surface resizes.
+    /// The room the tree is laid out in.
+    ///
+    /// Set once before `show`. After that the mount follows its own surface —
+    /// see `follow` — so a program does not have to notice a resize to stay
+    /// laid out correctly.
     pub fn set_bounds(size: geometry.Size) {
         self.bounds = size
     }
 
+    /// The room changed. Lays the tree out again at the new size.
+    ///
+    /// `follow` calls this for a window the user dragged. It is public because
+    /// a surface cortado does not own — a view embedded in a host application,
+    /// a phone rotating under a platform cortado has no window notification
+    /// for — has to be able to say so.
+    pub fn resized(size: geometry.Size) -> Result<bool> {
+        if size.width == self.bounds.width && size.height == self.bounds.height {
+            return ok(false)
+        }
+        self.bounds = size
+        self.lay_out()?
+        return ok(true)
+    }
+
     pub fn reading(direction: layout.TextDirection) {
-        self.solver.set_direction(direction)
+        self.reading_order = direction
     }
 
     pub fn scale(value: f64) {
-        self.solver.set_scale(value)
+        self.scaling = value
     }
 
     /// How many renders have happened. A test's cheapest proof that a
@@ -111,11 +141,96 @@ pub class Mount implements Composer {
         return self.renders
     }
 
+    /// How many controls the last layout pass wrote a frame to, how many it
+    /// left where they already were, and how many containers it had to ask the
+    /// platform about.
+    ///
+    /// The three numbers a test needs to see that a pass which changed nothing
+    /// cost nothing. A layout that wrote every frame and asked every container
+    /// on every pass looked identical from the outside — the frames were
+    /// right — which is why it went unnoticed for as long as it did.
+    pub fn frames_written() -> int {
+        return self.sheet.written()
+    }
+
+    pub fn frames_kept() -> int {
+        return self.sheet.unchanged()
+    }
+
+    pub fn chrome_asked() -> int {
+        return self.sheet.chrome_asked()
+    }
+
     /// Puts a component on this surface and renders it for the first time.
     pub fn show(component: Component) -> Result<bool> {
         self.top = some(component)
         self.prepare(component)?
+        self.follow()
         return self.refresh()
+    }
+
+    /// Keeps the layout in step with the surface the tree is in.
+    ///
+    /// **A window that resizes and a tree that does not follow it is the
+    /// default a framework must not have.** Before this, `set_bounds` was
+    /// called once at startup and never again, so every cortado program —
+    /// `examples/gallery` included — opened at one size and stayed laid out
+    /// for that size for ever: the window grew, the controls did not move, and
+    /// nothing anywhere said so. Making it the application's job to notice was
+    /// the bug, not the application's mistake; not one program in this
+    /// repository remembered to do it.
+    ///
+    /// Two things are followed, and they are the two that change the room or
+    /// the grid it is measured on:
+    ///
+    ///   * `surface_resized` — the user dragged a corner. The event carries
+    ///     the new **content** size, which is what `set_bounds` wants, so
+    ///     nothing has to ask the platform again.
+    ///   * `scale_changed` — the window moved to a display with a different
+    ///     backing scale. Frames snap to that grid, so the tree has to be
+    ///     solved again or every edge lands half a pixel out.
+    ///
+    /// Through `EventRouter.watch` rather than `on`: an application is free to
+    /// handle either event as well, and neither subscription can switch the
+    /// other off. A mount on a container that is in no surface follows
+    /// nothing, which is the headless case and not an error.
+    fn follow() {
+        var found: u64 = 0
+        unsafe {
+            found = host.ctd_view_surface(self.root.handle().raw)
+        }
+        if found == 0 { return }
+        self.surface = host.Handle.of(found)
+        let owner: Mount = self
+        self.router.watch(self.surface, events.EventKind.surface_resized,
+            fn(event: events.UiEvent) {
+                match owner.resized(event.size) {
+                    ok(done) => {}
+                    err(problem) => {}
+                }
+            })
+        self.router.watch(self.surface, events.EventKind.scale_changed,
+            fn(event: events.UiEvent) {
+                match owner.rescaled(event.position.x) {
+                    ok(done) => {}
+                    err(problem) => {}
+                }
+            })
+    }
+
+    /// The display's grid changed. Lays the tree out again on the new one.
+    pub fn rescaled(value: f64) -> Result<bool> {
+        if value == self.scaling {
+            return ok(false)
+        }
+        self.scaling = value
+        self.lay_out()?
+        return ok(true)
+    }
+
+    /// The surface this mount follows, or `Handle.none()` if it is in none.
+    pub fn following() -> host.Handle {
+        return self.surface
     }
 
     /// Renders, applies the difference, and lays the result out.
@@ -145,6 +260,15 @@ pub class Mount implements Composer {
     /// Takes everything down: unsubscribes, unmounts, and empties the
     /// container.
     pub fn close() -> Result<bool> {
+        // The surface first. A mount that let go of its component tree and
+        // left its surface watched keeps the host delivering a resize on every
+        // frame of a drag to a closure that will never lay anything out again
+        // — and keeps the closure, and through it this mount, alive.
+        if self.surface.raw != 0 {
+            self.router.unwatch(self.surface, events.EventKind.surface_resized)
+            self.router.unwatch(self.surface, events.EventKind.scale_changed)
+            self.surface = host.Handle.none()
+        }
         match self.top {
             none => {}
             some(component) => {
@@ -429,11 +553,42 @@ pub class Mount implements Composer {
             some(root) => { Mount.collect_keys(root, found) }
             none => {}
         }
+        // The controls themselves, for the calls a handle cannot make — a
+        // table's source, a tab's labels. One walk of the real tree, keyed by
+        // handle, rather than one walk per key: a screen with six keyed
+        // controls would otherwise walk it six times.
+        var by_handle: Map<u64, widgets.Widget> = {}
+        Mount.collect_controls(self.root, by_handle)
+        var objects: Map<string, widgets.Widget> = {}
+        for key: string in found.keys() {
+            match found.get(key) {
+                some(handle) => {
+                    match by_handle.get(handle.raw) {
+                        some(control) => { objects[key] = control }
+                        none => {}
+                    }
+                }
+                none => {}
+            }
+        }
         var surface: u64 = 0
         unsafe {
             surface = host.ctd_view_surface(self.root.handle().raw)
         }
-        return new Stage(move found, self.router, host.Handle.of(surface))
+        return new Stage(move found, move objects, self.router, host.Handle.of(surface))
+    }
+
+    /// Every control under `box`, by the handle it holds.
+    ///
+    /// Through `children()` rather than by downcasting to `Container`: a
+    /// disclosure, a group box, a scroll view and a tab view all hold children
+    /// and none of them is a `Container`. Every widget answers `children()`,
+    /// and a leaf answers with none.
+    static fn collect_controls(box: widgets.Widget, into: Map<u64, widgets.Widget>) {
+        for child: widgets.Widget in box.children() {
+            into[child.handle().raw] = child
+            Mount.collect_controls(child, into)
+        }
     }
 
     /// Every keyed element in a subtree, with the control it became.
@@ -465,12 +620,36 @@ pub class Mount implements Composer {
                 match self.face {
                     none => { return ok(true) }
                     some(control) => {
-                        self.sheet = new widgets.WidgetLayout()
-                        self.solver = new layout.Solver(self.sheet)
-                        var page: layout.LayoutNode = self.node_for(element, control)
-                        self.solver.solve(page,
-                            geometry.Rect.at(geometry.Point.zero(), self.bounds))?
-                        self.sheet.apply(page)?
+                        let moved: int = self.solve_once(element, control)?
+                        // **A split view needs a second pass, and only the
+                        // second one is true.**
+                        //
+                        // Where a divider sits is the control's own state, and
+                        // a split view that has never been laid out has no
+                        // frame to divide — so the first pass reads a divider
+                        // of nothing and gives one pane the lot. The first
+                        // pass is what gives it its frame; the second is the
+                        // one whose pane widths are real.
+                        //
+                        // Conditional twice over. On the screen having a split
+                        // view at all: one without solves once, as it always
+                        // did. And on the first pass having *moved* something:
+                        // a divider is read back from a frame, so a pass that
+                        // wrote no frame cannot have changed one, and a second
+                        // solve would produce the answer that is already on the
+                        // screen. That is the common case — a screen re-laid
+                        // out after a click moves a control or two and leaves
+                        // the rest where they were — and it used to cost a
+                        // whole second pass over the tree, every time, for
+                        // every screen with a splitter on it.
+                        //
+                        // Hand-written cortado programs have always had to do
+                        // this — `examples/cask` said so in a comment before
+                        // it was markup — and a screen described rather than
+                        // built should not have to know.
+                        if moved > 0 && Mount.holds_split(element) {
+                            self.solve_once(element, control)?
+                        }
                     }
                 }
                 return ok(true)
@@ -478,11 +657,63 @@ pub class Mount implements Composer {
         }
     }
 
+    /// One pass, answering how many controls it actually moved.
+    ///
+    /// The sheet is emptied rather than replaced. It used to be replaced —
+    /// `new WidgetLayout()` on every pass — and what went with it each time
+    /// was the only record of what the platform had already been told, so
+    /// every pass asked every container for its chrome again and wrote every
+    /// control's frame again whether or not it had moved. On a screen of
+    /// eighty controls that was seventy crossings and eighty writes per pass,
+    /// for two frames that had actually changed.
+    fn solve_once(element: Element, control: widgets.Widget) -> Result<int> {
+        self.sheet.reset()
+        // From the mount's own fields. A scale or a reading order written onto
+        // the solver alone did not survive the solver being replaced every
+        // pass, which is why `scale` and `reading` had no effect beyond the
+        // first refresh.
+        self.solver.set_scale(self.scaling)
+        self.solver.set_direction(self.reading_order)
+        var page: layout.LayoutNode = self.node_for(element, control)
+        self.solver.solve(page, geometry.Rect.at(geometry.Point.zero(), self.bounds))?
+        return self.sheet.apply(page)
+    }
+
+    /// Whether anything in this tree divides its own panes.
+    static fn holds_split(element: Element) -> bool {
+        if element.kind == widgets.WidgetKind.split_view { return true }
+        for child: Element in element.children() {
+            if Mount.holds_split(child) { return true }
+        }
+        return false
+    }
+
     fn node_for(element: Element, control: widgets.Widget) -> layout.LayoutNode {
         var node: layout.LayoutNode = layout.LayoutNode.leaf(element.tag, -1)
         match element.arranger {
             none => { node = self.sheet.leaf(element.tag, control) }
             some(arranger) => { node = self.sheet.group(element.tag, control, arranger) }
+        }
+        // **A split view arranges its own panes, and only it can.**
+        //
+        // Where the divider sits is the control's own state — a person drags
+        // it — so the arranger has to be asked for rather than described: no
+        // attribute in the markup could say it, and a stack arranger would
+        // give both panes the whole width. A `<SplitView>` written in markup
+        // laid its panes on top of each other until this line existed, and
+        // `examples/gallery` did not catch it because the two panes it shows
+        // are empty containers.
+        match control as? widgets.SplitView {
+            none => {}
+            some(divided) => {
+                match divided.split_layout() {
+                    ok(arranger) => { node = self.sheet.group(element.tag, control, arranger) }
+                    // A split that cannot say where its divider is has not
+                    // been laid out yet. Left as it was: the next pass, after
+                    // it has a frame, is the one that can answer.
+                    err(problem) => {}
+                }
+            }
         }
         node.spec = element.spec
         match control as? widgets.ChildHolder {
@@ -514,6 +745,17 @@ pub class Mount implements Composer {
     /// Framework use: forgets a control that has gone.
     pub fn release(handle: u64) {
         self.by_handle.remove(handle)
+        // And what the sheet had been told about it. A handle carries its
+        // generation, so a recycled slot is a different key and could not
+        // inherit these rows — but a control removed and never replaced would
+        // leave them in the map for the life of the mount.
+        self.sheet.forget(handle)
+    }
+
+    /// Framework use: a property was written to this control, so anything the
+    /// layout remembered about its shape is no longer true.
+    pub fn wrote_to(handle: u64) {
+        self.sheet.forget(handle)
     }
 
     /// Delivers an event to the handler the current render put on that

@@ -348,6 +348,14 @@ void ctd_forget_size(ctd_handle widget) {
     uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     if (slot == 0 || slot >= CTD_SLOTS) return;
     g_wanted_known[slot] = 0;
+    // A disclosure's header height is the same kind of answer, remembered for
+    // the same reason and stale in exactly the same cases — see -headerHeight
+    // in pane.m. One forgetting, so there is one rule about when a remembered
+    // measurement stops being true rather than two that can drift apart.
+    id object = ctd_resolve(widget);
+    if ([object isKindOfClass:[CortadoDisclosure class]]) {
+        [(CortadoDisclosure *)object forgetHeader];
+    }
 }
 
 // Every control at once, for the one thing that changes all of them: the
@@ -355,6 +363,12 @@ void ctd_forget_size(ctd_handle widget) {
 // what every label wants, and nothing writes to any of them.
 void ctd_forget_all_sizes(void) {
     memset(g_wanted_known, 0, sizeof g_wanted_known);
+    for (uint32_t slot = 1; slot <= g_used; slot++) {
+        id object = g_object[slot];
+        if ([object isKindOfClass:[CortadoDisclosure class]]) {
+            [(CortadoDisclosure *)object forgetHeader];
+        }
+    }
 }
 
 ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_height,

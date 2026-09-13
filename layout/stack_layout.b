@@ -75,7 +75,8 @@ pub class StackLayout extends Layout {
         var main_total: f64 = 0.0
         var cross_max: f64 = 0.0
         var seen: int = 0
-        for child: LayoutNode in node.children() {
+        for index: int in 0..node.count() {
+            let child: LayoutNode = node.at(index)
             // Each child is measured with no limit along the main axis: the
             // run is asking how big everyone naturally is, and only once that
             // is known can it decide whether there is room to share out.
@@ -99,8 +100,7 @@ pub class StackLayout extends Layout {
 
     pub override fn arrange(node: LayoutNode, content: geometry.Rect,
                             ruler: Measure) -> Result<bool> {
-        let children: List<LayoutNode> = node.children()
-        let count: int = children.len()
+        let count: int = node.count()
         if count == 0 {
             return ok(true)
         }
@@ -113,12 +113,13 @@ pub class StackLayout extends Layout {
         // space actually up for distribution, so `free` is a straight
         // subtraction rather than a running tally that is easy to get wrong.
         var reserved: f64 = self.spacing * ((count - 1) as f64)
-        for child: LayoutNode in children {
-            reserved = reserved + child.spec.margin_on(self.axis)
+        for index: int in 0..count {
+            reserved = reserved + node.at(index).spec.margin_on(self.axis)
         }
 
         var run: AxisRun = new AxisRun(room_main - reserved)
-        for child: LayoutNode in children {
+        for index: int in 0..count {
+            let child: LayoutNode = node.at(index)
             let offer: Constraint = Constraint.loose(
                 geometry.Size.of(content.width, content.height))
                 .deflate(child.spec.margin).unbound(self.axis)
@@ -152,8 +153,8 @@ pub class StackLayout extends Layout {
         let gap: f64 = self.justify.gap(free, count)
 
         var cursor: f64 = self.axis.main_start(content) + lead
-        var index: int = 0
-        for child: LayoutNode in children {
+        for index: int in 0..count {
+            let child: LayoutNode = node.at(index)
             let main_size: f64 = run.main_at(index)
             cursor = cursor + child.spec.margin_lead(self.axis)
 
@@ -180,7 +181,6 @@ pub class StackLayout extends Layout {
 
             let margin_trail: f64 = child.spec.margin_on(self.axis) - child.spec.margin_lead(self.axis)
             cursor = cursor + main_size + margin_trail + self.spacing + gap
-            index = index + 1
         }
         return ok(true)
     }

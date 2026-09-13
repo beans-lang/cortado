@@ -13,4 +13,11 @@
   token=201 button=0 text=""
   token=202 button=1 text=""
   both dialogs answered: true
+-- settling --
+  four events all reached the handler: true
+  and settled once, not four times: true
+  with one settle owed: true
+  the wake-up collects it: true
+  and nothing is left owed: true
+  the program's post handler never saw it: true
 -- refusals --

@@ -34,13 +34,96 @@ pub class WidgetLayout implements layout.Measure {
     controls: Map<int, Widget>
     next: int = 0
 
+    /// What the platform has already been told, by full handle.
+    ///
+    /// **A layout pass is mostly a pass that changes nothing.** A screen of
+    /// eighty controls re-laid out after a click moves two of them; the other
+    /// seventy-eight are solved to the frame they already have. Writing those
+    /// back is not free on any platform — on AppKit a container's `setFrame:`
+    /// re-lays its own subviews out and can re-measure text to do it — and
+    /// asking a container for its chrome again is a second crossing for an
+    /// answer that changes only when the container's own title does.
+    ///
+    /// These two maps are what makes a pass that changes nothing cost nothing.
+    /// They survive `reset`, which is what happens between passes; `forget`
+    /// takes one control's rows out when it is written to or goes away.
+    ///
+    /// **What they are not.** `frames` is what this sheet last *asked for*,
+    /// not what the control is at. Two things move a control without asking:
+    /// a surface's root view, which the platform keeps the size of the
+    /// surface — and which is never in a sheet, because a mount's tree starts
+    /// at the root's child — and the panes of a split or tab view, whose
+    /// frames the platform owns and whose writes `ctd_view_set_frame` already
+    /// declines. Anything else that moves a control behind cortado's back is
+    /// a program calling `Widget.set_frame` on a control a mount is laying
+    /// out, which is two things owning one frame.
+    frames: Map<u64, geometry.Rect> = {}
+    chrome: Map<u64, geometry.EdgeInsets> = {}
+
+    /// How many controls the last `apply` really moved, and how many it left
+    /// alone. A test's cheapest proof that a pass that changed nothing wrote
+    /// nothing.
+    wrote: int = 0
+    kept: int = 0
+    /// How many containers this pass had to ask the platform about, rather
+    /// than answering from `chrome`.
+    asked: int = 0
+
     pub fn init() {
         self.controls = {}
+    }
+
+    /// Empties the key space for another pass, keeping what the platform has
+    /// already been told.
+    ///
+    /// A layout pass builds its own tree and hands out its own keys, so the
+    /// sheet starts each one empty — but the two things worth remembering are
+    /// about *controls*, which outlive any one pass. Rebuilding the whole
+    /// sheet each time, which is what this replaced, threw them away with it.
+    pub fn reset() {
+        self.controls = {}
+        self.next = 0
+        self.wrote = 0
+        self.kept = 0
+        self.asked = 0
+    }
+
+    /// Drops what the platform was told about one control.
+    ///
+    /// Called when a control is written to — a group box retitled is a group
+    /// box with a different border to leave room for — and when one goes away,
+    /// so a recycled handle never inherits the last control's numbers.
+    pub fn forget(handle: u64) {
+        self.frames.remove(handle)
+        self.chrome.remove(handle)
+    }
+
+    /// Everything, for a mount that is closing or a system change that moves
+    /// every control at once.
+    pub fn forget_all() {
+        self.frames = {}
+        self.chrome = {}
     }
 
     /// How many widgets this sheet is tracking.
     pub fn count() -> int {
         return self.controls.len()
+    }
+
+    /// How many controls the last `apply` wrote a frame to.
+    pub fn written() -> int {
+        return self.wrote
+    }
+
+    /// How many it found already where the layout wanted them.
+    pub fn unchanged() -> int {
+        return self.kept
+    }
+
+    /// How many containers this pass asked the platform about. Zero on a
+    /// second pass over an unchanged tree is the whole point of `chrome`.
+    pub fn chrome_asked() -> int {
+        return self.asked
     }
 
     /// A node for a control with no children.
@@ -71,9 +154,24 @@ pub class WidgetLayout implements layout.Measure {
         // A control that cannot answer leaves it at zero rather than failing
         // the build: a chrome nobody can name is no chrome, and a layout is
         // not the place to discover a stale handle.
-        match control.content_inset() {
-            ok(inset) => { node.chrome = inset }
-            err(problem) => {}
+        //
+        // Asked once per control rather than once per pass — see `chrome`.
+        let slot: u64 = control.handle().raw
+        match self.chrome.get(slot) {
+            some(known) => { node.chrome = known }
+            none => {
+                self.asked = self.asked + 1
+                match control.content_inset() {
+                    ok(inset) => {
+                        node.chrome = inset
+                        self.chrome[slot] = inset
+                    }
+                    // Not remembered, so a control that could not answer now
+                    // is asked again rather than being held to a zero it never
+                    // gave.
+                    err(problem) => {}
+                }
+            }
         }
         return node
     }
@@ -112,6 +210,8 @@ pub class WidgetLayout implements layout.Measure {
     /// clips to its parent's bounds would otherwise place a child against a
     /// frame its parent has not taken yet.
     pub fn apply(root: layout.LayoutNode) -> Result<int> {
+        self.wrote = 0
+        self.kept = 0
         return self.apply_at(root, 0.0, 0.0)
     }
 
@@ -135,17 +235,40 @@ pub class WidgetLayout implements layout.Measure {
         match self.controls.get(node.key) {
             some(control) => {
                 let box: geometry.Rect = node.frame()
-                control.set_frame(geometry.Rect.of(box.x + dx, box.y + dy,
-                                                   box.width, box.height))?
-                moved = moved + 1
+                let want: geometry.Rect = geometry.Rect.of(box.x + dx, box.y + dy,
+                                                           box.width, box.height)
+                let slot: u64 = control.handle().raw
+                if self.told(slot, want) {
+                    self.kept = self.kept + 1
+                } else {
+                    control.set_frame(want)?
+                    self.frames[slot] = want
+                    self.wrote = self.wrote + 1
+                    moved = moved + 1
+                }
                 next_x = 0.0
                 next_y = 0.0
             }
             none => {}
         }
-        for child: layout.LayoutNode in node.children() {
-            moved = moved + self.apply_at(child, next_x, next_y)?
+        for index: int in 0..node.count() {
+            moved = moved + self.apply_at(node.at(index), next_x, next_y)?
         }
         return ok(moved)
+    }
+
+    /// Whether this sheet has already asked for exactly this frame.
+    ///
+    /// Compared field by field rather than through a derived equality, because
+    /// a frame is four `f64` and what matters is that all four are the same
+    /// number — not that two values look alike.
+    fn told(handle: u64, want: geometry.Rect) -> bool {
+        match self.frames.get(handle) {
+            none => { return false }
+            some(had) => {
+                return had.x == want.x && had.y == want.y &&
+                       had.width == want.width && had.height == want.height
+            }
+        }
     }
 }

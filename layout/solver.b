@@ -45,6 +45,11 @@ pub class Solver {
 
     /// Lays `root` out inside `into` and writes a frame onto every node.
     pub fn solve(root: LayoutNode, into: geometry.Rect) -> Result<bool> {
+        // What the tree measured last time is about controls as they were
+        // last time. A label given new words wants a new width, and a pass
+        // that started from remembered numbers would lay the screen out for
+        // the words before. See `LayoutNode.measured_for`.
+        root.forget_measures()
         root.place(into, self.ruler)?
         if self.reading.is_rtl() {
             mirror(root)
@@ -60,6 +65,7 @@ pub class Solver {
     /// This is what sizes a window to its content: measure first, open the
     /// window at that size, then solve into it.
     pub fn fit(root: LayoutNode, limit: Constraint) -> Result<geometry.Size> {
+        root.forget_measures()
         return root.measure(limit, self.ruler)
     }
 }
@@ -73,8 +79,8 @@ pub class Solver {
 /// on the right keeps 30 on the left after the flip, because the padding
 /// belongs to the container and not to the reading order.
 fn mirror(node: LayoutNode) {
-    let children: List<LayoutNode> = node.children()
-    if children.len() == 0 {
+    let count: int = node.count()
+    if count == 0 {
         return
     }
     if node.layout().mirrors_in_rtl() {
@@ -82,14 +88,15 @@ fn mirror(node: LayoutNode) {
         let frame: geometry.Rect = node.frame()
         let left: f64 = pad.left
         let right: f64 = frame.width - pad.right
-        for child: LayoutNode in children {
+        for index: int in 0..count {
+            let child: LayoutNode = node.at(index)
             let box: geometry.Rect = child.frame()
             child.set_frame(geometry.Rect.of(left + right - box.x - box.width,
                                              box.y, box.width, box.height))
         }
     }
-    for child: LayoutNode in children {
-        mirror(child)
+    for index: int in 0..count {
+        mirror(node.at(index))
     }
 }
 
@@ -118,8 +125,8 @@ fn snap(node: LayoutNode, origin_x: f64, origin_y: f64, scale: f64) {
     node.set_frame(geometry.Rect.of(x - round_to(origin_x, scale),
                                     y - round_to(origin_y, scale),
                                     right - x, bottom - y))
-    for child: LayoutNode in node.children() {
-        snap(child, left, top, scale)
+    for index: int in 0..node.count() {
+        snap(node.at(index), left, top, scale)
     }
 }
 

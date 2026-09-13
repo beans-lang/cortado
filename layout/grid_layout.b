@@ -105,8 +105,8 @@ pub class GridLayout extends Layout {
 
     pub override fn arrange(node: LayoutNode, content: geometry.Rect,
                             ruler: Measure) -> Result<bool> {
-        let children: List<LayoutNode> = node.children()
-        if children.len() == 0 || self.columns.len() == 0 {
+        let count: int = node.count()
+        if count == 0 || self.columns.len() == 0 {
             return ok(true)
         }
         let inner: Constraint = Constraint.loose(
@@ -116,8 +116,8 @@ pub class GridLayout extends Layout {
         var heights: List<f64> = self.solve_rows(node, widths, inner, ruler)?
 
         let columns: int = self.columns.len()
-        var index: int = 0
-        for child: LayoutNode in children {
+        for index: int in 0..count {
+            let child: LayoutNode = node.at(index)
             let column: int = index % columns
             let row: int = index / columns
             var x: f64 = content.x
@@ -131,7 +131,6 @@ pub class GridLayout extends Layout {
             }
             let cell: geometry.Rect = geometry.Rect.of(x, y, widths[column], heights[row])
             self.place_in_cell(child, cell, ruler)?
-            index = index + 1
         }
         return ok(true)
     }
@@ -189,7 +188,8 @@ pub class GridLayout extends Layout {
             return ok(move out)
         }
         var position: int = 0
-        for child: LayoutNode in node.children() {
+        for index: int in 0..node.count() {
+            let child: LayoutNode = node.at(index)
             let column: int = position % columns
             position = position + 1
             if out[column].kind != TrackKind.auto {
@@ -229,8 +229,7 @@ pub class GridLayout extends Layout {
         if columns == 0 {
             return ok(move heights)
         }
-        let children: List<LayoutNode> = node.children()
-        let row_count: int = (children.len() + columns - 1) / columns
+        let row_count: int = (node.count() + columns - 1) / columns
         var index: int = 0
         for index: int in 0..row_count {
             var height: f64 = 0.0
@@ -242,11 +241,10 @@ pub class GridLayout extends Layout {
             heights.push(height)
             pinned.push(fixed)
         }
-        var position: int = 0
-        for child: LayoutNode in children {
+        for position: int in 0..node.count() {
+            let child: LayoutNode = node.at(position)
             let column: int = position % columns
             let row: int = position / columns
-            position = position + 1
             if pinned[row] {
                 continue
             }

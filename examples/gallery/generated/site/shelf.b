@@ -508,51 +508,61 @@ partial class Shelf {
             b.close()
         }
         if self.has_split {  // shelf.bx:169
-            b.open("SplitView")  // shelf.bx:170
+            b.open("SplitView")  // shelf.bx:176
             b.number("height", (70) as f64)
-            b.open("Container")  // shelf.bx:171
+            b.open("VStack")  // shelf.bx:177
+            b.number("padding", (4) as f64)
+            b.word("align", "stretch")
+            b.open("Label")  // shelf.bx:178
+            b.text("this pane")
             b.close()
-            b.open("Container")  // shelf.bx:172
+            b.close()
+            b.open("VStack")  // shelf.bx:180
+            b.number("padding", (4) as f64)
+            b.word("align", "stretch")
+            b.open("Label")  // shelf.bx:181
+            b.text("and this one")
+            b.close()
             b.close()
             b.close()
         }
-        if !self.has_split {  // shelf.bx:175
-            b.open("Label")  // shelf.bx:176
+        if !self.has_split {  // shelf.bx:185
+            b.open("Label")  // shelf.bx:186
             b.text("no split view on this platform")
             b.close()
         }
-        if self.has_tree {  // shelf.bx:178
-            b.open("OutlineView")  // shelf.bx:179
+        if self.has_tree {  // shelf.bx:188
+            b.open("OutlineView")  // shelf.bx:189
             b.number("height", (90) as f64)
             b.close()
         }
-        if !self.has_tree {  // shelf.bx:181
-            b.open("Label")  // shelf.bx:182
+        if !self.has_tree {  // shelf.bx:191
+            b.open("Label")  // shelf.bx:192
             b.text("no outline view on this platform")
             b.close()
         }
-        if self.has_web {  // shelf.bx:184
-            b.open("WebView")  // shelf.bx:185
+        if self.has_web {  // shelf.bx:194
+            b.open("WebView")  // shelf.bx:195
             b.number("height", (90) as f64)
             b.close()
         }
-        if !self.has_web {  // shelf.bx:187
-            b.open("Label")  // shelf.bx:188
+        if !self.has_web {  // shelf.bx:197
+            b.open("Label")  // shelf.bx:198
             b.text("no browser engine on this platform")
             b.close()
         }
         b.close()
         b.close()
-        b.open("HStack")  // shelf.bx:193
+        b.open("HStack")  // shelf.bx:203
         b.number("spacing", (10) as f64)
         b.word("justify", "end")
-        b.open("Button")  // shelf.bx:194
+        b.open("Button")  // shelf.bx:204
         b.flag("enabled", self.shots > 0)
         b.on("click", fn(e: UiEvent) { self.order() })
         b.text("Order")
         b.close()
         b.close()
-        b.open("Label")  // shelf.bx:197
+        b.open("Label")  // shelf.bx:207
         b.text("{self.status}")
         b.close()
         b.close()

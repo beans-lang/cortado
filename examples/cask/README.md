@@ -1,6 +1,8 @@
 # cask — a database browser
 
 ```
+beansc build examples/cortado_bx.b -o build/cortado-bx
+build/cortado-bx build examples/cask/site/browser.bx
 beansc build examples/cask/main.b -o build/cask && ./build/cask
 ./build/cask some.db          # or point it at a file
 ./build/cask --dump           # what the gate runs: no window, prints what it read
@@ -43,9 +45,32 @@ decide what it does about that, and the honest answers are a short timeout or
 a background fetch that calls back — not a call that takes four seconds and
 freezes the window.
 
+## The screen is markup
+
+`site/browser.bx` is the whole user interface. It was not: `main.b` used to be
+929 lines, of which about 450 were controls built one at a time and an
+`arrange` closure that wrote the layout tree out node by node, spec by spec,
+rebuilt from scratch on every divider drag. That is 205 lines of markup now,
+and `main.b` is 294 — a database, a command table, a window, and a mount.
+
+What did **not** move is the line the conversion made clearest:
+
+> A table's rows, an outline's nodes and columns, a tab's labels, a divider's
+> position and a page's HTML are **data**. Markup describes shape.
+
+All of it is set in `Session.dress`, against the controls the markup built,
+reached by the `key` it gave them. The five tab pages are laid out in markup
+and the words on their tabs are five strings in Beans, because a tab strip is
+not a shape.
+
+Two things are on that list which arguably should not be, and they are named
+rather than hidden: **which way a split view divides** has no markup attribute,
+and a colour well's initial colour cannot be an `Rgba` in markup. Both are set
+in `dress`. The first is worth an attribute.
+
 ## What this found in cortado
 
-Four bugs, each invisible until a real program ran into it. Every one is fixed,
+Six bugs, each invisible until a real program ran into it. Every one is fixed,
 and every fix has a test that fails when the fix is reverted.
 
 | what | where | how it showed |
@@ -79,6 +104,26 @@ Three things were missing rather than wrong:
   That is why the toolbar bug survived a green suite. There is now
   `ctd_toolbar_label`, and `tests/shell.b` asserts each item carries its own
   command's words in the menu's order.
+
+**5. `component.Stage` could name a control and not hand it over.** It answered
+a `host.Handle` for a key, and every call a screen needs — `set_source`,
+`set_columns`, `add_page`, `load_html` — is a method on a widget class that a
+handle cannot be turned into. So a screen written in markup could describe a
+table and never point it at its rows. `Stage.widget(key)` answers the control
+itself now; the mount walks the real tree once and keeps what it found.
+
+**6. A `<SplitView>` in markup laid its panes on top of each other.** Where a
+divider sits is the control's own state, so the arranger has to be *asked for*
+— `SplitView.split_layout()` — and the component layer never did, giving both
+panes the whole width. It does now, and it solves twice where a split view is
+present, because a split that has never been laid out has no frame to divide:
+the first pass gives it one and the second is the pass whose pane widths are
+true. Hand-written cortado programs always had to do this and cask said so in a
+comment; a screen that is described rather than built should not have to know.
+
+`examples/gallery` could not have caught either. Its split view holds two empty
+containers, so there was nothing in them to be laid out wrongly. It holds a
+word in each pane now, and `tests/gallery.out` carries their frames.
 
 ## The control this example asked for
 

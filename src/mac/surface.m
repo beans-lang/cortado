@@ -164,6 +164,15 @@ ctd_status ctd_surface_set_root(ctd_handle surface, ctd_handle root) {
         [existing removeFromSuperview];
     }
     [view setFrame:[content bounds]];
+    // **The root of a surface fills the surface, for as long as it is the
+    // root.** Sizing it once here left it at the size the window happened to
+    // have when the tree was installed: the window grew and the root view did
+    // not, so everything the layout put inside it ran off the edge of a view
+    // that was still 320 points wide. GTK4 has had this for free since it was
+    // written — `gtk_window_set_child` makes the child fill the window — and
+    // this is that same fact, said in AppKit's own words. Win32 has no
+    // autoresizing at all and says it a third way, in WM_SIZE.
+    [view setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [content addSubview:view];
     return CTD_OK;
 }

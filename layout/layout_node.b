@@ -47,6 +47,28 @@ pub class LayoutNode {
     contents: List<LayoutNode> = []
     box: geometry.Rect = geometry.Rect.zero()
 
+    /// The last answer `measure` gave, and the question it answered.
+    ///
+    /// **A two-pass layout asks the same node the same question more than
+    /// once, by construction.** A run measures every child to find out how big
+    /// it wants to be, then arranges them — and arranging a child means
+    /// placing it, which means the child measures *its* children all over
+    /// again. The deeper the tree the more of it repeats: a leaf five levels
+    /// down was measured ten times for one solve, and every one of those
+    /// reached the platform.
+    ///
+    /// Within one pass the answer cannot change. Nothing writes to a control
+    /// while a solve is running, and a node's spec, chrome, arranger and
+    /// children are all fixed for the duration — so the same constraint has
+    /// the same answer, and this remembers it.
+    ///
+    /// Across passes it can change, which is why the solver clears the whole
+    /// tree before every solve rather than trusting anything to notice. See
+    /// `forget_measures`.
+    measured_for: Constraint = Constraint {}
+    measured: geometry.Size = geometry.Size.zero()
+    has_measure: bool = false
+
     pub fn init(name: string, arranger: Layout) {
         self.name = name
         self.arranger = arranger
@@ -91,12 +113,29 @@ pub class LayoutNode {
     /// A copy of the child list, so a caller walking the tree cannot mutate it
     /// underneath the node. The nodes themselves are shared: a frame written
     /// through a walked list lands on the real child.
+    ///
+    /// **Not what a layout pass uses.** A copy is one allocation, and a solve
+    /// walks every node between four and a dozen times — once per ancestor
+    /// that measures it, once to arrange it, once to mirror and once to snap.
+    /// A profile of a screen re-laying itself out had `beans_list_new` at the
+    /// top of it, and this was where they came from. Everything inside
+    /// `cortado.layout` walks by index through `at` instead; this stays for a
+    /// caller outside the engine that wants a list it can keep.
     pub fn children() -> List<LayoutNode> {
         var out: List<LayoutNode> = []
         for child: LayoutNode in self.contents {
             out.push(child)
         }
         return move out
+    }
+
+    /// The child at `index`, without copying anything.
+    ///
+    /// Out of range is a bug in the caller rather than a case to answer: every
+    /// caller here walks `0 .. count()`, and an `Option` at each step would be
+    /// the allocation this exists to avoid.
+    pub fn at(index: int) -> LayoutNode {
+        return self.contents[index]
     }
 
     // ---- results ----
@@ -118,13 +157,37 @@ pub class LayoutNode {
     /// for a minimum width gets one even when its layout would have measured
     /// smaller, and the final answer is clamped to what the parent offered.
     pub fn measure(limit: Constraint, ruler: Measure) -> Result<geometry.Size> {
+        if self.has_measure && self.measured_for.same_as(limit) {
+            return ok(self.measured)
+        }
         let mine: Constraint = self.spec.constrain(limit)
         let inside: Constraint = mine.deflate(self.chrome)
         let wanted: geometry.Size = self.arranger.measure(self, inside, ruler)?
         let whole: geometry.Size = geometry.Size.of(
             wanted.width + self.chrome.horizontal(),
             wanted.height + self.chrome.vertical())
-        return ok(mine.clamp(whole))
+        let answer: geometry.Size = mine.clamp(whole)
+        // Only a whole answer is remembered. A measure that failed part-way
+        // down left nothing to remember, and remembering the constraint alone
+        // would answer the next caller with a size nobody computed.
+        self.measured_for = limit
+        self.measured = answer
+        self.has_measure = true
+        return ok(answer)
+    }
+
+    /// Forgets every remembered measurement in this subtree.
+    ///
+    /// Called by the solver at the start of every pass, and by nothing else.
+    /// A cache that tried to notice what had changed would be a second
+    /// reconciler — the thing this engine deliberately does not have — so it
+    /// is thrown away wholesale instead, which is one walk of a tree of plain
+    /// objects with no platform call anywhere in it.
+    pub fn forget_measures() {
+        self.has_measure = false
+        for index: int in 0..self.contents.len() {
+            self.contents[index].forget_measures()
+        }
     }
 
     /// Puts this node at `frame` and lays its children out inside it.

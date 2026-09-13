@@ -20,35 +20,41 @@ cask: a sample database, in memory via SQLite x.y.z
   4 columns, 7 rows
   titles: name | origin | score | roasted_on
   it said: 7 rows, :since = 2026-08-01
-Container CortadoView role=group "" frame=0,0,1000,692 children=3
-  SplitView NSSplitView role=separator "" frame=10,10,980,640 children=2
-    Container CortadoView role=group "" frame=0,0,250,640 children=2
-      Label NSTextField role=text "Database Navigator" frame=0,0,250,18
-      OutlineView NSScrollView role=treegrid "" frame=0,24,250,616
-    Container CortadoView role=group "" frame=251,0,729,640 children=1
-      TabView NSTabView role=tablist "" frame=0,0,728,640 children=5
-        Container CortadoView role=group "" frame=10,33,708,594 children=3
-          SearchField NSSearchField role=searchbox "" frame=10,10,688,24
-          Table NSScrollView role=grid "" frame=10,42,688,518
-          Label NSTextField role=text "beans — 8 rows" frame=10,568,688,16
-        Container CortadoView role=group "" frame=0,0,708,594 children=1
-          Table NSScrollView role=grid "" frame=10,10,688,574
-        Container CortadoView role=group "" frame=0,0,708,594 children=1
-          TextArea NSScrollView role=textbox "CREATE TABLE beans(\n  id         INTEGER PRIMARY KEY,\n  roaster    INTEGER NOT NULL REFERENCES roasters(id),\n  name       TEXT NOT NULL,\n  origin     TEXT NOT NULL,\n  process    TEXT NOT NULL DEFAULT 'washed',\n  score      REAL,\n  roasted_on TEXT NOT NULL\n)" frame=10,10,688,574
-        Container CortadoView role=group "" frame=0,0,708,594 children=1
-          SplitView NSSplitView role=separator "" frame=10,10,688,574 children=2
-            Container CortadoView role=group "" frame=0,0,688,150 children=4
-              TextArea NSScrollView role=textbox "SELECT name, origin, score, roasted_on\n  FROM beans\n WHERE roasted_on >= :since\n ORDER BY roasted_on" frame=8,8,672,100
-              Label NSTextField role=text ":since" frame=8,116,48,20
-              DatePicker NSDatePicker role=spinbutton "" frame=64,116,150,24
-              Button NSButton role=button "Execute" frame=590,116,90,24
-            Container CortadoView role=group "" frame=0,151,688,423 children=2
-              Table NSScrollView role=grid "" frame=8,8,672,384
-              Label NSTextField role=text "7 rows, :since = 2026-08-01" frame=8,398,672,16
-        Container CortadoView role=group "" frame=0,0,708,594 children=4
-          Label NSTextField role=text "Accent" frame=10,10,50,20
-          ColorWell NSColorWell role=button "" frame=68,10,46,24
-          Button NSButton role=button "Render" frame=122,10,90,24
-          WebView WKWebView role=document "" frame=10,46,688,538
-  Label NSTextField role=text "▦ beans — table" frame=10,658,862,16
-  Button NSButton role=button "Connection" frame=880,658,110,22
+Container CortadoView role=group "" frame=0,0,1000,660 children=1
+  Container CortadoView role=group "" frame=0,0,1000,692 children=2
+    SplitView NSSplitView role=separator "" frame=10,10,980,640 children=2
+      Container CortadoView role=group "" frame=0,0,250,640 children=2
+        Label NSTextField role=text "Database Navigator" frame=0,0,250,18
+        OutlineView NSScrollView role=treegrid "" frame=0,24,250,616
+      Container CortadoView role=group "" frame=251,0,729,640 children=1
+        TabView NSTabView role=tablist "" frame=0,0,728,640 children=5
+          Container CortadoView role=group "" frame=10,33,708,594 children=3
+            SearchField NSSearchField role=searchbox "" frame=10,10,688,24
+            Table NSScrollView role=grid "" frame=10,42,688,518
+            Label NSTextField role=text "beans — 8 rows" frame=10,568,688,16
+          Container CortadoView role=group "" frame=0,0,708,594 children=1
+            Table NSScrollView role=grid "" frame=10,10,688,574
+          Container CortadoView role=group "" frame=0,0,708,594 children=1
+            TextArea NSScrollView role=textbox "CREATE TABLE beans(\n  id         INTEGER PRIMARY KEY,\n  roaster    INTEGER NOT NULL REFERENCES roasters(id),\n  name       TEXT NOT NULL,\n  origin     TEXT NOT NULL,\n  process    TEXT NOT NULL DEFAULT 'washed',\n  score      REAL,\n  roasted_on TEXT NOT NULL\n)" frame=10,10,688,574
+          Container CortadoView role=group "" frame=10,33,708,594 children=1
+            SplitView NSSplitView role=separator "" frame=10,10,688,574 children=2
+              Container CortadoView role=group "" frame=0,0,688,150 children=2
+                TextArea NSScrollView role=textbox "SELECT name, origin, score, roasted_on\n  FROM beans\n WHERE roasted_on >= :since\n ORDER BY roasted_on" frame=8,8,672,100
+                Container CortadoView role=group "" frame=8,116,672,26 children=4
+                  Label NSTextField role=text ":since" frame=0,0,48,20
+                  DatePicker NSDatePicker role=spinbutton "" frame=56,0,150,24
+                  Container CortadoView role=group "" frame=214,0,360,0
+                  Button NSButton role=button "Execute" frame=582,0,90,24
+              Container CortadoView role=group "" frame=0,151,688,423 children=2
+                Table NSScrollView role=grid "" frame=8,8,672,384
+                Label NSTextField role=text "7 rows, :since = 2026-08-01" frame=8,398,672,16
+          Container CortadoView role=group "" frame=0,0,708,594 children=2
+            Container CortadoView role=group "" frame=10,10,688,26 children=4
+              Label NSTextField role=text "Accent" frame=0,0,60,20
+              ColorWell NSColorWell role=button "" frame=68,0,60,24
+              Container CortadoView role=group "" frame=136,0,454,0
+              Button NSButton role=button "Render" frame=598,0,90,24
+            WebView WKWebView role=document "" frame=10,44,688,540
+    Container CortadoView role=group "" frame=10,658,980,24 children=2
+      Label NSTextField role=text "▦ beans — table" frame=0,0,862,16
+      Button NSButton role=button "Connection" frame=870,0,110,24

@@ -302,3 +302,12 @@ root stack frame=0,0,100,60
   half points at scale 2: true
   mirror is exact: true
   fit answers 100x58
+== cost ==
+  asks per leaf at depth 2: 3
+  asks per leaf at depth 4: 3
+  asks per leaf at depth 6: 3
+  and it does not grow with depth: true
+== remeasuring ==
+  first solve sizes it at what it measured: true
+  a leaf that grew is solved again, not remembered: true
+  and its neighbour moved with it: true

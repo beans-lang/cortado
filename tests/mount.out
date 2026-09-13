@@ -32,6 +32,38 @@ a disabled button ignores a click: true
 they are different controls: true
 cancel ran cancel: true
 cancel did not run buy: true
+== a pass that changes nothing ==
+it wrote no frames: true
+and left every control alone: true
+and asked no container about its chrome: true
+== what the sheet forgets ==
+  a container new to the sheet is asked: true
+  and not asked again on the next pass: true
+  until something writes to it: true
+  and the answer is the platform's, not a zero: true
+  a settled screen asks about no chrome: true
+  a retitled container is asked again: true
+  and then settles again: true
+== a pass that changes something ==
+it wrote the controls that moved: true
+== the window resized ==
+the mount follows its surface: true
+the application's own handler still ran: false
+and it was told the new width: false
+Container CortadoView role=group "" frame=0,0,420,300 children=1
+  Container CortadoView role=group "" frame=0,0,320,220 children=4
+    Label NSTextField role=text "Order a coffee" frame=16,16,288,16
+    Label NSTextField role=text "380p" frame=16,40,288,16
+    CheckBox NSButton role=checkbox "Extra shot" frame=16,64,288,16
+    Container CortadoView role=group "" frame=16,88,288,24 children=2
+      Button NSButton role=button "Buy" frame=167,0,47,24 disabled
+      Button NSButton role=button "Cancel" frame=222,0,66,24
+the tree moved: true
+it filled the new width: false
+the watch ran before the handler: false
+no render was needed for it: true
+the same size again does nothing: false
 == closed ==
 the container is empty: true
 the router holds nothing: true
+and watches nothing: true

@@ -50,6 +50,13 @@ pub class Applier {
         let target: widgets.Widget = self.resolve(change)?
         match change.kind {
             set => {
+                // Writing to a control can change the room it keeps for its
+                // own chrome — a group box retitled draws a wider border, a
+                // disclosure retitled a taller header — and the layout sheet
+                // remembers that answer between passes. So it is forgotten
+                // here, at the one place in cortado where a property is
+                // written, rather than at each of the setters.
+                self.owner.wrote_to(target.handle().raw)
                 return WidgetMaker.write(target, change.attribute)
             }
             bind => {

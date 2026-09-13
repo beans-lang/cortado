@@ -43,11 +43,28 @@ static CGFloat ctd_pane_gap(void) {
 // Not a constant, because the title's height follows the user's text size and
 // the triangle's follows the system's control metrics. A number written here
 // would be right on the machine it was written on.
+//
+// **Remembered, for the same reason -fittingSize is** — see `g_wanted` in
+// view.m, and the same invalidation: `ctd_forget_size`, which every write to a
+// control already calls, and `ctd_forget_all_sizes` when the system font
+// changes. -fittingSize on the caption runs CoreAutoLayout and measures text,
+// and this was being asked on every frame the disclosure was given: one
+// profile of a gallery re-laying itself out spent 30% of the whole pass inside
+// -[NSView setFrame:] on eight disclosures, and nearly all of that was this
+// question, asked three times per layout for an answer that had not changed
+// since the title was set.
 - (CGFloat)headerHeight {
+    if (_headerKnown) return _knownHeader;
     NSSize glyph = [_triangle fittingSize];
     NSSize words = [_caption fittingSize];
     CGFloat tall = glyph.height > words.height ? glyph.height : words.height;
-    return tall + ctd_pane_gap();
+    _knownHeader = tall + ctd_pane_gap();
+    _headerKnown = YES;
+    return _knownHeader;
+}
+
+- (void)forgetHeader {
+    _headerKnown = NO;
 }
 
 - (void)relayout {
@@ -63,8 +80,16 @@ static CGFloat ctd_pane_gap(void) {
     [_content setFrame:NSMakeRect(0.0, header, own.size.width, body > 0.0 ? body : 0.0)];
 }
 
+// A size it already has is not a resize.
+//
+// -[NSView setFrame:] calls this whether or not the size moved, so a layout
+// writing the frame a disclosure already had re-laid its three subviews out
+// anyway — three more -setFrame: calls, each of which AppKit has to invalidate
+// and redisplay, for an arrangement that was already correct.
 - (void)setFrameSize:(NSSize)size {
+    NSSize had = [self frame].size;
     [super setFrameSize:size];
+    if (had.width == size.width && had.height == size.height) return;
     [self relayout];
 }
 

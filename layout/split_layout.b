@@ -73,12 +73,12 @@ pub class SplitLayout extends Layout {
 
     pub override fn arrange(node: LayoutNode, content: geometry.Rect,
                             ruler: Measure) -> Result<bool> {
-        let children: List<LayoutNode> = node.children()
-        if children.len() > 2 {
-            return err("a split view has two panes and \"{node.name}\" was given {children.len()}",
+        let count: int = node.count()
+        if count > 2 {
+            return err("a split view has two panes and \"{node.name}\" was given {count}",
                        "too_many_panes")
         }
-        if children.len() == 0 {
+        if count == 0 {
             return ok(true)
         }
         let along: f64 = if self.axis.is_horizontal() { content.width } else { content.height }
@@ -94,16 +94,16 @@ pub class SplitLayout extends Layout {
         if second < 0.0 { second = 0.0 }
 
         if self.axis.is_horizontal() {
-            children[0].place(geometry.Rect.of(content.x, content.y, first, content.height), ruler)?
-            if children.len() > 1 {
-                children[1].place(geometry.Rect.of(content.x + first + self.thickness,
-                                                   content.y, second, content.height), ruler)?
+            node.at(0).place(geometry.Rect.of(content.x, content.y, first, content.height), ruler)?
+            if count > 1 {
+                node.at(1).place(geometry.Rect.of(content.x + first + self.thickness,
+                                                  content.y, second, content.height), ruler)?
             }
         } else {
-            children[0].place(geometry.Rect.of(content.x, content.y, content.width, first), ruler)?
-            if children.len() > 1 {
-                children[1].place(geometry.Rect.of(content.x, content.y + first + self.thickness,
-                                                   content.width, second), ruler)?
+            node.at(0).place(geometry.Rect.of(content.x, content.y, content.width, first), ruler)?
+            if count > 1 {
+                node.at(1).place(geometry.Rect.of(content.x, content.y + first + self.thickness,
+                                                  content.width, second), ruler)?
             }
         }
         return ok(true)

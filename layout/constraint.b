@@ -43,6 +43,19 @@ pub struct Constraint {
                             min_height: min_height, max_height: max_height }
     }
 
+    /// Whether these are the same four numbers.
+    ///
+    /// Field by field rather than through a derived equality: what a measure
+    /// cache needs to know is that a node is being asked the identical
+    /// question, and identical here means the numbers are the same, not that
+    /// two constraints describe the same room.
+    pub fn same_as(other: Constraint) -> bool {
+        return self.min_width == other.min_width &&
+               self.max_width == other.max_width &&
+               self.min_height == other.min_height &&
+               self.max_height == other.max_height
+    }
+
     pub fn has_max_width() -> bool {
         return self.max_width >= 0.0
     }

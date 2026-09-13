@@ -45,7 +45,8 @@ pub class FillLayout extends Layout {
         let room: Constraint = limit.deflate(self.pad)
         var widest: f64 = 0.0
         var tallest: f64 = 0.0
-        for child: LayoutNode in node.children() {
+        for index: int in 0..node.count() {
+            let child: LayoutNode = node.at(index)
             let wanted: geometry.Size = child.measure(room, ruler)?
             if wanted.width > widest { widest = wanted.width }
             if wanted.height > tallest { tallest = wanted.height }
@@ -56,8 +57,8 @@ pub class FillLayout extends Layout {
 
     pub override fn arrange(node: LayoutNode, content: geometry.Rect,
                             ruler: Measure) -> Result<bool> {
-        for child: LayoutNode in node.children() {
-            child.place(content, ruler)?
+        for index: int in 0..node.count() {
+            node.at(index).place(content, ruler)?
         }
         return ok(true)
     }

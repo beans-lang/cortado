@@ -72,8 +72,10 @@ Container CortadoView role=group "" frame=0,0,460,460 children=1
           Container CortadoView role=group "" frame=10,33,392,44
           Container CortadoView role=group "" frame=0,0,392,44
         SplitView NSSplitView role=separator "" frame=8,106,412,70 children=2
-          Container CortadoView role=group "" frame=0,0,206,70
-          Container CortadoView role=group "" frame=207,0,205,70
+          Container CortadoView role=group "" frame=0,0,206,70 children=1
+            Label NSTextField role=text "this pane" frame=4,4,198,16
+          Container CortadoView role=group "" frame=207,0,205,70 children=1
+            Label NSTextField role=text "and this one" frame=4,4,196,16
         OutlineView NSScrollView role=treegrid "" frame=8,184,412,90
         WebView WKWebView role=document "" frame=8,282,412,90
     Container CortadoView role=group "" frame=16,1581,428,24 children=1

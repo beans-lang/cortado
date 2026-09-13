@@ -12,6 +12,7 @@ import cortado.platform
 import cortado.surface
 import cortado.events
 import cortado.host
+import cortado.widgets
 import std.io
 
 const SAY_HELLO: int = 201
@@ -19,6 +20,13 @@ const PICK_FILE: int = 202
 
 class Answers {
     pub lines: List<string> = []
+    pub fn init() {}
+}
+
+/// Events reaching a handler, and settles following them.
+class Settles {
+    pub events: int = 0
+    pub settles: int = 0
     pub fn init() {}
 }
 
@@ -69,6 +77,64 @@ fn build() -> Result<bool> {
         io.println("  {line}")
     }
     io.println("  both dialogs answered: {seen.lines.len() == 2}")
+
+    // **How often a program re-renders follows the screen, not the mouse.**
+    //
+    // What `after` runs is a render, and a slider being dragged reports on
+    // every step. Running it per report does a screen's worth of work per
+    // report, and the reports do not slow down to wait — so the queue grows
+    // and the window stops answering. Events still reach their handlers one
+    // for one and in order; only the work *after* a batch collapses.
+    //
+    // The window is set to a whole second here so the collapse is a fact
+    // rather than a race: at the default of one frame, whether four
+    // activations land inside one window depends on how fast the machine is,
+    // and a case that proves nothing on a slow one is worse than no case.
+    //
+    // This is not in the cross-host list, and that is deliberate: the wake-up
+    // is a `ctd_post`, its timing is the platform's, and a golden asserting
+    // *how many* settles a host produced would be asserting the shape of that
+    // host's run loop. What is checked here is the rule — fewer settles than
+    // events, none lost, and the framework's own word never reaching a
+    // program's handler.
+    io.println("-- settling --")
+    var page: widgets.Container = new widgets.Container()
+    window.set_root(page)?
+    var press: widgets.Button = widgets.Button.of("press")?
+    page.add(press)?
+    let tally: Settles = new Settles()
+    app.router.on(press.handle(), events.EventKind.activate,
+        fn(event: events.UiEvent) { tally.events = tally.events + 1 })
+    app.router.after(fn() { tally.settles = tally.settles + 1 })
+    let dialogs_seen: int = seen.lines.len()
+
+    app.router.set_settle_window(1000000000)
+    press.activate()?
+    press.activate()?
+    press.activate()?
+    press.activate()?
+    io.println("  four events all reached the handler: {tally.events == 4}")
+    io.println("  and settled once, not four times: {tally.settles == 1}")
+    io.println("  with one settle owed: {app.router.settle_waiting()}")
+
+    // The one that matters most. The last event of a drag has nothing behind
+    // it, so a deferral waiting to be triggered by the *next* event would
+    // leave the screen showing the second-to-last frame for ever.
+    //
+    // Turns of the loop rather than one long wait, and bounded rather than
+    // open: *when* a platform runs a queued block is the platform's business —
+    // the two dialogs above delay this one past a single fiftieth of a second
+    // on macOS — and a case that asserted a deadline would be asserting the
+    // shape of a run loop. What is promised is that it arrives.
+    var turns: int = 0
+    for app.router.settle_waiting() && turns < 20 {
+        app.run_for(0.05)?
+        turns = turns + 1
+    }
+    io.println("  the wake-up collects it: {tally.settles == 2}")
+    io.println("  and nothing is left owed: {app.router.settle_waiting() == false}")
+    io.println("  the program's post handler never saw it: {seen.lines.len() == dialogs_seen}")
+    app.router.set_settle_window(events.FRAME_NANOS)
 
     io.println("-- refusals --")
     match window.scale() {

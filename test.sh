@@ -632,6 +632,27 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         diff -u "$root/tests/cask.out" "$tmp/cask.out"
         pass
         echo "ok native: the database browser builds, opens a database and lays itself out"
+
+        # **And through the tree interpreter, which is the half that was
+        # missing.** This leg built cask and ran the binary, and nothing ever
+        # ran it the other way — so `beansc run examples/cask/main.b` failed
+        # for as long as cask has existed, with `bind_text: bad parameter or
+        # other API misuse`, and the suite was green throughout.
+        #
+        # What it was: the interpreter resolved a program's extern symbols
+        # against the process's global namespace before the program's own C
+        # library, so a package that vendors SQLite got macOS's — dragged in by
+        # AppKit — to prepare its statements, and its own to bind them. Two
+        # SQLite libraries, one statement. The native backend never had it,
+        # because the linker binds the vendored copy at link time.
+        #
+        # This is the only case in the suite where two packages that each ship
+        # C are in one program, which is why nothing else caught it either.
+        "$BEANSC" run "$root/examples/cask/main.b" -- --dump 2>&1 \
+            | sed -E 's/SQLite [0-9]+\.[0-9]+\.[0-9]+/SQLite x.y.z/g' >"$tmp/cask.interp"
+        diff -u "$root/tests/cask.out" "$tmp/cask.interp"
+        pass
+        echo "ok interpreter: the database browser reads the same database through the tree engine"
     else
         skip cask_example "the sqlite package is not checked out beside this one at ../sqlite, so the database browser cannot be built"
     fi
@@ -658,7 +679,7 @@ pass
 # regenerated and never be diffed. What that produces is the worst failure this
 # repository has — a *stale* generated file that still compiles, still renders
 # last week's screen, and says nothing.
-for source in $(find examples/markup/site examples/gallery/site -name '*.bx' | sort); do
+for source in $(find examples/markup/site examples/gallery/site examples/cask/site -name '*.bx' | sort); do
     module="${source%%/site/*}"
     relative="${source#"$module/"}"
     target="$module/generated/${relative%.bx}.b"
@@ -678,7 +699,7 @@ pass
 # And the tool's own walk finds what `find` found. The loop above is only as
 # good as the list it iterates; this is the half that checks cortado-bx agrees
 # about what is in a folder, which is what a person actually hands it.
-for module in examples/markup examples/gallery; do
+for module in examples/markup examples/gallery examples/cask; do
     (cd "$root" && "$tmp/cortado-bx" build "$module/site" --stdout) >"$tmp/walk.b" 2>&1 || {
         echo "FAIL markup: cortado-bx refused the directory $module/site" >&2
         cat "$tmp/walk.b" >&2

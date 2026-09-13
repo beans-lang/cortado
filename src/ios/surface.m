@@ -94,6 +94,11 @@ ctd_status ctd_surface_set_root(ctd_handle surface, ctd_handle root) {
         [existing removeFromSuperview];
     }
     [view setFrame:[content bounds]];
+    // The root fills the surface — see the note in src/mac/surface.m. It
+    // matters more here than on a desktop, not less: a phone has no window to
+    // drag, and the one thing that does change a scene's size is a rotation.
+    [view setAutoresizingMask:UIViewAutoresizingFlexibleWidth |
+                              UIViewAutoresizingFlexibleHeight];
     [content addSubview:view];
     return CTD_OK;
 }

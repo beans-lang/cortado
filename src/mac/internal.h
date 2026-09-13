@@ -89,8 +89,13 @@ enum { CTD_SLOTS = 8192 };
 @property (assign) NSButton *triangle;
 @property (assign) NSTextField *caption;
 @property (assign) NSView *content;
+/// The header's height, remembered — see `-headerHeight`. Forgotten by
+/// `ctd_forget_size`, which every write to a control already calls.
+@property (assign) CGFloat knownHeader;
+@property (assign) BOOL headerKnown;
 - (void)relayout;
 - (CGFloat)headerHeight;
+- (void)forgetHeader;
 @end
 
 // One target object for every menu item cortado owns. `ctd_init` makes it and

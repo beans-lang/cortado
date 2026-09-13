@@ -50,7 +50,8 @@ pub class AbsoluteLayout extends Layout {
         var right: f64 = 0.0
         var bottom: f64 = 0.0
         let inner: Constraint = limit.deflate(self.pad)
-        for child: LayoutNode in node.children() {
+        for index: int in 0..node.count() {
+            let child: LayoutNode = node.at(index)
             let size: geometry.Size = child.measure(inner.loosen(), ruler)?
             let reach_x: f64 = child.spec.x + size.width
             let reach_y: f64 = child.spec.y + size.height
@@ -65,7 +66,8 @@ pub class AbsoluteLayout extends Layout {
                             ruler: Measure) -> Result<bool> {
         let offer: Constraint = Constraint.loose(
             geometry.Size.of(content.width, content.height))
-        for child: LayoutNode in node.children() {
+        for index: int in 0..node.count() {
+            let child: LayoutNode = node.at(index)
             let size: geometry.Size = child.measure(offer, ruler)?
             child.place(geometry.Rect.of(content.x + child.spec.x,
                                          content.y + child.spec.y,

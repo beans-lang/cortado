@@ -321,6 +321,24 @@ static LRESULT CALLBACK ctd_surface_proc(HWND window, UINT message,
     if (handled) return answer;
     switch (message) {
         case WM_SIZE: {
+            // **The root of a surface fills the surface.** AppKit and UIKit
+            // say it with an autoresizing mask and GTK4 says it by making the
+            // window's child the window's size; Windows has neither, so it is
+            // said here. Without it the root stays the size it was when the
+            // tree was installed, and everything the layout puts inside it
+            // runs off the edge of a window that has since grown.
+            //
+            // Unconditional, and above the `g_writing` gate: a resize the
+            // *program* asked for moves the root too, and only the event is
+            // silent. Sizing a child sends WM_SIZE to that child's own proc,
+            // never back to this one, so there is no loop to break.
+            for (HWND child = GetWindow(window, GW_CHILD); child;
+                 child = GetWindow(child, GW_HWNDNEXT)) {
+                if (!ctd_is_ours(child)) continue;
+                SetWindowPos(child, NULL, 0, 0, LOWORD(lparam), HIWORD(lparam),
+                             SWP_NOACTIVATE | SWP_NOZORDER);
+                break;
+            }
             // The header's rule: a write is silent. A window the *program*
             // resized re-solves its own layout on the way out of that call,
             // and a layout that also re-solved here would re-solve for ever.

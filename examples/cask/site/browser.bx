@@ -1,0 +1,205 @@
+<VFlex spacing={8} padding={10} align="stretch">
+
+  <!-- The navigator on the left, the editor on the right.
+       A split view is one of the three controls markup cannot fully describe —
+       a divider's position is data — so `on_mount` sets it, which is the same
+       rule the tab labels and every table's rows follow. -->
+  $if self.has_split {
+    <SplitView key={"split"} grow={1}
+               on:change={fn(e: UiEvent) { self.work.divider_moved(e) }}>
+
+      <VFlex spacing={6} align="stretch">
+        <Label height={18} text="Database Navigator" />
+        $if self.has_tree {
+          <OutlineView key={"tree"} grow={1}
+                       on:select={fn(e: UiEvent) { self.work.picked(e) }} />
+        }
+        $if !self.has_tree {
+          <Label grow={1} text={self.no_tree()} />
+        }
+      </VFlex>
+
+      <!-- A flexing column rather than a plain box, because the tab view asks
+           for the room its siblings do not take and `grow` is shared out by a
+           run that flexes. cortado-bx says so by name rather than laying it
+           out wrong. -->
+      <VFlex key={"editor"} align="stretch">
+        $if self.has_tabs {
+          <TabView key={"tabs"} grow={1}>
+
+            <!-- Data. The table's rows are a source, set in on_mount; what the
+                 markup says is that there is a table here and that it takes
+                 the room the search field and the count do not. -->
+            <VFlex spacing={8} padding={10} align="stretch">
+              <SearchField key={"hunt"}
+                           on:change={fn(e: UiEvent) { self.work.refilter() }}
+                           on:commit={fn(e: UiEvent) { self.work.refilter() }} />
+              <Table key={"rows"} grow={1} />
+              <Label key={"counted"} text="Open a table in the navigator" />
+            </VFlex>
+
+            <!-- Columns -->
+            <VFlex spacing={8} padding={10} align="stretch">
+              <Table key={"columns"} grow={1} />
+            </VFlex>
+
+            <!-- DDL -->
+            <VFlex spacing={8} padding={10} align="stretch">
+              <TextArea key={"ddl"} grow={1} />
+            </VFlex>
+
+            <!-- SQL: a statement above, its answer below, which is the one
+                 place a second split view earns its keep. -->
+            <VFlex spacing={8} padding={10} align="stretch">
+              $if self.has_split {
+                <SplitView key={"editor_split"} grow={1}
+                           on:change={fn(e: UiEvent) { self.work.editor_moved(e) }}>
+                  <VFlex spacing={8} padding={8} align="stretch">
+                    <TextArea key={"sql"} grow={1} />
+                    <HFlex spacing={8} height={26}>
+                      <Label width={48} height={20} text=":since" />
+                      $if self.has_day {
+                        <DatePicker key={"since"} width={150} height={24}
+                                    day={self.work.since}
+                                    on:change={fn(e: UiEvent) { self.work.execute() }} />
+                      }
+                      <Container grow={1} />
+                      <Button width={90} height={24}
+                              on:click={fn(e: UiEvent) { self.work.execute() }}>
+                        Execute
+                      </Button>
+                    </HFlex>
+                  </VFlex>
+                  <VFlex spacing={6} padding={8} align="stretch">
+                    <Table key={"answer"} grow={1} />
+                    <Label key={"said"} text="" />
+                  </VFlex>
+                </SplitView>
+              }
+            </VFlex>
+
+            <!-- Report -->
+            <VFlex spacing={8} padding={10} align="stretch">
+              <HFlex spacing={8} height={26}>
+                <Label width={60} height={20} text="Accent" />
+                $if self.has_ink {
+                  <ColorWell key={"ink"} width={60} height={24}
+                             on:change={fn(e: UiEvent) { self.work.render() }} />
+                }
+                <Container grow={1} />
+                <Button width={90} height={24}
+                        on:click={fn(e: UiEvent) { self.work.render() }}>
+                  Render
+                </Button>
+              </HFlex>
+              $if self.has_web {
+                <WebView key={"page"} grow={1} />
+              }
+              $if !self.has_web {
+                <Label grow={1} text={self.no_web()} />
+              }
+            </VFlex>
+
+          </TabView>
+        }
+        $if !self.has_tabs {
+          <Label grow={1} text={self.no_tabs()} />
+        }
+      </VFlex>
+    </SplitView>
+  }
+  $if !self.has_split {
+    <Label grow={1} text={self.no_split()} />
+  }
+
+  <HFlex spacing={8} height={24}>
+    <Label key={"status"} grow={1} text="" />
+    <Button width={110} height={24}
+            on:click={fn(e: UiEvent) { self.work.show_facts() }}>
+      Connection
+    </Button>
+  </HFlex>
+</VFlex>
+<beans>
+package site
+
+import cortado.component
+import cortado.widgets
+import cortado.events
+import {view, inject} from cortado.annotations
+import {Session} from cask.ui
+import std.io
+
+/// The whole of cask's window.
+///
+/// **Everything above the `<beans>` line replaced four hundred and fifty lines
+/// of `main.b`**: every control built by hand, and an `arrange` closure that
+/// wrote the layout tree out node by node and spec by spec, rebuilt from
+/// scratch on every divider drag. What is there instead is `grow={1}` and
+/// `height={26}` — the same solver, described rather than constructed.
+///
+/// What did **not** move is the part markup cannot carry, and this screen is
+/// the clearest statement of that line cortado has: **a table's rows, an
+/// outline's nodes, a tab's labels and a page's HTML are data.** The five
+/// pages are laid out here and the words on their tabs are strings in
+/// `Session.dress`, because a tab strip is not something markup describes.
+///
+/// Every `$if` in it is a control that is not on every platform, and each has
+/// a sentence for where it is missing rather than a hole.
+@view
+pub partial class Browser extends component.Component {
+    /// Everything the window is looking at, and every handler it has.
+    ///
+    /// Injected rather than made here: `main.b` opens the database, and a
+    /// screen that opened its own would be a screen that could not be shown
+    /// against a different one.
+    @inject pub work: Session = Session.blank()
+
+    pub has_split: bool = false
+    pub has_tabs: bool = false
+    pub has_tree: bool = false
+    pub has_day: bool = false
+    pub has_ink: bool = false
+    pub has_web: bool = false
+
+    pub fn init() { super.init() }
+
+    pub override fn on_init() {
+        self.has_split = widgets.WidgetKind.split_view.available()
+        self.has_tabs = widgets.WidgetKind.tab_view.available()
+        self.has_tree = widgets.WidgetKind.outline_view.available()
+        self.has_day = widgets.WidgetKind.date_picker.available()
+        self.has_ink = widgets.WidgetKind.color_well.available()
+        self.has_web = widgets.WebView.offered()
+    }
+
+    /// The data the markup could not carry: sources, columns, tab labels, the
+    /// dividers. One place, run once, after the controls exist.
+    pub override fn on_mount(stage: component.Stage) {
+        // Reported rather than swallowed. A screen whose data never arrived
+        // looks exactly like a screen with an empty database, and the first
+        // version of this said `.or(false)` and spent twenty minutes looking
+        // like the second.
+        match self.work.dress(stage) {
+            ok(done) => {}
+            err(problem) => { io.println("cask: {problem.kind}: {problem.msg}") }
+        }
+    }
+
+    pub fn no_tree() -> string {
+        return "This platform has no outline view, so there is no navigator. UIKit's tree is a collection-view layout rather than a control."
+    }
+
+    pub fn no_web() -> string {
+        return "No browser engine on this platform, so there is no report. WKWebView is part of macOS and iOS; GTK's is a separate library and Windows' is a redistributable."
+    }
+
+    pub fn no_tabs() -> string {
+        return "This platform has no tab view, so the editor's five pages have nowhere to go."
+    }
+
+    pub fn no_split() -> string {
+        return "This platform has no split view, so there is nowhere to put a navigator beside an editor."
+    }
+}
+</beans>

@@ -30,16 +30,35 @@ import cortado.widgets
 /// refusal rather than a crash.
 pub class Stage {
     priv controls: Map<string, host.Handle> = {}
+    /// The same controls, as the objects a program actually calls methods on.
+    ///
+    /// A handle alone is not enough to *use* a control: `set_source`,
+    /// `set_columns` and `add_page` are on the widget classes, and a handle
+    /// cannot be turned into one — a second `Table` around the same handle
+    /// would release it twice. So the mount, which walked the real tree to
+    /// build a control anyway, keeps what it found.
+    ///
+    /// This is a reference to a control the tree already owns, held for the
+    /// life of one call. It is not a second owner: `ChildHolder` owns the
+    /// subtree, and a stage that outlived the call would hold a widget whose
+    /// handle is stale — which every method on it answers as a typed refusal.
+    priv objects: Map<string, widgets.Widget> = {}
     priv router_ref: events.EventRouter = new events.EventRouter()
     priv surface_handle: host.Handle = host.Handle.none()
 
-    pub fn init(controls: Map<string, host.Handle>, router: events.EventRouter,
-                surface: host.Handle) {
+    pub fn init(controls: Map<string, host.Handle>, objects: Map<string, widgets.Widget>,
+                router: events.EventRouter, surface: host.Handle) {
         // Copied rather than moved: a parameter is borrowed, and a stage that
         // took its caller's map would leave the mount without one.
         for key: string in controls.keys() {
             match controls.get(key) {
                 some(handle) => { self.controls[key] = handle }
+                none => {}
+            }
+        }
+        for key: string in objects.keys() {
+            match objects.get(key) {
+                some(control) => { self.objects[key] = control }
                 none => {}
             }
         }
@@ -54,6 +73,34 @@ pub class Stage {
     /// finding each other's.
     pub fn control(key: string) -> Option<host.Handle> {
         return self.controls.get(key)
+    }
+
+    /// The control itself, for the things only the control can be asked.
+    ///
+    /// **This is what markup cannot carry.** A table's rows, an outline's
+    /// nodes, a tab's labels and a page's HTML are *data*, and the calls that
+    /// set them are methods on `widgets.Table`, `widgets.OutlineView`,
+    /// `widgets.TabView` and `widgets.WebView`. So a screen written in `.bx`
+    /// describes the shape and fills the data in here:
+    ///
+    /// ```
+    /// pub override fn on_mount(stage: component.Stage) {
+    ///     match stage.widget("rows") {
+    ///         some(control) => {
+    ///             match control as? widgets.Table {
+    ///                 some(grid) => { grid.set_source(self.rows).or(false) }
+    ///                 none => {}
+    ///             }
+    ///         }
+    ///         none => {}
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// `none` when nothing in this component's own render carried that key —
+    /// the same rule `control` follows, for the same reason.
+    pub fn widget(key: string) -> Option<widgets.Widget> {
+        return self.objects.get(key)
     }
 
     /// Where handlers are registered. The same router the application made,

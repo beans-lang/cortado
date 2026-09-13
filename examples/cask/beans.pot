@@ -7,4 +7,6 @@ kind application
 # program with a real dependency, which is the only way to find out what the
 # control set is missing. Every gap it hit is written down in its README.
 require path "../.."
+require path "../../app"
+require path "../../../barista"
 require path "../../../sqlite"
