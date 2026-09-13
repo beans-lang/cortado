@@ -109,6 +109,33 @@ pub class Vocabulary {
         return -1
     }
 
+    /// Whether a control of `kind` carries the attribute `name`.
+    ///
+    /// Asked of the host, so there is one answer rather than a copy above the
+    /// ABI. A name that is not a property answers `true`: layout names belong
+    /// to no control, and an unknown name is refused before this is reached.
+    pub static fn carries(kind: widgets.WidgetKind, name: string) -> bool {
+        let property: int = Vocabulary.property_of(name)
+        if property < 0 { return true }
+        var answer: int = 0
+        unsafe {
+            answer = host.ctd_kind_carries(kind.code() as i32,
+                                           host.KEY_PROPERTY as i32,
+                                           property as i32) as int
+        }
+        return answer == 1
+    }
+
+    /// Which controls carry `name`, for a refusal that says where it belongs.
+    pub static fn who_carries(name: string) -> string {
+        var carried: List<string> = []
+        for kind: widgets.WidgetKind in widgets.WidgetKind.all() {
+            if Vocabulary.carries(kind, name) { carried.push(kind.name()) }
+        }
+        if carried.len() == 0 { return "no control carries it" }
+        return "{name} is carried by {carried.join(", ")}"
+    }
+
     /// How a property's value travels.
     pub static fn kind_of_property(name: string) -> AttributeKind {
         if name == "min" || name == "max" || name == "value" ||

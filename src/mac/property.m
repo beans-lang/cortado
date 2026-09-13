@@ -78,6 +78,32 @@ CALayer *ctd_layer_of(NSView *view) {
     return [view layer];
 }
 
+/* The layer a view already has, or nil. Not ctd_layer_of: a getter must not
+ * make a layer on every control it is asked about. */
+static CALayer *ctd_layer_if_any(NSView *view) {
+    return [view wantsLayer] ? [view layer] : nil;
+}
+
+/* A CGColor back to 0xRRGGBBAA. Matched into sRGB first: four floats out of a
+ * grey or pattern space read as RGBA are plausible and wrong. */
+static int64_t ctd_color_of_cg(CGColorRef color) {
+    if (!color) return 0;
+    CGColorSpaceRef srgb = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGColorRef matched = CGColorCreateCopyByMatchingToColorSpace(
+        srgb, kCGRenderingIntentDefault, color, NULL);
+    CGColorSpaceRelease(srgb);
+    if (!matched) return 0;
+    const CGFloat *parts = CGColorGetComponents(matched);
+    size_t count = CGColorGetNumberOfComponents(matched);
+    int64_t packed = 0;
+    if (count >= 4) {
+        packed = ctd_color_pack(ctd_color_byte(parts[0]), ctd_color_byte(parts[1]),
+                                ctd_color_byte(parts[2]), ctd_color_byte(parts[3]));
+    }
+    CGColorRelease(matched);
+    return packed;
+}
+
 static CGColorRef ctd_cg_color(int64_t value) {
     return [[NSColor colorWithSRGBRed:ctd_color_red(value)   / 255.0
                                 green:ctd_color_green(value) / 255.0
@@ -329,15 +355,23 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             [(NSButton *)object setState:state];
             return CTD_OK;
         }
-        case CTD_P_EDITABLE:
+        case CTD_P_EDITABLE: {
+            if (!ctd_kind_has_editable(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            /* The old class check refused a text area (an NSScrollView) and
+             * accepted a label (an NSTextField). Both wrong. */
+            NSTextView *inner = ctd_text_view(object);
+            if (inner) { [inner setEditable:value ? YES : NO]; return CTD_OK; }
             if (![object isKindOfClass:[NSTextField class]]) return CTD_ERR_KIND;
             [(NSTextField *)object setEditable:value ? YES : NO];
             return CTD_OK;
+        }
         case CTD_P_ALIGNMENT: {
-            if (![object isKindOfClass:[NSTextField class]]) return CTD_ERR_KIND;
+            if (!ctd_kind_has_alignment(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             NSTextAlignment alignment = value == 1 ? NSTextAlignmentCenter
                                       : value == 2 ? NSTextAlignmentRight
                                                    : NSTextAlignmentLeft;
+            NSTextView *inner = ctd_text_view(object);
+            if (inner) { [inner setAlignment:alignment]; return CTD_OK; }
             [(NSTextField *)object setAlignment:alignment];
             return CTD_OK;
         }
@@ -422,6 +456,19 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = [[(CortadoDisclosure *)object triangle] state] ==
                         NSControlStateValueOn ? 1 : 0;
             break;
+        case CTD_P_BG_COLOR: {
+            /* These shipped write-only. No layer means no background, which
+             * is 0 — a true answer rather than a refusal. */
+            if (!ctd_kind_has_background(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            CALayer *layer = ctd_layer_if_any((NSView *)object);
+            value = layer ? ctd_color_of_cg([layer backgroundColor]) : 0;
+            break;
+        }
+        case CTD_P_BORDER_COLOR: {
+            CALayer *layer = ctd_layer_if_any((NSView *)object);
+            value = layer ? ctd_color_of_cg([layer borderColor]) : 0;
+            break;
+        }
         case CTD_P_FOCUSABLE: {
             if (!ctd_kind_is_drawn(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = [(CortadoView *)object ctdFocusable] ? 1 : 0;
@@ -454,10 +501,14 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
                   : state == NSControlStateValueOn    ? 1 : 0;
             break;
         }
-        case CTD_P_EDITABLE:
+        case CTD_P_EDITABLE: {
+            if (!ctd_kind_has_editable(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSTextView *inner = ctd_text_view(object);
+            if (inner) { value = [inner isEditable] ? 1 : 0; break; }
             if (![object isKindOfClass:[NSTextField class]]) return CTD_ERR_KIND;
             value = [(NSTextField *)object isEditable] ? 1 : 0;
             break;
+        }
         case CTD_P_SELECTED:
             if ([object isKindOfClass:[NSTabView class]]) {
                 NSTabView *tabs = (NSTabView *)object;
@@ -532,10 +583,16 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             if (value < 0.0 || value > 1.0) return CTD_ERR_RANGE;
             [(NSView *)object setAlphaValue:value];
             return CTD_OK;
-        case CTD_P_FONT_SIZE:
+        case CTD_P_FONT_SIZE: {
+            /* NSControl said yes to a slider and no to a text area. */
+            if (!ctd_kind_has_font_size(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSFont *font = [NSFont systemFontOfSize:value];
+            NSTextView *inner = ctd_text_view(object);
+            if (inner) { [inner setFont:font]; return CTD_OK; }
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
-            [(NSControl *)object setFont:[NSFont systemFontOfSize:value]];
+            [(NSControl *)object setFont:font];
             return CTD_OK;
+        }
         case CTD_P_CORNER_RADIUS:
             if (value < 0.0) return CTD_ERR_RANGE;
             [ctd_layer_of((NSView *)object) setCornerRadius:value];
@@ -623,18 +680,26 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
         case CTD_P_OPACITY:
             value = [(NSView *)object alphaValue];
             break;
-        case CTD_P_FONT_SIZE:
+        case CTD_P_FONT_SIZE: {
+            if (!ctd_kind_has_font_size(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSTextView *inner = ctd_text_view(object);
+            if (inner) { value = (double)[[inner font] pointSize]; break; }
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
             value = (double)[[(NSControl *)object font] pointSize];
             break;
-        case CTD_P_CORNER_RADIUS:
-            if (value < 0.0) return CTD_ERR_RANGE;
-            [ctd_layer_of((NSView *)object) setCornerRadius:value];
-            return CTD_OK;
-        case CTD_P_BORDER_WIDTH:
-            if (value < 0.0) return CTD_ERR_RANGE;
-            [ctd_layer_of((NSView *)object) setBorderWidth:value];
-            return CTD_OK;
+        }
+        case CTD_P_CORNER_RADIUS: {
+            /* These two arrived as a copy of their own setters, so asking for
+             * the corner radius set it to zero. */
+            CALayer *layer = ctd_layer_if_any((NSView *)object);
+            value = layer ? (double)[layer cornerRadius] : 0.0;
+            break;
+        }
+        case CTD_P_BORDER_WIDTH: {
+            CALayer *layer = ctd_layer_if_any((NSView *)object);
+            value = layer ? (double)[layer borderWidth] : 0.0;
+            break;
+        }
         case CTD_P_MIN: {
             id<CortadoRanged> ranged = ctd_ranged(widget, object);
             if (!ranged) return CTD_ERR_KIND;

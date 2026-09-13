@@ -201,6 +201,71 @@ pub fn widget_tags() -> List<string> {
             "OutlineView", "WebView"]
 }
 
+/// Whether a control tag carries an attribute.
+///
+/// A written copy of `ctd_rule_carries`, because this package must build with
+/// no host. `tests/attributes.b` holds the two together, pair by pair.
+///
+/// A name that is not a control property answers `true`: layout names belong
+/// to the parent's layout, and an unknown name is `is_attribute`'s refusal.
+pub fn tag_carries(tag: string, name: string) -> bool {
+    if name == "enabled" { return one_of(tag, ["Button", "TextField", "SecureField",
+                                               "SearchField", "CheckBox", "RadioButton",
+                                               "Switch", "Slider", "Stepper", "ComboBox",
+                                               "Segmented", "DatePicker", "ColorWell"]) }
+    if name == "checked" { return one_of(tag, ["CheckBox", "RadioButton", "Switch"]) }
+    if name == "min" || name == "max" || name == "value" {
+        return one_of(tag, ["Slider", "Stepper", "ProgressBar", "LevelIndicator"])
+    }
+    if name == "editable" { return is_typed_into(tag) }
+    // A label lays text out and is not typed into, which is the one difference
+    // between these two lists.
+    if name == "alignment" { return is_typed_into(tag) || tag == "Label" }
+    // A table, an outline, a group box, a disclosure and a tab view all show
+    // words, and none of them is here: those words are a title or a cell
+    // rather than the control's own text, and one name meaning both would be
+    // worse than no name at all.
+    if name == "font_size" { return one_of(tag, ["Label", "Button", "TextField",
+                                                 "SecureField", "SearchField", "TextArea",
+                                                 "CheckBox", "RadioButton", "ComboBox",
+                                                 "Link", "Segmented", "DatePicker"]) }
+    if name == "step" { return one_of(tag, ["Slider", "Stepper"]) }
+    if name == "selected" { return one_of(tag, ["ComboBox", "TabView", "Segmented"]) }
+    // Not a spinner: a spinner is always indeterminate, which is the whole
+    // difference between the two controls.
+    if name == "indeterminate" { return tag == "ProgressBar" }
+    if name == "animating" { return tag == "Spinner" }
+    if name == "day" { return tag == "DatePicker" }
+    if name == "color" { return tag == "ColorWell" }
+    if name == "open" { return tag == "Disclosure" }
+    // `hidden` and `opacity` are the view's own and every control is a view.
+    return true
+}
+
+/// Which control tags carry `name`, for a refusal that says where it belongs.
+/// Computed from `tag_carries`, so a changed rule changes the sentence.
+pub fn tags_carrying(name: string) -> string {
+    var carried: List<string> = []
+    for tag: string in widget_tags() {
+        if tag_carries(tag, name) { carried.push(tag) }
+    }
+    if carried.len() == 0 { return "no control carries it" }
+    return carried.join(", ")
+}
+
+/// The four a person types into — the same four that refuse a background,
+/// because a control has a bezel because you type into it.
+fn is_typed_into(tag: string) -> bool {
+    return one_of(tag, ["TextField", "SecureField", "SearchField", "TextArea"])
+}
+
+fn one_of(tag: string, tags: List<string>) -> bool {
+    for candidate: string in tags {
+        if candidate == tag { return true }
+    }
+    return false
+}
+
 /// Whether a tag is spelled like an identifier.
 ///
 /// Not a security question here — there is no document to inject into — but a

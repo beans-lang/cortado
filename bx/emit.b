@@ -450,6 +450,14 @@ pub class Emitter {
             if name == "" { continue }
             if !attribute_name_is_safe(name) {
                 self.report(attr.span, "{name} is not an attribute name — a name is a letter followed by letters, digits and underscores")
+                continue
+            }
+            // A real attribute on a control that has not got it. Components
+            // are exempt: their attributes are fields beansc checks.
+            // `attribute_call` first, so a misspelling stays a misspelling.
+            if !element.component && attribute_call(name) != "" &&
+               !tag_carries(element.tag, name) {
+                self.report(attr.span, "<{element.tag}> has no {name} — {name} is carried by {tags_carrying(name)}")
             }
         }
     }

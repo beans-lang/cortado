@@ -122,6 +122,7 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_OK;
         }
         case CTD_P_EDITABLE: {
+            if (!ctd_kind_has_editable(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             GtkTextView *text = ctd_text_view(object);
             if (text) {
                 gtk_text_view_set_editable(text, value ? TRUE : FALSE);
@@ -134,13 +135,26 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_ERR_KIND;
         }
         case CTD_P_ALIGNMENT: {
+            if (!ctd_kind_has_alignment(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             float alignment = value == 1 ? 0.5f : value == 2 ? 1.0f : 0.0f;
+            GtkTextView *text = ctd_text_view(object);
+            if (text) {
+                gtk_text_view_set_justification(
+                    text, value == 1 ? GTK_JUSTIFY_CENTER
+                        : value == 2 ? GTK_JUSTIFY_RIGHT
+                                     : GTK_JUSTIFY_LEFT);
+                return CTD_OK;
+            }
             if (GTK_IS_LABEL(object)) {
                 gtk_label_set_xalign(GTK_LABEL(object), alignment);
                 return CTD_OK;
             }
-            if (GTK_IS_ENTRY(object)) {
-                gtk_entry_set_alignment(GTK_ENTRY(object), alignment);
+            // GtkEditable rather than GtkEntry: in GTK4 a GtkSearchEntry is
+            // not a GtkEntry — it implements the interface and does not
+            // inherit the class — so asking for the class refused alignment on
+            // exactly one of the four fields, which no golden had noticed.
+            if (GTK_IS_EDITABLE(object)) {
+                gtk_editable_set_alignment(GTK_EDITABLE(object), alignment);
                 return CTD_OK;
             }
             return CTD_ERR_KIND;
@@ -238,6 +252,7 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             }
             break;
         case CTD_P_EDITABLE: {
+            if (!ctd_kind_has_editable(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             GtkTextView *text = ctd_text_view(object);
             if (text) { value = gtk_text_view_get_editable(text) ? 1 : 0; break; }
             if (!GTK_IS_EDITABLE(object)) return CTD_ERR_KIND;
@@ -295,6 +310,11 @@ static ctd_status ctd_set_real_raising(ctd_handle widget, int32_t key, double va
             gtk_widget_set_opacity(GTK_WIDGET(object), value);
             return CTD_OK;
         case CTD_P_FONT_SIZE: {
+            // The rule before the mechanism, and here that matters more than
+            // anywhere: a CSS class goes on *any* widget, so without this a
+            // container, a canvas and a separator all took a font size and
+            // silently showed nothing for it.
+            if (!ctd_kind_has_font_size(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             // GTK sets fonts with CSS, and since GTK 4.10 a style context is
             // not something a caller may add a provider to. The supported
             // shape is a provider for the whole display and a class on the
@@ -451,6 +471,7 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             value = gtk_widget_get_opacity(GTK_WIDGET(object));
             break;
         case CTD_P_FONT_SIZE: {
+            if (!ctd_kind_has_font_size(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             PangoContext *context = gtk_widget_get_pango_context(GTK_WIDGET(object));
             const PangoFontDescription *font = pango_context_get_font_description(context);
             value = (double)pango_font_description_get_size(font) / PANGO_SCALE;

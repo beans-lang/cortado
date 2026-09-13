@@ -91,7 +91,10 @@ pub enum WidgetKind {
     outline_view
 
     /// The number `cortado_host.h` uses for this kind.
-    fn code() -> int {
+    ///
+    /// Public because `component.Vocabulary.carries` asks the host about a
+    /// kind, and the host speaks numbers.
+    pub fn code() -> int {
         return match self {
             container => host.W_CONTAINER,
             label => host.W_LABEL,
@@ -215,7 +218,6 @@ pub enum WidgetKind {
             tab_view => { return false }
             split_view => { return false }
             web_view => { return false }
-            outline_view => { return false }
             outline_view => { return false }
         }
     }

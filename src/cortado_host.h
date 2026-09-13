@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 27
+#define CTD_ABI_VERSION 28
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -842,6 +842,23 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value);
 ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out);
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value);
 ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out);
+
+/* Which of the two key spaces a number is in. They overlap — CTD_P_CHECKED and
+ * CTD_S_HINT are both 1 — because each is an index into its own switch, and
+ * that is fine right up until something has to ask about a key without also
+ * knowing which call it would be passed to. ctd_kind_carries is that
+ * something. */
+#define CTD_KEY_PROPERTY 0  /* CTD_P_*: ctd_set_int and ctd_set_real */
+#define CTD_KEY_TEXT     1  /* CTD_S_*: ctd_set_string               */
+
+/* Whether a kind carries a key: 1 carries, 0 does not, CTD_ERR_RANGE for a
+ * number that is not a kind, not a key, or not a space.
+ *
+ * About the control, never the platform. "This control has no such property"
+ * is CTD_ERR_KIND and the same everywhere; "this platform cannot" is
+ * CTD_ERR_UNSUPPORTED and differs; "this platform has no such control" is
+ * ctd_widget_supports. Every host delegates to ctd_rule_carries. */
+int32_t ctd_kind_carries(int32_t kind, int32_t space, int32_t key);
 
 /* ---- animation --------------------------------------------------------- */
 

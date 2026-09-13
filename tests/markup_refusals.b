@@ -277,10 +277,53 @@ fn lexing() {
           "let ok: int = 2")
 }
 
+/// An attribute that is real, spelled right, and on the wrong control.
+///
+/// Until there was a per-kind table this compiled: the emitter never saw the
+/// tag, so the property went onto the wrong control and did nothing.
+fn wrong_control() {
+    io.println("-- an attribute the control has not got --")
+    // The three the plan named, one per value shape: a flag, a number and a
+    // word.
+    refuses("checked on a label", markup([r#"<Label checked />"#]),
+            "<Label> has no checked")
+    refuses("a day on a separator", markup([r#"<Separator day={0} />"#]),
+            "<Separator> has no day")
+    refuses("open on a button", markup([r#"<Button open />"#]),
+            "<Button> has no open")
+    // `r##"…"##` because the value itself contains `"#`, which would end an
+    // `r#"…"#` in the middle of the colour.
+    refuses("a colour on a text field", markup([r##"<TextField color="#ff8800" />"##]),
+            "<TextField> has no color")
+    // A font size on a container: the one every host answered differently,
+    // because GTK4 and Win32 will style any widget and the two Apple hosts
+    // will not.
+    refuses("a font size on a container", markup([r#"<VStack font_size={13} />"#]),
+            "<VStack> has no font_size")
+
+    // The refusal says where the attribute does belong, from the same table.
+    refuses("and it says which controls do carry it", markup([r#"<Label checked />"#]),
+            "carried by CheckBox, RadioButton, Switch")
+
+    // A misspelling is still a misspelling, and not the same mistake.
+    refuses("a misspelling is still a misspelling", markup([r#"<Label chekced />"#]),
+            "did you mean checked")
+
+    // And the same attribute on a control that does carry it compiles.
+    emits("checked on a check box", markup([r#"<CheckBox checked />"#]),
+          r#"flag("checked", true)"#)
+    emits("a font size on a label", markup([r#"<Label font_size={13} />"#]),
+          r#"number("font_size"#)
+    // A layout name belongs to no control, so no per-kind rule refuses one.
+    emits("spacing on a label", markup([r#"<Label spacing={4} />"#]),
+          r#"number("spacing"#)
+}
+
 fn main() {
     lexing()
     html_documents()
     attribute_bags()
     references()
     slots()
+    wrong_control()
 }

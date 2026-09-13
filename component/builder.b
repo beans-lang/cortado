@@ -120,6 +120,14 @@ pub class Builder {
     }
 
     /// A true/false property: `enabled`, `hidden`, `checked`, `editable`.
+    /// Refuses a property this control has not got, and says which do.
+    /// `true` when refused. One spelling for three call sites.
+    fn refuse_unless_carried(element: Element, name: string) -> bool {
+        if Vocabulary.carries(element.kind, name) { return false }
+        self.faults.push("<{element.tag}> has no {name} — {Vocabulary.who_carries(name)}")
+        return true
+    }
+
     pub fn flag(name: string, value: bool) {
         match self.current() {
             none => { self.faults.push("{name} with no element open") }
@@ -129,6 +137,7 @@ pub class Builder {
                     self.faults.push("<{element.tag}> has no attribute called '{name}'")
                     return
                 }
+                if self.refuse_unless_carried(element, name) { return }
                 element.set(Attribute.of_flag(property, value))
             }
         }
@@ -149,6 +158,7 @@ pub class Builder {
                     self.faults.push("<{element.tag}> has no attribute called '{name}'")
                     return
                 }
+                if self.refuse_unless_carried(element, name) { return }
                 if Vocabulary.kind_of_property(name) == AttributeKind.real {
                     element.set(Attribute.of_real(property, value))
                 } else {
@@ -183,6 +193,7 @@ pub class Builder {
                 // as it does in a shader — one parser, one set of rules, one
                 // refusal when the digits are wrong.
                 if name == "color" {
+                    if self.refuse_unless_carried(element, name) { return }
                     match widgets.Rgba.of_hex(value) {
                         err(problem) => { self.faults.push(problem.msg) }
                         ok(shade) => {

@@ -98,15 +98,30 @@ pub struct Attribute {
                 // A packed colour is the one whole number a reader cannot
                 // read. These goldens exist to be read by people, and
                 // `color=4278190335` says nothing that `rgba(255,0,0,255)`
-                // does not say better.
-                if self.property == host.P_COLOR {
-                    return "color={widgets.ColorWell.unpack(self.whole).show()}"
+                // does not say better. Three keys are one now that a control
+                // can be dressed, which is why it asks a function rather than
+                // naming CTD_P_COLOR: the fourth would have been added to the
+                // header and not here, and printed as a number nobody reads.
+                if is_packed_colour(self.property) {
+                    let name: string = property_name(self.property)
+                    return "{name}={widgets.ColorWell.unpack(self.whole).show()}"
                 }
                 return "{property_name(self.property)}={self.whole}"
             }
             flag => { return "{property_name(self.property)}={self.is_on()}" }
         }
     }
+}
+
+/// Whether a property's whole number is a packed `0xRRGGBBAA` colour.
+///
+/// Three keys are, and a fourth is one edit away. Stated once so that a golden
+/// printing a colour as `4278190335` is a missing row here rather than a
+/// number a reader has to decode.
+pub fn is_packed_colour(property: int) -> bool {
+    return property == host.P_COLOR ||
+           property == host.P_BG_COLOR ||
+           property == host.P_BORDER_COLOR
 }
 
 /// The readable name of a host property id.
@@ -132,6 +147,14 @@ pub fn property_name(property: int) -> string {
     if property == host.P_DATE { return "day" }
     if property == host.P_COLOR { return "color" }
     if property == host.P_EXPANDED { return "open" }
-    if property == host.P_ANIMATING { return "animating" }
+    if property == host.P_AXIS { return "axis" }
+    if property == host.P_DIVIDER { return "divider" }
+    if property == host.P_ICON { return "icon" }
+    if property == host.P_BG_COLOR { return "background" }
+    if property == host.P_CORNER_RADIUS { return "corner_radius" }
+    if property == host.P_BORDER_WIDTH { return "border_width" }
+    if property == host.P_BORDER_COLOR { return "border_color" }
+    if property == host.P_FOCUSABLE { return "focusable" }
+    if property == host.P_A11Y_ROLE { return "a11y_role" }
     return "p{property}"
 }

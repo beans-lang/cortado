@@ -836,6 +836,51 @@ that opened a tree node and selected it heard the selection as a click and
 shut the node again. Each host now carries one counter, `g_writing`, and
 `tests/panes.b` and `tests/table.b` fail when it is taken out.
 
+### Which control has which property
+
+`<Label checked />` is refused where it is written, and the refusal says where
+`checked` does belong:
+
+```
+probe.bx:1:8: <Label> has no checked — checked is carried by CheckBox, RadioButton, Switch
+```
+
+**The answer lives in one place.** `ctd_kind_carries(kind, space, key)` asks
+`src/cortado_rules.h`, and every host's implementation of it is the same three
+lines, because a host that decided for itself is how this went wrong in the
+first place. Three of these rules had four different answers before it existed,
+one per platform, none of them written down anywhere:
+
+| | macOS said | iOS said | GTK4 said |
+|---|---|---|---|
+| `editable` on a `Label` | yes — a label is an `NSTextField` | no | no |
+| `editable` on a `TextArea` | no — it is an `NSScrollView` | yes | yes |
+| `font_size` on a `Container` | no — it is not an `NSControl` | no | yes — CSS styles anything |
+| `alignment` on a `Link` | yes | no | no |
+
+Each host was asking its own object system, and the object systems disagree —
+which is the same mistake `CTD_P_ENABLED` was fixed for once already.
+`tests/attributes.b` is what keeps it fixed: it walks every tag against every
+attribute for the two written tables, then builds a real control of every kind
+the platform has, sets every property on it, and fails when what happened is
+not what the rule promised.
+
+**Three facts, three answers, and merging any two of them costs you a bug.**
+
+- *this control has no such property* — `wrong_widget`, the same on every
+  platform, and what `carries` answers
+- *this platform cannot do it* — `unsupported`, and it differs; a slider
+  carries a step everywhere, and iOS says so plainly because a `UISlider` is
+  always continuous
+- *this platform has no such control* — `WidgetKind.available()`
+
+A caller who cannot tell the first from the second writes a program that works
+on one desktop and is quietly inert on another.
+
+Layout names are nobody's to refuse. `spacing`, `padding`, `grow` and the rest
+belong to the parent's layout and never reach the control, so `<Label
+spacing={4} />` is fine.
+
 ### Dressing a control
 
 A control can be given a background, rounded corners and a border without

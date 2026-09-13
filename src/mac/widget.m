@@ -47,6 +47,13 @@ int32_t ctd_widget_supports(int32_t kind) {
     }
 }
 
+/* Every host's copy of this is the same three lines, and that is the point:
+ * the answer is cortado's, written once in cortado_rules.h. A host that
+ * decided for itself is how a label came to be editable on one platform. */
+int32_t ctd_kind_carries(int32_t kind, int32_t space, int32_t key) {
+    return ctd_rule_carries(kind, space, key);
+}
+
 ctd_handle ctd_widget_new(int32_t kind) {
     // Asked rather than re-decided, so the factory and the question cannot
     // answer differently about the same kind.

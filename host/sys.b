@@ -63,6 +63,7 @@ pub extern "C" fn ctd_set_int(widget: u64, key: i32, value: i64) -> i32
 pub extern "C" fn ctd_get_int(widget: u64, key: i32, out: RawPtr<i64>) -> i32
 pub extern "C" fn ctd_set_real(widget: u64, key: i32, value: f64) -> i32
 pub extern "C" fn ctd_get_real(widget: u64, key: i32, out: RawPtr<f64>) -> i32
+pub extern "C" fn ctd_kind_carries(kind: i32, space: i32, key: i32) -> i32
 pub extern "C" fn ctd_anim_new(widget: u64, property: i32) -> u64
 pub extern "C" fn ctd_anim_from_real(anim: u64, value: f64) -> i32
 pub extern "C" fn ctd_anim_to_real(anim: u64, value: f64) -> i32

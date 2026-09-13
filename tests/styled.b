@@ -161,6 +161,45 @@ fn drive() -> Result<bool> {
     io.println("  a negative radius is refused everywhere: {negative_refused}")
     box.release()
 
+    io.println("-- and what was set reads back --")
+    // Nothing read any of these back, which is how the corner radius and
+    // border width getters shipped as copies of their own setters: asking for
+    // the radius set it to zero and answered nothing.
+    var card: widgets.Container = new widgets.Container()
+    card.set_background(red)
+    card.set_corner_radius(6.0)
+    card.set_border(2.0, blue)
+    var radius_back: bool = false
+    match card.corner_radius() {
+        ok(points) => { radius_back = points == (if dressed { 6.0 } else { 0.0 }) }
+        err(problem) => { radius_back = !dressed }
+    }
+    io.println("  the corner radius that went in: {radius_back}")
+    var border_back: bool = false
+    match card.border_width() {
+        ok(points) => { border_back = points == (if dressed { 2.0 } else { 0.0 }) }
+        err(problem) => { border_back = !dressed }
+    }
+    io.println("  the border width that went in: {border_back}")
+    var colour_back: bool = false
+    match card.background() {
+        ok(shade) => { colour_back = !dressed || (shade.red == 220 && shade.green == 60 &&
+                                                  shade.blue == 60 && shade.alpha == 255) }
+        err(problem) => { colour_back = !dressed }
+    }
+    io.println("  and the colour, byte for byte: {colour_back}")
+    // A control nobody dressed has no layer, and reads zero rather than
+    // growing one to answer.
+    var plain_box: widgets.Container = new widgets.Container()
+    var undressed: bool = false
+    match plain_box.corner_radius() {
+        ok(points) => { undressed = points == 0.0 }
+        err(problem) => { undressed = !dressed }
+    }
+    io.println("  one nobody dressed reads zero: {undressed}")
+    card.release()
+    plain_box.release()
+
     app.shutdown()
     return ok(true)
 }

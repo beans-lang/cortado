@@ -142,6 +142,109 @@ static inline int ctd_kind_has_background(int32_t kind) {
           || kind == CTD_W_TEXT_AREA);
 }
 
+/* Whether a kind is one a person types into, and so can be told not to be.
+ *
+ * The same four `ctd_kind_has_background` refuses, and that is not a
+ * coincidence: a control has a bezel because you type into it. Everything else
+ * is refused, a label included.
+ *
+ * Written down here because the classes lie, and here they lied in both
+ * directions at once. A label is an `NSTextField`, so the macOS host let a
+ * program make a label typeable — which is not a label any more. A text area
+ * is an `NSScrollView` around an `NSTextView`, so the same host refused the
+ * one control the whole property is for. iOS answered a third way and GTK4 a
+ * fourth. Four hosts, four answers, and none of them was written down
+ * anywhere a reader could find it. */
+static inline int ctd_kind_has_editable(int32_t kind) {
+    return kind == CTD_W_TEXT_FIELD
+        || kind == CTD_W_SECURE_FIELD
+        || kind == CTD_W_SEARCH_FIELD
+        || kind == CTD_W_TEXT_AREA;
+}
+
+/* Whether a kind lays out text whose alignment the program chooses.
+ *
+ * The four you type into, plus a label. A link is deliberately not here: a
+ * link is its words, and the four hosts draw one differently enough — an
+ * attributed `NSTextField`, a `UIButton`, a `GtkLinkButton`, a custom-drawn
+ * static — that "centre it" would mean four things. A button's title is
+ * centred by the platform and is not the program's to move. */
+static inline int ctd_kind_has_alignment(int32_t kind) {
+    return ctd_kind_has_editable(kind) || kind == CTD_W_LABEL;
+}
+
+/* Whether a kind draws text whose size the program chooses.
+ *
+ * Everything whose content is words. Not a container, a canvas, a scroll view,
+ * a separator, an image, a slider, a progress bar, a level indicator, a
+ * spinner, a colour well or a split view — those draw no text of their own, and
+ * a font size set on one is a number that goes in and never shows.
+ *
+ * Five that look like they belong are deliberately out: a table, an outline, a
+ * group box, a disclosure and a tab view all show words, but the words are a
+ * *title* or a *cell* and not the control's own text. `NSBox` has a
+ * `titleFont` and nothing else; an `NSTableView` has no font at all, because
+ * its text belongs to the cells cortado makes per row. Giving any of them
+ * CTD_P_FONT_SIZE would make one name mean the title on one control and the
+ * contents on another. A title font is a different property, and it is not
+ * written yet because nothing has asked for it.
+ *
+ * This is the rule the four hosts disagreed about most, because three of them
+ * were answering a different question. GTK4 puts a CSS class on any widget and
+ * Win32 sends WM_SETFONT to any window, so both said yes to a container; macOS
+ * asked `NSControl`, which says no to an image view and yes to a slider; iOS
+ * listed three classes by hand. A size that is accepted on two platforms and
+ * refused on two is worse than either answer. */
+static inline int ctd_kind_has_font_size(int32_t kind) {
+    return kind == CTD_W_LABEL
+        || kind == CTD_W_BUTTON
+        || kind == CTD_W_TEXT_FIELD
+        || kind == CTD_W_SECURE_FIELD
+        || kind == CTD_W_SEARCH_FIELD
+        || kind == CTD_W_TEXT_AREA
+        || kind == CTD_W_CHECK_BOX
+        || kind == CTD_W_RADIO_BUTTON
+        || kind == CTD_W_COMBO_BOX
+        || kind == CTD_W_LINK
+        || kind == CTD_W_SEGMENTED
+        || kind == CTD_W_DATE_PICKER;
+}
+
+/* Whether a kind carries an increment — CTD_P_STEP.
+ *
+ * A stepper, whose whole purpose is one, and a slider, which can be made to
+ * land on detents. Note the shape of the answer on a slider: the kind carries
+ * it everywhere, and iOS says CTD_ERR_UNSUPPORTED because a UISlider is always
+ * continuous. That is the distinction this file exists to keep — "this control
+ * has no such thing" is cortado's answer and the same on every platform;
+ * "this platform cannot" is the platform's and differs. */
+static inline int ctd_kind_has_step(int32_t kind) {
+    return kind == CTD_W_SLIDER || kind == CTD_W_STEPPER;
+}
+
+/* Whether a kind carries a chosen index — CTD_P_SELECTED.
+ *
+ * Three controls that are each a list of things with one of them current. Two
+ * of the three are missing from one platform apiece, which is
+ * ctd_widget_supports' business and not this one's: a kind a host cannot build
+ * is never asked about. */
+static inline int ctd_kind_has_selected(int32_t kind) {
+    return kind == CTD_W_COMBO_BOX
+        || kind == CTD_W_TAB_VIEW
+        || kind == CTD_W_SEGMENTED;
+}
+
+/* Whether a kind can be a bar with no known total — CTD_P_INDETERMINATE.
+ *
+ * A progress bar alone. Not a spinner: a spinner is *always* indeterminate,
+ * which is the difference between the two controls, and a key that could only
+ * ever be set to the value it already has is a key with nothing to say. On
+ * macOS both are an NSProgressIndicator, so a host asking the class would let
+ * a spinner take it — on that one platform. */
+static inline int ctd_kind_has_indeterminate(int32_t kind) {
+    return kind == CTD_W_PROGRESS_BAR;
+}
+
 /* Whether a kind carries the two keys that belong to a control a program draws
  * itself: can it take the keyboard, and what does it call itself.
  *
@@ -380,6 +483,63 @@ static inline int ctd_curve_is_known(int32_t curve) {
  * and another refused would be the CTD_P_ENABLED mistake made twice. */
 static inline int ctd_property_animates(int32_t property) {
     return property == CTD_P_OPACITY;
+}
+
+/* Whether `kind` is a widget kind at all. A range rather than a list, because
+ * a 31-case switch goes stale the next time a control is added. */
+static inline int ctd_kind_is_known(int32_t kind) {
+    return kind >= CTD_W_CONTAINER && kind <= CTD_W_OUTLINE_VIEW;
+}
+
+/* Whether `kind` carries `key` in `space`. See ctd_kind_carries.
+ *
+ * Every key in the header appears below; one that does not falls to
+ * CTD_ERR_RANGE, and tests/attributes.b holds every answer here against what a
+ * real control actually does. */
+static inline int32_t ctd_rule_carries(int32_t kind, int32_t space, int32_t key) {
+    if (!ctd_kind_is_known(kind)) return CTD_ERR_RANGE;
+    if (space == CTD_KEY_TEXT) {
+        switch (key) {
+            /* What a screen reader says. Every control has a name, and an
+             * icon-only toolbar is unusable without one. */
+            case CTD_S_A11Y_LABEL: return 1;
+            case CTD_S_HINT:       return ctd_kind_has_hint(kind);
+            case CTD_S_URL:        return ctd_kind_has_url(kind);
+            default:               return CTD_ERR_RANGE;
+        }
+    }
+    if (space != CTD_KEY_PROPERTY) return CTD_ERR_RANGE;
+    switch (key) {
+        /* Every control: a view is a view, and these are the view's own. */
+        case CTD_P_HIDDEN:        return 1;
+        case CTD_P_OPACITY:       return 1;
+        case CTD_P_CORNER_RADIUS: return 1;
+        case CTD_P_BORDER_WIDTH:  return 1;
+        case CTD_P_BORDER_COLOR:  return 1;
+
+        case CTD_P_ENABLED:       return ctd_kind_has_enabled(kind);
+        case CTD_P_CHECKED:       return ctd_kind_has_checked(kind);
+        case CTD_P_MIN:
+        case CTD_P_MAX:
+        case CTD_P_VALUE:         return ctd_kind_has_range(kind);
+        case CTD_P_EDITABLE:      return ctd_kind_has_editable(kind);
+        case CTD_P_ALIGNMENT:     return ctd_kind_has_alignment(kind);
+        case CTD_P_FONT_SIZE:     return ctd_kind_has_font_size(kind);
+        case CTD_P_STEP:          return ctd_kind_has_step(kind);
+        case CTD_P_SELECTED:      return ctd_kind_has_selected(kind);
+        case CTD_P_INDETERMINATE: return ctd_kind_has_indeterminate(kind);
+        case CTD_P_ANIMATING:     return ctd_kind_has_animating(kind);
+        case CTD_P_DATE:          return ctd_kind_has_date(kind);
+        case CTD_P_COLOR:         return ctd_kind_has_color(kind);
+        case CTD_P_EXPANDED:      return ctd_kind_has_expanded(kind);
+        case CTD_P_AXIS:
+        case CTD_P_DIVIDER:       return ctd_kind_has_divider(kind);
+        case CTD_P_ICON:          return ctd_kind_has_icon(kind);
+        case CTD_P_BG_COLOR:      return ctd_kind_has_background(kind);
+        case CTD_P_FOCUSABLE:
+        case CTD_P_A11Y_ROLE:     return ctd_kind_is_drawn(kind);
+        default:                  return CTD_ERR_RANGE;
+    }
 }
 
 #endif

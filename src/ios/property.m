@@ -95,16 +95,19 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             return CTD_ERR_KIND;
         }
         case CTD_P_EDITABLE:
-            if ([object isKindOfClass:[UITextField class]]) {
-                [(UITextField *)object setEnabled:value ? YES : NO];
-                return CTD_OK;
-            }
+            if (!ctd_kind_has_editable(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if ([object isKindOfClass:[UITextView class]]) {
                 [(UITextView *)object setEditable:value ? YES : NO];
                 return CTD_OK;
             }
-            return CTD_ERR_KIND;
+            /* A UITextField has no read-only state. What stood here was
+             * setEnabled:, which is CTD_P_ENABLED — two keys writing one piece
+             * of state. UNSUPPORTED rather than KIND: the kind carries it,
+             * this platform cannot. Removing it needs a UITextFieldDelegate
+             * per field returning a flag from -textFieldShouldBeginEditing. */
+            return CTD_ERR_UNSUPPORTED;
         case CTD_P_ALIGNMENT: {
+            if (!ctd_kind_has_alignment(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             NSTextAlignment alignment = value == 1 ? NSTextAlignmentCenter
                                       : value == 2 ? NSTextAlignmentRight
                                                    : NSTextAlignmentLeft;
@@ -204,14 +207,14 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             }
             break;
         case CTD_P_EDITABLE:
-            if ([object isKindOfClass:[UITextField class]]) {
-                value = [(UITextField *)object isEnabled] ? 1 : 0;
-            } else if ([object isKindOfClass:[UITextView class]]) {
+            if (!ctd_kind_has_editable(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if ([object isKindOfClass:[UITextView class]]) {
                 value = [(UITextView *)object isEditable] ? 1 : 0;
-            } else {
-                return CTD_ERR_KIND;
+                break;
             }
-            break;
+            /* It used to answer isEnabled here, which is a different property
+             * with its own key — see the setter. */
+            return CTD_ERR_UNSUPPORTED;
         case CTD_P_SELECTED:
             if (ctd_slot_kind(widget) == CTD_W_SEGMENTED) {
                 NSInteger at = [(UISegmentedControl *)object selectedSegmentIndex];
@@ -266,6 +269,7 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
             [(UIView *)object setAlpha:value];
             return CTD_OK;
         case CTD_P_FONT_SIZE: {
+            if (!ctd_kind_has_font_size(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             UIFont *font = [UIFont systemFontOfSize:value];
             if ([object isKindOfClass:[UILabel class]]) {
                 [(UILabel *)object setFont:font];
@@ -275,8 +279,15 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
                 [(UITextView *)object setFont:font];
             } else if ([object isKindOfClass:[UIButton class]]) {
                 [[(UIButton *)object titleLabel] setFont:font];
+            } else if ([object isKindOfClass:[UISegmentedControl class]]) {
+                [(UISegmentedControl *)object
+                    setTitleTextAttributes:@{NSFontAttributeName: font}
+                                  forState:UIControlStateNormal];
             } else {
-                return CTD_ERR_KIND;
+                /* A check box is a UISwitch here and has no text; a
+                 * UIDatePicker offers no font. The kind carries it, this
+                 * platform cannot — so UNSUPPORTED, not KIND. */
+                return CTD_ERR_UNSUPPORTED;
             }
             return CTD_OK;
         }
@@ -370,6 +381,7 @@ ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out) {
             value = [(UIView *)object alpha];
             break;
         case CTD_P_FONT_SIZE:
+            if (!ctd_kind_has_font_size(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if ([object isKindOfClass:[UILabel class]]) {
                 value = [[(UILabel *)object font] pointSize];
             } else if ([object isKindOfClass:[UITextField class]]) {

@@ -1,0 +1,13 @@
+-- the markup table and the host agree, tag by tag --
+  every pair was asked: true
+  and answered the same way by both: true
+-- and the answer is the one the control gives --
+  every control was asked about every property: true
+  and did exactly what the rule promised: true
+  no value was out of range: true
+-- the three answers a caller has to be able to tell apart --
+  a label has no checked state: true
+  and it does have a font size: true
+  a slider carries a step: true
+  and was told yes or told the platform cannot: true
+  a layout name belongs to no control: true

@@ -356,6 +356,99 @@ First working macOS host.
   flip wrong. It is a division and nothing else: a pointer arrives in points,
   `ctd_view_frame` is points, and the 2× lives only inside `size`. A canvas with
   no size has no answer rather than a division by zero.
+- **`ctd_kind_carries` — which control has which property, answered once.**
+  The rules were already written down in `src/cortado_rules.h` for eleven
+  properties and not at all for six others, and nothing above the ABI could ask
+  any of them: markup never saw the tag, so `<Label checked />`,
+  `<Separator day={0} />` and `<Button open />` all compiled and then did
+  nothing. Both are closed. The new entry point takes a kind, a key space and a
+  key, and every host's copy of it is the same three lines — `return
+  ctd_rule_carries(...)` — because a host that decided for itself is precisely
+  how this went wrong. ABI 28.
+- **Three properties had four different answers, one per host, and none of them
+  was written down.** Each host asked its own object system, which is the
+  mistake `cortado_rules.h`'s own header warns about and had already caught
+  once for `CTD_P_ENABLED`:
+  - **`editable`**: a label is an `NSTextField`, so macOS let a program make a
+    label typeable — which is not a label any more. A `UILabel` is not a
+    `UITextField`, so iOS refused; a `GtkLabel` is not `GtkEditable`, so GTK4
+    refused. Meanwhile a text area is an `NSScrollView` around an `NSTextView`,
+    so macOS refused the one control the property exists for, while the other
+    two allowed it. Wrong in both directions on one platform.
+  - **`font_size`**: GTK4 puts a CSS class on any widget and Win32 sends
+    `WM_SETFONT` to any window, so both accepted one on a container, a canvas
+    and a separator and showed nothing for it. macOS asked `NSControl`, which
+    says yes to a slider and a colour well and no to an image view. iOS listed
+    three classes by hand.
+  - **`alignment`**: the same `NSTextField` question on macOS, so a link could
+    be centred there and nowhere else.
+  Now all three are `ctd_kind_has_*` rules, and `tests/attributes.b` builds a
+  real control of every kind this platform has, sets every property on it, and
+  fails when what happened is not what the rule promised. Every one of the
+  divergences above is a line that case printed.
+- **A table, an outline, a group box, a disclosure and a tab view deliberately
+  have no `font_size`.** They all show words, and the words are a *title* or a
+  *cell* rather than the control's own text — `NSBox` has a `titleFont` and
+  nothing else, and an `NSTableView` has no font at all because its text lives
+  in the cells cortado makes per row. One name meaning the title on one control
+  and the contents on another is worse than no name. A title font is a
+  different property and nothing has asked for it.
+- **`editable` on iOS was writing `enabled`.** `[UITextField setEnabled:]` is
+  `CTD_P_ENABLED`'s state, so two keys wrote one thing: a program that disabled
+  a field and then asked whether it was editable got the answer to the other
+  question, and one that made a field read-only also greyed it out and stopped
+  it being tapped. A `UITextField` genuinely has no read-only mode, so it is
+  `CTD_ERR_UNSUPPORTED` now — the kind carries the property and this platform
+  cannot honour it, which is a different sentence from either of the other two.
+  What would remove it: a `UITextFieldDelegate` per field whose
+  `-textFieldShouldBeginEditing` returns a flag cortado keeps, which is a
+  delegate on the input path that nothing has asked for.
+- **Asking a control for its corner radius set it to zero.** `CTD_P_CORNER_RADIUS`
+  and `CTD_P_BORDER_WIDTH` arrived in `ctd_get_real` as a copy of their own
+  setters, so the getter wrote the caller's uninitialised local into the layer
+  and answered nothing. `tests/styled.b` asserted every setter and read none of
+  them back, which is how it passed. Both are real getters now, and they read
+  the layer the view already has rather than making one — a question should not
+  cost a control its own layer.
+- **A background colour could be set and not read.** `CTD_P_BG_COLOR` and
+  `CTD_P_BORDER_COLOR` had no getter at all, and a property a program can write
+  and not read is one it cannot check, restore or animate toward. Reading back
+  matches the colour into sRGB first rather than trusting the components: these
+  are written as sRGB, but a colour read off a layer is whatever the layer
+  holds, and four floats out of a grey or pattern space read as RGBA are
+  plausible and wrong.
+- **A `GtkSearchEntry` is not a `GtkEntry`.** In GTK4 it implements
+  `GtkEditable` and does not inherit the class, so alignment was refused on
+  exactly one of the four fields and no golden had ever asked.
+- **`<Label checked />` is refused where it is written.** The markup compiler
+  has the tag in `check_element` and now uses it; `Builder` refuses the same
+  thing at run time for components written by hand. The refusal names the
+  control, the attribute and **which controls do carry it** — computed from the
+  same table, so a rule that changes changes the sentence with it. A
+  misspelling is still reported as a misspelling: `<Label chekced />` and
+  `<Label checked />` are two different mistakes, and a check that could not
+  tell them apart would send the author of the first one hunting for a control
+  that has a `chekced`.
+- **Nine properties had no readable name**, so the first golden to print one
+  would have printed `p21=1`. `component/attribute.b`'s `property_name` ends in
+  a number on purpose — it is how a forgotten key shows up — and nothing was
+  reading it. `tools/check_vocabulary.sh` holds it against `host/constants.b`
+  now. The same pass made packed colours readable wherever they appear rather
+  than only for `CTD_P_COLOR`: three keys carry one today and `color=4278190335`
+  says nothing that `rgba(255,0,0,255)` does not say better.
+- **Two match arms were written twice** — `outline_view` in
+  `WidgetKind.has_state` and `P_ANIMATING` in `property_name`. Both were
+  harmless only because the two copies agreed; the next pair will not, and it
+  would read as the first copy being wrong rather than as a second copy
+  existing. beansc accepts an unreachable duplicate arm in an exhaustive match
+  with no complaint, which is filed against the compiler; the gate catches it
+  here meanwhile. That leg guards its own extraction first, because a pattern
+  that stops matching prints nothing and "nothing" is exactly what a clean file
+  prints — the first version of it passed while reading no arms at all.
+- **An attribute could be published with no description.** `attributes()`
+  builds each row as `attribute_note(name)`, which ends in an empty string, so
+  a name added to the list and not to the notes shipped a blank into
+  `bx/vocabulary.json` and nothing said so. Held together now.
 - **No `Capability` for focus or roles, on purpose.** A `UIView` and a
   `GtkWidget` both take focus and both could carry a role — the cases are
   simply not written for those hosts. A capability would say "this platform

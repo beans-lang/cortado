@@ -12,3 +12,8 @@
   a text field is always refused one: true
   and told which control and why: true
   a negative radius is refused everywhere: true
+-- and what was set reads back --
+  the corner radius that went in: true
+  the border width that went in: true
+  and the colour, byte for byte: true
+  one nobody dressed reads zero: true

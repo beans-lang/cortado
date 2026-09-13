@@ -36,3 +36,14 @@
   a template with no parameter compiled, emitting it: true
   a component tag's children become its body compiled, emitting it: true
   a template defined outside a component tag refused, saying so: true
+-- an attribute the control has not got --
+  checked on a label refused, saying so: true
+  a day on a separator refused, saying so: true
+  open on a button refused, saying so: true
+  a colour on a text field refused, saying so: true
+  a font size on a container refused, saying so: true
+  and it says which controls do carry it refused, saying so: true
+  a misspelling is still a misspelling refused, saying so: true
+  checked on a check box compiled, emitting it: true
+  a font size on a label compiled, emitting it: true
+  spacing on a label compiled, emitting it: true

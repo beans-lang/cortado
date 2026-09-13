@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 27
+pub const ABI_VERSION: int = 28
 
 // ---- statuses ----
 
@@ -220,6 +220,15 @@ pub const ICON_COUNT: int = 27
 pub const S_HINT: int = 1
 pub const S_URL: int = 2
 pub const S_A11Y_LABEL: int = 3
+
+// ---- which key space a number is in ----
+//
+// The two overlap: P_CHECKED and S_HINT are both 1, because each indexes its
+// own switch. That is fine until something asks about a key without also
+// knowing which call it would be handed to, which is what ctd_kind_carries
+// does.
+pub const KEY_PROPERTY: int = 0
+pub const KEY_TEXT: int = 1
 
 // ---- animation curves ----
 

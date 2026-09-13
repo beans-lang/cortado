@@ -156,6 +156,108 @@ if ! diff -u "$root/build/.bools.markup" "$root/build/.bools.listed" \
          "bx/widgets.b and bx/vocabulary.b have drifted."
 fi
 
+# Every listed attribute must carry a note, or the editor shows a blank.
+# `attributes()` builds each published row as `attribute_note(name)`, and that
+# function ends in `return ""` — so a name added to the list and not to the
+# notes ships an empty description into `bx/vocabulary.json` and nothing
+# anywhere says so. The same shape of hole as the boolean list above, one
+# function along.
+sed -n '/^fn attribute_note(/,/^}/p' "$vocabulary" \
+    | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.attrs.noted"
+if [[ ! -s "$root/build/.attrs.noted" ]]; then
+    fail "no attribute notes were read from bx/vocabulary.b, so this check covered nothing:" \
+         "Look for 'fn attribute_note(' in bx/vocabulary.b."
+fi
+if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.noted" \
+        >"$root/build/.attrs.noted.diff"; then
+    cat "$root/build/.attrs.noted.diff" >&2
+    echo "  < listed by attribute_names()      > described by attribute_note()" >&2
+    fail "an attribute is published with no description, or described and not published:" \
+         "attribute_note() ends in an empty string, so the editor would show a blank."
+fi
+
+# ---- property names in goldens ----
+#
+# `component/attribute.b`'s `property_name` turns a host property id back into
+# a word, and it ends in `return "p{property}"` on purpose — a key added to the
+# header and forgotten there prints as `p21=1` rather than as a wrong name.
+# That is the right failure, and nothing was reading it: nine keys reached
+# host/constants.b across the layer-styling and drawn-control work and none of
+# them reached this function, so the first golden to print one would have
+# printed a number.
+runtime_attr="$root/component/attribute.b"
+
+grep -oE '^pub const P_[A-Z_0-9]+' "$root/host/constants.b" \
+    | sed 's/^pub const //' | sort -u >"$root/build/.props.declared"
+sed -n '/^pub fn property_name(/,/^}/p' "$runtime_attr" \
+    | grep -oE 'host\.P_[A-Z_0-9]+' | sed 's/^host\.//' | sort -u >"$root/build/.props.named"
+if [[ ! -s "$root/build/.props.declared" ]]; then
+    fail "no properties were read from host/constants.b, so this check covered nothing:" \
+         "Look for 'pub const P_' in host/constants.b."
+fi
+if [[ ! -s "$root/build/.props.named" ]]; then
+    fail "no properties were read from component/attribute.b, so this check covered nothing:" \
+         "Look for 'pub fn property_name(' in component/attribute.b."
+fi
+if ! diff -u "$root/build/.props.declared" "$root/build/.props.named" \
+        >"$root/build/.props.diff"; then
+    cat "$root/build/.props.diff" >&2
+    echo "  < declared in host/constants.b      > named by property_name()" >&2
+    fail "a property has no readable name, so a golden would print it as a number:" \
+         "Add it to property_name() in component/attribute.b, beside the others."
+fi
+
+# ---- an arm written twice ----
+#
+# beansc accepts a duplicated arm in an exhaustive match: the second is
+# unreachable and nothing warns. Two were already here — `outline_view` twice
+# in `has_state` and `P_ANIMATING` twice in `property_name` — and both were
+# harmless only because the two copies agreed. The next pair will not agree,
+# and it would read as the first copy being wrong rather than as a second copy
+# existing. A text check, because the compiler has no complaint to make; that
+# gap is filed against beansc separately.
+#
+# Each label is tagged with the function it sits in: `button` may legitimately
+# appear in two different matches in one file, and only a repeat inside one of
+# them is the bug.
+arm_labels() {
+    # $1 file, $2 a regex matching one arm label.
+    awk -v pattern="$2" '
+        /^[[:space:]]*(pub )?(static )?fn [a-z_]+\(/ { current = $0; next }
+        current == "" { next }
+        {
+            line = $0
+            while (match(line, pattern)) {
+                print current "\t" substr(line, RSTART, RLENGTH)
+                line = substr(line, RSTART + RLENGTH)
+            }
+        }
+    ' "$1"
+}
+
+for pair in "$root/widgets/widget_kind.b|[a-z_]+ =>" "$runtime_attr|host\.P_[A-Z_0-9]+"; do
+    file="${pair%%|*}"
+    pattern="${pair##*|}"
+    short="$(basename "$file")"
+    arm_labels "$file" "$pattern" >"$root/build/.arms.$short"
+    # The guard first, and it is the whole reason this leg is worth anything:
+    # an extraction that has stopped matching prints nothing, and "nothing" is
+    # exactly what a file with no duplicates prints. Without this, editing the
+    # pattern wrongly makes the check pass forever while reading no arms at
+    # all — which is the failure this repository keeps finding in its own
+    # gates, and which cost one round here before the guard went in.
+    if [[ ! -s "$root/build/.arms.$short" ]]; then
+        fail "no match arms were read from $short, so this check covered nothing:" \
+             "The pattern in this script no longer matches what $short is written like."
+    fi
+    sort "$root/build/.arms.$short" | uniq -d | cut -f2 >"$root/build/.dup.$short"
+    if [[ -s "$root/build/.dup.$short" ]]; then
+        cat "$root/build/.dup.$short" >&2
+        fail "an arm is written twice in $short, and the second can never run:" \
+             "Delete the copy. beansc does not refuse this, which is why the gate does."
+    fi
+done
+
 # ---- widget kinds ----
 #
 # `WidgetKind.all()` is a hand-written list of the enum's own cases, and it is
