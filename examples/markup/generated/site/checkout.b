@@ -1,11 +1,11 @@
-// Generated from examples/markup/site/checkout.bx by cortado-bx. Do not edit.
+// Generated from site/checkout.bx by cortado. Do not edit.
 //
 // The <beans> block below is checkout.bx's, copied through byte for byte; its
 // own package line is blanked so every line after it keeps its number. The
 // render method under it is the markup, as Builder calls.
 // Change checkout.bx and regenerate:
 //
-//     cortado-bx build examples/markup/site/checkout.bx
+//     cortado generate site/checkout.bx
 package site
 
 import {Builder, Component} from cortado.component

@@ -1,0 +1,6 @@
+# A database browser. Its screen is `screens/browser.bx`; the rest of the
+# window — a table's rows, an outline's nodes, a divider's position — is data,
+# and lives in `ui/` and `engine/` rather than in markup.
+name       Cask
+identifier org.beans-lang.cortado.cask
+markup     screens

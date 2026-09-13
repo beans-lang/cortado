@@ -96,4 +96,28 @@ pub enum CommandRole {
             preferences => false,
         }
     }
+
+    /// The role this name spells, or nothing when no role does.
+    ///
+    /// The inverse of `name()`, beside it so the two lists are one list.
+    /// `@command(role: "preferences")` is how a declaration names a role, and
+    /// a table written anywhere else would drift from this one.
+    pub static fn from_name(text: string) -> Option<CommandRole> {
+        if text == "none" { return some(CommandRole.none)
+        } else if text == "about" { return some(CommandRole.about)
+        } else if text == "preferences" { return some(CommandRole.preferences)
+        } else if text == "quit" { return some(CommandRole.quit)
+        } else if text == "hide" { return some(CommandRole.hide)
+        } else if text == "undo" { return some(CommandRole.undo)
+        } else if text == "redo" { return some(CommandRole.redo)
+        } else if text == "cut" { return some(CommandRole.cut)
+        } else if text == "copy" { return some(CommandRole.copy)
+        } else if text == "paste" { return some(CommandRole.paste)
+        } else if text == "select_all" { return some(CommandRole.select_all)
+        } else if text == "close" { return some(CommandRole.close)
+        } else if text == "minimize" { return some(CommandRole.minimize)
+        } else if text == "fullscreen" { return some(CommandRole.fullscreen)
+        }
+        return none
+    }
 }

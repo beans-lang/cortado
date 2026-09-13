@@ -1,11 +1,11 @@
-// Generated from examples/gallery/site/shelf.bx by cortado-bx. Do not edit.
+// Generated from site/shelf.bx by cortado. Do not edit.
 //
 // The <beans> block below is shelf.bx's, copied through byte for byte; its
 // own package line is blanked so every line after it keeps its number. The
 // render method under it is the markup, as Builder calls.
 // Change shelf.bx and regenerate:
 //
-//     cortado-bx build examples/gallery/site/shelf.bx
+//     cortado generate site/shelf.bx
 package site
 
 import {Builder, Component} from cortado.component

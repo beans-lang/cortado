@@ -60,6 +60,120 @@ every run).
 | Windows | host not written. Everything above the host runs and is tested here |
 | Android | no host yet — but `cortado.layout` builds for it and runs on an emulator, printing the same 69 goldens |
 
+## Building an application
+
+```
+cortado init myapp && cd myapp
+cortado run
+```
+
+`init` writes a project that builds and renders on the first run: a screen, a
+component the screen reuses, an injected service, the two manifests, and the
+generated half of the markup.
+
+```
+myapp/
+├── beans.pot        the module, and what it depends on
+├── cortado.pot      the application: name, bundle identity, profiles
+├── main.b           four lines of code
+├── screens/         one .bx per screen
+├── components/      .bx parts a screen reuses
+├── services/        plain .b — injected, no UI, testable with no window
+├── models/          plain data
+└── generated/       the .b half of every .bx, mirroring its folder
+```
+
+**There is no ViewModel folder, and that is a decision.** A `.bx` file is
+already both halves: markup on top, a `partial class` holding the state and the
+commands underneath, in one file the compiler keeps in step. A separate view
+model could not be bound to — cortado has no binding engine, so it would
+forward every property by hand and call `request_render()` itself. What a view
+model is *for*, logic you can exercise without a screen, is what `services/`
+is, and a service needs no window at all.
+
+**Every build regenerates the markup first.** Markup and the code built from it
+are two files, and any process where a person can compile one without the other
+eventually ships the pair out of step — a generated file that still compiles,
+still renders last week's screen, and says nothing. `cortado build` cannot
+produce one. `cortado check --drift` is the gate form, for the ways a file can
+go stale that a build never sees: a merge, or somebody running `beansc`
+directly.
+
+**Two configurations, the way `dotnet` has two.**
+
+| | `beansc` | where it lands |
+|---|---|---|
+| `cortado build` | `--debug` — `-O0`, frame pointers, DWARF line tables | `build/debug/` |
+| `cortado build -c Release` | `--release` — `-O3`, `NDEBUG` | `build/release/` |
+
+Every cortado build documented before this passed *neither* flag, which is a
+third mode that is unoptimised **and** has nothing for a debugger to attach to.
+The two profiles write to different directories so switching never silently
+overwrites the other one's binary, and `beansc`'s object cache keys on both
+flags, so switching back is not a rebuild.
+
+```
+cortado build [-c Release]   regenerate, then compile
+cortado run                  build, then launch it; after -- goes to the program
+cortado watch                build, run, and do it again on every change
+cortado check [--drift]      type-check; --drift fails on a stale generated file
+cortado generate             the markup only — `cortado-bx` is this, under its
+                             older name, and calls the same code
+cortado clean [--generated]  remove build/
+cortado publish              a Release build, wrapped as a .app and signed
+```
+
+`cortado.pot` is the application's own manifest, beside `beans.pot` because the
+compiler refuses a manifest row it does not know — which is the right rule, and
+the reason a bundle identifier and a usage description have nowhere to live in
+`beans.pot`:
+
+```
+name       Cask
+identifier com.example.cask
+version    0.1.0
+icon       assets/cask.icns
+
+markup     screens
+markup     components
+
+profile release
+    out    build/release
+    lto    true
+
+plist NSCameraUsageDescription "to scan a receipt"
+```
+
+**A `.bx` outside every `markup` folder is an error**, not a file quietly left
+alone — a screen nothing regenerates is the same silent staleness by another
+road. The refusal names the folder to add.
+
+The window's size and title come from `@window` on the root component, so they
+live beside the screen they describe and a tool can read them without running
+the program. `cortado_app.run_main` is the nine steps between `main` and a
+screen on the display — the container, the application, the window, the mount,
+the render loop, and taking all of it back down in the right order:
+
+```beans
+fn main() {
+    var options: cortado_app.AppOptions = new cortado_app.AppOptions()
+    cortado_app.run_main<Home>(options)
+}
+```
+
+It also gives every application `--dump`: the screen mounted headless, the
+widget tree printed, exit. That is what makes a project's own gate possible
+from its first commit, on a machine with no display.
+
+Two hooks are on `AppOptions`, for the two things an application owns and
+cortado does not. `on_ready` runs once the screen is mounted and its controls
+exist — which some things genuinely need: a split view refuses a divider wider
+than itself, so a divider written inside `on_mount`, where the control exists
+with no frame at all, is refused by every host and is fine one pass later.
+`on_closing` runs after the loop, for a database to close or a file to flush.
+`examples/cask` is both of them, and its `main.b` is now the database and
+nothing else.
+
 ## How it is put together
 
 ```
@@ -303,10 +417,15 @@ pub partial class Checkout extends component.Component {
 ```
 
 ```
-beansc build examples/cortado_bx.b -o build/cortado-bx
-build/cortado-bx build site/checkout.bx      # one file
-build/cortado-bx build site                  # every .bx under it, however deep
+cortado generate                    # every markup folder cortado.pot names
+cortado generate screens/home.bx    # one file
+cortado generate screens            # every .bx under it, however deep
 ```
+
+`cortado build` and `cortado run` do this first, every time, so a hand-run
+generate is for the times you want only the generated code. `cortado-bx` is the
+same work under its older name — `build/cortado-bx build screens` — and calls
+the same code rather than carrying a second copy of the walk.
 
 **Hand it the folder.** A shell glob is not recursive — `site/*.bx` silently
 misses `site/parts/` — and what that produces is the worst kind of failure
@@ -318,7 +437,10 @@ directory with no markup in it is an error rather than no work.
 **Generated code goes under `generated/`, mirroring the source tree.**
 `site/checkout.bx` becomes `generated/site/checkout.b`, and the mirror hangs
 off the module root — the nearest directory with a `beans.pot` — so the output
-does not depend on where the compiler was run from.
+does not depend on where the compiler was run from. The header naming the
+source is written relative to that same root, so the *bytes* do not either:
+`cortado generate screens` and `cortado generate ./screens` from one directory
+up produce the same file, and a drift gate does not call one of them stale.
 
 ```
 examples/markup/
@@ -653,8 +775,36 @@ should compare those strings.
 
 ## Menus, dialogs and the system
 
-**A menu command carries a role, and the platform places it.** This is the one
-idea that makes a menu portable:
+**A command is declared on the method it runs.** `@command` is read by
+`cortado_app.run_main`, which builds the menu, puts it in the toolbar where the
+platform has one, and routes the platform's event back to the method:
+
+```beans
+@command(title: "Execute", key: "mod+return", icon: "run")
+pub fn run_statement() { self.work.execute() }
+
+@command(title: "Connection", key: "mod+i", icon: "info", separator: true)
+pub fn show_connection() { self.work.show_facts() }
+```
+
+`examples/cask` wrote that table twice before — five `Menu.add` rows with a
+token apiece, and a router handler matching those tokens back to these four
+calls. Two tables for one fact is a fact that goes out of step.
+
+Four things are refused rather than ignored, because each is a silent no-op
+otherwise: a **role the platform handles itself** (a method declared for `copy`
+would never run — that command reaches the focused control through the
+responder chain), an **icon name no role spells**, **two commands with one id**,
+and a **command that declares a parameter**, which the platform has nothing to
+fill. An icon this *platform* does not have is not one of them: the command
+keeps its words, which is what `examples/cask`'s toolbar does on Windows.
+
+**A command is not a control, which is why it is not in the markup.** It has a
+role the platform places it by, a shortcut the platform spells, and an icon the
+platform may not have — none of which is a shape on a screen.
+
+**A role carries the platform's own words and keys.** This is the one idea that
+makes a menu portable, and it is what `role:` above selects:
 
 ```beans
 var edit: surface.Menu = surface.Menu.of("Edit")?
@@ -1082,9 +1232,20 @@ files above are where that work is counted.
 ## Shipping
 
 ```
-tools/bundle.sh build/gallery Gallery com.example.gallery
-open build/Gallery.app
+cortado publish              # a Release build, wrapped and signed
+open build/release/Myapp.app
 ```
+
+The name, the identifier, the version, the icon and every usage description
+come from `cortado.pot`, and each declared key is read back out of the finished
+bundle with `plutil -extract` — the way macOS reads it. Not "the file contains
+it" and not "the file lints": the first version of this wrote the usage
+descriptions after `</plist>`, `plutil -lint` called the file OK because a
+plist parser stops at the closing tag, the app launched, and every usage
+description was silently missing.
+
+`tools/bundle.sh build/gallery Gallery com.example.gallery` still wraps a loose
+binary that is not a project, and calls the same code.
 
 A bare binary runs and shows a window — that is why the examples work without
 this. What it does not get is a name in the Dock and the menu bar, a place in

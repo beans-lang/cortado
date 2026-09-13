@@ -1,11 +1,11 @@
-// Generated from examples/markup/site/parts/badge.bx by cortado-bx. Do not edit.
+// Generated from site/parts/badge.bx by cortado. Do not edit.
 //
 // The <beans> block below is badge.bx's, copied through byte for byte; its
 // own package line is blanked so every line after it keeps its number. The
 // render method under it is the markup, as Builder calls.
 // Change badge.bx and regenerate:
 //
-//     cortado-bx build examples/markup/site/parts/badge.bx
+//     cortado generate site/parts/badge.bx
 package parts
 
 import {Builder, Component} from cortado.component

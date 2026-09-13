@@ -671,16 +671,22 @@ fi
 #      describes" is a test rather than a screenshot somebody looked at once.
 "$BEANSC" build "$root/examples/cortado_bx.b" -o "$tmp/cortado-bx" >/dev/null
 pass
-# Regenerated from the repository root with a relative path, because the path
-# is written into the generated file's header — so the diff has to be run the
-# way a person regenerates, or it fails on the absolute path alone.
+# The generated header names its source **relative to that source's module
+# root**, so these bytes are the same whichever directory the tool is run from
+# and however the path was spelled. That is checked below rather than assumed.
 # Found with `find`, not with a shell glob, and that is the point: `site/*.bx`
 # is not recursive, so a component somebody put in `site/parts/` would never be
 # regenerated and never be diffed. What that produces is the worst failure this
 # repository has — a *stale* generated file that still compiles, still renders
 # last week's screen, and says nothing.
-for source in $(find examples/markup/site examples/gallery/site examples/cask/site -name '*.bx' | sort); do
-    module="${source%%/site/*}"
+# Each example names its own markup folder, because a project does — which is
+# why the mirror hangs off the module root and not off a folder called `site`.
+markup_roots=(examples/markup/site examples/gallery/site examples/cask/screens)
+for source in $(find "${markup_roots[@]}" -name '*.bx' | sort); do
+    module="${source%/*}"
+    while [[ "$module" == */* && ! -f "$root/$module/beans.pot" ]]; do
+        module="${module%/*}"
+    done
     relative="${source#"$module/"}"
     target="$module/generated/${relative%.bx}.b"
     (cd "$root" && "$tmp/cortado-bx" build "$source" --stdout) >"$tmp/regen.b" 2>"$tmp/regen.err" || {
@@ -690,7 +696,7 @@ for source in $(find examples/markup/site examples/gallery/site examples/cask/si
     }
     if ! diff -u "$root/$target" "$tmp/regen.b"; then
         echo "FAIL markup: $target is stale — regenerate it with" >&2
-        echo "    build/cortado-bx build $module/site" >&2
+        echo "    build/cortado generate ${source%/*}" >&2
         exit 1
     fi
 done
@@ -699,16 +705,16 @@ pass
 # And the tool's own walk finds what `find` found. The loop above is only as
 # good as the list it iterates; this is the half that checks cortado-bx agrees
 # about what is in a folder, which is what a person actually hands it.
-for module in examples/markup examples/gallery examples/cask; do
-    (cd "$root" && "$tmp/cortado-bx" build "$module/site" --stdout) >"$tmp/walk.b" 2>&1 || {
-        echo "FAIL markup: cortado-bx refused the directory $module/site" >&2
+for folder in "${markup_roots[@]}"; do
+    (cd "$root" && "$tmp/cortado-bx" build "$folder" --stdout) >"$tmp/walk.b" 2>&1 || {
+        echo "FAIL markup: cortado-bx refused the directory $folder" >&2
         cat "$tmp/walk.b" >&2
         exit 1
     }
     walked="$(grep -c '^// Generated from ' "$tmp/walk.b" || true)"
-    present="$(find "$root/$module/site" -name '*.bx' | wc -l | tr -d ' ')"
+    present="$(find "$root/$folder" -name '*.bx' | wc -l | tr -d ' ')"
     if [[ "$walked" != "$present" ]]; then
-        echo "FAIL markup: cortado-bx walked $walked .bx files under $module/site, there are $present" >&2
+        echo "FAIL markup: cortado-bx walked $walked .bx files under $folder, there are $present" >&2
         exit 1
     fi
 done
@@ -723,6 +729,218 @@ if ! diff -u "$root/bx/vocabulary.json" "$tmp/vocabulary.json"; then
 fi
 pass
 echo "ok markup: cortado-bx builds, every generated file matches its source, and the editor vocabulary is current"
+
+# ----------------------------------------------------------------- commands
+#
+# `@command` on a method, read. It replaced two hand-written tables — the
+# menu's rows and the router's token-to-method match — so what has to hold is
+# that the one declaration still produces both: the platform builds the
+# command, and choosing it runs the method it was written on. A check that
+# only counted the commands would pass with the routing deleted.
+#
+# It lives in `app/tests/` because `cortado_app` is a sibling module: a package
+# under `cortado/` may not import its own module root, so the composition root
+# cannot live there, and neither can its test.
+if [[ -f "$root/../barista/beans.pot" && $have_host -eq 1 ]]; then
+    "$BEANSC" run "$root/app/tests/commands.b" >"$tmp/commands.out" 2>&1
+    diff -u "$root/app/tests/commands.out" "$tmp/commands.out"
+    pass
+    if [[ $native -eq 1 ]]; then
+        "$BEANSC" build "$root/app/tests/commands.b" -o "$tmp/commands.bin" >/dev/null
+        "$tmp/commands.bin" >"$tmp/commands.native" 2>&1
+        diff -u "$root/app/tests/commands.out" "$tmp/commands.native"
+        pass
+    fi
+    echo "ok commands: @command builds the menu, and choosing one runs its method"
+else
+    if [[ $have_host -eq 1 ]]; then
+        skip commands "barista is not checked out beside this one at ../barista, so cortado_app cannot be built"
+    else
+        skip commands "this platform has no cortado host, so a menu cannot be built"
+    fi
+fi
+
+# ---------------------------------------------------------------------- cli
+#
+# `cortado` is the project command line: it scaffolds a project, regenerates
+# its markup, compiles it with a named profile, and runs it. What this leg
+# asserts is the part a person cannot see by looking — that the project it
+# writes actually builds and renders, that Debug and Release are two different
+# builds and not two names for one, and that a generated file which has fallen
+# behind its markup is caught rather than shipped.
+"$BEANSC" build "$root/examples/cortado_cli.b" -o "$tmp/cortado" >/dev/null
+pass
+
+# The same bytes from two directories and two spellings. The generated header
+# names its source, so a header that quoted whatever it was handed would make
+# the output depend on the working directory — and then a drift gate reports a
+# file stale because somebody ran the tool from one directory up.
+(cd "$root" && "$tmp/cortado" generate examples/markup/site --stdout) >"$tmp/spell-a.b"
+(cd "$root/examples/markup" && "$tmp/cortado" generate ./site --stdout) >"$tmp/spell-b.b"
+if ! diff -u "$tmp/spell-a.b" "$tmp/spell-b.b"; then
+    echo "FAIL cli: generating the same markup from two directories wrote two different files" >&2
+    exit 1
+fi
+pass
+
+if [[ -f "$root/../barista/beans.pot" && $have_host -eq 1 ]]; then
+    demo="$tmp/cli-demo"
+    mkdir -p "$demo"
+    (cd "$demo" && "$tmp/cortado" init acme --cortado "$root") >"$tmp/init.out" 2>&1 || {
+        echo "FAIL cli: init refused" >&2
+        cat "$tmp/init.out" >&2
+        exit 1
+    }
+    pass
+
+    # A screen in a folder the scaffold did not write, one level deeper than
+    # anything it did. A walk that is not recursive misses this, and a mirror
+    # that flattens puts it in the wrong package — and both failures produce a
+    # file that still compiles, which is why the assertion is on the rendered
+    # tree and not on the file's existence.
+    mkdir -p "$demo/acme/screens/parts"
+    cat >"$demo/acme/screens/parts/note.bx" <<'NOTE'
+<Label font_size={11}>$self.line</Label>
+<beans>
+package parts
+
+import cortado.component
+import {view, param} from cortado.annotations
+
+@view
+pub partial class Note extends component.Component {
+    @param pub line: string = ""
+
+    pub fn init() { super.init() }
+}
+</beans>
+NOTE
+    # And the screen above it reaches the nested package with one import line.
+    python3 - "$demo/acme/screens/home.bx" <<'PATCH'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+s = s.replace('  <Badge words="tap Change for another drink" />',
+              '  <Badge words="tap Change for another drink" />\n  <Note line="a screen in a nested folder" />')
+s = s.replace('import {Badge} from acme.generated.components',
+              'import {Badge} from acme.generated.components\nimport {Note} from acme.generated.screens.parts')
+p.write_text(s)
+PATCH
+
+    (cd "$demo/acme" && "$tmp/cortado" generate) >/dev/null 2>&1 || {
+        echo "FAIL cli: generate refused after a screen was added" >&2
+        exit 1
+    }
+    if [[ ! -f "$demo/acme/generated/screens/parts/note.b" ]]; then
+        echo "FAIL cli: the nested screen was not mirrored — the walk is not recursive" >&2
+        exit 1
+    fi
+    (cd "$demo/acme" && "$tmp/cortado" check --drift) >/dev/null 2>&1 || {
+        echo "FAIL cli: a freshly generated project reads as stale" >&2
+        exit 1
+    }
+    pass
+
+    # Debug and Release are two builds, not two names. The debug map is the
+    # macOS answer to "is there debug information in here": `-g` leaves DWARF
+    # in the object files and a `N_OSO` entry per object in the binary, and a
+    # release build has none at all. A profile that passed the same flags
+    # twice would print the same number here.
+    (cd "$demo/acme" && "$tmp/cortado" build) >/dev/null 2>&1
+    (cd "$demo/acme" && "$tmp/cortado" build -c Release) >/dev/null 2>&1
+    for shape in debug release; do
+        if [[ ! -x "$demo/acme/build/$shape/Acme" ]]; then
+            echo "FAIL cli: build/$shape/Acme was not produced" >&2
+            exit 1
+        fi
+    done
+    debug_oso="$(nm -pa "$demo/acme/build/debug/Acme" 2>/dev/null | grep -c ' OSO ' || true)"
+    release_oso="$(nm -pa "$demo/acme/build/release/Acme" 2>/dev/null | grep -c ' OSO ' || true)"
+    if [[ "$debug_oso" -eq 0 ]]; then
+        echo "FAIL cli: the Debug build carries no debug information ($debug_oso debug-map entries)" >&2
+        exit 1
+    fi
+    if [[ "$release_oso" -ne 0 ]]; then
+        echo "FAIL cli: the Release build carries debug information ($release_oso debug-map entries)" >&2
+        exit 1
+    fi
+    pass
+
+    # What the scaffolded application actually renders. The window is 420 by
+    # 260 because `@window` on `Home` says so — an annotation that was declared
+    # for this and read by nothing until now, so a regression here is silent
+    # everywhere else.
+    "$demo/acme/build/debug/Acme" --dump >"$tmp/cli.out" 2>&1
+    diff -u "$root/tests/cli.out" "$tmp/cli.out"
+    pass
+
+    # A generated file that has fallen behind. This is the failure the whole
+    # tool exists to make impossible, so it is checked by causing it.
+    printf '\n// touched\n' >>"$demo/acme/generated/screens/home.b"
+    if (cd "$demo/acme" && "$tmp/cortado" check --drift) >/dev/null 2>&1; then
+        echo "FAIL cli: a stale generated file read as current" >&2
+        exit 1
+    fi
+    # And a build puts it back, because a build regenerates first.
+    (cd "$demo/acme" && "$tmp/cortado" build) >/dev/null 2>&1
+    (cd "$demo/acme" && "$tmp/cortado" check --drift) >/dev/null 2>&1 || {
+        echo "FAIL cli: a build did not regenerate a stale file" >&2
+        exit 1
+    }
+    pass
+
+    # A `.bx` outside every markup folder. A screen nothing regenerates is the
+    # same silent staleness by another road, so it is an error and not a file
+    # quietly left alone.
+    mkdir -p "$demo/acme/elsewhere"
+    cp "$demo/acme/screens/parts/note.bx" "$demo/acme/elsewhere/stray.bx"
+    if (cd "$demo/acme" && "$tmp/cortado" build) >/dev/null 2>&1; then
+        echo "FAIL cli: markup outside every markup folder was accepted" >&2
+        exit 1
+    fi
+    rm -rf "$demo/acme/elsewhere"
+
+    # An unknown row in cortado.pot names the line rather than being ignored.
+    cp "$demo/acme/cortado.pot" "$tmp/cortado.pot.keep"
+    printf 'identfier com.example.typo\n' >>"$demo/acme/cortado.pot"
+    if (cd "$demo/acme" && "$tmp/cortado" build) >"$tmp/typo.out" 2>&1; then
+        echo "FAIL cli: a misspelled cortado.pot row was ignored" >&2
+        exit 1
+    fi
+    if ! grep -q 'identfier' "$tmp/typo.out"; then
+        echo "FAIL cli: the refusal did not name the row it refused" >&2
+        cat "$tmp/typo.out" >&2
+        exit 1
+    fi
+    cp "$tmp/cortado.pot.keep" "$demo/acme/cortado.pot"
+    pass
+
+    # `clean` removes what was built and leaves what was written. `generated/`
+    # is checked in — a clone builds from it with plain `beansc` — so removing
+    # it is asked for by name.
+    (cd "$demo/acme" && "$tmp/cortado" clean) >/dev/null 2>&1
+    if [[ -d "$demo/acme/build" ]]; then
+        echo "FAIL cli: clean left the build directory" >&2
+        exit 1
+    fi
+    if [[ ! -f "$demo/acme/generated/screens/home.b" ]]; then
+        echo "FAIL cli: clean removed generated/, which is checked-in source" >&2
+        exit 1
+    fi
+    (cd "$demo/acme" && "$tmp/cortado" clean --generated) >/dev/null 2>&1
+    if [[ -d "$demo/acme/generated" ]]; then
+        echo "FAIL cli: clean --generated left generated/" >&2
+        exit 1
+    fi
+    pass
+    echo "ok cli: a scaffolded project builds, renders, and cannot go stale"
+else
+    if [[ $have_host -eq 1 ]]; then
+        skip cli_project "barista is not checked out beside this one at ../barista, so a scaffolded project cannot be built"
+    else
+        skip cli_project "this platform has no cortado host, so a scaffolded application cannot be linked"
+    fi
+fi
 
 if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     if [[ -f "$root/../barista/beans.pot" ]]; then

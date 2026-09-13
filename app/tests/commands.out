@@ -1,0 +1,18 @@
+-- what the declaration says --
+  1 id=refresh title="Refresh" key=mod+r role=none icon=refresh
+  2 id=go title="Execute" key=mod+return role=none icon=run
+  3 id=about_it title="about_it" key=mod+i role=none icon=none
+-- the platform's own words --
+  'Refresh' [mod+r]
+  'Execute' [mod+return]
+  'about_it' [mod+i]
+-- choosing them --
+  ran refresh
+  ran execute
+  ran about_it
+  3 of 3 commands ran
+-- refused --
+  a role the platform handles: command
+  an icon no role spells: command
+  two commands with one id: command
+  a command that wants an argument: command

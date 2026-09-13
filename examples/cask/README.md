@@ -1,11 +1,9 @@
 # cask — a database browser
 
 ```
-beansc build examples/cortado_bx.b -o build/cortado-bx
-build/cortado-bx build examples/cask/site/browser.bx
-beansc build examples/cask/main.b -o build/cask && ./build/cask
-./build/cask some.db          # or point it at a file
-./build/cask --dump           # what the gate runs: no window, prints what it read
+cortado run                   # from examples/cask
+cortado run -- some.db        # or point it at a file
+cortado run -- --dump         # what the gate runs: no window, prints what it read
 ```
 
 A SQLite browser with DBeaver's shape: a navigator tree down the left, an
@@ -47,11 +45,19 @@ freezes the window.
 
 ## The screen is markup
 
-`site/browser.bx` is the whole user interface. It was not: `main.b` used to be
+`screens/browser.bx` is the whole user interface. It was not: `main.b` used to be
 929 lines, of which about 450 were controls built one at a time and an
 `arrange` closure that wrote the layout tree out node by node, spec by spec,
 rebuilt from scratch on every divider drag. That is 205 lines of markup now,
-and `main.b` is 294 — a database, a command table, a window, and a mount.
+and `main.b` is 230 — a database, and nothing else.
+
+The command table went the same way and later: five `Menu.add` rows with a
+token apiece, four `set_icon` calls and a `router.on` handler matching those
+tokens back to four methods are now four `@command` declarations on the methods
+they run. The window's size and title are `@window` on `Browser`. What is left
+in `main.b` is opening a database, two hooks — `on_ready` places the dividers,
+which can only happen after the first layout, and `on_closing` closes the
+database — and `cortado_app.run_main<Browser>`.
 
 What did **not** move is the line the conversion made clearest:
 

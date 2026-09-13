@@ -1,0 +1,9 @@
+Container CortadoView role=group "" frame=0,0,420,260 children=1
+  Container CortadoView role=group "" frame=0,0,420,260 children=5
+    Label NSTextField role=text "flat white" frame=24,24,372,20
+    Label NSTextField role=text "1 × 380p" frame=24,58,372,16
+    Label NSTextField role=text "tap Change for another drink" frame=24,88,372,16
+    Label NSTextField role=text "a screen in a nested folder" frame=24,118,372,14
+    Container CortadoView role=group "" frame=24,146,372,24 children=2
+      Button NSButton role=button "Another shot" frame=188,0,103,24
+      Button NSButton role=button "Change" frame=301,0,71,24

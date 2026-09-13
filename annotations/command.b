@@ -18,6 +18,13 @@ package annotations
 ///
 /// `key` is a portable shortcut description — `"mod+s"`, `"mod+shift+n"` —
 /// where `mod` is Command on macOS and Control elsewhere.
+///
+/// `icon` names a `SystemIcon` role — `"refresh"`, `"run"`, `"print"`. It is a
+/// string and not the enum so that `cortado.annotations` keeps importing
+/// nothing: every generated screen imports this package, and a dependency from
+/// here on `cortado.widgets` would put the platform host behind every one of
+/// them. An unknown name is refused when the command is wired, naming the
+/// role and the method, rather than quietly leaving the space empty.
 @target(value: ["method"])
 @retention(value: "runtime")
 pub annotation command {
@@ -25,4 +32,12 @@ pub annotation command {
     title: string = ""
     key: string = ""
     role: string = ""
+    icon: string = ""
+    /// Put a dividing line above this command.
+    ///
+    /// A separator belongs to the item below it rather than being an item of
+    /// its own, because a list of methods has nowhere to hang a thing that is
+    /// not a method — and because a separator that was its own declaration
+    /// would be one more row to keep in the right place when commands move.
+    separator: bool = false
 }

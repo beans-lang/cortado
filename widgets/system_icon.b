@@ -169,4 +169,42 @@ pub enum(u8) SystemIcon {
             table => "table",
         }
     }
+
+    /// The role this name spells, or nothing when no role does.
+    ///
+    /// The inverse of `name()`, and it lives beside it so the two lists are
+    /// one list. A caller with its own string-to-role table would have a
+    /// second one to keep in step, and the way that fails is a role quietly
+    /// becoming `none` — an empty square where an icon was asked for.
+    pub static fn from_name(text: string) -> Option<SystemIcon> {
+        if text == "none" { return some(SystemIcon.none)
+        } else if text == "refresh" { return some(SystemIcon.refresh)
+        } else if text == "add" { return some(SystemIcon.add)
+        } else if text == "remove" { return some(SystemIcon.remove)
+        } else if text == "delete" { return some(SystemIcon.delete)
+        } else if text == "open" { return some(SystemIcon.open)
+        } else if text == "save" { return some(SystemIcon.save)
+        } else if text == "search" { return some(SystemIcon.search)
+        } else if text == "run" { return some(SystemIcon.run)
+        } else if text == "stop" { return some(SystemIcon.stop)
+        } else if text == "back" { return some(SystemIcon.back)
+        } else if text == "forward" { return some(SystemIcon.forward)
+        } else if text == "cut" { return some(SystemIcon.cut)
+        } else if text == "copy" { return some(SystemIcon.copy)
+        } else if text == "paste" { return some(SystemIcon.paste)
+        } else if text == "undo" { return some(SystemIcon.undo)
+        } else if text == "redo" { return some(SystemIcon.redo)
+        } else if text == "print" { return some(SystemIcon.print)
+        } else if text == "settings" { return some(SystemIcon.settings)
+        } else if text == "info" { return some(SystemIcon.info)
+        } else if text == "warning" { return some(SystemIcon.warning)
+        } else if text == "error" { return some(SystemIcon.error)
+        } else if text == "help" { return some(SystemIcon.help)
+        } else if text == "document" { return some(SystemIcon.document)
+        } else if text == "folder" { return some(SystemIcon.folder)
+        } else if text == "database" { return some(SystemIcon.database)
+        } else if text == "table" { return some(SystemIcon.table)
+        }
+        return none
+    }
 }

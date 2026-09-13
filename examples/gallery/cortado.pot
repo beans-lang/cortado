@@ -1,0 +1,4 @@
+# Every control cortado has, in one window, described in markup.
+name       Gallery
+identifier org.beans-lang.cortado.gallery
+markup     site

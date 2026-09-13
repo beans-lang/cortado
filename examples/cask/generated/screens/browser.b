@@ -1,23 +1,23 @@
-// Generated from examples/cask/site/browser.bx by cortado-bx. Do not edit.
+// Generated from screens/browser.bx by cortado. Do not edit.
 //
 // The <beans> block below is browser.bx's, copied through byte for byte; its
 // own package line is blanked so every line after it keeps its number. The
 // render method under it is the markup, as Builder calls.
 // Change browser.bx and regenerate:
 //
-//     cortado-bx build examples/cask/site/browser.bx
-package site
+//     cortado generate screens/browser.bx
+package screens
 
 import {Builder, Component} from cortado.component
 import {UiEvent} from cortado.events
 
 
-//          
+//             
 
 import cortado.component
 import cortado.widgets
 import cortado.events
-import {view, inject} from cortado.annotations
+import {view, inject, window, command} from cortado.annotations
 import {Session} from cask.ui
 import std.io
 
@@ -38,6 +38,7 @@ import std.io
 /// Every `$if` in it is a control that is not on every platform, and each has
 /// a sentence for where it is missing rather than a hole.
 @view
+@window(title: "cask", width: 1000.0, height: 660.0)
 pub partial class Browser extends component.Component {
     /// Everything the window is looking at, and every handler it has.
     ///
@@ -54,6 +55,26 @@ pub partial class Browser extends component.Component {
     pub has_web: bool = false
 
     pub fn init() { super.init() }
+
+    /// The window's commands, each on the method it runs.
+    ///
+    /// One declaration each, where there were two tables: five `Menu.add`
+    /// rows with a token apiece in `main.b`, and a `router.on` handler
+    /// matching those tokens back to these four calls. A command is not a
+    /// control — it has a role the platform places it by, a shortcut the
+    /// platform spells and an icon the platform may not have — so it is
+    /// declared here rather than described in the markup above.
+    @command(title: "Refresh", key: "mod+r", icon: "refresh")
+    pub fn refresh_tree() { self.work.retree() }
+
+    @command(title: "Execute", key: "mod+return", icon: "run")
+    pub fn run_statement() { self.work.execute() }
+
+    @command(title: "Report", key: "mod+p", icon: "print")
+    pub fn render_report() { self.work.render() }
+
+    @command(title: "Connection", key: "mod+i", icon: "info", separator: true)
+    pub fn show_connection() { self.work.show_facts() }
 
     pub override fn on_init() {
         self.has_split = widgets.WidgetKind.split_view.available()

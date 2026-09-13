@@ -1,0 +1,11 @@
+# The application, as against the module. `beans.pot` cannot hold any of this:
+# the compiler refuses a manifest row it does not know, which is the right rule
+# and the reason this file exists beside it.
+name       Markup
+identifier org.beans-lang.cortado.markup
+
+# This example keeps its markup in `site/`, which predates the scaffolder's
+# `screens/` — and it stays that way on purpose. The folder a screen lives in
+# is the project's choice; a tool that only understood one name would be one
+# more thing to rename on the way in.
+markup     site

@@ -1,11 +1,11 @@
-// Generated from examples/markup/site/price.bx by cortado-bx. Do not edit.
+// Generated from site/price.bx by cortado. Do not edit.
 //
 // The <beans> block below is price.bx's, copied through byte for byte; its
 // own package line is blanked so every line after it keeps its number. The
 // render method under it is the markup, as Builder calls.
 // Change price.bx and regenerate:
 //
-//     cortado-bx build examples/markup/site/price.bx
+//     cortado generate site/price.bx
 package site
 
 import {Builder, Component} from cortado.component

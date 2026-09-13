@@ -1,9 +1,8 @@
 // cask — a database browser, shaped like the one everybody already knows.
 //
-//     beansc build examples/cortado_bx.b -o build/cortado-bx
-//     build/cortado-bx build examples/cask/site/browser.bx
-//     beansc build examples/cask/main.b -o build/cask && ./build/cask
-//     ./build/cask some.db          # or point it at a file
+//     cortado run                   # from examples/cask
+//     cortado run -- some.db        # or point it at a file
+//     cortado run -- --dump         # the tree and the data, headless
 //
 // **The layout is DBeaver's**, because that shape is what a person who
 // browses databases already has in their hands: a navigator tree down the
@@ -11,12 +10,14 @@
 // statement is above its results, and a status bar that says what you are
 // connected to. Nothing here is a new idea, and that is the point.
 //
-// **The screen is `site/browser.bx`, and this file no longer draws anything.**
+// **The screen is `screens/browser.bx`, and this file no longer draws anything.**
 // It used to: four hundred and fifty lines of it were controls built one at a
 // time and an `arrange` closure that wrote out the layout tree node by node,
 // rebuilt from scratch on every divider drag. All of that is markup now, and
-// what is left here is the three things markup is not for — opening a
-// database, describing the commands, and putting a window on the screen.
+// what is left here is the one thing neither markup nor cortado is for:
+// opening a database. The window's size and title are `@window` on `Browser`,
+// its four commands are `@command` on the methods they run, and the container,
+// the application, the mount and the render loop are `cortado_app.run_main`.
 //
 // **Nothing above `cask.engine` knows what SQLite is.** A database is a
 // `Connection`; a kind of database is a `Driver`; the window asks a registry
@@ -48,152 +49,55 @@ import std.os
 import {Connection, DbObject, Grid, Registry} from cask.engine
 import {SqliteDriver} from cask.sqlite_driver
 import {Navigator, Session} from cask.ui
-import {Browser} from cask.generated.site
+import {Browser} from cask.generated.screens
 
-const REFRESH: int = 21
-const EXECUTE: int = 22
-const RENDER: int = 23
-const ABOUT: int = 24
-
-fn run(target: string, showing: bool) -> Result<bool> {
-    // ------------------------------------------------------ the drivers
-
+/// Everything the window is looking at, made before the screen is shown.
+///
+/// It is built here rather than registered as a type the container constructs,
+/// because the session holds an **open database**: a container that built its
+/// own would open a second one.
+fn open_session(target: string) -> Result<Session> {
     var drivers: Registry = new Registry()
     drivers.add(new SqliteDriver())
     let link: Connection = drivers.open(target)?
     let tree: Navigator = new Navigator(link)
-    let work: Session = new Session(link, tree)
-
-    // The screen asks for its session by type, so it is registered rather
-    // than passed: a screen that took its database as a parameter could not
-    // be shown by anything that did not already have one.
-    var services: barista.ServiceCollection = new barista.ServiceCollection()
-    // A factory that hands back the one already made, rather than a type
-    // barista constructs: the session holds an open database, and a container
-    // that built its own would open a second one.
-    barista.add_singleton_factory(services,
-        fn(from: barista.ServiceProvider) -> Result<Session> { return ok(work) })
-        .expect("register the session")
-    let provider: barista.ServiceProvider = services.build_provider()
-    let container: cortado_app.Container = new cortado_app.Container(provider)
-
-    // ------------------------------------------------------- the window
-
-    var app: surface.Application = new surface.Application(
-        if showing { platform.AppRole.gui } else { platform.AppRole.headless })
-    app.check_abi()?
-
-    var window: surface.Window = app.window(1000.0, 660.0, "cask")?
-    var root: widgets.Container = new widgets.Container()
-    window.set_root(root)?
-
-    // One command table, which becomes the toolbar where there is one and the
-    // menu bar where there is one. Two lists would drift.
-    //
-    // Still here rather than in the markup, and for the same reason the tab
-    // labels are: a command is not a control. It has a role the platform
-    // places by, a shortcut the platform spells, and an icon the platform may
-    // not have — none of which is a shape on a screen.
-    var commands: surface.Menu = surface.Menu.of("cask")?
-    commands.add("Refresh", "mod+r", surface.CommandRole.none, REFRESH)?
-    commands.add("Execute", "mod+return", surface.CommandRole.none, EXECUTE)?
-    commands.add("Report", "mod+p", surface.CommandRole.none, RENDER)?
-    commands.separator()?
-    commands.add("Connection", "mod+i", surface.CommandRole.none, ABOUT)?
-    // The system's own icons, where the system has one. A role a platform
-    // cannot draw is left as words rather than as an empty square — Windows
-    // has no standard picture for "run", and a toolbar of blanks is worse
-    // than a toolbar of labels.
-    wear(commands, REFRESH, widgets.SystemIcon.refresh)
-    wear(commands, EXECUTE, widgets.SystemIcon.run)
-    wear(commands, RENDER, widgets.SystemIcon.print)
-    wear(commands, ABOUT, widgets.SystemIcon.info)
-
-    let have_bar: bool = platform.Capability.toolbar.available()
-    if have_bar { window.set_toolbar(commands)? }
-
-    // -------------------------------------------------------- the screen
-
-    let content: geometry.Size = window.content_size()?
-    var mount: component.Mount = new component.Mount(root, app.router)
-    mount.use_services(container)
-    mount.use_activator(container)
-    mount.set_bounds(content)
-    var screen: Browser = new Browser()
-    mount.show(screen)?
-
-    // Laid out, *then* the dividers, then laid out again — and the order is
-    // the whole point. Every platform here re-divides a split view's panes
-    // when the control itself is resized, so a divider written before the
-    // control has its final frame is not the divider a moment later: the first
-    // pass gives each split view its real size, and the second is the one
-    // whose pane widths are true.
-    //
-    // It is here rather than inside `Session.dress` because a split view
-    // refuses a divider wider than itself, and inside `on_mount` the control
-    // exists with no frame at all — so every platform answers `out_of_range`
-    // to a number that is fine one pass later.
-    match work.place_dividers() {
-        ok(placed) => {}
-        err(problem) => { io.println("cask: {problem.kind}: {problem.msg}") }
-    }
-    mount.refresh()?
-
-    // The commands, which belong to the window rather than to any control.
-    app.router.on(host.Handle.none(), events.EventKind.command,
-        fn(event: events.UiEvent) {
-            if event.token == REFRESH { work.retree() }
-            if event.token == EXECUTE { work.execute() }
-            if event.token == RENDER { work.render() }
-            if event.token == ABOUT { work.show_facts() }
-        })
-
     io.println("cask: {link.label()?} via {link.server()?}")
-    io.println("  drivers={drivers.count()} toolbar={have_bar} split={widgets.WidgetKind.split_view.available()} tabs={widgets.WidgetKind.tab_view.available()}")
+    io.println("  drivers={drivers.count()} toolbar={platform.Capability.toolbar.available()} split={widgets.WidgetKind.split_view.available()} tabs={widgets.WidgetKind.tab_view.available()}")
     io.println("  day={widgets.WidgetKind.date_picker.available()} colour={widgets.WidgetKind.color_well.available()} web={widgets.WebView.offered()}")
+    return ok(new Session(link, tree))
+}
 
-    if !showing {
-        // What a person would see in the navigator, and what opening a table
-        // put on the Data tab. The control tree below says the window is laid
-        // out; these say the database was read — which is the half a dump of
-        // widgets cannot show, because a table's rows are not controls.
-        io.println("-- the navigator --")
-        // Walked through the *source*, not the control, and the difference is
-        // the point: this is what a person would see if they opened every
-        // node, and what the control shows is whichever of these are open.
-        show_tree(tree, widgets.OutlineView.root(), 0)
-        match find_node(tree, widgets.OutlineView.root(), "beans") {
-            none => { io.println("-- no table called beans --") }
-            some(node) => {
-                work.open_object(node)
-                io.println("-- opening a table --")
-                io.println("  {work.data.column_count()} columns, {work.data.row_count()} rows")
-                io.println("  titles: {joined(work.data.column_titles())}")
-                io.println("  row 7: {joined(row_of(work.data, 7))}")
-                io.println("  filtered to 'ethiopia': {work.data.filtered("ethiopia").row_count()} rows")
-            }
+/// What the gate reads: the database, rather than the controls.
+///
+/// The control tree `--dump` prints says the window is laid out; this says the
+/// database was read — which is the half a dump of widgets cannot show,
+/// because a table's rows are not controls.
+fn report(work: Session) {
+    io.println("-- the navigator --")
+    // Walked through the *source*, not the control, and the difference is the
+    // point: this is what a person would see if they opened every node, and
+    // what the control shows is whichever of these are open.
+    show_tree(work.tree, widgets.OutlineView.root(), 0)
+    match find_node(work.tree, widgets.OutlineView.root(), "beans") {
+        none => { io.println("-- no table called beans --") }
+        some(node) => {
+            work.open_object(node)
+            io.println("-- opening a table --")
+            io.println("  {work.data.column_count()} columns, {work.data.row_count()} rows")
+            io.println("  titles: {joined(work.data.column_titles())}")
+            io.println("  row 7: {joined(row_of(work.data, 7))}")
+            io.println("  filtered to 'ethiopia': {work.data.filtered("ethiopia").row_count()} rows")
         }
-        work.execute()
-        io.println("-- running the editor's statement --")
-        io.println("  {work.answer.column_count()} columns, {work.answer.row_count()} rows")
-        io.println("  titles: {joined(work.answer.column_titles())}")
-        // The editor's own message, which names the day `:since` became — so
-        // the golden shows the parameter and not only its effect. The table
-        // has eight rows and this answers seven, which is the earliest one
-        // falling outside the date the picker holds.
-        io.println("  it said: {work.said_words()}")
-
-        io.print(widgets.WidgetDump.of(root)?)
-        link.close()?
-        app.shutdown()
-        return ok(true)
     }
-
-    window.show()?
-    app.run()
-    link.close()?
-    app.shutdown()
-    return ok(true)
+    work.execute()
+    io.println("-- running the editor's statement --")
+    io.println("  {work.answer.column_count()} columns, {work.answer.row_count()} rows")
+    io.println("  titles: {joined(work.answer.column_titles())}")
+    // The editor's own message, which names the day `:since` became — so the
+    // golden shows the parameter and not only its effect. The table has eight
+    // rows and this answers seven, which is the earliest one falling outside
+    // the date the picker holds.
+    io.println("  it said: {work.said_words()}")
 }
 
 /// Puts a system icon on a command, if this platform has that one.
@@ -287,8 +191,40 @@ fn main() {
             target = arg
         }
     }
-    match run(target, showing) {
-        ok(done) => {}
-        err(problem) => { io.println("{problem.kind}: {problem.msg}") }
+
+    var work: Session = Session.blank()
+    match open_session(target) {
+        ok(opened) => { work = opened }
+        err(problem) => {
+            io.println("{problem.kind}: {problem.msg}")
+            return
+        }
     }
+
+    var options: cortado_app.AppOptions = new cortado_app.AppOptions()
+    // The screen asks for its session by type, so it is registered rather than
+    // passed: a screen that took its database as a parameter could not be
+    // shown by anything that did not already have one. A factory that hands
+    // back the one already made, rather than a type barista constructs,
+    // because the session holds an open database.
+    options.configure = fn(services: barista.ServiceCollection) -> Result<bool> {
+        return barista.add_singleton_factory(services,
+            fn(from: barista.ServiceProvider) -> Result<Session> { return ok(work) })
+    }
+    // Laid out, *then* the dividers. Every platform here re-divides a split
+    // view's panes when the control itself is resized, so a divider written
+    // before the control has its final frame is not the divider a moment
+    // later — and inside `on_mount` the control exists with no frame at all,
+    // so every platform answers `out_of_range` to a number that is fine one
+    // pass later. `run_main` lays the tree out again after this returns.
+    options.on_ready = fn() -> Result<bool> {
+        work.place_dividers()?
+        if !showing { report(work) }
+        return ok(true)
+    }
+    options.on_closing = fn() -> Result<bool> {
+        work.link.close()?
+        return ok(true)
+    }
+    cortado_app.run_main<Browser>(options)
 }
