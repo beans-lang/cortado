@@ -12,6 +12,13 @@ First working macOS host.
   signed `.app`. `cortado-bx` is `cortado generate` under its older name and
   calls the same code, so there is one implementation of the directory walk and
   one of the mirror rule.
+- **`tools/install.sh` installs it, and the README says how.** The command line
+  shipped with no instruction for getting it, and the script itself could not
+  build a thing: it compiles from cortado's directory rather than the
+  compiler's, and a tree-built `beansc` resolves `BEANS_RUNTIME` relative to the
+  working directory, so it died before writing a byte. Nothing ran it, which is
+  how that survived. A gate leg now installs into a scratch directory and runs
+  what landed from somewhere with no checkout in sight.
 - **Two configurations, named.** `cortado build` passes `--debug` and
   `cortado build -c Release` passes `--release`, into `build/debug/` and
   `build/release/`. Every cortado build documented before this passed *neither*,

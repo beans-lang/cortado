@@ -60,12 +60,58 @@ every run).
 | Windows | host not written. Everything above the host runs and is tested here |
 | Android | no host yet — but `cortado.layout` builds for it and runs on an emulator, printing the same 69 goldens |
 
+## Installing
+
+cortado is compiled by `beansc`, so install [the Beans
+compiler](https://github.com/beans-lang/beans) first.
+
+```
+git clone https://github.com/beans-lang/cortado
+git clone https://github.com/beans-lang/barista
+cd cortado && ./tools/install.sh
+```
+
+That builds `cortado` and puts it beside `beansc` in `$BEANS_HOME/bin`, or
+`~/.beans/bin` when that is unset. Pass a directory to choose your own:
+`./tools/install.sh /usr/local/bin`. It finds the compiler the way everything
+else here does — `$BEANSC`, then `$BEANS_ROOT/build/beansc`, then
+`../../beans/build/beansc`, then `PATH` — and says so rather than guessing if
+there is none.
+
+**barista is cloned beside it, not inside it.** cortado's dependency injection
+is barista, and a scaffolded project names it as the sibling of the cortado
+checkout — so the two directories have to sit next to each other.
+
+**There is no download.** cortado has no published release yet, so the binary
+comes from the checkout. That is also the arrangement that keeps it honest
+while it moves: the generator and the `cortado` package a project depends on
+come out of one tree, and a generated file written by one version against a
+library from another is exactly the silent staleness `cortado check --drift`
+exists to catch.
+
+`cortado-bx` is installed alongside. It is the same program under its older
+name, kept because the editors' vocabulary and a good deal of writing still
+name it.
+
+**An application does not need cortado to build.** A project's `generated/` is
+checked in, so a clone compiles with plain `beansc` and no cortado binary
+present at all — which is how `./test.sh --native` builds every example here.
+`cortado` is what you need to *write* a project: to scaffold one, and to
+regenerate the markup as part of every build.
+
 ## Building an application
 
 ```
-cortado init myapp && cd myapp
+cortado init myapp --cortado ../cortado && cd myapp
 cortado run
 ```
+
+`--cortado` is the checkout you cloned, and it is asked for rather than guessed:
+a project's `beans.pot` names cortado and barista with `require path` rows, and
+a row pointing at a directory that is not there fails later with a message about
+a missing package rather than about the row. Leave the flag off when you are
+making a project inside this workspace — then the checkout is found by walking
+up, and `init` says so instead of writing a manifest it cannot stand behind.
 
 `init` writes a project that builds and renders on the first run: a screen, a
 component the screen reuses, an injected service, the two manifests, and the

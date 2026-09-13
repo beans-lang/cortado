@@ -942,6 +942,40 @@ else
     fi
 fi
 
+# `tools/install.sh` is how a person gets `cortado` at all, and it is the one
+# script in here that nothing else runs — which is exactly how it shipped
+# unable to build anything. It compiles from cortado's directory rather than
+# the compiler's, and a tree-built beansc resolves BEANS_RUNTIME relative to
+# the working directory, so without the roots it names it dies before writing
+# a byte. Installing into a scratch directory and running what landed is the
+# only thing that can tell.
+installed="$tmp/installed"
+if ! "$root/tools/install.sh" "$installed" >"$tmp/install.log" 2>&1; then
+    echo "FAIL install: tools/install.sh did not install" >&2
+    cat "$tmp/install.log" >&2
+    exit 1
+fi
+for name in cortado cortado-bx; do
+    if [[ ! -x "$installed/$name" ]]; then
+        echo "FAIL install: $name is not in $installed" >&2
+        exit 1
+    fi
+done
+# Run the installed copy, not the one built above, and from somewhere with no
+# checkout in sight: a binary that only works inside its own source tree is not
+# installed, it is merely copied.
+# Its output is captured rather than piped: `cortado` with no command prints
+# usage and exits 2, and under `pipefail` that status would sink the pipeline
+# however well the text matched.
+(cd "$tmp" && "$installed/cortado" >"$tmp/installed-usage.txt" 2>&1) || true
+if ! grep -q '^usage: cortado' "$tmp/installed-usage.txt"; then
+    echo "FAIL install: the installed cortado does not run" >&2
+    cat "$tmp/installed-usage.txt" >&2
+    exit 1
+fi
+pass
+echo "ok install: tools/install.sh installs a cortado that runs outside the tree"
+
 if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     if [[ -f "$root/../barista/beans.pot" ]]; then
         "$BEANSC" build "$root/examples/markup/main.b" -o "$tmp/markup.bin" >/dev/null
