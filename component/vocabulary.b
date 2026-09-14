@@ -215,7 +215,9 @@ pub class Vocabulary {
                name == "margin_top" || name == "margin_right" ||
                name == "margin_bottom" || name == "margin_left" ||
                name == "min_width" || name == "max_width" ||
-               name == "min_height" || name == "max_height"
+               name == "min_height" || name == "max_height" ||
+               name == "width_percent" || name == "height_percent" ||
+               name == "aspect_ratio"
     }
 
     /// Whether a component tag may carry `name`: what the component's root asks
@@ -228,6 +230,8 @@ pub class Vocabulary {
                name == "width" || name == "height" ||
                name == "min_width" || name == "max_width" ||
                name == "min_height" || name == "max_height" ||
+               name == "width_percent" || name == "height_percent" ||
+               name == "aspect_ratio" ||
                name == "x" || name == "y" || name == "align"
     }
 

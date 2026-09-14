@@ -319,7 +319,9 @@ main-axis justification and cross-axis alignment, and every child may carry a
 margin, size bounds, a grow and shrink weight, and an alignment of its own.
 Padding and margin are both `geometry.EdgeInsets` — `all(8.0)`,
 `symmetric(16.0, 8.0)` or `of(top, right, bottom, left)` — so a lopsided box
-is one call, not four.
+is one call, not four. A child may also ask for a share of its room
+(`width_percent`, `height_percent`) and a shape (`aspect_ratio`); the markup
+section below says how each resolves.
 
 Three decisions are worth knowing about, because each is a class of bug the
 engine does not have:
@@ -960,6 +962,23 @@ source order, so `width={150} max_width={200}` may stretch to 200 and the
 reverse order is pinned at 150. A range that ends up reversed — a minimum
 above a maximum — is refused naming both numbers, because the solver would
 otherwise fold them together silently.
+
+**A share of the room, and a shape.** `width_percent={50}` and
+`height_percent={50}` are a share, 0 to 100, of the room the container offers
+the child — its content box, less the child's own margin, so `width_percent={100}`
+inside `margin_x={10}` fills the room between the margins rather than
+overflowing it. Across a run it is the size, stretch or no stretch; along a
+flexing run it is the basis, and `grow` still grows from it; `min_width` and
+`max_width` still clamp it. A share and a pin on one axis are refused as
+deciding it twice, and a share and a `basis` along one axis are refused by
+the solver. `aspect_ratio={1.5}` is width over height, resolved at measure
+from whichever axis is settled — a pinned width, a pinned height, a share, or
+the stretch of the run it sits in — and from the measured width when none is.
+A canvas that follows the window is one line:
+
+```
+<Canvas width_percent={100} aspect_ratio={1.777} />
+```
 
 ### A screen laid out by coordinate
 

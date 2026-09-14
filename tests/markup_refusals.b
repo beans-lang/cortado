@@ -459,6 +459,12 @@ fn bounds() {
     emits("min_height on a component tag",
           markup([r#"<VStack><Tile min_height={20} /></VStack>"#]),
           r#"}).number("min_height", (20) as f64)"#)
+    emits("width_percent on a control",
+          markup([r#"<VStack><Label width_percent={50} text="hi" /></VStack>"#]),
+          r#"number("width_percent", (50) as f64)"#)
+    emits("aspect_ratio on a component tag",
+          markup([r#"<VStack><Tile aspect_ratio={1.5} /></VStack>"#]),
+          r#"}).number("aspect_ratio", (1.5) as f64)"#)
     refuses("maxWidth",
             markup([r#"<VStack><Label maxWidth={200} text="hi" /></VStack>"#]),
             "max_width")

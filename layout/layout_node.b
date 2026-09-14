@@ -170,9 +170,12 @@ pub class LayoutNode {
         let mine: Constraint = self.spec.constrain(limit)
         let inside: Constraint = mine.deflate(self.chrome)
         let wanted: geometry.Size = self.arranger.measure(self, inside, ruler)?
-        let whole: geometry.Size = geometry.Size.of(
+        var whole: geometry.Size = geometry.Size.of(
             wanted.width + self.chrome.horizontal(),
             wanted.height + self.chrome.vertical())
+        if self.spec.aspect_ratio > 0.0 {
+            whole = self.spec.shaped(whole, mine)
+        }
         let answer: geometry.Size = mine.clamp(whole)
         // Only a whole answer is remembered. A measure that failed part-way
         // down left nothing to remember, and remembering the constraint alone

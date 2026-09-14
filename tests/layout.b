@@ -957,6 +957,113 @@ fn scrolling() {
     io.println("  it scrolls: {grown.content.height == 120.0}")
 }
 
+// ---- 17. a share of the room, and a shape ----
+
+fn proportions() {
+    // Across a stretched column, a share is the width: half of 300 is 150, a
+    // cap still caps it, and a margin comes off the room before the share.
+    var across: layout.LayoutNode = layout.LayoutNode.group("root", stretched_column(0.0))
+    var half: layout.LayoutSpec = layout.LayoutSpec.auto()
+    half.width_percent = 50.0
+    across.add(spec_leaf("half", 1, half))
+    var capped: layout.LayoutSpec = layout.LayoutSpec.auto()
+    capped.width_percent = 90.0
+    capped.max_width = 200.0
+    across.add(spec_leaf("nine tenths, capped at 200", 1, capped))
+    var inset: layout.LayoutSpec = layout.LayoutSpec.auto()
+    inset.width_percent = 100.0
+    inset.margin = geometry.EdgeInsets.symmetric(10.0, 0.0)
+    across.add(spec_leaf("all of it, inside a margin", 1, inset))
+    var quarter: layout.LayoutSpec = layout.LayoutSpec.auto()
+    quarter.width_percent = 25.0
+    quarter.align = geometry.Align.center
+    across.add(spec_leaf("a quarter, centred", 1, quarter))
+    run("shares across a stretched column", across, 300.0, 200.0)
+
+    // Along a flexing row a share is a basis: the child grows from it.
+    var shared: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.row(0.0))
+    var fixed_share: layout.LayoutSpec = layout.LayoutSpec.auto()
+    fixed_share.width_percent = 25.0
+    shared.add(spec_leaf("a quarter", 1, fixed_share))
+    shared.add(spec_leaf("the rest", 1, layout.LayoutSpec.flexible(1.0)))
+    run("a share beside one that grows", shared, 300.0, 40.0)
+
+    var both_grow: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.row(0.0))
+    var growing_share: layout.LayoutSpec = layout.LayoutSpec.flexible(1.0)
+    growing_share.width_percent = 50.0
+    both_grow.add(spec_leaf("half, growing", 1, growing_share))
+    both_grow.add(spec_leaf("natural, growing", 1, layout.LayoutSpec.flexible(1.0)))
+    run("a share that grows too", both_grow, 300.0, 40.0)
+
+    // In a plain row it is the size, and nothing grows.
+    var plain: layout.LayoutNode = layout.LayoutNode.group("root", row(0.0))
+    var three_tenths: layout.LayoutSpec = layout.LayoutSpec.auto()
+    three_tenths.width_percent = 30.0
+    plain.add(spec_leaf("three tenths", 1, three_tenths))
+    plain.add(leaf("natural", 1))
+    run("a share along a plain row", plain, 300.0, 40.0)
+
+    // A box offers its content on both axes.
+    var placed: layout.AbsoluteLayout = new layout.AbsoluteLayout()
+    var box: layout.LayoutNode = layout.LayoutNode.group("root", placed)
+    var corner: layout.LayoutSpec = layout.LayoutSpec.at(10.0, 10.0)
+    corner.width_percent = 50.0
+    corner.height_percent = 50.0
+    box.add(spec_leaf("half each way", 1, corner))
+    run("shares in a box", box, 200.0, 100.0)
+
+    // Inside a scroll view the content is as tall as the viewport at least,
+    // and a share is of that: the content is measured unbounded, but placed in a box.
+    var scrolling: layout.LayoutNode = layout.LayoutNode.group("root", stretched_column(0.0))
+    var viewport: layout.LayoutNode = layout.LayoutNode.group("viewport", new layout.ScrollLayout())
+    viewport.spec = layout.LayoutSpec.tall(100.0)
+    var content: layout.LayoutNode = layout.LayoutNode.group("content", stretched_column(0.0))
+    var half_tall: layout.LayoutSpec = layout.LayoutSpec.auto()
+    half_tall.height_percent = 50.0
+    content.add(spec_leaf("half the viewport", 1, half_tall))
+    viewport.add(content)
+    scrolling.add(viewport)
+    run("a share inside a scroll view", scrolling, 300.0, 100.0)
+
+    // A basis and a share along one axis contradict each other.
+    var torn: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.row(0.0))
+    var twice: layout.LayoutSpec = layout.LayoutSpec.auto()
+    twice.basis = 50.0
+    twice.width_percent = 50.0
+    torn.add(spec_leaf("basis and share", 1, twice))
+    run("basis and share together", torn, 300.0, 40.0)
+
+    // A shape follows whichever axis is settled: a pinned width, a pinned
+    // height, the stretch of a column, or — with none of those — the width measured.
+    var shapes: layout.LayoutNode = layout.LayoutNode.group("root", column(0.0))
+    var from_width: layout.LayoutSpec = layout.LayoutSpec.wide(120.0)
+    from_width.aspect_ratio = 2.0
+    shapes.add(spec_leaf("2:1 from a width of 120", 1, from_width))
+    var from_height: layout.LayoutSpec = layout.LayoutSpec.tall(30.0)
+    from_height.aspect_ratio = 2.0
+    shapes.add(spec_leaf("2:1 from a height of 30", 1, from_height))
+    var from_measure: layout.LayoutSpec = layout.LayoutSpec.auto()
+    from_measure.aspect_ratio = 4.0
+    shapes.add(spec_leaf("4:1 from the 100 it measures", 1, from_measure))
+    var from_share: layout.LayoutSpec = layout.LayoutSpec.auto()
+    from_share.width_percent = 50.0
+    from_share.aspect_ratio = 3.0
+    from_share.align = geometry.Align.stretch
+    shapes.add(spec_leaf("3:1 from half the room", 1, from_share))
+    var from_stretch: layout.LayoutSpec = layout.LayoutSpec.auto()
+    from_stretch.aspect_ratio = 2.0
+    from_stretch.align = geometry.Align.stretch
+    shapes.add(spec_leaf("2:1 from being stretched", 1, from_stretch))
+    run("shapes in a column", shapes, 300.0, 400.0)
+
+    // Both pinned: the pin wins and the ratio is ignored, not enforced.
+    var overruled: layout.LayoutNode = layout.LayoutNode.group("root", column(0.0))
+    var pinned_both: layout.LayoutSpec = layout.LayoutSpec.fixed(80.0, 80.0)
+    pinned_both.aspect_ratio = 2.0
+    overruled.add(spec_leaf("pinned square, asking for 2:1", 1, pinned_both))
+    run("a shape overruled by a pin", overruled, 300.0, 100.0)
+}
+
 fn main() {
     stacks()
     alignment()
@@ -974,4 +1081,5 @@ fn main() {
     cost()
     remeasuring()
     scrolling()
+    proportions()
 }

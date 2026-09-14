@@ -82,4 +82,6 @@
 -- one size bound at a time --
   max_width on a control compiled, emitting it: true
   min_height on a component tag compiled, emitting it: true
+  width_percent on a control compiled, emitting it: true
+  aspect_ratio on a component tag compiled, emitting it: true
   maxWidth refused, saying so: true

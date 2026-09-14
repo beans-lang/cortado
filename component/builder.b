@@ -683,13 +683,37 @@ pub class Builder {
             return
         }
         if name == "width" {
+            if self.refuse_double_pin(element, "width", element.spec.width_percent >= 0.0) { return }
             element.spec.min_width = value
             element.spec.max_width = value
             return
         }
         if name == "height" {
+            if self.refuse_double_pin(element, "height", element.spec.height_percent >= 0.0) { return }
             element.spec.min_height = value
             element.spec.max_height = value
+            return
+        }
+        if name == "width_percent" || name == "height_percent" {
+            if value < 0.0 || value > 100.0 {
+                self.faults.push("<{element.tag}> asks for {name}={value}, and a share of the room is 0 to 100")
+                return
+            }
+            if name == "width_percent" {
+                if self.refuse_double_pin(element, "width", Builder.pinned(element.spec.min_width, element.spec.max_width)) { return }
+                element.spec.width_percent = value
+            } else {
+                if self.refuse_double_pin(element, "height", Builder.pinned(element.spec.min_height, element.spec.max_height)) { return }
+                element.spec.height_percent = value
+            }
+            return
+        }
+        if name == "aspect_ratio" {
+            if value <= 0.0 {
+                self.faults.push("<{element.tag}> asks for aspect_ratio={value}, and a ratio is width over height, above 0")
+                return
+            }
+            element.spec.aspect_ratio = value
             return
         }
         // One bound at a time. Later attributes win, so `width={150}` after a
@@ -705,6 +729,19 @@ pub class Builder {
             return
         }
         self.faults.push("<{element.tag}> has no attribute called '{name}'")
+    }
+
+    /// Whether a lower and an upper bound are one number: a pin.
+    static fn pinned(lower: f64, upper: f64) -> bool {
+        return lower >= 0.0 && upper >= 0.0 && lower == upper
+    }
+
+    /// A pinned size and a share of the room both decide the same axis, so
+    /// writing both is refused rather than ordered.
+    fn refuse_double_pin(element: Element, axis: string, already: bool) -> bool {
+        if !already { return false }
+        self.faults.push("<{element.tag}> has its {axis} decided twice — {axis} and {axis}_percent both pin it, so write one")
+        return true
     }
 
     /// A minimum above a maximum is no box at all. The solver would fold the

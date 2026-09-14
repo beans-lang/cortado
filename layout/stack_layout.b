@@ -120,13 +120,34 @@ pub class StackLayout extends Layout {
         var run: AxisRun = new AxisRun(room_main - reserved)
         for index: int in 0..count {
             let child: LayoutNode = node.at(index)
-            let offer: Constraint = Constraint.loose(
+            var offer: Constraint = Constraint.loose(
                 geometry.Size.of(content.width, content.height))
                 .deflate(child.spec.margin).unbound(self.axis)
+            // A child that will be stretched is measured at the size it will
+            // get, so a wrapped label or an aspect ratio answers for the real box.
+            if child.spec.align.resolve(self.cross) == geometry.Align.stretch {
+                var band: f64 = room_cross - child.spec.margin_on(cross_axis)
+                if band < 0.0 { band = 0.0 }
+                if self.axis.is_horizontal() {
+                    offer = Constraint.of(0.0, -1.0, band, band)
+                } else {
+                    offer = Constraint.of(band, band, 0.0, -1.0)
+                }
+            }
             let measured: geometry.Size = child.measure(offer, ruler)?
             var base: f64 = self.axis.main_of(measured)
             if child.spec.basis >= 0.0 {
                 base = child.spec.basis
+            }
+            // A share of the run is a basis: the child still grows and shrinks
+            // from it, and a basis written beside it is a contradiction.
+            let share: f64 = child.spec.percent_size(self.axis, room_main - child.spec.margin_on(self.axis))
+            if share >= 0.0 {
+                if child.spec.basis >= 0.0 {
+                    return err("\"{child.name}\" asks for a basis of {child.spec.basis} and a share of {child.spec.percent_on(self.axis)}% along the same axis — write one",
+                               "basis_and_percent")
+                }
+                base = share
             }
             // A child that asked to grow, in a layout that hands nothing out.
             //
@@ -219,6 +240,9 @@ fn insets_size(insets: geometry.EdgeInsets) -> geometry.Size {
 
 // A cross-axis size pulled inside the child's own bounds and the room it has.
 fn clamp_cross(value: f64, spec: LayoutSpec, cross_axis: Direction, band: f64) -> f64 {
+    // A share of the band is the size, whatever stretching would have given.
+    let share: f64 = spec.percent_size(cross_axis, band)
+    if share >= 0.0 { return share }
     var out: f64 = value
     let lower: f64 = spec.min_on(cross_axis)
     let upper: f64 = spec.max_on(cross_axis)

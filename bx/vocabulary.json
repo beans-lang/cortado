@@ -47,6 +47,7 @@
     {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
     {"name": "alignment", "detail": "number", "note": "text alignment inside the control"},
     {"name": "animating", "detail": "flag", "note": "whether a spinner is turning"},
+    {"name": "aspect_ratio", "detail": "number", "note": "width over height, above 0, resolved from whichever axis is settled"},
     {"name": "background", "detail": "word", "note": "the colour behind this control, written #rgb, #rrggbb or #rrggbbaa; refused on the four bezelled text controls"},
     {"name": "basis", "detail": "number", "note": "main-axis size to grow or shrink from"},
     {"name": "border_color", "detail": "word", "note": "the outline's colour, written #rgb, #rrggbb or #rrggbbaa"},
@@ -60,6 +61,7 @@
     {"name": "font_size", "detail": "number", "note": "text size in points"},
     {"name": "grow", "detail": "number", "note": "share of leftover space along the main axis"},
     {"name": "height", "detail": "number", "note": "pins the height: min_height and max_height at once"},
+    {"name": "height_percent", "detail": "number", "note": "the height as a share, 0 to 100, of the room its container offers, less its own margin"},
     {"name": "hidden", "detail": "flag", "note": "whether the control is drawn"},
     {"name": "indeterminate", "detail": "flag", "note": "a progress bar with no known total"},
     {"name": "justify", "detail": "word", "note": "main-axis distribution: start, center, end, space_between, space_around, space_evenly"},
@@ -93,6 +95,7 @@
     {"name": "text_color", "detail": "word", "note": "the colour of the control's own text, written #rgb, #rrggbb or #rrggbbaa; carried by a label and the four controls you type into"},
     {"name": "value", "detail": "number", "note": "a slider or progress value"},
     {"name": "width", "detail": "number", "note": "pins the width: min_width and max_width at once"},
+    {"name": "width_percent", "detail": "number", "note": "the width as a share, 0 to 100, of the room its container offers, less its own margin"},
     {"name": "x", "detail": "number", "note": "how far from the left of a <Box> this control is placed, in points"},
     {"name": "y", "detail": "number", "note": "how far from the top of a <Box> this control is placed, in points"}
   ],

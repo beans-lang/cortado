@@ -351,3 +351,41 @@ root flex frame=0,0,200,50
       row4 leaf frame=0,80,200,20
       row5 leaf frame=0,100,200,20
   it scrolls: true
+== shares across a stretched column ==
+root stack frame=0,0,300,200
+  half leaf frame=0,0,150,20
+  nine tenths, capped at 200 leaf frame=0,20,200,20
+  all of it, inside a margin leaf frame=10,40,280,20
+  a quarter, centred leaf frame=113,60,75,20
+== a share beside one that grows ==
+root flex frame=0,0,300,40
+  a quarter leaf frame=0,0,75,20
+  the rest leaf frame=75,0,225,20
+== a share that grows too ==
+root flex frame=0,0,300,40
+  half, growing leaf frame=0,0,175,20
+  natural, growing leaf frame=175,0,125,20
+== a share along a plain row ==
+root stack frame=0,0,300,40
+  three tenths leaf frame=0,0,90,20
+  natural leaf frame=90,0,100,20
+== shares in a box ==
+root absolute frame=0,0,200,100
+  half each way leaf frame=10,10,100,50
+== a share inside a scroll view ==
+root stack frame=0,0,300,100
+  viewport scroll frame=0,0,300,100
+    content stack frame=0,0,300,100
+      half the viewport leaf frame=0,0,300,50
+== basis and share together ==
+  FAILED basis_and_percent: "basis and share" asks for a basis of 50 and a share of 50% along the same axis — write one
+== shapes in a column ==
+root stack frame=0,0,300,400
+  2:1 from a width of 120 leaf frame=0,0,120,60
+  2:1 from a height of 30 leaf frame=0,60,60,30
+  4:1 from the 100 it measures leaf frame=0,90,100,25
+  3:1 from half the room leaf frame=0,115,150,50
+  2:1 from being stretched leaf frame=0,165,300,150
+== a shape overruled by a pin ==
+root stack frame=0,0,300,100
+  pinned square, asking for 2:1 leaf frame=0,0,80,80

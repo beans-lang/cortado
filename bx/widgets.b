@@ -188,6 +188,10 @@ pub fn attribute_call(name: string) -> string {
        name == "min_height" || name == "max_height" {
         return "number"
     }
+    // A share of the room, 0 to 100, and a width-over-height shape.
+    if name == "width_percent" || name == "height_percent" || name == "aspect_ratio" {
+        return "number"
+    }
     // A colour is a word here and a whole number by the time it reaches the
     // ABI, parsed once in `Builder.word` so `#abc` means one thing everywhere.
     if name == "align" || name == "justify" || is_colour_attribute(name) { return "word" }
@@ -204,6 +208,8 @@ pub fn is_placement_attribute(name: string) -> bool {
            name == "width" || name == "height" ||
            name == "min_width" || name == "max_width" ||
            name == "min_height" || name == "max_height" ||
+           name == "width_percent" || name == "height_percent" ||
+           name == "aspect_ratio" ||
            name == "x" || name == "y" || name == "align"
 }
 
@@ -216,17 +222,17 @@ pub fn is_colour_attribute(name: string) -> bool {
 
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
 pub fn attribute_names() -> List<string> {
-    return ["align", "alignment", "animating", "background", "basis",
+    return ["align", "alignment", "animating", "aspect_ratio", "background", "basis",
             "border_color", "border_width", "checked", "color", "corner_radius",
             "day", "editable", "enabled",
-            "font_size", "grow", "height", "hidden", "indeterminate",
+            "font_size", "grow", "height", "height_percent", "hidden", "indeterminate",
             "justify", "margin", "margin_bottom", "margin_left", "margin_right",
             "margin_top", "margin_x", "margin_y", "max", "max_height",
             "max_width", "min", "min_height", "min_width", "opacity",
             "open", "padding", "padding_bottom", "padding_left",
             "padding_right", "padding_top", "padding_x", "padding_y",
             "selected", "shrink", "spacing", "step", "text", "text_color",
-            "value", "width", "x", "y"]
+            "value", "width", "width_percent", "x", "y"]
 }
 
 /// Every control tag, for the same reason.

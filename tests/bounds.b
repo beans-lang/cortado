@@ -66,6 +66,12 @@ fn bounds_of(tree: component.Element) -> string {
     return "w {spec.min_width as int}..{spec.max_width as int}, h {spec.min_height as int}..{spec.max_height as int}"
 }
 
+/// The share the first child asks for on each axis, `-1` for none.
+fn tree_share(tree: component.Element) -> string {
+    let spec: layout.LayoutSpec = tree.child_at(0).spec
+    return "w {spec.width_percent as int}%, h {spec.height_percent as int}%"
+}
+
 /// One stretching column holding one label, with `names` written on the
 /// label in that order.
 fn bounded(names: List<string>, values: List<f64>) -> Result<component.Element> {
@@ -140,6 +146,24 @@ fn drive() -> Result<bool> {
     io.println("-- on a component tag --")
     match placed("max_width", 200.0) {
         ok(tree) => { io.println("  max_width={200} places the root: {bounds_of(tree)}") }
+        err(problem) => { io.println("  refused: {problem.msg}") }
+    }
+
+    io.println("-- a share of the room, and a shape --")
+    let half: component.Element = bounded(["width_percent"], [50.0])?
+    io.println("  width_percent={50} is kept as a share: {tree_share(half)}")
+    show("half the width of a stretched 300", half, 300.0, 100.0)
+    let shaped: component.Element = bounded(["width_percent", "aspect_ratio"], [50.0, 3.0])?
+    show("half the width, three times as wide as tall", shaped, 300.0, 100.0)
+    let floored_share: component.Element = bounded(["width_percent", "min_width"], [10.0, 80.0])?
+    show("a tenth, but at least 80", floored_share, 300.0, 100.0)
+    refuse("width_percent={150}", bounded(["width_percent"], [150.0]), "0 to 100")
+    refuse("height_percent={-5}", bounded(["height_percent"], [0.0 - 5.0]), "0 to 100")
+    refuse("width={100} then width_percent={50}", bounded(["width", "width_percent"], [100.0, 50.0]), "decided twice")
+    refuse("width_percent={50} then width={100}", bounded(["width_percent", "width"], [50.0, 100.0]), "decided twice")
+    refuse("aspect_ratio={0}", bounded(["aspect_ratio"], [0.0]), "above 0")
+    match placed("aspect_ratio", 1.5) {
+        ok(tree) => { io.println("  aspect_ratio={1.5} on a component tag: {tree.child_at(0).spec.aspect_ratio}") }
         err(problem) => { io.println("  refused: {problem.msg}") }
     }
 

@@ -179,6 +179,9 @@ fn attribute_note(name: string) -> string {
     if name == "basis" { return "main-axis size to grow or shrink from" }
     if name == "width" { return "pins the width: min_width and max_width at once" }
     if name == "height" { return "pins the height: min_height and max_height at once" }
+    if name == "width_percent" { return "the width as a share, 0 to 100, of the room its container offers, less its own margin" }
+    if name == "height_percent" { return "the height as a share, 0 to 100, of the room its container offers, less its own margin" }
+    if name == "aspect_ratio" { return "width over height, above 0, resolved from whichever axis is settled" }
     if name == "min_width" { return "the least width this control takes, in points" }
     if name == "max_width" { return "the most width this control takes, in points" }
     if name == "min_height" { return "the least height this control takes, in points" }

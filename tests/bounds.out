@@ -31,6 +31,28 @@ VStack stack frame=0,0,300,100
   but equal bounds are a pin, and fine: w 100..100, h -1..-1
 -- on a component tag --
   max_width=200 places the root: w -1..200, h -1..-1
+-- a share of the room, and a shape --
+  width_percent=50 is kept as a share: w 50%, h -1%
+== half the width of a stretched 300 ==
+VStack stack frame=0,0,300,100
+  Label leaf frame=0,0,150,20
+== half the width, three times as wide as tall ==
+VStack stack frame=0,0,300,100
+  Label leaf frame=0,0,150,50
+== a tenth, but at least 80 ==
+VStack stack frame=0,0,300,100
+  Label leaf frame=0,0,80,20
+  width_percent=150 is refused: true
+  and the message says why: true
+  height_percent=-5 is refused: true
+  and the message says why: true
+  width=100 then width_percent=50 is refused: true
+  and the message says why: true
+  width_percent=50 then width=100 is refused: true
+  and the message says why: true
+  aspect_ratio=0 is refused: true
+  and the message says why: true
+  aspect_ratio=1.5 on a component tag: 1.5
 -- a bound inside a flexing row --
 == two growing labels in 300, the first capped at 120 ==
 HFlex flex frame=0,0,300,40

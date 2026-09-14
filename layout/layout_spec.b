@@ -44,6 +44,15 @@ pub struct LayoutSpec {
     pub x: f64 = 0.0
     pub y: f64 = 0.0
 
+    /// A share, 0 to 100, of the room the container offers on that axis — its
+    /// content box less this child's own margin — or -1. While that room is unbounded, no opinion.
+    pub width_percent: f64 = -1.0
+    pub height_percent: f64 = -1.0
+
+    /// Width over height, or -1 for none. Resolved at measure from whichever
+    /// axis is settled; see `shaped`.
+    pub aspect_ratio: f64 = -1.0
+
     pub static fn auto() -> LayoutSpec {
         return LayoutSpec {}
     }
@@ -115,7 +124,53 @@ pub struct LayoutSpec {
         if out.has_max_height() && out.min_height > out.max_height {
             out.min_height = out.max_height
         }
+        // A percent of a bounded axis is a size, pinned like `width` would be;
+        // of an unbounded one it is no opinion, and the bounds above stand.
+        let wide: f64 = self.percent_size(Direction.horizontal, limit.max_width)
+        if wide >= 0.0 {
+            out.min_width = wide
+            out.max_width = wide
+        }
+        let tall: f64 = self.percent_size(Direction.vertical, limit.max_height)
+        if tall >= 0.0 {
+            out.min_height = tall
+            out.max_height = tall
+        }
         return out
+    }
+
+    /// The share this spec asks for along `axis`, or -1.
+    pub fn percent_on(axis: Direction) -> f64 {
+        if axis.is_horizontal() { return self.width_percent }
+        return self.height_percent
+    }
+
+    /// What the share along `axis` comes to inside `room`, pulled inside this
+    /// spec's own bounds and the room; -1 with no share, or no room to take it of.
+    pub fn percent_size(axis: Direction, room: f64) -> f64 {
+        let share: f64 = self.percent_on(axis)
+        if share < 0.0 || room < 0.0 { return -1.0 }
+        var size: f64 = room * share / 100.0
+        let lower: f64 = self.min_on(axis)
+        let upper: f64 = self.max_on(axis)
+        if size < lower { size = lower }
+        if upper >= 0.0 && size > upper { size = upper }
+        if size > room { size = room }
+        return size
+    }
+
+    /// `size` reshaped to `aspect_ratio`: a width `limit` has settled decides
+    /// the height, a settled height the width, and with neither the measured width decides.
+    pub fn shaped(size: geometry.Size, limit: Constraint) -> geometry.Size {
+        let width_set: bool = limit.has_max_width() && limit.min_width == limit.max_width
+        let height_set: bool = limit.has_max_height() && limit.min_height == limit.max_height
+        if width_set && height_set { return size }
+        if height_set {
+            return geometry.Size.of(limit.max_height * self.aspect_ratio, limit.max_height)
+        }
+        var width: f64 = size.width
+        if width_set { width = limit.max_width }
+        return geometry.Size.of(width, width / self.aspect_ratio)
     }
 
     /// This spec's lower bound on `axis`, or 0 when it sets none.

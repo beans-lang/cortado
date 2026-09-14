@@ -14,6 +14,19 @@ First working macOS host.
   the step before it, from the attribute to the solved frame, against a table
   on every host. `README.md` also claimed `<Label spacing={4} />` was fine; it
   is refused, and the sentence now says so.
+- **A share of the room, and a shape.** `width_percent`, `height_percent` and
+  `aspect_ratio` on `LayoutSpec`, in markup, and as placements. A share is 0 to
+  100 of the room the container offers the child, its content box less the
+  child's own margin, so `width_percent={100}` never overflows past a margin
+  the way CSS's `width: 100%` does. Across a run it is the size, stretch or
+  not; along a flexing run it is the basis and `grow` still grows from it;
+  `min_width`/`max_width` still clamp it. A share beside a pin is refused as
+  deciding the axis twice, and beside a `basis` by the solver. An aspect ratio
+  is width over height, resolved at measure from whichever axis is settled —
+  a pin, a share, or the run's stretch — and from the measured width when none
+  is; a stretched child is now measured at the width it will get, which is
+  what lets `<Canvas width_percent={100} aspect_ratio={1.777} />` follow the
+  window. Every existing layout golden is byte-identical.
 - **One size bound at a time.** `min_width`, `max_width`, `min_height` and
   `max_height` are markup attributes, `Builder.number` names and placements
   now; `width` and `height` were the only way to bound a control and pinned
