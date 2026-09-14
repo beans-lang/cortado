@@ -96,6 +96,18 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             // has this property" is what a caller would be told on every other
             // host too. CTD_P_DIVIDER is a real and is refused in ctd_set_real.
             return CTD_ERR_KIND;
+        case CTD_P_FG_COLOR: {
+            // Recorded rather than written. A Win32 control asks its parent for
+            // a text colour each time it paints, so app.c answers from here.
+            if (!ctd_kind_has_fg_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            uint32_t slot = (uint32_t)(widget & 0xffffffffu);
+            g_ink[slot] = value;
+            g_has_ink[slot] = 1;
+            HWND window = ctd_window(widget);
+            if (window && IsWindow(window)) InvalidateRect(window, NULL, TRUE);
+            return CTD_OK;
+        }
         case CTD_P_ICON: {
             if (!ctd_kind_has_icon(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value >= CTD_ICON_COUNT) return CTD_ERR_RANGE;
@@ -218,6 +230,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             // is no way from one back to the role that asked for it.
             value = g_icon[(uint32_t)(widget & 0xffffffffu)];
             break;
+        case CTD_P_FG_COLOR: {
+            if (!ctd_kind_has_fg_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            uint32_t slot = (uint32_t)(widget & 0xffffffffu);
+            value = g_has_ink[slot] ? g_ink[slot] : 0;
+            break;
+        }
         case CTD_P_EXPANDED:
             return CTD_ERR_KIND;
         case CTD_P_EDITABLE:

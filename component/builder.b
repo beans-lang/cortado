@@ -414,7 +414,37 @@ pub class Builder {
             }
             return
         }
-        self.open_stack[self.open_stack.len() - 1].add(subtree)
+        let parent: Element = self.open_stack[self.open_stack.len() - 1]
+        self.settle(subtree, parent)
+        parent.add(subtree)
+    }
+
+    /// Answers the requirement a component's root element carried out of its
+    /// own render, now that the container it landed in is known.
+    fn settle(subtree: Element, parent: Element) {
+        if subtree.pending == "" { return }
+        var answered: bool = false
+        match parent.arranger {
+            none => {}
+            some(arranger) => {
+                if subtree.pending == "flex" {
+                    match arranger as? layout.FlexLayout {
+                        some(run) => { answered = true }
+                        none => {}
+                    }
+                } else {
+                    match arranger as? layout.AbsoluteLayout {
+                        some(box) => { answered = true }
+                        none => {}
+                    }
+                }
+            }
+        }
+        if !answered {
+            self.faults.push(Builder.wrong_parent(subtree.tag, subtree.pending_name, subtree.pending))
+        }
+        subtree.pending = ""
+        subtree.pending_name = ""
     }
 
     // ---- the result ----
@@ -467,6 +497,55 @@ pub class Builder {
         }
     }
 
+    /// Whether `name` may be written on `element` here.
+    ///
+    /// A parent in this render answers at once. A component's root element has
+    /// none yet — its render is a builder of its own — so the requirement is
+    /// recorded and `embed` answers it against the container it lands in.
+    fn parent_allows(element: Element, name: string, want: string) -> bool {
+        if self.open_stack.len() < 2 {
+            if element.pending != "" && element.pending != want {
+                self.faults.push("<{element.tag}> asks both to be placed and to flex, and no one container does both")
+                return false
+            }
+            element.pending = want
+            element.pending_name = name
+            return true
+        }
+        if want == "flex" {
+            if self.parent_flexes() { return true }
+            self.faults.push(Builder.wrong_parent(element.tag, name, want))
+            return false
+        }
+        if self.parent_places() { return true }
+        self.faults.push(Builder.wrong_parent(element.tag, name, want))
+        return false
+    }
+
+    /// The one sentence for a requirement no container around it answers,
+    /// written once so a deferred refusal reads the same as an immediate one.
+    static fn wrong_parent(tag: string, name: string, want: string) -> string {
+        if want == "flex" {
+            return "{name} is shared out by a flexing run, and <{tag}> sits in one that does not flex — write <VFlex> or <HFlex> around it, or set width/height instead"
+        }
+        return "{name} is a coordinate a placing container reads, and <{tag}> sits in one that arranges its children itself — write <Box> around it, or use spacing and padding instead"
+    }
+
+    /// Whether the container around this element places its children at the
+    /// coordinates they carry, which is the only thing that reads `x` and `y`.
+    fn parent_places() -> bool {
+        if self.open_stack.len() < 2 { return false }
+        match self.open_stack[self.open_stack.len() - 2].arranger {
+            none => { return false }
+            some(arranger) => {
+                match arranger as? layout.AbsoluteLayout {
+                    some(box) => { return true }
+                    none => { return false }
+                }
+            }
+        }
+    }
+
     // `spacing` and `padding` configure the container's own arrangement;
     // everything else is what this element asks of the run around it. The
     // split matters because the two live on different objects and are read at
@@ -500,14 +579,20 @@ pub class Builder {
         // parent is checked here, where both markup and hand-written code go
         // through.
         if name == "grow" || name == "shrink" || name == "basis" {
-            if !self.parent_flexes() {
-                self.faults.push(
-                    "{name} is shared out by a flexing run, and <{element.tag}> sits in one that does not flex — write <VFlex> or <HFlex> around it, or set width/height instead")
-                return
-            }
+            if !self.parent_allows(element, name, "flex") { return }
             if name == "grow" { element.spec.grow = value }
             if name == "shrink" { element.spec.shrink = value }
             if name == "basis" { element.spec.basis = value }
+            return
+        }
+        // `x` and `y` are read by a placing run and by nothing else, the
+        // same shape as `grow` above: an author who writes `x={20}` inside a
+        // `<VStack>` would get a control at the run's coordinate and no word
+        // about why.
+        if name == "x" || name == "y" {
+            if !self.parent_allows(element, name, "place") { return }
+            if name == "x" { element.spec.x = value }
+            if name == "y" { element.spec.y = value }
             return
         }
         if name == "width" {

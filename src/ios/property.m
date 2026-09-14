@@ -62,6 +62,26 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
                                  blue:ctd_color_blue(value)  / 255.0
                                 alpha:ctd_color_alpha(value) / 255.0]];
             return CTD_OK;
+        case CTD_P_FG_COLOR: {
+            if (!ctd_kind_has_fg_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            UIColor *ink = [UIColor colorWithRed:ctd_color_red(value)   / 255.0
+                                           green:ctd_color_green(value) / 255.0
+                                            blue:ctd_color_blue(value)  / 255.0
+                                           alpha:ctd_color_alpha(value) / 255.0];
+            if ([object isKindOfClass:[UILabel class]]) {
+                [(UILabel *)object setTextColor:ink];
+            } else if ([object isKindOfClass:[UITextField class]]) {
+                [(UITextField *)object setTextColor:ink];
+            } else if ([object isKindOfClass:[UITextView class]]) {
+                [(UITextView *)object setTextColor:ink];
+            } else if ([object isKindOfClass:[UISearchBar class]]) {
+                [[(UISearchBar *)object searchTextField] setTextColor:ink];
+            } else {
+                return CTD_ERR_KIND;
+            }
+            return CTD_OK;
+        }
         case CTD_P_CHECKED: {
             // Which kinds have this property, and which of them have a third
             // state, is cortado's rule rather than UIKit's — the paragraph
@@ -197,6 +217,21 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_COLOR:
             if (!ctd_kind_has_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = ctd_ui_color_packed([(UIColorWell *)object selectedColor]);
+            break;
+        case CTD_P_FG_COLOR:
+            if (!ctd_kind_has_fg_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if ([object isKindOfClass:[UILabel class]]) {
+                value = ctd_ui_color_packed([(UILabel *)object textColor]);
+            } else if ([object isKindOfClass:[UITextField class]]) {
+                value = ctd_ui_color_packed([(UITextField *)object textColor]);
+            } else if ([object isKindOfClass:[UITextView class]]) {
+                value = ctd_ui_color_packed([(UITextView *)object textColor]);
+            } else if ([object isKindOfClass:[UISearchBar class]]) {
+                value = ctd_ui_color_packed(
+                    [[(UISearchBar *)object searchTextField] textColor]);
+            } else {
+                return CTD_ERR_KIND;
+            }
             break;
         case CTD_P_CHECKED:
             if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;

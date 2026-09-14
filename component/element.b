@@ -49,6 +49,18 @@ pub class Element {
     /// What this element asks of the run it sits in.
     pub spec: layout.LayoutSpec = layout.LayoutSpec {}
 
+    /// What this element still needs of whatever contains it, when its own
+    /// render did not contain it: "place", "flex", or "" once that is settled.
+    ///
+    /// A component renders into a builder of its own, so its root element has
+    /// no parent at the moment `x` or `grow` is written on it. The requirement
+    /// is carried here and answered by `Builder.embed`, where the container it
+    /// actually landed in is known.
+    pub pending: string = ""
+
+    /// The attribute that asked, so the refusal names what the author wrote.
+    pub pending_name: string = ""
+
     /// The control this element became, once one exists.
     ///
     /// An integer, not a reference, so an element that outlives its control

@@ -1,0 +1,22 @@
+-- four children of a box, at four coordinates --
+  north: 10,4
+  east: 130,40
+  south: 24,90
+  west: 0,56
+  each one carries what it was written: true
+  and no two of them carry the same: true
+-- a coordinate where nothing reads one --
+  x in a <VStack> is refused: true
+  and the message says where it belongs: true
+  y in an <HFlex> is refused: true
+  and the message says where it belongs: true
+  x in a <Grid> is refused: true
+  and the message says where it belongs: true
+-- a component's root, which had no parent when it was written --
+  a <Box> takes it: true
+  the same subtree in a <VStack> is refused: true
+  and the message says where it belongs: true
+  and a <VFlex> takes a grow from one: true
+-- and a root nothing contains at all --
+  the requirement is still open: true
+  and it names the attribute that asked: true

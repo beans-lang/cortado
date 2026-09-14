@@ -115,13 +115,13 @@ pub struct Attribute {
 
 /// Whether a property's whole number is a packed `0xRRGGBBAA` colour.
 ///
-/// Three keys are, and a fourth is one edit away. Stated once so that a golden
-/// printing a colour as `4278190335` is a missing row here rather than a
-/// number a reader has to decode.
+/// Four keys are. Stated once so that a golden printing a colour as
+/// `4278190335` is a missing row here rather than a number a reader decodes.
 pub fn is_packed_colour(property: int) -> bool {
     return property == host.P_COLOR ||
            property == host.P_BG_COLOR ||
-           property == host.P_BORDER_COLOR
+           property == host.P_BORDER_COLOR ||
+           property == host.P_FG_COLOR
 }
 
 /// The readable name of a host property id.
@@ -154,6 +154,7 @@ pub fn property_name(property: int) -> string {
     if property == host.P_CORNER_RADIUS { return "corner_radius" }
     if property == host.P_BORDER_WIDTH { return "border_width" }
     if property == host.P_BORDER_COLOR { return "border_color" }
+    if property == host.P_FG_COLOR { return "text_color" }
     if property == host.P_FOCUSABLE { return "focusable" }
     if property == host.P_A11Y_ROLE { return "a11y_role" }
     return "p{property}"

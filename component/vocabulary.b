@@ -113,6 +113,7 @@ pub class Vocabulary {
         if name == "corner_radius" { return host.P_CORNER_RADIUS }
         if name == "border_width" { return host.P_BORDER_WIDTH }
         if name == "border_color" { return host.P_BORDER_COLOR }
+        if name == "text_color" { return host.P_FG_COLOR }
         return -1
     }
 
@@ -136,7 +137,8 @@ pub class Vocabulary {
     /// Whether this attribute's value is a colour, written `#rgb`, `#rrggbb`
     /// or `#rrggbbaa`. Mirrors `bx.is_colour_attribute`.
     pub static fn is_colour(name: string) -> bool {
-        return name == "color" || name == "background" || name == "border_color"
+        return name == "color" || name == "background" ||
+               name == "border_color" || name == "text_color"
     }
 
     /// Which controls carry `name`, for a refusal that says where it belongs.
@@ -202,7 +204,7 @@ pub class Vocabulary {
         return name == "spacing" || name == "padding" || name == "justify" ||
                name == "align" || name == "grow" || name == "shrink" ||
                name == "basis" || name == "margin" || name == "width" ||
-               name == "height"
+               name == "height" || name == "x" || name == "y"
     }
 
     pub static fn align_of(name: string) -> Option<geometry.Align> {

@@ -190,6 +190,9 @@ fn attribute_note(name: string) -> string {
     if name == "corner_radius" { return "how far the corners are rounded, in points" }
     if name == "border_width" { return "how thick the outline is, in points, drawn inside the bounds" }
     if name == "border_color" { return "the outline's colour, written #rgb, #rrggbb or #rrggbbaa" }
+    if name == "text_color" { return "the colour of the control's own text, written #rgb, #rrggbb or #rrggbbaa; carried by a label and the four controls you type into" }
+    if name == "x" { return "how far from the left of a <Box> this control is placed, in points" }
+    if name == "y" { return "how far from the top of a <Box> this control is placed, in points" }
     return ""
 }
 

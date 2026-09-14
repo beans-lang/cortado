@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 29
+pub const ABI_VERSION: int = 30
 
 // ---- statuses ----
 
@@ -176,6 +176,7 @@ pub const P_BORDER_WIDTH: int = 23
 pub const P_BORDER_COLOR: int = 24
 pub const P_FOCUSABLE: int = 25
 pub const P_A11Y_ROLE: int = 26
+pub const P_FG_COLOR: int = 27
 pub const A11Y_AUTO: int = 0
 pub const A11Y_BUTTON: int = 1
 pub const A11Y_IMAGE: int = 2

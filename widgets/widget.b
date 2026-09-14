@@ -172,6 +172,30 @@ pub abstract class Widget {
         return ok(ColorWell.unpack(packed))
     }
 
+    /// The colour of this control's own text.
+    ///
+    /// Carried by a label and the four controls you type into, and refused by
+    /// name on everything else. A button, a check box and a radio button draw
+    /// their words as a title inside the platform's bezel — three mechanisms
+    /// with one name — and a link's colour is the system's. See
+    /// `ctd_kind_has_fg_color`.
+    ///
+    /// Without this `set_background` was half a property: a pale background
+    /// behind a label and no way to stop the system drawing white on it.
+    pub fn set_text_color(shade: Rgba) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_set_int(self.slot.raw, host.P_FG_COLOR as i32,
+                                 ColorWell.pack(shade) as i64) as int,
+                "give a {self.kind_value.name()} a text colour")
+        }
+    }
+
+    pub fn text_color() -> Result<Rgba> {
+        let packed: int = self.read_property(host.P_FG_COLOR)?
+        return ok(ColorWell.unpack(packed))
+    }
+
     /// Corner rounding in points. Zero is square.
     pub fn set_corner_radius(points: f64) -> Result<bool> {
         unsafe {

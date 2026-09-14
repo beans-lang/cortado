@@ -169,7 +169,8 @@ pub fn attribute_call(name: string) -> string {
     if name == "alignment" || name == "selected" { return "number" }
     if name == "spacing" || name == "padding" || name == "margin" ||
        name == "grow" || name == "shrink" || name == "basis" ||
-       name == "width" || name == "height" {
+       name == "width" || name == "height" ||
+       name == "x" || name == "y" {
         return "number"
     }
     // A colour is a word here and a whole number by the time it reaches the
@@ -181,7 +182,8 @@ pub fn attribute_call(name: string) -> string {
 /// The attributes whose value is a colour, written `#rgb`, `#rrggbb` or
 /// `#rrggbbaa`. One list, so the spelling is parsed in exactly one place.
 pub fn is_colour_attribute(name: string) -> bool {
-    return name == "color" || name == "background" || name == "border_color"
+    return name == "color" || name == "background" ||
+           name == "border_color" || name == "text_color"
 }
 
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
@@ -191,7 +193,8 @@ pub fn attribute_names() -> List<string> {
             "day", "editable", "enabled",
             "font_size", "grow", "height", "hidden", "indeterminate",
             "justify", "margin", "max", "min", "opacity", "open", "padding",
-            "selected", "shrink", "spacing", "step", "text", "value", "width"]
+            "selected", "shrink", "spacing", "step", "text", "text_color",
+            "value", "width", "x", "y"]
 }
 
 /// Every control tag, for the same reason.
@@ -226,6 +229,9 @@ pub fn tag_carries(tag: string, name: string) -> bool {
     // A label lays text out and is not typed into, which is the one difference
     // between these two lists.
     if name == "alignment" { return is_typed_into(tag) || tag == "Label" }
+    // The same five as `alignment`, and for the same reason: each is a plain
+    // text view on all four hosts, so one name means one thing.
+    if name == "text_color" { return is_typed_into(tag) || tag == "Label" }
     // A table, an outline, a group box, a disclosure and a tab view all show
     // words, and none of them is here: those words are a title or a cell
     // rather than the control's own text, and one name meaning both would be

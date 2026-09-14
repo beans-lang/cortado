@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 29
+#define CTD_ABI_VERSION 30
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -680,6 +680,18 @@ ctd_status ctd_view_content_size(ctd_handle widget, double *out_size);
  * every design tool mean, and an outside one needs room the layout never gave. */
 #define CTD_P_BORDER_WIDTH  23
 #define CTD_P_BORDER_COLOR  24
+/* The colour of the control's own text, packed 0xRRGGBBAA like CTD_P_COLOR.
+ *
+ * Numbered out of order because a property number is part of the ABI and this
+ * arrived after CTD_P_A11Y_ROLE; it is written here because this is where it
+ * belongs to a reader.
+ *
+ * Carried by the five ctd_kind_has_alignment names and refused by name on
+ * everything else — see ctd_kind_has_fg_color for why a button is not one of
+ * them. Without it CTD_P_BG_COLOR is half a property: a program could put a
+ * pale background behind a label and had no way to stop the system drawing
+ * white text on it. */
+#define CTD_P_FG_COLOR      27
 
 /* ---- a control a program draws itself ------------------------------------
  *

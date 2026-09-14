@@ -104,6 +104,18 @@ static int64_t ctd_color_of_cg(CGColorRef color) {
     return packed;
 }
 
+/* An NSColor back to 0xRRGGBBAA, through sRGB for the reason ctd_color_of_cg
+ * matches: a colour left in the display profile is a different byte. */
+static int64_t ctd_color_of_ns(NSColor *color) {
+    if (!color) return 0;
+    NSColor *shown = [color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+    if (!shown) return 0;
+    return ctd_color_pack(ctd_color_byte([shown redComponent]),
+                          ctd_color_byte([shown greenComponent]),
+                          ctd_color_byte([shown blueComponent]),
+                          ctd_color_byte([shown alphaComponent]));
+}
+
 static CGColorRef ctd_cg_color(int64_t value) {
     return [[NSColor colorWithSRGBRed:ctd_color_red(value)   / 255.0
                                 green:ctd_color_green(value) / 255.0
@@ -315,6 +327,21 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             [ctd_layer_of((NSView *)object) setBorderColor:ctd_cg_color(value)];
             return CTD_OK;
         }
+        case CTD_P_FG_COLOR: {
+            if (!ctd_kind_has_fg_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            NSColor *ink = [NSColor colorWithSRGBRed:ctd_color_red(value)   / 255.0
+                                               green:ctd_color_green(value) / 255.0
+                                                blue:ctd_color_blue(value)  / 255.0
+                                               alpha:ctd_color_alpha(value) / 255.0];
+            /* A text area is an NSScrollView around the view that holds the
+             * text, the same indirection CTD_P_FONT_SIZE steps through. */
+            NSTextView *inner = ctd_text_view(object);
+            if (inner) { [inner setTextColor:ink]; return CTD_OK; }
+            if (![object isKindOfClass:[NSTextField class]]) return CTD_ERR_KIND;
+            [(NSTextField *)object setTextColor:ink];
+            return CTD_OK;
+        }
         case CTD_P_FOCUSABLE: {
             if (!ctd_kind_is_drawn(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -467,6 +494,14 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_BORDER_COLOR: {
             CALayer *layer = ctd_layer_if_any((NSView *)object);
             value = layer ? ctd_color_of_cg([layer borderColor]) : 0;
+            break;
+        }
+        case CTD_P_FG_COLOR: {
+            if (!ctd_kind_has_fg_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            NSTextView *inner = ctd_text_view(object);
+            if (inner) { value = (double)ctd_color_of_ns([inner textColor]); break; }
+            if (![object isKindOfClass:[NSTextField class]]) return CTD_ERR_KIND;
+            value = (double)ctd_color_of_ns([(NSTextField *)object textColor]);
             break;
         }
         case CTD_P_FOCUSABLE: {

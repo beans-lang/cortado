@@ -76,7 +76,7 @@ fn drive() -> Result<bool> {
         }
     }
     // The same on every platform: neither table knows what this machine builds.
-    io.println("  every pair was asked: {pairs == 1184}")
+    io.println("  every pair was asked: {pairs == 1295}")
     io.println("  and answered the same way by both: {same == pairs}")
 
     io.println("-- and the answer is the one the control gives --")

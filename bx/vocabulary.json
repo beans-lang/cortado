@@ -74,8 +74,11 @@
     {"name": "spacing", "detail": "number", "note": "the gap between a container's children"},
     {"name": "step", "detail": "number", "note": "the increment a slider's thumb lands on; 0 for continuous"},
     {"name": "text", "detail": "text", "note": "the text this control shows"},
+    {"name": "text_color", "detail": "word", "note": "the colour of the control's own text, written #rgb, #rrggbb or #rrggbbaa; carried by a label and the four controls you type into"},
     {"name": "value", "detail": "number", "note": "a slider or progress value"},
-    {"name": "width", "detail": "number", "note": "pins the width"}
+    {"name": "width", "detail": "number", "note": "pins the width"},
+    {"name": "x", "detail": "number", "note": "how far from the left of a <Box> this control is placed, in points"},
+    {"name": "y", "detail": "number", "note": "how far from the top of a <Box> this control is placed, in points"}
   ],
   "booleanAttributes": ["animating", "checked", "editable", "enabled", "hidden", "indeterminate", "open"]
 }

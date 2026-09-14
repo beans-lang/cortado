@@ -307,8 +307,20 @@ static LRESULT CALLBACK ctd_view_proc(HWND window, UINT message,
         FillRect(device, &client, (HBRUSH)(COLOR_BTNFACE + 1));
         return 1;
     }
-    if (message == WM_CTLCOLORSTATIC) {
+    // A control paints its own text, and asks its parent what colour to use.
+    // So CTD_P_FG_COLOR is answered here rather than written on the control.
+    if (message == WM_CTLCOLORSTATIC || message == WM_CTLCOLOREDIT) {
         SetBkMode((HDC)wparam, TRANSPARENT);
+        ctd_handle owner = (ctd_handle)(uintptr_t)
+            GetPropW((HWND)lparam, CTD_HANDLE_PROP);
+        uint32_t slot = (uint32_t)(owner & 0xffffffffu);
+        if (owner && slot < CTD_SLOTS && g_has_ink[slot]) {
+            int64_t ink = g_ink[slot];
+            SetTextColor((HDC)wparam, RGB(ctd_color_red(ink),
+                                          ctd_color_green(ink),
+                                          ctd_color_blue(ink)));
+        }
+        if (message == WM_CTLCOLOREDIT) return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
         return (LRESULT)GetSysColorBrush(COLOR_BTNFACE);
     }
     return DefWindowProcW(window, message, wparam, lparam);

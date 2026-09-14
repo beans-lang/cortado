@@ -152,6 +152,12 @@ extern int g_running;
 extern int g_started;
 extern int32_t g_kind[CTD_SLOTS];
 extern int32_t g_icon[CTD_SLOTS];  // CTD_P_ICON, per slot
+// CTD_P_FG_COLOR, per slot. Win32 has no per-control text colour to write: the
+// parent is asked for one every time the control paints, so it is kept here.
+extern int64_t g_ink[CTD_SLOTS];
+extern int     g_has_ink[CTD_SLOTS];
+// The handle a control window carries, so a WM_CTLCOLOR* can find its slot.
+#define CTD_HANDLE_PROP L"cortado-handle"
 extern int32_t g_role;
 extern int32_t g_type[CTD_SLOTS];
 extern uint32_t g_generation[CTD_SLOTS];

@@ -9,6 +9,18 @@ import cortado.component
 import cortado.geometry
 import std.io
 
+/// The widget kinds that take a text colour: a label and the four you type
+/// into. Spelled out rather than asked of the host, for the reason every rule
+/// in this suite is — a test that asked and then checked the answer agrees
+/// with anything.
+fn takes_text_color(kind: widgets.WidgetKind) -> bool {
+    return kind == widgets.WidgetKind.label ||
+           kind == widgets.WidgetKind.text_field ||
+           kind == widgets.WidgetKind.secure_field ||
+           kind == widgets.WidgetKind.search_field ||
+           kind == widgets.WidgetKind.text_area
+}
+
 /// The widget kinds that must refuse a background, and why they are alike.
 fn refuses_background(kind: widgets.WidgetKind) -> bool {
     return kind == widgets.WidgetKind.text_field ||
@@ -34,6 +46,8 @@ fn drive() -> Result<bool> {
     var owed_refusal: int = 0
     var took_radius: int = 0
     var took_border: int = 0
+    var took_ink: int = 0
+    var owed_ink: int = 0
     var agreed: int = 0
 
     for kind: widgets.WidgetKind in widgets.WidgetKind.all() {
@@ -75,6 +89,14 @@ fn drive() -> Result<bool> {
                 }
                 if got_border { took_border = took_border + 1 }
 
+                // A text colour is a rule of cortado's, not of the layer's, so
+                // it holds on every host rather than only where one dresses.
+                if takes_text_color(kind) { owed_ink = owed_ink + 1 }
+                match control.set_text_color(blue) {
+                    ok(done) => { took_ink = took_ink + 1 }
+                    err(problem) => {}
+                }
+
                 if got_background == want_background &&
                    got_radius == dressed && got_border == dressed {
                     agreed = agreed + 1
@@ -97,6 +119,39 @@ fn drive() -> Result<bool> {
     // The count itself, because a rule that refused *every* control would
     // satisfy the two lines above and be badly wrong.
     io.println("  there are four of them wherever a platform dresses: {owed_refusal == (if dressed { 4 } else { 0 })}")
+
+    io.println("-- the five that draw text a program can colour --")
+    // Both halves, and the count: a rule that said yes to everything or no to
+    // everything would satisfy one of these lines and fail the other two.
+    io.println("  exactly the ones that should took one: {took_ink == owed_ink}")
+    io.println("  and there are five of them: {owed_ink == 5}")
+    io.println("  which is fewer than every control offered: {owed_ink < offered}")
+
+    io.println("-- a text colour reads back, and the wrong control is named --")
+    var note: widgets.Label = widgets.Label.of("Petrichor")?
+    note.set_text_color(blue)?
+    var read_back: bool = false
+    match note.text_color() {
+        ok(shown) => { read_back = shown.same_as(blue) }
+        err(problem) => {}
+    }
+    io.println("  the colour that went in: {read_back}")
+    note.release()
+
+    var gauge: widgets.ProgressBar = widgets.ProgressBar.of(0.0, 1.0)?
+    var gauge_refused: bool = false
+    var gauge_named: bool = false
+    match gauge.set_text_color(blue) {
+        ok(done) => {}
+        err(problem) => {
+            gauge_refused = true
+            gauge_named = problem.msg.contains("ProgressBar") &&
+                          problem.kind == "wrong_widget"
+        }
+    }
+    io.println("  a progress bar has no text to colour: {gauge_refused}")
+    io.println("  and the refusal names it: {gauge_named}")
+    gauge.release()
 
     io.println("-- the one everybody expects to fail --")
     // A bezelled push button showing a layer colour is the finding this whole

@@ -46,6 +46,10 @@ extern int g_started;
 extern int32_t g_role;
 extern int32_t g_kind[CTD_SLOTS];
 extern int32_t g_icon[CTD_SLOTS];  // CTD_P_ICON, per slot
+// CTD_P_FG_COLOR, per slot: a widget told a second colour must lose the first
+// CSS class, and a released slot must not hand its colour to the next widget.
+extern int64_t g_ink[CTD_SLOTS];
+extern int     g_has_ink[CTD_SLOTS];
 extern uint32_t g_generation[CTD_SLOTS];
 extern uint32_t g_used;
 extern void *g_sink_context;

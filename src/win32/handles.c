@@ -9,6 +9,8 @@ void     *g_object[CTD_SLOTS];      // HWND, or CtdMenu*
 uint32_t  g_generation[CTD_SLOTS];
 int32_t   g_kind[CTD_SLOTS];        // CTD_W_*, or -1 for a non-widget
 int32_t   g_icon[CTD_SLOTS];        // CTD_P_ICON, per slot; see icon.c
+int64_t   g_ink[CTD_SLOTS];         // CTD_P_FG_COLOR, per slot; see property.c
+int       g_has_ink[CTD_SLOTS];
 int32_t   g_type[CTD_SLOTS];        // CTD_T_*
 double    g_progress_value[CTD_SLOTS];
 double    g_progress_min[CTD_SLOTS];
@@ -84,6 +86,7 @@ void ctd_untrack(ctd_handle handle) {
     g_type[slot] = CTD_T_FREE;
     g_kind[slot] = -1;
     g_icon[slot] = CTD_ICON_NONE;
+    g_has_ink[slot] = 0;
     g_generation[slot] = g_generation[slot] + 1;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     ctd_give_back(slot);
@@ -96,6 +99,7 @@ ctd_handle ctd_track(void *object, int32_t type, int32_t kind) {
     g_type[slot] = type;
     g_kind[slot] = kind;
     g_icon[slot] = CTD_ICON_NONE;
+    g_has_ink[slot] = 0;
     if (g_generation[slot] == 0) g_generation[slot] = 1;
     ctd_handle handle = ((uint64_t)g_generation[slot] << 32) | slot;
     // A control's input is reported to the control, not to its parent — the

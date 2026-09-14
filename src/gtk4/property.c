@@ -43,6 +43,11 @@ void ctd_calendar_set_seconds(GtkCalendar *calendar, double seconds) {
     g_date_time_unref(day);
 }
 
+// Text colours that already have a CSS class on the display, so a second
+// widget asking for the same colour installs nothing. The colour each widget
+// is wearing lives in handles.c, where a released slot is cleared.
+static GHashTable *g_ink_classes;
+
 ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
     gpointer object = ctd_resolve(widget);
     if (!object) return CTD_ERR_STALE;
@@ -100,6 +105,41 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
                              (float)(ctd_color_blue(value)  / 255.0),
                              (float)(ctd_color_alpha(value) / 255.0) };
             gtk_color_dialog_button_set_rgba(GTK_COLOR_DIALOG_BUTTON(object), &want);
+            return CTD_OK;
+        }
+        case CTD_P_FG_COLOR: {
+            // The rule before the mechanism, for the reason CTD_P_FONT_SIZE
+            // gives: a CSS class goes on any widget at all.
+            if (!ctd_kind_has_fg_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (!ctd_color_in_range(value)) return CTD_ERR_RANGE;
+            uint32_t slot = (uint32_t)(widget & 0xffffffffu);
+            char class_name[32];
+            if (g_has_ink[slot]) {
+                snprintf(class_name, sizeof class_name, "ctd-ink-%08llx",
+                         (unsigned long long)g_ink[slot]);
+                gtk_widget_remove_css_class(GTK_WIDGET(object), class_name);
+            }
+            snprintf(class_name, sizeof class_name, "ctd-ink-%08llx",
+                     (unsigned long long)value);
+            if (!g_ink_classes) g_ink_classes = g_hash_table_new(NULL, NULL);
+            if (!g_hash_table_contains(g_ink_classes, GINT_TO_POINTER((gint)value))) {
+                char css[160];
+                snprintf(css, sizeof css,
+                         ".%s, .%s text { color: rgba(%d,%d,%d,%.3f); }",
+                         class_name, class_name,
+                         ctd_color_red(value), ctd_color_green(value),
+                         ctd_color_blue(value), ctd_color_alpha(value) / 255.0);
+                GtkCssProvider *provider = gtk_css_provider_new();
+                gtk_css_provider_load_from_string(provider, css);
+                gtk_style_context_add_provider_for_display(
+                    gdk_display_get_default(), GTK_STYLE_PROVIDER(provider),
+                    GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+                g_object_unref(provider);
+                g_hash_table_add(g_ink_classes, GINT_TO_POINTER((gint)value));
+            }
+            gtk_widget_add_css_class(GTK_WIDGET(object), class_name);
+            g_ink[slot] = value;
+            g_has_ink[slot] = 1;
             return CTD_OK;
         }
         case CTD_P_CHECKED: {
@@ -239,6 +279,14 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
                                    ctd_color_byte(shown->green),
                                    ctd_color_byte(shown->blue),
                                    ctd_color_byte(shown->alpha));
+            break;
+        }
+        case CTD_P_FG_COLOR: {
+            // What was set, not what the theme is painting. GTK has no ask for
+            // the second, and a themed default is not a colour a program chose.
+            if (!ctd_kind_has_fg_color(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            uint32_t slot = (uint32_t)(widget & 0xffffffffu);
+            value = g_has_ink[slot] ? g_ink[slot] : 0;
             break;
         }
         case CTD_P_CHECKED:

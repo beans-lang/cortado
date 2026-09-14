@@ -24,7 +24,6 @@ static int g_wanted[CTD_EV_COUNT];
 // The handle a window was tracked under. A window property rather than a table
 // of cortado's own: Win32 already keeps one per window, the lookup is a hash,
 // and it goes away with the window.
-#define CTD_HANDLE_PROP L"cortado-handle"
 
 int ctd_listening(uint32_t kind) {
     if (kind >= (uint32_t)CTD_EV_COUNT) return 0;

@@ -248,7 +248,16 @@ ios_builds_only=(anim)
 # thing reverted. It is here rather than beside the `markup` leg because the
 # markup compiler links no platform host, which is the property that lets a
 # Windows machine regenerate a project's screens.
-portable=(layout diff sweep markup_refusals)
+#
+# `placed` is here for the same reason, and it started out in the wrong list.
+# It was written reading frames off real controls and put in `cross_host` on
+# the claim that a coordinate is arithmetic — which is true of the coordinate
+# and not of the frame: an unmapped GTK4 widget has no allocation and answered
+# 0,0 for every child. Where a child ends up is AbsoluteLayout's, and
+# `tests/layout.b` already holds it. What is left is the step before, which
+# really is arithmetic: that `x={10}` reaches `spec.x`, and that a coordinate
+# written where nothing reads one is refused rather than dropped.
+portable=(layout diff sweep markup_refusals placed)
 
 # `--case` narrows every list to the one name, and leaves the lists it is not
 # in empty — so a case that is macOS-only runs on macOS and the GTK4 loop runs

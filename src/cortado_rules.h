@@ -182,6 +182,22 @@ static inline int ctd_kind_has_font_size(int32_t kind) {
         || kind == CTD_W_DATE_PICKER;
 }
 
+/* Whether a kind draws text whose colour the program chooses.
+ *
+ * The five ctd_kind_has_alignment names: a label and the four you type into.
+ * Each is a plain text view on all four hosts, so the colour is one call that
+ * means one thing.
+ *
+ * A button, a check box and a radio button are deliberately out. Their words
+ * are a title the platform draws inside its own bezel — an attributed string
+ * on AppKit, a CSS rule on GTK, an owner-draw on Win32 — so one name would be
+ * three implementations of three different things. A link's colour is the
+ * system's on all four. Refusing those by name is the honest answer, and it is
+ * the same call ctd_kind_has_alignment already made about a link. */
+static inline int ctd_kind_has_fg_color(int32_t kind) {
+    return ctd_kind_has_alignment(kind);
+}
+
 /* Whether a kind carries an increment — CTD_P_STEP.
  *
  * A stepper and a slider. The kind carries it everywhere; iOS answers
@@ -511,6 +527,7 @@ static inline int32_t ctd_rule_carries(int32_t kind, int32_t space, int32_t key)
         case CTD_P_DIVIDER:       return ctd_kind_has_divider(kind);
         case CTD_P_ICON:          return ctd_kind_has_icon(kind);
         case CTD_P_BG_COLOR:      return ctd_kind_has_background(kind);
+        case CTD_P_FG_COLOR:      return ctd_kind_has_fg_color(kind);
         case CTD_P_FOCUSABLE:
         case CTD_P_A11Y_ROLE:     return ctd_kind_is_drawn(kind);
         default:                  return CTD_ERR_RANGE;

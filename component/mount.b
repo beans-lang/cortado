@@ -246,6 +246,12 @@ pub class Mount implements Composer {
             some(component) => {
                 self.used = {}
                 let next: Element = self.render_one(component, "")?
+                // Nothing contains a screen's root, so a coordinate or a share
+                // of leftover space written on it can never be answered.
+                if next.pending != "" {
+                    return err(Builder.wrong_parent(next.tag, next.pending_name, next.pending),
+                               "bad_render")
+                }
                 var differ: Differ = new Differ()
                 let changes: List<Change> = differ.diff(self.shown, next)
                 var applier: Applier = new Applier(self.root, self.router, self)
