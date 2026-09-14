@@ -1,8 +1,7 @@
 // A screen that decides by the window it is in, and follows it.
 //
-// The mount already laid a tree out again on every resize. What it could not
-// do was render again: a screen that folds its sidebar under 600 points had
-// no way to learn the width, and no way to be asked once it changed.
+// The mount already laid a tree out again on every resize; what it could not
+// do was render again, so a screen had no way to learn the width it was given.
 package main
 
 import cortado.platform

@@ -585,10 +585,8 @@ pub class Builder {
         }
     }
 
-    /// Whether `name` may be written on `element`, inside `container`.
-    ///
-    /// No container means a root still to be embedded — a component's own
-    /// render, or a placement on it — so the requirement is recorded for `embed`.
+    /// Whether `name` may be written on `element`, inside `container`. With no
+    /// container the element is a root still to be embedded, and `embed` answers.
     fn parent_allows(element: Element, container: Option<Element>, name: string, want: string) -> bool {
         match container {
             none => {

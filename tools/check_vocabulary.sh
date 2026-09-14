@@ -109,8 +109,8 @@ if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.kinded" >"$root/bui
 fi
 
 # ---- placements ----
-# What a component tag may carry, answered by the Builder at run time and by
-# the emitter at compile time. One list, and every name in it a layout name.
+# What a component tag may carry: one list for the Builder and the emitter,
+# and every name in it a layout name.
 sed -n '/pub static fn is_placement_name(/,/^    }/p' "$runtime" \
     | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.place.runtime"
 sed -n '/pub fn is_placement_attribute(/,/^}/p' "$markup" \
