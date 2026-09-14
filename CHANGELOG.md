@@ -4,6 +4,16 @@
 
 First working macOS host.
 
+- **Padding and margin, one edge at a time.** `padding={8}` wrote four edges
+  and there was no way to write one. `padding_x`, `padding_y`, `padding_top`,
+  `padding_right`, `padding_bottom`, `padding_left` and the same six for
+  `margin` are markup attributes and `Builder.number` names now. Each writes
+  only the edges it names, in source order — `padding={8} padding_x={16}` is
+  8 above and below and 16 at the sides, and the reverse is 8 all round. The
+  engine took a lopsided `EdgeInsets` from the start; `tests/insets.b` holds
+  the step before it, from the attribute to the solved frame, against a table
+  on every host. `README.md` also claimed `<Label spacing={4} />` was fine; it
+  is refused, and the sentence now says so.
 - **`<ScrollView>` scrolls.** It never had. Its arranger was `FillLayout`,
   which hands every child the container's own box, so the content could not be
   taller than the viewport and there was nothing to scroll; the macOS document

@@ -63,3 +63,11 @@
   two children in a scroll view refused, saying so: true
   one is what it takes compiled, emitting it: true
   and a plain container still holds as many as it likes compiled, emitting it: true
+-- padding and margin, one edge at a time --
+  padding_x on a container compiled, emitting it: true
+  padding_top beside padding compiled, emitting it: true
+  and in the order they were written: true
+  margin_left on a control compiled, emitting it: true
+  margin_y from an expression compiled, emitting it: true
+  padding_horizontal refused, saying so: true
+  marginTop refused, saying so: true

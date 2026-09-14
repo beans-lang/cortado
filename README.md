@@ -317,6 +317,9 @@ Four algorithms, each its own class: `StackLayout` (a row or a column),
 and `AbsoluteLayout` (the escape hatch). Every one takes padding, spacing,
 main-axis justification and cross-axis alignment, and every child may carry a
 margin, size bounds, a grow and shrink weight, and an alignment of its own.
+Padding and margin are both `geometry.EdgeInsets` — `all(8.0)`,
+`symmetric(16.0, 8.0)` or `of(top, right, bottom, left)` — so a lopsided box
+is one call, not four.
 
 Three decisions are worth knowing about, because each is a class of bug the
 engine does not have:
@@ -907,9 +910,28 @@ not what the rule promised.
 A caller who cannot tell the first from the second writes a program that works
 on one desktop and is quietly inert on another.
 
-Layout names are nobody's to refuse. `spacing`, `padding`, `grow` and the rest
-belong to the parent's layout and never reach the control, so `<Label
-spacing={4} />` is fine.
+Layout names are no control's to refuse. `spacing`, `padding`, `grow` and the
+rest belong to the layout and never reach the control; what refuses them is the
+tree — `<Label spacing={4} />` has no children to space, and the render says so.
+
+**Padding and margin come in seven spellings each.** The bare name writes all
+four edges; `padding_x` and `padding_y` write one axis; `padding_top`,
+`padding_right`, `padding_bottom` and `padding_left` write one edge. `margin`
+has the same six. Each writes only the edges it names, in source order, so
+`padding={8} padding_x={16}` is 8 above and below and 16 at the sides — and the
+reverse order is 8 all round, because `padding` wrote last. That is the rule a
+CSS shorthand follows, and it is the one that lets a base value be written
+once and adjusted on one side.
+
+```
+<VStack padding={8} padding_top={20} align="stretch">
+  <Label margin_left={12} text="hangs in from the left" />
+  <Button margin_y={4}>Order</Button>
+</VStack>
+```
+
+A margin is the child's own, so every control takes one; padding is a
+container's, so `padding_left` on a `<Label>` is refused the way `padding` is.
 
 ### A screen laid out by coordinate
 

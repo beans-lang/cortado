@@ -200,11 +200,44 @@ pub class Vocabulary {
     /// belong to what this element asks of the run it sits in. Neither ever
     /// reaches the platform as a property, which is why they are separated
     /// here and not discovered by the applier finding no property id.
+    ///
+    /// The per-edge insets are written out one by one because
+    /// `tools/check_vocabulary.sh` reads this list and holds `bx/widgets.b` to it.
     pub static fn is_layout_name(name: string) -> bool {
         return name == "spacing" || name == "padding" || name == "justify" ||
                name == "align" || name == "grow" || name == "shrink" ||
                name == "basis" || name == "margin" || name == "width" ||
-               name == "height" || name == "x" || name == "y"
+               name == "height" || name == "x" || name == "y" ||
+               name == "padding_x" || name == "padding_y" ||
+               name == "padding_top" || name == "padding_right" ||
+               name == "padding_bottom" || name == "padding_left" ||
+               name == "margin_x" || name == "margin_y" ||
+               name == "margin_top" || name == "margin_right" ||
+               name == "margin_bottom" || name == "margin_left"
+    }
+
+    /// The edge a padding name writes: `top`, `right`, `bottom`, `left`, `x` for
+    /// both sides or `y` for top and bottom. `""` for anything else, `padding` included.
+    pub static fn padding_edge(name: string) -> string {
+        if name == "padding_x" { return "x" }
+        if name == "padding_y" { return "y" }
+        if name == "padding_top" { return "top" }
+        if name == "padding_right" { return "right" }
+        if name == "padding_bottom" { return "bottom" }
+        if name == "padding_left" { return "left" }
+        return ""
+    }
+
+    /// The same for margin: `margin_left` writes `left`, `margin_y` writes
+    /// top and bottom, and `margin` itself answers `""`.
+    pub static fn margin_edge(name: string) -> string {
+        if name == "margin_x" { return "x" }
+        if name == "margin_y" { return "y" }
+        if name == "margin_top" { return "top" }
+        if name == "margin_right" { return "right" }
+        if name == "margin_bottom" { return "bottom" }
+        if name == "margin_left" { return "left" }
+        return ""
     }
 
     pub static fn align_of(name: string) -> Option<geometry.Align> {

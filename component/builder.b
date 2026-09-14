@@ -143,8 +143,8 @@ pub class Builder {
         }
     }
 
-    /// A numeric property, or one of the layout numbers — `spacing`,
-    /// `padding`, `grow`, `shrink`, `basis`, `margin`, `width`, `height`.
+    /// A numeric property, or one of the layout numbers — `spacing`, `padding`,
+    /// `grow`, `shrink`, `basis`, `margin`, `width`, `height` and their per-edge forms.
     pub fn number(name: string, value: f64) {
         match self.current() {
             none => { self.faults.push("{name} with no element open") }
@@ -572,6 +572,18 @@ pub class Builder {
             element.spec.margin = geometry.EdgeInsets.all(value)
             return
         }
+        // A per-edge form writes only the edges it names and keeps the rest, in
+        // source order: `padding={8} padding_x={16}` is 8 above and below, 16 at the sides.
+        let pad_edge: string = Vocabulary.padding_edge(name)
+        if pad_edge != "" {
+            self.set_padding(element, with_edge(self.padding_of(element), pad_edge, value))
+            return
+        }
+        let margin_edge: string = Vocabulary.margin_edge(name)
+        if margin_edge != "" {
+            element.spec.margin = with_edge(element.spec.margin, margin_edge, value)
+            return
+        }
         // `grow`, `shrink` and `basis` are read by a flexing run and by
         // nothing else. An author who writes `grow={1}` inside a plain
         // `<HStack>` gets a control that does not grow and no explanation —
@@ -606,6 +618,15 @@ pub class Builder {
             return
         }
         self.faults.push("<{element.tag}> has no attribute called '{name}'")
+    }
+
+    /// What `element` keeps inside its box so far, for a per-edge attribute to
+    /// add one edge to. A leaf answers zero, and `set_padding` refuses it a call later.
+    fn padding_of(element: Element) -> geometry.EdgeInsets {
+        match element.arranger {
+            none => { return geometry.EdgeInsets.zero() }
+            some(arranger) => { return arranger.padding() }
+        }
     }
 
     fn set_padding(element: Element, insets: geometry.EdgeInsets) {
@@ -661,4 +682,17 @@ pub class Builder {
             }
         }
     }
+}
+
+/// `insets` with one edge replaced, or both edges of one axis for `x` and `y`.
+/// Any other edge name changes nothing, and `Vocabulary` never answers one.
+fn with_edge(insets: geometry.EdgeInsets, edge: string, value: f64) -> geometry.EdgeInsets {
+    var out: geometry.EdgeInsets = insets
+    if edge == "top" { out.top = value }
+    if edge == "right" { out.right = value }
+    if edge == "bottom" { out.bottom = value }
+    if edge == "left" { out.left = value }
+    if edge == "x" { out.left = value; out.right = value }
+    if edge == "y" { out.top = value; out.bottom = value }
+    return out
 }

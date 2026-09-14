@@ -393,6 +393,36 @@ fn scrolling() {
           r#"open("VStack")"#)
 }
 
+fn insets() {
+    io.println("-- padding and margin, one edge at a time --")
+    // Each per-edge name is a `number` call like the bare one; the merge is
+    // the Builder's, so all the compiler has to do is pass the name through.
+    emits("padding_x on a container",
+          markup([r#"<VStack padding_x={16}><Label text="hi" /></VStack>"#]),
+          r#"number("padding_x", (16) as f64)"#)
+    emits("padding_top beside padding",
+          markup([r#"<VStack padding={8} padding_top={20}><Label text="hi" /></VStack>"#]),
+          r#"number("padding_top", (20) as f64)"#)
+    writes_in_order("and in the order they were written",
+                    markup([r#"<VStack padding={8} padding_top={20}><Label text="hi" /></VStack>"#]),
+                    r#"number("padding", (8) as f64)"#,
+                    r#"number("padding_top", (20) as f64)"#)
+    emits("margin_left on a control",
+          markup([r#"<HStack><Label margin_left={5} text="hi" /></HStack>"#]),
+          r#"number("margin_left", (5) as f64)"#)
+    emits("margin_y from an expression",
+          markup([r#"<HStack><Label margin_y={self.gap} text="hi" /></HStack>"#]),
+          r#"number("margin_y", (self.gap) as f64)"#)
+    // The names are closed: the old spelling of an edge is a spelling
+    // mistake, and the refusal offers the one that exists.
+    refuses("padding_horizontal",
+            markup([r#"<VStack padding_horizontal={16}><Label text="hi" /></VStack>"#]),
+            "padding_x")
+    refuses("marginTop",
+            markup([r#"<HStack><Label marginTop={4} text="hi" /></HStack>"#]),
+            "margin_top")
+}
+
 fn main() {
     lexing()
     html_documents()
@@ -402,4 +432,5 @@ fn main() {
     wrong_control()
     dressing()
     scrolling()
+    insets()
 }

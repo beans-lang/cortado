@@ -173,6 +173,16 @@ pub fn attribute_call(name: string) -> string {
        name == "x" || name == "y" {
         return "number"
     }
+    // The per-edge and per-axis forms of `padding` and `margin`. Each writes
+    // only the edges it names, in source order — see `Builder.layout_number`.
+    if name == "padding_x" || name == "padding_y" ||
+       name == "padding_top" || name == "padding_right" ||
+       name == "padding_bottom" || name == "padding_left" ||
+       name == "margin_x" || name == "margin_y" ||
+       name == "margin_top" || name == "margin_right" ||
+       name == "margin_bottom" || name == "margin_left" {
+        return "number"
+    }
     // A colour is a word here and a whole number by the time it reaches the
     // ABI, parsed once in `Builder.word` so `#abc` means one thing everywhere.
     if name == "align" || name == "justify" || is_colour_attribute(name) { return "word" }
@@ -192,7 +202,10 @@ pub fn attribute_names() -> List<string> {
             "border_color", "border_width", "checked", "color", "corner_radius",
             "day", "editable", "enabled",
             "font_size", "grow", "height", "hidden", "indeterminate",
-            "justify", "margin", "max", "min", "opacity", "open", "padding",
+            "justify", "margin", "margin_bottom", "margin_left", "margin_right",
+            "margin_top", "margin_x", "margin_y", "max", "min", "opacity",
+            "open", "padding", "padding_bottom", "padding_left",
+            "padding_right", "padding_top", "padding_x", "padding_y",
             "selected", "shrink", "spacing", "step", "text", "text_color",
             "value", "width", "x", "y"]
 }
