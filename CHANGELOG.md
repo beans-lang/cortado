@@ -4,6 +4,45 @@
 
 First working macOS host.
 
+- **`<ScrollView>` scrolls.** It never had. Its arranger was `FillLayout`,
+  which hands every child the container's own box, so the content could not be
+  taller than the viewport and there was nothing to scroll; the macOS document
+  view was built at `NSZeroRect` and never resized. The shipped example said
+  otherwise — three labels captioned "so the rest scrolls" in a golden that
+  recorded them fitting exactly. New `layout.ScrollLayout` measures its child
+  with the scroll axis unbounded and places it at that height.
+- **`ctd_view_set_content_size` / `ctd_view_content_size`** (ABI 29) — how big
+  the thing behind the viewport is. Win32 used to work this out inside
+  `ctd_view_set_frame` by reading the children's frames, which is one host
+  inventing an answer the other three did not have, and reading it a pass late
+  because frames are written parents first. It is `ctd_kind_scrolls` now: a
+  text area, a table and an outline view are `NSScrollView`s and are refused,
+  which a class check could not do.
+- **A `<ScrollView>` could not hold a child on GTK4, and never could.** GTK puts
+  a `GtkFixed` inside a `GtkViewport` of its own — a fixed is not
+  `GtkScrollable` — and hands that viewport back from
+  `gtk_scrolled_window_get_child`, so `ctd_container_of` answered NULL and
+  every add refused by kind. No golden had ever put a child in one; the new
+  `tests/panes.b` case does, on every host.
+- **Two refusals where there were two silences.** A `<ScrollView>` with more
+  than one child laid them all in the same rectangle; every toolkit here
+  scrolls a single content view, so the extras are refused at compile time and
+  in the solver. A scroll view with no height, in a run that hands none out,
+  grows to its content and scrolls nothing — refused, naming `height=` and
+  `grow=` inside a `<VFlex>`.
+
+- **A colour in markup can be computed.** `background={self.tint}` was refused
+  as "one of a fixed set of words, so it needs a literal" — the word branch of
+  the emitter was written for `align` and `justify`, whose vocabulary is closed,
+  and Phase 2 folded the three colour attributes into it without splitting it.
+  No colour could be bound to state on any tag. The literal bought nothing
+  either: `bx` never validated a hex literal, so a bad one was already the
+  Builder's to refuse. `align` and `justify` still need theirs.
+- **`FancyButton.bx`** — the answer to "can I subclass `Button`", as a file. You
+  cannot: a `widgets.Button` owns a native handle and is not a `Component`. A
+  component that renders a `<Button>` is a tag with no registration, and this is
+  one, on the gallery screen beside the button it wraps.
+
 - `cortado` — the project command line. `cortado init` writes a project that
   builds and renders on the first run; `cortado build` regenerates the markup
   and compiles it; `cortado run` launches it; `cortado watch` does all of that

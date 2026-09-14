@@ -171,37 +171,47 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
     if (ctd_slot_kind(widget) == CTD_W_COMBO_BOX) tall += CTD_COMBO_DROP;
     SetWindowPos(view, NULL, (int)x, (int)y, (int)width, tall,
                  SWP_NOZORDER | SWP_NOACTIVATE);
-    if (ctd_slot_kind(widget) == CTD_W_SCROLL_VIEW) {
-        // The content window is as wide as the viewport and as tall as it
-        // needs to be; the scroll range is what is left over.
-        HWND content = ctd_container_of(widget);
-        if (content) {
-            RECT bounds = { 0, 0, 0, 0 };
-            HWND ours[256];
-            int32_t count = ctd_own_children(content, ours, 256);
-            for (int32_t i = 0; i < count; i++) {
-                RECT frame;
-                GetWindowRect(ours[i], &frame);
-                MapWindowPoints(HWND_DESKTOP, content, (POINT *)&frame, 2);
-                if (frame.right > bounds.right) bounds.right = frame.right;
-                if (frame.bottom > bounds.bottom) bounds.bottom = frame.bottom;
-            }
-            SetWindowPos(content, NULL, 0, 0,
-                         bounds.right > (int)width ? bounds.right : (int)width,
-                         bounds.bottom > (int)height ? bounds.bottom : (int)height,
-                         SWP_NOZORDER | SWP_NOACTIVATE);
-            SCROLLINFO info;
-            memset(&info, 0, sizeof info);
-            info.cbSize = sizeof info;
-            info.fMask = SIF_RANGE | SIF_PAGE;
-            info.nMin = 0;
-            info.nMax = bounds.bottom;
-            info.nPage = (UINT)height;
-            SetScrollInfo(view, SB_VERT, &info, TRUE);
-            info.nMax = bounds.right;
-            info.nPage = (UINT)width;
-            SetScrollInfo(view, SB_HORZ, &info, TRUE);
-        }
+    // A scroll view's range used to be worked out right here, from the
+    // children's frames. See ctd_view_set_content_size: it is cortado's number.
+    return CTD_OK;
+}
+
+// The content window is the thing behind the viewport, and the scroll range is
+// what is left over once the viewport has taken its page.
+ctd_status ctd_view_set_content_size(ctd_handle widget, double width, double height) {
+    HWND view = ctd_window(widget);
+    if (!view) return CTD_ERR_STALE;
+    if (!ctd_kind_scrolls(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+    HWND content = ctd_container_of(widget);
+    if (!content) return CTD_ERR_KIND;
+    RECT seen;
+    GetClientRect(view, &seen);
+    SetWindowPos(content, NULL, 0, 0, (int)width, (int)height,
+                 SWP_NOZORDER | SWP_NOACTIVATE);
+    SCROLLINFO info;
+    memset(&info, 0, sizeof info);
+    info.cbSize = sizeof info;
+    info.fMask = SIF_RANGE | SIF_PAGE;
+    info.nMin = 0;
+    info.nMax = (int)height;
+    info.nPage = (UINT)(seen.bottom - seen.top);
+    SetScrollInfo(view, SB_VERT, &info, TRUE);
+    info.nMax = (int)width;
+    info.nPage = (UINT)(seen.right - seen.left);
+    SetScrollInfo(view, SB_HORZ, &info, TRUE);
+    return CTD_OK;
+}
+
+ctd_status ctd_view_content_size(ctd_handle widget, double *out_size) {
+    if (!ctd_window(widget)) return CTD_ERR_STALE;
+    if (!ctd_kind_scrolls(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+    HWND content = ctd_container_of(widget);
+    if (!content) return CTD_ERR_KIND;
+    RECT held;
+    GetClientRect(content, &held);
+    if (out_size) {
+        out_size[0] = (double)(held.right - held.left);
+        out_size[1] = (double)(held.bottom - held.top);
     }
     return CTD_OK;
 }

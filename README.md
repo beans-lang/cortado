@@ -329,6 +329,28 @@ on Windows, under the tree interpreter and as a native binary. A frame that
 comes out wrong is a solver bug and can be nothing else. `WidgetLayout` is the
 other implementation: it asks the real control.
 
+**A scroll view is the one node bigger than its frame.** Everything else fills
+the box it is given; a `<ScrollView>` measures its child with the scroll axis
+unbounded and places it at *that* height, then tells the platform how big the
+thing behind the viewport is (`ctd_view_set_content_size`). That number is
+cortado's, worked out once in `layout.ScrollLayout` — Win32 used to infer it
+from the children's frames inside `set_frame`, one host answering a question
+the other three did not.
+
+Two things about it are refused rather than guessed. It holds **one** child,
+because every toolkit here scrolls a single content view and the extras would
+land on top of it. And it must be told a height — `height={...}`, or
+`grow={1}` inside a `<VFlex>` — because a scroll view in a run that hands out
+no height takes its content's height and scrolls nothing, silently.
+
+```
+<VFlex padding={16}>
+  <ScrollView grow={1}>
+    <VStack spacing={10}> ... </VStack>
+  </ScrollView>
+</VFlex>
+```
+
 **Right-to-left is one pass, not a parameter.** Every algorithm lays out left
 to right, and the solver mirrors the finished frames once — about each
 container's *content* box, so asymmetric padding stays where the designer put
@@ -540,6 +562,14 @@ mistake.
 any other capitalised tag is a component. There is no `<div>`, no entity table,
 no escaping and no `$html`: the output is a tree of native objects, and there
 is nothing to inject into.
+
+**You extend a control by wrapping it, not by subclassing it.** A
+`widgets.Button` owns one native object and is not a `Component`, so a subclass
+of it is not a tag — `Mount.obtain` refuses it by name. A component that
+*renders* a `<Button>` is a tag, with no registration anywhere, and that is the
+supported shape: `examples/gallery/site/FancyButton.bx` is a coloured button in
+eight lines of markup, used as `<FancyButton title="Clear" tint={self.accent}
+on_press={...} />`. Its attributes are its own fields, so it names them itself.
 
 **The generated code is the code you would have written.** `.bx` is sugar over
 `Builder`'s methods, not a second way of saying the same thing:
@@ -903,6 +933,12 @@ A colour is a word in markup and a packed integer by the time it reaches the
 ABI, parsed in one place, so `#abc` means the same thing in a control as it
 does in a shader. `<TextField background="#f00" />` is refused where it is
 written.
+
+**A colour can be computed.** `background={self.tint}` is a Beans expression
+like any other, because a colour is not a closed set of words. The two
+attributes that *are* a closed set — `align` and `justify` — still need a
+literal, so a misspelling is refused where it is written rather than reaching
+the builder at run time.
 
 **A property the platform has not got does not break the screen.** It is
 stepped over, the way a canvas still renders where there is no GPU; every other

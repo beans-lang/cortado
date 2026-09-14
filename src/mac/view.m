@@ -312,6 +312,32 @@ ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset) {
     return CTD_OK;
 }
 
+// An NSScrollView scrolls its document view, so the content size is that
+// view's frame. It is flipped, so a taller one starts at the top.
+ctd_status ctd_view_set_content_size(ctd_handle widget, double width, double height) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if (!ctd_kind_scrolls(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+    NSView *inside = ctd_container_of(object);
+    if (!inside || inside == object) return CTD_ERR_KIND;
+    [inside setFrameSize:NSMakeSize(width, height)];
+    return CTD_OK;
+}
+
+ctd_status ctd_view_content_size(ctd_handle widget, double *out_size) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if (!ctd_kind_scrolls(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+    NSView *inside = ctd_container_of(object);
+    if (!inside || inside == object) return CTD_ERR_KIND;
+    NSRect held = [inside frame];
+    if (out_size) {
+        out_size[0] = held.size.width;
+        out_size[1] = held.size.height;
+    }
+    return CTD_OK;
+}
+
 ctd_status ctd_view_frame(ctd_handle widget, double *out_frame) {
     NSView *view = (NSView *)ctd_resolve(widget);
     if (!view) return CTD_ERR_STALE;

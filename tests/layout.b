@@ -890,6 +890,73 @@ fn remeasuring() {
     io.println("  and its neighbour moved with it: {first_x == 100.0 && second_x == 250.0}")
 }
 
+// ---- 16. scrolling ----
+
+fn scroller(name: string, child: layout.LayoutNode) -> layout.LayoutNode {
+    var view: layout.LayoutNode = layout.LayoutNode.group(name, new layout.ScrollLayout())
+    view.add(child)
+    return view
+}
+
+/// A stretched column of `count` leaves, each 100 x 20.
+fn tall_content(count: int) -> layout.LayoutNode {
+    var node: layout.LayoutNode = layout.LayoutNode.group("content", stretched_column(0.0))
+    for index: int in 0..count {
+        node.add(leaf("row{index}", 1))
+    }
+    return node
+}
+
+fn scrolling() {
+    // Sixty points of labels behind a forty-point viewport. The content keeps
+    // its own height; the viewport keeps the box it was given.
+    var over: layout.LayoutNode = scroller("scroller", tall_content(3))
+    run("content taller than the viewport", over, 200.0, 40.0)
+    io.println("  the viewport is the box it was given: {over.frame().height == 40.0}")
+    io.println("  the content is as tall as it measured: {over.at(0).frame().height == 60.0}")
+    io.println("  and that is what the platform is told to scroll: {over.content.height == 60.0}")
+    io.println("  across, they are the same: {over.content.width == 200.0}")
+
+    // The same tree in a box with room to spare. Nothing to scroll, and the
+    // content size says so by matching the viewport rather than by being zero.
+    var under: layout.LayoutNode = scroller("scroller", tall_content(2))
+    run("content shorter than the viewport", under, 200.0, 120.0)
+    io.println("  the content fills the viewport: {under.at(0).frame().height == 120.0}")
+    io.println("  and there is nothing to scroll: {under.content.height == 120.0}")
+
+    // Two children. Every platform here scrolls one content view, so the
+    // second would be laid on top of the first.
+    var crowded: layout.LayoutNode = scroller("crowded", tall_content(2))
+    crowded.add(leaf("stray", 2))
+    run("two children in a scroll view", crowded, 200.0, 40.0)
+
+    // A scroll view in a column that hands out no height: it would grow to its
+    // content and scroll nothing, which is the silent version of this bug.
+    var loose: layout.LayoutNode = layout.LayoutNode.group("root", stretched_column(0.0))
+    loose.add(scroller("unbounded", tall_content(3)))
+    run("a scroll view with no height", loose, 200.0, 400.0)
+
+    // The two ways out, both taken.
+    var pinned: layout.LayoutNode = layout.LayoutNode.group("root", stretched_column(0.0))
+    var sized: layout.LayoutNode = scroller("sized", tall_content(3))
+    var spec: layout.LayoutSpec = layout.LayoutSpec.auto()
+    spec.max_height = 40.0
+    spec.align = geometry.Align.stretch
+    sized.spec = spec
+    pinned.add(sized)
+    run("a scroll view told its height", pinned, 200.0, 400.0)
+    io.println("  it scrolls: {sized.content.height == 60.0}")
+
+    var flexed: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.column(0.0))
+    var grown: layout.LayoutNode = scroller("grown", tall_content(6))
+    var share: layout.LayoutSpec = layout.LayoutSpec.flexible(1.0)
+    share.align = geometry.Align.stretch
+    grown.spec = share
+    flexed.add(grown)
+    run("a scroll view that takes the leftover", flexed, 200.0, 50.0)
+    io.println("  it scrolls: {grown.content.height == 120.0}")
+}
+
 fn main() {
     stacks()
     alignment()
@@ -906,4 +973,5 @@ fn main() {
     checks()
     cost()
     remeasuring()
+    scrolling()
 }

@@ -624,6 +624,27 @@ pub abstract class Widget {
                                         right: scratch.real(2), bottom: scratch.real(3) })
     }
 
+    /// How big the area this control scrolls over is.
+    ///
+    /// A scroll view's frame is its viewport; this is the thing behind it.
+    /// Refused on any other control, which scrolls nothing cortado laid out.
+    pub fn set_content_size(size: geometry.Size) -> Result<bool> {
+        unsafe {
+            return host.check(
+                host.ctd_view_set_content_size(self.slot.raw, size.width, size.height) as int,
+                "set the scrolled size of a {self.kind_value.name()}")
+        }
+    }
+
+    pub fn content_size() -> Result<geometry.Size> {
+        let scratch: host.HostScratch = host.HostScratch.instance
+        unsafe {
+            host.check(host.ctd_view_content_size(self.slot.raw, scratch.reals) as int,
+                       "read the scrolled size of a {self.kind_value.name()}")?
+        }
+        return ok(geometry.Size.of(scratch.real(0), scratch.real(1)))
+    }
+
     pub fn set_value_as_user(index: int, value: f64) -> Result<bool> {
         unsafe {
             return host.check(

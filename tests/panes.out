@@ -25,5 +25,8 @@
   a released one is refused, not taken for keeping nothing: true
   a teardown the platform refuses says so: true
   and finishes anyway: true
+-- a scroll view --
+  the viewport is the height it was given: true
+  what it scrolls over is taller: true
   a released split view is not arranged on a guess: true
 drove=true

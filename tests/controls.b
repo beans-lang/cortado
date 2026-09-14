@@ -24,7 +24,17 @@ import cortado.widgets
 import cortado.component
 import cortado.events
 import cortado.host
+import cortado.geometry
 import std.io
+
+/// Which of the three refusals a control gives to being told what it scrolls,
+/// or `""` when it takes it.
+fn refusal_of(control: widgets.Widget) -> string {
+    match control.set_content_size(geometry.Size.of(400.0, 900.0)) {
+        ok(done) => { return "" }
+        err(problem) => { return problem.kind }
+    }
+}
 
 fn agrees(promised: bool, happened: bool) -> bool {
     return promised == happened
@@ -219,6 +229,38 @@ fn drive() -> Result<bool> {
     }
     io.println("-- what can be turning --")
     io.println("  exactly a spinner, and only where there is one: {turning_correct == offered}")
+
+    // The same per-kind shape as the spinner above, and for a stronger version
+    // of the same reason: on AppKit a text area, a table and an outline view
+    // are all NSScrollViews, so a host that asked the object would let three
+    // controls be told how big their content is when none of them lays it out.
+    var scrolls_correct: int = 0
+    for kind: widgets.WidgetKind in every {
+        if !kind.available() { continue }
+        var control: widgets.Widget = component.WidgetMaker.of_kind(kind)?
+        var took_it: bool = false
+        match control.set_content_size(geometry.Size.of(400.0, 900.0)) {
+            ok(done) => { took_it = true }
+            err(problem) => { took_it = false }
+        }
+        if took_it == (kind == widgets.WidgetKind.scroll_view) {
+            scrolls_correct = scrolls_correct + 1
+        } else {
+            io.println("  ...{kind.name()} answered {took_it} to being told what it scrolls")
+        }
+    }
+    io.println("-- what scrolls something cortado laid out --")
+    io.println("  exactly a scroll view: {scrolls_correct == offered}")
+
+    var scroller: widgets.ScrollView = new widgets.ScrollView()
+    scroller.set_content_size(geometry.Size.of(400.0, 900.0))?
+    let held: geometry.Size = scroller.content_size()?
+    io.println("  and it keeps the size it was given: {held.width == 400.0 && held.height == 900.0}")
+    var pane: widgets.TextArea = new widgets.TextArea()
+    io.println("  a text area is a scroller and is refused anyway: {refusal_of(pane) == "wrong_widget"}")
+    var gone: widgets.ScrollView = new widgets.ScrollView()
+    gone.release()
+    io.println("  a released one says the handle is gone: {refusal_of(gone) == "stale_handle"}")
 
     io.println("-- a number that is not a kind --")
     io.println("  the host refuses it rather than calling it a missing control: {not_a_kind == 3}")

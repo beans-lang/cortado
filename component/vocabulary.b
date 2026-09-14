@@ -80,7 +80,10 @@ pub class Vocabulary {
         // `<Container />` is a box a program fills itself, and a canvas is
         // drawn rather than filled; giving either one children that fill it
         // would change what those two tags have always meant.
-        if tag == "GroupBox" || tag == "Disclosure" || tag == "ScrollView" ||
+        // A scroll view fills like the rest, except on the axis it scrolls:
+        // its content is measured with no ceiling, or nothing ever scrolls.
+        if tag == "ScrollView" { return some(new layout.ScrollLayout()) }
+        if tag == "GroupBox" || tag == "Disclosure" ||
            tag == "TabView" || tag == "SplitView" {
             return some(new layout.FillLayout())
         }

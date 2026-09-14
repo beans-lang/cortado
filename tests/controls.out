@@ -16,6 +16,11 @@
   and none raises anything when the program writes to it: true
 -- what can be turning --
   exactly a spinner, and only where there is one: true
+-- what scrolls something cortado laid out --
+  exactly a scroll view: true
+  and it keeps the size it was given: true
+  a text area is a scroller and is refused anyway: true
+  a released one says the handle is gone: true
 -- a number that is not a kind --
   the host refuses it rather than calling it a missing control: true
   and cortado has no name for it: true

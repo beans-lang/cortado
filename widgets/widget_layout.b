@@ -59,6 +59,8 @@ pub class WidgetLayout implements layout.Measure {
     /// out, which is two things owning one frame.
     frames: Map<u64, geometry.Rect> = {}
     chrome: Map<u64, geometry.EdgeInsets> = {}
+    /// What each scrolling control was last told it scrolls over.
+    scrolled: Map<u64, geometry.Size> = {}
 
     /// How many controls the last `apply` really moved, and how many it left
     /// alone. A test's cheapest proof that a pass that changed nothing wrote
@@ -96,6 +98,7 @@ pub class WidgetLayout implements layout.Measure {
     pub fn forget(handle: u64) {
         self.frames.remove(handle)
         self.chrome.remove(handle)
+        self.scrolled.remove(handle)
     }
 
     /// Everything, for a mount that is closing or a system change that moves
@@ -103,6 +106,7 @@ pub class WidgetLayout implements layout.Measure {
     pub fn forget_all() {
         self.frames = {}
         self.chrome = {}
+        self.scrolled = {}
     }
 
     /// How many widgets this sheet is tracking.
@@ -244,6 +248,9 @@ pub class WidgetLayout implements layout.Measure {
                     self.wrote = self.wrote + 1
                     moved = moved + 1
                 }
+                // Before the children, because a host may size the thing they
+                // live in — Win32 moves the content window this call resizes.
+                self.scroll_to(control, slot, node.content)?
                 next_x = 0.0
                 next_y = 0.0
             }
@@ -253,6 +260,25 @@ pub class WidgetLayout implements layout.Measure {
             moved = moved + self.apply_at(node.at(index), next_x, next_y)?
         }
         return ok(moved)
+    }
+
+    /// Tells a scrolling control how big the area behind its viewport is.
+    ///
+    /// Only `ScrollLayout` leaves a non-zero `content`, so this is a no-op for
+    /// every other node rather than a call every control has to refuse.
+    fn scroll_to(control: Widget, slot: u64, size: geometry.Size) -> Result<bool> {
+        if size.width <= 0.0 && size.height <= 0.0 { return ok(false) }
+        match self.scrolled.get(slot) {
+            some(had) => {
+                if had.width == size.width && had.height == size.height {
+                    return ok(false)
+                }
+            }
+            none => {}
+        }
+        control.set_content_size(size)?
+        self.scrolled[slot] = size
+        return ok(true)
     }
 
     /// Whether this sheet has already asked for exactly this frame.

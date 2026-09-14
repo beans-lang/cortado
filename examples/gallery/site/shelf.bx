@@ -1,221 +1,229 @@
-<VStack spacing={10} padding={16} align="stretch">
-  <Label font_size={18} text="Every control cortado has" />
-  <Label>$self.inventory</Label>
-  <Separator />
+<VFlex spacing={10} padding={16} align="stretch">
+  <ScrollView grow={1}>
+    <VStack spacing={10} align="stretch">
+      <Label font_size={18} text="Every control cortado has" />
+      <Label>$self.inventory</Label>
+      <Separator />
 
-  <!-- Words. Everything here is on every platform. -->
-  <Disclosure text="Words" open={self.words}
-              on:change={fn(e: UiEvent) { self.toggle_words(e) }}>
-    <VStack spacing={8} padding={8} align="stretch">
-      <HFlex spacing={10}>
-        <Label width={110} text="Name" />
-        <TextField grow={1} bind:value={self.name} />
-      </HFlex>
-      <HFlex spacing={10}>
-        <Label width={110} text="Passphrase" />
-        <SecureField grow={1} />
-      </HFlex>
-      <HFlex spacing={10}>
-        <Label width={110} text="Search" />
-        <SearchField grow={1} />
-      </HFlex>
-      <TextArea height={56} bind:value={self.note} />
-      <Link text="Read the manual" />
-    </VStack>
-  </Disclosure>
-
-  <!-- Choices. Three of these are not on every platform, and each says so. -->
-  <Disclosure text="Choices" open={self.choices}
-              on:change={fn(e: UiEvent) { self.toggle_choices(e) }}>
-    <VStack spacing={8} padding={8} align="stretch">
-      <HFlex spacing={10}>
-        <Label width={110} text="Drink" />
-        <ComboBox grow={1} on:change={fn(e: UiEvent) { self.pick(e.index) }} />
-      </HFlex>
-      <HStack spacing={10}>
-        <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>Rush it</CheckBox>
-        <RadioButton>Eat in</RadioButton>
-        <RadioButton>Take away</RadioButton>
-      </HStack>
-      $if self.has_switch {
-        <HFlex spacing={10}>
-          <Label width={110} text="Keep warm" />
-          <Switch checked={self.warm} on:change={fn(e: UiEvent) { self.toggle_warm(e) }} />
-        </HFlex>
-      }
-      $if !self.has_switch {
-        <Label text="no toggle switch on this platform" />
-      }
-      $if self.has_segmented {
-        <Segmented />
-      }
-      $if !self.has_segmented {
-        <Label text="no segmented control on this platform" />
-      }
-    </VStack>
-  </Disclosure>
-
-  <!-- Numbers. A gauge is not on every platform; the rest are. -->
-  <Disclosure text="Numbers" open={self.numbers}
-              on:change={fn(e: UiEvent) { self.toggle_numbers(e) }}>
-    <VStack spacing={8} padding={8} align="stretch">
-      <HFlex spacing={10}>
-        <Label width={110}>Shots: $self.shots</Label>
-        <Slider grow={1} min={1} max={4} value={self.shots}
-                on:change={fn(e: UiEvent) { self.set_shots(e) }} />
-      </HFlex>
-      <HFlex spacing={10}>
-        <Label width={110} text="Exactly" />
-        <Stepper min={1} max={4} step={1} value={self.shots}
-                 on:change={fn(e: UiEvent) { self.set_shots(e) }} />
-      </HFlex>
-      <ProgressBar height={12} min={0} max={4} value={self.shots} />
-      $if self.has_level {
-        <LevelIndicator height={16} min={0} max={4} value={self.shots} />
-      }
-      $if !self.has_level {
-        <Label text="no level indicator on this platform" />
-      }
-      $if self.has_spinner {
-        <Spinner height={20} animating={self.busy} />
-      }
-      $if !self.has_spinner {
-        <Label text="no spinner on this platform" />
-      }
-    </VStack>
-  </Disclosure>
-
-  <!-- A day and a colour: the two values that are neither text nor a number. -->
-  <Disclosure text="A day and a colour" open={self.values}
-              on:change={fn(e: UiEvent) { self.toggle_values(e) }}>
-    <VStack spacing={8} padding={8} align="stretch">
-      <HFlex spacing={10}>
-        <Label width={110} text="When" />
-        <DatePicker grow={1} day={self.day}
-                    on:change={fn(e: UiEvent) { self.set_day(e) }} />
-      </HFlex>
-      $if self.has_color {
-        <HFlex spacing={10}>
-          <Label width={110} text="Marker" />
-          <ColorWell width={60} height={24} color="#3b82f6"
-                     on:change={fn(e: UiEvent) { self.set_color(e) }} />
-        </HFlex>
-      }
-      $if !self.has_color {
-        <Label text="no colour well on this platform" />
-      }
-      <Label>$self.chosen</Label>
-    </VStack>
-  </Disclosure>
-
-  <!-- Boxes and pictures. -->
-  <Disclosure text="Boxes and pictures" open={self.boxes}
-              on:change={fn(e: UiEvent) { self.toggle_boxes(e) }}>
-    <VStack spacing={8} padding={8} align="stretch">
-      $if self.has_group {
-        <GroupBox text="Brewing">
-          <VStack spacing={6} padding={10} align="stretch">
-            <CheckBox>Grind fresh</CheckBox>
-            <CheckBox>Filtered water</CheckBox>
-          </VStack>
-        </GroupBox>
-      }
-      $if !self.has_group {
-        <Label text="no group box on this platform" />
-      }
-      <Image height={20} />
-      <!-- A bare canvas: an ordinary control a program fills itself. -->
-      <Canvas height={20} />
-      <!-- And the easy road: no shader code at all. The effect is named and
-           cortado writes the shader, the pipeline, the quad and the clock. -->
-      <ShaderCanvas height={44} effect="ripple" color="#4088bf" color_to="#0d1b2a" detail={26} />
-      <!-- A shape, which is the same road again with a mask on it: the fill is
-           one of those same named effects, and the figure is what it is drawn
-           through. Still, so it costs no frame after the first. -->
-      <ShapeCanvas height={44} figure="rounded_rect" radius={10} inset={6}
-                   fill="gradient" color="#4088bf" color_to="#0d1b2a"
-                   stroke="#8fb7d4" stroke_width={1} />
-    </VStack>
-  </Disclosure>
-
-  <!-- Rows, and a window onto something bigger. A table is filled by *asking*
-       rather than by building — its rows are a data source, which `main.b`
-       gives it — and a scroll view holds whatever is too big for its frame. -->
-  <Disclosure text="Rows" open={self.rows}
-              on:change={fn(e: UiEvent) { self.toggle_rows(e) }}>
-    <VStack spacing={8} padding={8} align="stretch">
-      <Table height={80} />
-      <ScrollView height={60}>
-        <VStack spacing={4} padding={4} align="stretch">
-          <Label text="More than fits" />
-          <Label text="so the rest scrolls" />
-          <Label text="and nothing is clipped away" />
+      <!-- Words. Everything here is on every platform. -->
+      <Disclosure text="Words" open={self.words}
+                  on:change={fn(e: UiEvent) { self.toggle_words(e) }}>
+        <VStack spacing={8} padding={8} align="stretch">
+          <HFlex spacing={10}>
+            <Label width={110} text="Name" />
+            <TextField grow={1} bind:value={self.name} />
+          </HFlex>
+          <HFlex spacing={10}>
+            <Label width={110} text="Passphrase" />
+            <SecureField grow={1} />
+          </HFlex>
+          <HFlex spacing={10}>
+            <Label width={110} text="Search" />
+            <SearchField grow={1} />
+          </HFlex>
+          <TextArea height={56} bind:value={self.note} />
+          <Link text="Read the manual" />
         </VStack>
-      </ScrollView>
+      </Disclosure>
+
+      <!-- Choices. Three of these are not on every platform, and each says so. -->
+      <Disclosure text="Choices" open={self.choices}
+                  on:change={fn(e: UiEvent) { self.toggle_choices(e) }}>
+        <VStack spacing={8} padding={8} align="stretch">
+          <HFlex spacing={10}>
+            <Label width={110} text="Drink" />
+            <ComboBox grow={1} on:change={fn(e: UiEvent) { self.pick(e.index) }} />
+          </HFlex>
+          <HStack spacing={10}>
+            <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>Rush it</CheckBox>
+            <RadioButton>Eat in</RadioButton>
+            <RadioButton>Take away</RadioButton>
+          </HStack>
+          $if self.has_switch {
+            <HFlex spacing={10}>
+              <Label width={110} text="Keep warm" />
+              <Switch checked={self.warm} on:change={fn(e: UiEvent) { self.toggle_warm(e) }} />
+            </HFlex>
+          }
+          $if !self.has_switch {
+            <Label text="no toggle switch on this platform" />
+          }
+          $if self.has_segmented {
+            <Segmented />
+          }
+          $if !self.has_segmented {
+            <Label text="no segmented control on this platform" />
+          }
+        </VStack>
+      </Disclosure>
+
+      <!-- Numbers. A gauge is not on every platform; the rest are. -->
+      <Disclosure text="Numbers" open={self.numbers}
+                  on:change={fn(e: UiEvent) { self.toggle_numbers(e) }}>
+        <VStack spacing={8} padding={8} align="stretch">
+          <HFlex spacing={10}>
+            <Label width={110}>Shots: $self.shots</Label>
+            <Slider grow={1} min={1} max={4} value={self.shots}
+                    on:change={fn(e: UiEvent) { self.set_shots(e) }} />
+          </HFlex>
+          <HFlex spacing={10}>
+            <Label width={110} text="Exactly" />
+            <Stepper min={1} max={4} step={1} value={self.shots}
+                    on:change={fn(e: UiEvent) { self.set_shots(e) }} />
+          </HFlex>
+          <ProgressBar height={12} min={0} max={4} value={self.shots} />
+          $if self.has_level {
+            <LevelIndicator height={16} min={0} max={4} value={self.shots} />
+          }
+          $if !self.has_level {
+            <Label text="no level indicator on this platform" />
+          }
+          $if self.has_spinner {
+            <Spinner height={20} animating={self.busy} />
+          }
+          $if !self.has_spinner {
+            <Label text="no spinner on this platform" />
+          }
+        </VStack>
+      </Disclosure>
+
+      <!-- A day and a colour: the two values that are neither text nor a number. -->
+      <Disclosure text="A day and a colour" open={self.values}
+                  on:change={fn(e: UiEvent) { self.toggle_values(e) }}>
+        <VStack spacing={8} padding={8} align="stretch">
+          <HFlex spacing={10}>
+            <Label width={110} text="When" />
+            <DatePicker grow={1} day={self.day}
+                        on:change={fn(e: UiEvent) { self.set_day(e) }} />
+          </HFlex>
+          $if self.has_color {
+            <HFlex spacing={10}>
+              <Label width={110} text="Marker" />
+              <ColorWell width={60} height={24} color="#3b82f6"
+                        on:change={fn(e: UiEvent) { self.set_color(e) }} />
+            </HFlex>
+          }
+          $if !self.has_color {
+            <Label text="no colour well on this platform" />
+          }
+          <Label>$self.chosen</Label>
+        </VStack>
+      </Disclosure>
+
+      <!-- Boxes and pictures. -->
+      <Disclosure text="Boxes and pictures" open={self.boxes}
+                  on:change={fn(e: UiEvent) { self.toggle_boxes(e) }}>
+        <VStack spacing={8} padding={8} align="stretch">
+          $if self.has_group {
+            <GroupBox text="Brewing">
+              <VStack spacing={6} padding={10} align="stretch">
+                <CheckBox>Grind fresh</CheckBox>
+                <CheckBox>Filtered water</CheckBox>
+              </VStack>
+            </GroupBox>
+          }
+          $if !self.has_group {
+            <Label text="no group box on this platform" />
+          }
+          <Image height={20} />
+          <!-- A bare canvas: an ordinary control a program fills itself. -->
+          <Canvas height={20} />
+          <!-- And the easy road: no shader code at all. The effect is named and
+              cortado writes the shader, the pipeline, the quad and the clock. -->
+          <ShaderCanvas height={44} effect="ripple" color="#4088bf" color_to="#0d1b2a" detail={26} />
+          <!-- A shape, which is the same road again with a mask on it: the fill is
+              one of those same named effects, and the figure is what it is drawn
+              through. Still, so it costs no frame after the first. -->
+          <ShapeCanvas height={44} figure="rounded_rect" radius={10} inset={6}
+                      fill="gradient" color="#4088bf" color_to="#0d1b2a"
+                      stroke="#8fb7d4" stroke_width={1} />
+        </VStack>
+      </Disclosure>
+
+      <!-- Rows, and a window onto something bigger. A table is filled by *asking*
+          rather than by building — its rows are a data source, which `main.b`
+          gives it — and a scroll view holds whatever is too big for its frame. -->
+      <Disclosure text="Rows" open={self.rows}
+                  on:change={fn(e: UiEvent) { self.toggle_rows(e) }}>
+        <VStack spacing={8} padding={8} align="stretch">
+          <Table height={80} />
+          <ScrollView height={60}>
+            <VStack spacing={4} padding={4} align="stretch">
+              <Label text="More than fits" />
+              <Label text="so the rest scrolls" />
+              <Label text="and nothing is clipped away" />
+            </VStack>
+          </ScrollView>
+        </VStack>
+      </Disclosure>
+
+      <!-- The three that are whole systems rather than controls. Each is missing
+          on at least one platform, and none of them can be fully described in
+          markup: a tab's labels, a divider's position and a page's HTML are data.
+          `main.b` fills those in after the mount, the same way it fills the combo
+          box — which is the same rule, not a special case. -->
+      <Disclosure text="Pages, panes and a browser" open={self.systems}
+                  on:change={fn(e: UiEvent) { self.toggle_systems(e) }}>
+        <VStack spacing={8} padding={8} align="stretch">
+          $if self.has_tabs {
+            <TabView height={90}>
+              <Container />
+              <Container />
+            </TabView>
+          }
+          $if !self.has_tabs {
+            <Label text="no tab view on this platform" />
+          }
+          $if self.has_split {
+            <!-- A word in each pane, and they are here to be *measured*. A split
+                view's panes are divided by the control and not by the arranger
+                around it, so a mount that laid its children out as a plain box
+                would give both of these the whole width — and two empty
+                containers, which is what stood here, could not show it. The
+                frames in tests/gallery.out are what catches it now. -->
+            <SplitView height={70}>
+              <VStack padding={4} align="stretch">
+                <Label text="this pane" />
+              </VStack>
+              <VStack padding={4} align="stretch">
+                <Label text="and this one" />
+              </VStack>
+            </SplitView>
+          }
+          $if !self.has_split {
+            <Label text="no split view on this platform" />
+          }
+          $if self.has_tree {
+            <OutlineView height={90} />
+          }
+          $if !self.has_tree {
+            <Label text="no outline view on this platform" />
+          }
+          $if self.has_web {
+            <WebView height={90} />
+          }
+          $if !self.has_web {
+            <Label text="no browser engine on this platform" />
+          }
+        </VStack>
+      </Disclosure>
+
+      <!-- Dressed from markup: a real NSButton that keeps its bezel and its title
+          and shows the colour behind them. The four text controls refuse one. -->
+      <!-- <FancyButton> is the same button wrapped as a component: a tag cortado
+          does not own, with no registration anywhere. Its tint is a field. -->
+      <HStack spacing={10} justify="end">
+        <FancyButton title="Clear" tint={self.accent} enabled={self.shots > 0}
+                    on_press={fn(e: UiEvent) { self.clear() }} />
+        <Button enabled={self.shots > 0} background="#2f6f4f" corner_radius={6}
+                border_width={1} border_color="#00000040"
+                on:click={fn(e: UiEvent) { self.order() }}>Order</Button>
+      </HStack>
+
+      <Label>$self.status</Label>
     </VStack>
-  </Disclosure>
-
-  <!-- The three that are whole systems rather than controls. Each is missing
-       on at least one platform, and none of them can be fully described in
-       markup: a tab's labels, a divider's position and a page's HTML are data.
-       `main.b` fills those in after the mount, the same way it fills the combo
-       box — which is the same rule, not a special case. -->
-  <Disclosure text="Pages, panes and a browser" open={self.systems}
-              on:change={fn(e: UiEvent) { self.toggle_systems(e) }}>
-    <VStack spacing={8} padding={8} align="stretch">
-      $if self.has_tabs {
-        <TabView height={90}>
-          <Container />
-          <Container />
-        </TabView>
-      }
-      $if !self.has_tabs {
-        <Label text="no tab view on this platform" />
-      }
-      $if self.has_split {
-        <!-- A word in each pane, and they are here to be *measured*. A split
-             view's panes are divided by the control and not by the arranger
-             around it, so a mount that laid its children out as a plain box
-             would give both of these the whole width — and two empty
-             containers, which is what stood here, could not show it. The
-             frames in tests/gallery.out are what catches it now. -->
-        <SplitView height={70}>
-          <VStack padding={4} align="stretch">
-            <Label text="this pane" />
-          </VStack>
-          <VStack padding={4} align="stretch">
-            <Label text="and this one" />
-          </VStack>
-        </SplitView>
-      }
-      $if !self.has_split {
-        <Label text="no split view on this platform" />
-      }
-      $if self.has_tree {
-        <OutlineView height={90} />
-      }
-      $if !self.has_tree {
-        <Label text="no outline view on this platform" />
-      }
-      $if self.has_web {
-        <WebView height={90} />
-      }
-      $if !self.has_web {
-        <Label text="no browser engine on this platform" />
-      }
-    </VStack>
-  </Disclosure>
-
-  <!-- Dressed from markup: a real NSButton that keeps its bezel and its title
-       and shows the colour behind them. The four text controls refuse one. -->
-  <HStack spacing={10} justify="end">
-    <Button enabled={self.shots > 0} background="#2f6f4f" corner_radius={6}
-            border_width={1} border_color="#00000040"
-            on:click={fn(e: UiEvent) { self.order() }}>Order</Button>
-  </HStack>
-
-  <Label>$self.status</Label>
-</VStack>
+  </ScrollView>
+</VFlex>
 <beans>
 package site
 
@@ -249,6 +257,9 @@ pub partial class Shelf extends component.Component {
     pub day: f64 = 1767225600.0
     pub note: string = "no sugar"
     pub status: string = "Nothing ordered yet"
+    /// The tint `<FancyButton>` is given. A field, not a literal, so the
+    /// colour a screen computes reaches a control the way a number does.
+    pub accent: string = "#8a4b2a"
     pub chosen: string = "2026-01-01, marker #3b82f6"
 
     /// Which sections are open. A shut disclosure still takes the room its
@@ -366,6 +377,13 @@ pub partial class Shelf extends component.Component {
 
     pub fn order() {
         self.status = "Ordered {self.shots} × {self.drink}"
+        self.request_render()
+    }
+
+    /// What `<FancyButton on_press=...>` runs. The component holds the button;
+    /// the screen holds what pressing it means.
+    pub fn clear() {
+        self.status = "Nothing ordered yet"
         self.request_render()
     }
 }

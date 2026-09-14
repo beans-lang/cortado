@@ -11,6 +11,11 @@ static GtkFixed *ctd_container_of(gpointer object) {
     if (GTK_IS_FIXED(object)) return GTK_FIXED(object);
     if (GTK_IS_SCROLLED_WINDOW(object)) {
         GtkWidget *inner = gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(object));
+        // GTK puts a GtkFixed in a GtkViewport of its own, because a fixed is
+        // not GtkScrollable, and hands that viewport back here.
+        if (inner && GTK_IS_VIEWPORT(inner)) {
+            inner = gtk_viewport_get_child(GTK_VIEWPORT(inner));
+        }
         if (inner && GTK_IS_FIXED(inner)) return GTK_FIXED(inner);
         return NULL;
     }
@@ -277,6 +282,35 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
     GtkWidget *parent = gtk_widget_get_parent(GTK_WIDGET(view));
     if (parent && GTK_IS_FIXED(parent)) {
         gtk_fixed_move(GTK_FIXED(parent), GTK_WIDGET(view), x, y);
+    }
+    return CTD_OK;
+}
+
+/* A GtkScrolledWindow scrolls whatever its child asks to be, so the content
+ * size is the GtkFixed's size request. */
+ctd_status ctd_view_set_content_size(ctd_handle widget, double width, double height) {
+    gpointer object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if (!ctd_kind_scrolls(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+    GtkFixed *inside = ctd_container_of(object);
+    if (!inside) return CTD_ERR_KIND;
+    gtk_widget_set_size_request(GTK_WIDGET(inside), (int)width, (int)height);
+    return CTD_OK;
+}
+
+ctd_status ctd_view_content_size(ctd_handle widget, double *out_size) {
+    gpointer object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if (!ctd_kind_scrolls(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+    GtkFixed *inside = ctd_container_of(object);
+    if (!inside) return CTD_ERR_KIND;
+    int width = 0;
+    int height = 0;
+    gtk_widget_get_size_request(GTK_WIDGET(inside), &width, &height);
+    if (out_size) {
+        /* -1 is GTK's "no request"; the caller asked for a size, not a flag. */
+        out_size[0] = width < 0 ? 0.0 : (double)width;
+        out_size[1] = height < 0 ? 0.0 : (double)height;
     }
     return CTD_OK;
 }

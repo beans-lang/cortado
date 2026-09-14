@@ -43,6 +43,13 @@ pub class LayoutNode {
     /// a machine with no display.
     pub chrome: geometry.EdgeInsets = geometry.EdgeInsets {}
 
+    /// How big the area behind this node is, when that is not its own frame.
+    ///
+    /// Only a scrolling container has one, and only `ScrollLayout` writes it.
+    /// Zero everywhere else, which is how a caller tells "nothing to scroll"
+    /// from "a content size of nothing".
+    pub content: geometry.Size = geometry.Size.zero()
+
     arranger: Layout
     contents: List<LayoutNode> = []
     box: geometry.Rect = geometry.Rect.zero()

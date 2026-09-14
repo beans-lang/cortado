@@ -44,6 +44,9 @@ pub partial class Shelf extends component.Component {
     pub day: f64 = 1767225600.0
     pub note: string = "no sugar"
     pub status: string = "Nothing ordered yet"
+    /// The tint `<FancyButton>` is given. A field, not a literal, so the
+    /// colour a screen computes reaches a control the way a number does.
+    pub accent: string = "#8a4b2a"
     pub chosen: string = "2026-01-01, marker #3b82f6"
 
     /// Which sections are open. A shut disclosure still takes the room its
@@ -163,6 +166,13 @@ pub partial class Shelf extends component.Component {
         self.status = "Ordered {self.shots} × {self.drink}"
         self.request_render()
     }
+
+    /// What `<FancyButton on_press=...>` runs. The component holds the button;
+    /// the screen holds what pressing it means.
+    pub fn clear() {
+        self.status = "Nothing ordered yet"
+        self.request_render()
+    }
 }
 
 // Every component tag in shelf.bx, checked by beansc rather than by cortado-bx:
@@ -171,149 +181,155 @@ pub partial class Shelf extends component.Component {
 // unused free function is not an error.
 fn _cortado_component_shelf_ShaderCanvas(value: ShaderCanvas) -> Component { return value }
 fn _cortado_component_shelf_ShapeCanvas(value: ShapeCanvas) -> Component { return value }
+fn _cortado_component_shelf_FancyButton(value: FancyButton) -> Component { return value }
 
 partial class Shelf {
     pub override fn render(b: Builder) {
-        b.open("VStack")  // shelf.bx:1
+        b.open("VFlex")  // shelf.bx:1
         b.number("spacing", (10) as f64)
         b.number("padding", (16) as f64)
         b.word("align", "stretch")
-        b.open("Label")  // shelf.bx:2
+        b.open("ScrollView")  // shelf.bx:2
+        b.number("grow", (1) as f64)
+        b.open("VStack")  // shelf.bx:3
+        b.number("spacing", (10) as f64)
+        b.word("align", "stretch")
+        b.open("Label")  // shelf.bx:4
         b.number("font_size", (18) as f64)
         b.text("Every control cortado has")
         b.close()
-        b.open("Label")  // shelf.bx:3
+        b.open("Label")  // shelf.bx:5
         b.text("{self.inventory}")
         b.close()
-        b.open("Separator")  // shelf.bx:4
+        b.open("Separator")  // shelf.bx:6
         b.close()
-        b.open("Disclosure")  // shelf.bx:7
+        b.open("Disclosure")  // shelf.bx:9
         b.text("Words")
         b.flag("open", self.words)
         b.on("change", fn(e: UiEvent) { self.toggle_words(e) })
-        b.open("VStack")  // shelf.bx:9
+        b.open("VStack")  // shelf.bx:11
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("HFlex")  // shelf.bx:10
+        b.open("HFlex")  // shelf.bx:12
         b.number("spacing", (10) as f64)
-        b.open("Label")  // shelf.bx:11
+        b.open("Label")  // shelf.bx:13
         b.number("width", (110) as f64)
         b.text("Name")
         b.close()
-        b.open("TextField")  // shelf.bx:12
+        b.open("TextField")  // shelf.bx:14
         b.number("grow", (1) as f64)
         b.on("commit", fn(_e: UiEvent) { self.name = _e.text })
         b.text("{self.name}")
         b.close()
         b.close()
-        b.open("HFlex")  // shelf.bx:14
+        b.open("HFlex")  // shelf.bx:16
         b.number("spacing", (10) as f64)
-        b.open("Label")  // shelf.bx:15
+        b.open("Label")  // shelf.bx:17
         b.number("width", (110) as f64)
         b.text("Passphrase")
         b.close()
-        b.open("SecureField")  // shelf.bx:16
+        b.open("SecureField")  // shelf.bx:18
         b.number("grow", (1) as f64)
         b.close()
         b.close()
-        b.open("HFlex")  // shelf.bx:18
+        b.open("HFlex")  // shelf.bx:20
         b.number("spacing", (10) as f64)
-        b.open("Label")  // shelf.bx:19
+        b.open("Label")  // shelf.bx:21
         b.number("width", (110) as f64)
         b.text("Search")
         b.close()
-        b.open("SearchField")  // shelf.bx:20
+        b.open("SearchField")  // shelf.bx:22
         b.number("grow", (1) as f64)
         b.close()
         b.close()
-        b.open("TextArea")  // shelf.bx:22
+        b.open("TextArea")  // shelf.bx:24
         b.number("height", (56) as f64)
         b.on("commit", fn(_e: UiEvent) { self.note = _e.text })
         b.text("{self.note}")
         b.close()
-        b.open("Link")  // shelf.bx:23
+        b.open("Link")  // shelf.bx:25
         b.text("Read the manual")
         b.close()
         b.close()
         b.close()
-        b.open("Disclosure")  // shelf.bx:28
+        b.open("Disclosure")  // shelf.bx:30
         b.text("Choices")
         b.flag("open", self.choices)
         b.on("change", fn(e: UiEvent) { self.toggle_choices(e) })
-        b.open("VStack")  // shelf.bx:30
+        b.open("VStack")  // shelf.bx:32
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("HFlex")  // shelf.bx:31
+        b.open("HFlex")  // shelf.bx:33
         b.number("spacing", (10) as f64)
-        b.open("Label")  // shelf.bx:32
+        b.open("Label")  // shelf.bx:34
         b.number("width", (110) as f64)
         b.text("Drink")
         b.close()
-        b.open("ComboBox")  // shelf.bx:33
+        b.open("ComboBox")  // shelf.bx:35
         b.number("grow", (1) as f64)
         b.on("change", fn(e: UiEvent) { self.pick(e.index) })
         b.close()
         b.close()
-        b.open("HStack")  // shelf.bx:35
+        b.open("HStack")  // shelf.bx:37
         b.number("spacing", (10) as f64)
-        b.open("CheckBox")  // shelf.bx:36
+        b.open("CheckBox")  // shelf.bx:38
         b.flag("checked", self.rush)
         b.on("change", fn(e: UiEvent) { self.toggle_rush() })
         b.text("Rush it")
         b.close()
-        b.open("RadioButton")  // shelf.bx:37
+        b.open("RadioButton")  // shelf.bx:39
         b.text("Eat in")
         b.close()
-        b.open("RadioButton")  // shelf.bx:38
+        b.open("RadioButton")  // shelf.bx:40
         b.text("Take away")
         b.close()
         b.close()
-        if self.has_switch {  // shelf.bx:40
-            b.open("HFlex")  // shelf.bx:41
+        if self.has_switch {  // shelf.bx:42
+            b.open("HFlex")  // shelf.bx:43
             b.number("spacing", (10) as f64)
-            b.open("Label")  // shelf.bx:42
+            b.open("Label")  // shelf.bx:44
             b.number("width", (110) as f64)
             b.text("Keep warm")
             b.close()
-            b.open("Switch")  // shelf.bx:43
+            b.open("Switch")  // shelf.bx:45
             b.flag("checked", self.warm)
             b.on("change", fn(e: UiEvent) { self.toggle_warm(e) })
             b.close()
             b.close()
         }
-        if !self.has_switch {  // shelf.bx:46
-            b.open("Label")  // shelf.bx:47
+        if !self.has_switch {  // shelf.bx:48
+            b.open("Label")  // shelf.bx:49
             b.text("no toggle switch on this platform")
             b.close()
         }
-        if self.has_segmented {  // shelf.bx:49
-            b.open("Segmented")  // shelf.bx:50
+        if self.has_segmented {  // shelf.bx:51
+            b.open("Segmented")  // shelf.bx:52
             b.close()
         }
-        if !self.has_segmented {  // shelf.bx:52
-            b.open("Label")  // shelf.bx:53
+        if !self.has_segmented {  // shelf.bx:54
+            b.open("Label")  // shelf.bx:55
             b.text("no segmented control on this platform")
             b.close()
         }
         b.close()
         b.close()
-        b.open("Disclosure")  // shelf.bx:59
+        b.open("Disclosure")  // shelf.bx:61
         b.text("Numbers")
         b.flag("open", self.numbers)
         b.on("change", fn(e: UiEvent) { self.toggle_numbers(e) })
-        b.open("VStack")  // shelf.bx:61
+        b.open("VStack")  // shelf.bx:63
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("HFlex")  // shelf.bx:62
+        b.open("HFlex")  // shelf.bx:64
         b.number("spacing", (10) as f64)
-        b.open("Label")  // shelf.bx:63
+        b.open("Label")  // shelf.bx:65
         b.number("width", (110) as f64)
         b.text("Shots: {self.shots}")
         b.close()
-        b.open("Slider")  // shelf.bx:64
+        b.open("Slider")  // shelf.bx:66
         b.number("grow", (1) as f64)
         b.number("min", (1) as f64)
         b.number("max", (4) as f64)
@@ -321,13 +337,13 @@ partial class Shelf {
         b.on("change", fn(e: UiEvent) { self.set_shots(e) })
         b.close()
         b.close()
-        b.open("HFlex")  // shelf.bx:67
+        b.open("HFlex")  // shelf.bx:69
         b.number("spacing", (10) as f64)
-        b.open("Label")  // shelf.bx:68
+        b.open("Label")  // shelf.bx:70
         b.number("width", (110) as f64)
         b.text("Exactly")
         b.close()
-        b.open("Stepper")  // shelf.bx:69
+        b.open("Stepper")  // shelf.bx:71
         b.number("min", (1) as f64)
         b.number("max", (4) as f64)
         b.number("step", (1) as f64)
@@ -335,66 +351,66 @@ partial class Shelf {
         b.on("change", fn(e: UiEvent) { self.set_shots(e) })
         b.close()
         b.close()
-        b.open("ProgressBar")  // shelf.bx:72
+        b.open("ProgressBar")  // shelf.bx:74
         b.number("height", (12) as f64)
         b.number("min", (0) as f64)
         b.number("max", (4) as f64)
         b.number("value", (self.shots) as f64)
         b.close()
-        if self.has_level {  // shelf.bx:73
-            b.open("LevelIndicator")  // shelf.bx:74
+        if self.has_level {  // shelf.bx:75
+            b.open("LevelIndicator")  // shelf.bx:76
             b.number("height", (16) as f64)
             b.number("min", (0) as f64)
             b.number("max", (4) as f64)
             b.number("value", (self.shots) as f64)
             b.close()
         }
-        if !self.has_level {  // shelf.bx:76
-            b.open("Label")  // shelf.bx:77
+        if !self.has_level {  // shelf.bx:78
+            b.open("Label")  // shelf.bx:79
             b.text("no level indicator on this platform")
             b.close()
         }
-        if self.has_spinner {  // shelf.bx:79
-            b.open("Spinner")  // shelf.bx:80
+        if self.has_spinner {  // shelf.bx:81
+            b.open("Spinner")  // shelf.bx:82
             b.number("height", (20) as f64)
             b.flag("animating", self.busy)
             b.close()
         }
-        if !self.has_spinner {  // shelf.bx:82
-            b.open("Label")  // shelf.bx:83
+        if !self.has_spinner {  // shelf.bx:84
+            b.open("Label")  // shelf.bx:85
             b.text("no spinner on this platform")
             b.close()
         }
         b.close()
         b.close()
-        b.open("Disclosure")  // shelf.bx:89
+        b.open("Disclosure")  // shelf.bx:91
         b.text("A day and a colour")
         b.flag("open", self.values)
         b.on("change", fn(e: UiEvent) { self.toggle_values(e) })
-        b.open("VStack")  // shelf.bx:91
+        b.open("VStack")  // shelf.bx:93
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("HFlex")  // shelf.bx:92
+        b.open("HFlex")  // shelf.bx:94
         b.number("spacing", (10) as f64)
-        b.open("Label")  // shelf.bx:93
+        b.open("Label")  // shelf.bx:95
         b.number("width", (110) as f64)
         b.text("When")
         b.close()
-        b.open("DatePicker")  // shelf.bx:94
+        b.open("DatePicker")  // shelf.bx:96
         b.number("grow", (1) as f64)
         b.number("day", (self.day) as f64)
         b.on("change", fn(e: UiEvent) { self.set_day(e) })
         b.close()
         b.close()
-        if self.has_color {  // shelf.bx:97
-            b.open("HFlex")  // shelf.bx:98
+        if self.has_color {  // shelf.bx:99
+            b.open("HFlex")  // shelf.bx:100
             b.number("spacing", (10) as f64)
-            b.open("Label")  // shelf.bx:99
+            b.open("Label")  // shelf.bx:101
             b.number("width", (110) as f64)
             b.text("Marker")
             b.close()
-            b.open("ColorWell")  // shelf.bx:100
+            b.open("ColorWell")  // shelf.bx:102
             b.number("width", (60) as f64)
             b.number("height", (24) as f64)
             b.word("color", "#3b82f6")
@@ -402,59 +418,59 @@ partial class Shelf {
             b.close()
             b.close()
         }
-        if !self.has_color {  // shelf.bx:104
-            b.open("Label")  // shelf.bx:105
+        if !self.has_color {  // shelf.bx:106
+            b.open("Label")  // shelf.bx:107
             b.text("no colour well on this platform")
             b.close()
         }
-        b.open("Label")  // shelf.bx:107
+        b.open("Label")  // shelf.bx:109
         b.text("{self.chosen}")
         b.close()
         b.close()
         b.close()
-        b.open("Disclosure")  // shelf.bx:112
+        b.open("Disclosure")  // shelf.bx:114
         b.text("Boxes and pictures")
         b.flag("open", self.boxes)
         b.on("change", fn(e: UiEvent) { self.toggle_boxes(e) })
-        b.open("VStack")  // shelf.bx:114
+        b.open("VStack")  // shelf.bx:116
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        if self.has_group {  // shelf.bx:115
-            b.open("GroupBox")  // shelf.bx:116
+        if self.has_group {  // shelf.bx:117
+            b.open("GroupBox")  // shelf.bx:118
             b.text("Brewing")
-            b.open("VStack")  // shelf.bx:117
+            b.open("VStack")  // shelf.bx:119
             b.number("spacing", (6) as f64)
             b.number("padding", (10) as f64)
             b.word("align", "stretch")
-            b.open("CheckBox")  // shelf.bx:118
+            b.open("CheckBox")  // shelf.bx:120
             b.text("Grind fresh")
             b.close()
-            b.open("CheckBox")  // shelf.bx:119
+            b.open("CheckBox")  // shelf.bx:121
             b.text("Filtered water")
             b.close()
             b.close()
             b.close()
         }
-        if !self.has_group {  // shelf.bx:123
-            b.open("Label")  // shelf.bx:124
+        if !self.has_group {  // shelf.bx:125
+            b.open("Label")  // shelf.bx:126
             b.text("no group box on this platform")
             b.close()
         }
-        b.open("Image")  // shelf.bx:126
+        b.open("Image")  // shelf.bx:128
         b.number("height", (20) as f64)
         b.close()
-        b.open("Canvas")  // shelf.bx:128
+        b.open("Canvas")  // shelf.bx:130
         b.number("height", (20) as f64)
         b.close()
-        b.child<ShaderCanvas>("c8", fn(_cortado_c: ShaderCanvas) {  // shelf.bx:131
+        b.child<ShaderCanvas>("c8", fn(_cortado_c: ShaderCanvas) {  // shelf.bx:133
             _cortado_c.height = 44
             _cortado_c.effect = "ripple"
             _cortado_c.color = "#4088bf"
             _cortado_c.color_to = "#0d1b2a"
             _cortado_c.detail = 26
         })
-        b.child<ShapeCanvas>("c9", fn(_cortado_c: ShapeCanvas) {  // shelf.bx:135
+        b.child<ShapeCanvas>("c9", fn(_cortado_c: ShapeCanvas) {  // shelf.bx:137
             _cortado_c.height = 44
             _cortado_c.figure = "rounded_rect"
             _cortado_c.radius = 10
@@ -467,108 +483,114 @@ partial class Shelf {
         })
         b.close()
         b.close()
-        b.open("Disclosure")  // shelf.bx:144
+        b.open("Disclosure")  // shelf.bx:146
         b.text("Rows")
         b.flag("open", self.rows)
         b.on("change", fn(e: UiEvent) { self.toggle_rows(e) })
-        b.open("VStack")  // shelf.bx:146
+        b.open("VStack")  // shelf.bx:148
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("Table")  // shelf.bx:147
+        b.open("Table")  // shelf.bx:149
         b.number("height", (80) as f64)
         b.close()
-        b.open("ScrollView")  // shelf.bx:148
+        b.open("ScrollView")  // shelf.bx:150
         b.number("height", (60) as f64)
-        b.open("VStack")  // shelf.bx:149
+        b.open("VStack")  // shelf.bx:151
         b.number("spacing", (4) as f64)
         b.number("padding", (4) as f64)
         b.word("align", "stretch")
-        b.open("Label")  // shelf.bx:150
+        b.open("Label")  // shelf.bx:152
         b.text("More than fits")
         b.close()
-        b.open("Label")  // shelf.bx:151
+        b.open("Label")  // shelf.bx:153
         b.text("so the rest scrolls")
         b.close()
-        b.open("Label")  // shelf.bx:152
+        b.open("Label")  // shelf.bx:154
         b.text("and nothing is clipped away")
         b.close()
         b.close()
         b.close()
         b.close()
         b.close()
-        b.open("Disclosure")  // shelf.bx:163
+        b.open("Disclosure")  // shelf.bx:165
         b.text("Pages, panes and a browser")
         b.flag("open", self.systems)
         b.on("change", fn(e: UiEvent) { self.toggle_systems(e) })
-        b.open("VStack")  // shelf.bx:165
+        b.open("VStack")  // shelf.bx:167
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        if self.has_tabs {  // shelf.bx:166
-            b.open("TabView")  // shelf.bx:167
+        if self.has_tabs {  // shelf.bx:168
+            b.open("TabView")  // shelf.bx:169
             b.number("height", (90) as f64)
-            b.open("Container")  // shelf.bx:168
+            b.open("Container")  // shelf.bx:170
             b.close()
-            b.open("Container")  // shelf.bx:169
+            b.open("Container")  // shelf.bx:171
             b.close()
             b.close()
         }
-        if !self.has_tabs {  // shelf.bx:172
-            b.open("Label")  // shelf.bx:173
+        if !self.has_tabs {  // shelf.bx:174
+            b.open("Label")  // shelf.bx:175
             b.text("no tab view on this platform")
             b.close()
         }
-        if self.has_split {  // shelf.bx:175
-            b.open("SplitView")  // shelf.bx:182
+        if self.has_split {  // shelf.bx:177
+            b.open("SplitView")  // shelf.bx:184
             b.number("height", (70) as f64)
-            b.open("VStack")  // shelf.bx:183
+            b.open("VStack")  // shelf.bx:185
             b.number("padding", (4) as f64)
             b.word("align", "stretch")
-            b.open("Label")  // shelf.bx:184
+            b.open("Label")  // shelf.bx:186
             b.text("this pane")
             b.close()
             b.close()
-            b.open("VStack")  // shelf.bx:186
+            b.open("VStack")  // shelf.bx:188
             b.number("padding", (4) as f64)
             b.word("align", "stretch")
-            b.open("Label")  // shelf.bx:187
+            b.open("Label")  // shelf.bx:189
             b.text("and this one")
             b.close()
             b.close()
             b.close()
         }
-        if !self.has_split {  // shelf.bx:191
-            b.open("Label")  // shelf.bx:192
+        if !self.has_split {  // shelf.bx:193
+            b.open("Label")  // shelf.bx:194
             b.text("no split view on this platform")
             b.close()
         }
-        if self.has_tree {  // shelf.bx:194
-            b.open("OutlineView")  // shelf.bx:195
+        if self.has_tree {  // shelf.bx:196
+            b.open("OutlineView")  // shelf.bx:197
             b.number("height", (90) as f64)
             b.close()
         }
-        if !self.has_tree {  // shelf.bx:197
-            b.open("Label")  // shelf.bx:198
+        if !self.has_tree {  // shelf.bx:199
+            b.open("Label")  // shelf.bx:200
             b.text("no outline view on this platform")
             b.close()
         }
-        if self.has_web {  // shelf.bx:200
-            b.open("WebView")  // shelf.bx:201
+        if self.has_web {  // shelf.bx:202
+            b.open("WebView")  // shelf.bx:203
             b.number("height", (90) as f64)
             b.close()
         }
-        if !self.has_web {  // shelf.bx:203
-            b.open("Label")  // shelf.bx:204
+        if !self.has_web {  // shelf.bx:205
+            b.open("Label")  // shelf.bx:206
             b.text("no browser engine on this platform")
             b.close()
         }
         b.close()
         b.close()
-        b.open("HStack")  // shelf.bx:211
+        b.open("HStack")  // shelf.bx:215
         b.number("spacing", (10) as f64)
         b.word("justify", "end")
-        b.open("Button")  // shelf.bx:212
+        b.child<FancyButton>("c10", fn(_cortado_c: FancyButton) {  // shelf.bx:216
+            _cortado_c.title = "Clear"
+            _cortado_c.tint = self.accent
+            _cortado_c.enabled = self.shots > 0
+            _cortado_c.on_press = fn(e: UiEvent) { self.clear() }
+        })
+        b.open("Button")  // shelf.bx:218
         b.flag("enabled", self.shots > 0)
         b.word("background", "#2f6f4f")
         b.number("corner_radius", (6) as f64)
@@ -578,8 +600,10 @@ partial class Shelf {
         b.text("Order")
         b.close()
         b.close()
-        b.open("Label")  // shelf.bx:217
+        b.open("Label")  // shelf.bx:223
         b.text("{self.status}")
+        b.close()
+        b.close()
         b.close()
         b.close()
     }

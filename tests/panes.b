@@ -456,6 +456,32 @@ fn drive() -> Result<bool> {
     io.println("  a teardown the platform refuses says so: {closed_said == "stale_handle"}")
     io.println("  and finishes anyway: {after_close == "not_mounted"}")
 
+    // A scroll view is the other half of what this file is about. A group box
+    // keeps part of its frame; a scroll view's content is *bigger* than its.
+    //
+    // The assertion is end to end on purpose: the layout works the height out,
+    // and the only thing that makes it true on screen is the host being told.
+    // Reading it back off the control is what proves the telling happened.
+    io.println("-- a scroll view --")
+    var scrolled_box: widgets.Container = new widgets.Container()
+    var scrolled_mount: component.Mount = new component.Mount(scrolled_box, app.router)
+    scrolled_mount.set_bounds(geometry.Size.of(300.0, 200.0))
+    var scrolled_screen: Scrolled = new Scrolled()
+    scrolled_mount.show(scrolled_screen)?
+    scrolled_mount.refresh()?
+    var viewport: f64 = 0.0
+    var behind: f64 = 0.0
+    match scrolled_screen.held {
+        none => {}
+        some(control) => {
+            viewport = control.frame()?.height
+            behind = control.content_size()?.height
+        }
+    }
+    scrolled_mount.close()?
+    io.println("  the viewport is the height it was given: {viewport == 40.0}")
+    io.println("  what it scrolls over is taller: {behind > viewport}")
+
     // A split view reads its divider back the same way, and the mount asks it
     // on every pass to arrange the panes.
     var split_gone: bool = true
@@ -501,6 +527,36 @@ class Held extends component.Component {
         into.key("page")
         into.open("Label")
         into.text("in a run")
+        into.close()
+        into.close()
+    }
+}
+
+/// A scroll view with more in it than fits: three labels behind a 40-point
+/// viewport, which is the whole of what a scroll view is for.
+class Scrolled extends component.Component {
+    pub held: Option<widgets.Widget> = none
+
+    pub fn init() { super.init() }
+
+    pub override fn on_mount(stage: component.Stage) {
+        self.held = stage.widget("scroller")
+    }
+
+    /// The scroll view is a child and not the root: a mount places its root at
+    /// the bounds it was given, so a height on it would be ignored.
+    pub override fn render(into: component.Builder) {
+        into.open("VStack")
+        into.open("ScrollView")
+        into.key("scroller")
+        into.number("height", 40.0)
+        into.open("VStack")
+        for index: int in 0..3 {
+            into.open("Label")
+            into.text("row {index}")
+            into.close()
+        }
+        into.close()
         into.close()
         into.close()
     }

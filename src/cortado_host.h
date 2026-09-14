@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 28
+#define CTD_ABI_VERSION 29
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -526,6 +526,24 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
  * The answer must not depend on the control's current size, because the layout
  * asks before anything has one. */
 ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset);
+
+/* How big the area a scrolling control scrolls over is, in points.
+ *
+ * A scroll view's frame is its viewport; this is the thing behind it. The two
+ * differ by exactly the amount there is to scroll, and nothing else.
+ *
+ * **It is cortado's number, not the platform's.** Win32 used to work it out
+ * inside ctd_view_set_frame by reading the children's frames — which is one
+ * host inventing an answer the other three did not have, and reading it a pass
+ * late, because frames are written parents first. The layout already knows how
+ * tall the content is: it placed it.
+ *
+ * Refused with CTD_ERR_KIND on a control that scrolls nothing. A text area, a
+ * table and an outline view are scrollers too, and they are not this: their
+ * content is the platform's to size, and cortado never lays it out. */
+ctd_status ctd_view_set_content_size(ctd_handle widget, double width, double height);
+/* Writes width and height into out[0..1]. */
+ctd_status ctd_view_content_size(ctd_handle widget, double *out_size);
 
 /* ---- properties -------------------------------------------------------- */
 

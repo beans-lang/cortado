@@ -10,10 +10,12 @@ package widgets
 /// platform code in Beans, so the child calls reach through whatever the
 /// platform wrapped and the tree above sees one control with children.
 ///
-/// The scrolled content is laid out at whatever size the layout gives it,
-/// which will usually be larger than the scroll view itself — that is the
-/// point. A stack inside a scroll view with no height of its own will size to
-/// its children and scroll; one told to stretch will fit and not scroll.
+/// It holds **one** child, the way every toolkit here does: an AppKit document
+/// view, a GTK viewport's child, a UIScrollView's content. More is refused.
+///
+/// That child is laid out at its own height and the scroll view keeps the one
+/// it was given — see `layout.ScrollLayout`, and give the scroll view a
+/// `height` or a `grow`, or it takes its content's height and scrolls nothing.
 ///
 /// **It extends `ChildHolder` like every other box.** It used to carry its own
 /// copy of the list, the ordering, the platform calls and the lifetime — sixty

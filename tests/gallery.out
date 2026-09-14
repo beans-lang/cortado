@@ -1,84 +1,87 @@
 Container CortadoView role=group "" frame=0,0,460,460 children=1
-  Container CortadoView role=group "" frame=0,0,460,460 children=12
-    Label NSTextField role=text "Every control cortado has" frame=16,16,428,21
-    Label NSTextField role=text "31 of 31 kinds on this platform" frame=16,47,428,16
-    Separator NSBox role=separator "" frame=16,73,428,1
-    Disclosure CortadoDisclosure role=group "Words" frame=16,84,428,213 children=1
-      Container CortadoView role=group "" frame=0,0,428,192 children=5
-        Container CortadoView role=group "" frame=8,8,412,24 children=2
-          Label NSTextField role=text "Name" frame=0,0,110,16
-          TextField NSTextField role=textbox "Ada" frame=120,0,292,24
-        Container CortadoView role=group "" frame=8,40,412,24 children=2
-          Label NSTextField role=text "Passphrase" frame=0,0,110,16
-          SecureField NSSecureTextField role=password "" frame=120,0,292,24
-        Container CortadoView role=group "" frame=8,72,412,24 children=2
-          Label NSTextField role=text "Search" frame=0,0,110,16
-          SearchField NSSearchField role=searchbox "" frame=120,0,292,24
-        TextArea NSScrollView role=textbox "no sugar" frame=8,104,412,56
-        Link NSTextField role=link "Read the manual" frame=8,168,412,16
-    Disclosure CortadoDisclosure role=group "Choices" frame=16,307,428,125 children=1
-      Container CortadoView role=group "" frame=0,0,428,104 children=4
-        Container CortadoView role=group "" frame=8,8,412,24 children=2
-          Label NSTextField role=text "Drink" frame=0,0,110,16
-          ComboBox NSPopUpButton role=combobox "flat white" frame=120,0,292,24
-        Container CortadoView role=group "" frame=8,40,412,16 children=3
-          CheckBox NSButton role=checkbox "Rush it" frame=0,0,64,16
-          RadioButton NSButton role=radio "Eat in" frame=74,0,56,16
-          RadioButton NSButton role=radio "Take away" frame=140,0,84,16
-        Container CortadoView role=group "" frame=8,64,412,24 children=2
-          Label NSTextField role=text "Keep warm" frame=0,0,110,16
-          Switch NSSwitch role=switch "" frame=120,0,54,24
-        Segmented NSSegmentedControl role=radiogroup "" frame=8,96,412,0
-    Disclosure CortadoDisclosure role=group "Numbers" frame=16,442,428,159 children=1
-      Container CortadoView role=group "" frame=0,0,428,138 children=5
-        Container CortadoView role=group "" frame=8,8,412,16 children=2
-          Label NSTextField role=text "Shots: 2" frame=0,0,110,16
-          Slider NSSlider role=slider "" frame=120,0,292,16
-        Container CortadoView role=group "" frame=8,32,412,26 children=2
-          Label NSTextField role=text "Exactly" frame=0,0,110,16
-          Stepper NSStepper role=spinbutton "" frame=120,0,20,26
-        ProgressBar NSProgressIndicator role=progressbar "" frame=8,66,412,12
-        LevelIndicator NSLevelIndicator role=meter "" frame=8,86,412,16
-        Spinner NSProgressIndicator role=progressbar "" frame=8,110,412,20
-    Disclosure CortadoDisclosure role=group "A day and a colour" frame=16,611,428,119 children=1
-      Container CortadoView role=group "" frame=0,0,428,98 children=3
-        Container CortadoView role=group "" frame=8,8,412,26 children=2
-          Label NSTextField role=text "When" frame=0,0,110,16
-          DatePicker NSDatePicker role=spinbutton "" frame=120,0,292,26
-        Container CortadoView role=group "" frame=8,42,412,24 children=2
-          Label NSTextField role=text "Marker" frame=0,0,110,16
-          ColorWell NSColorWell role=button "" frame=120,0,60,24
-        Label NSTextField role=text "2026-01-01, marker #3b82f6" frame=8,74,412,16
-    Disclosure CortadoDisclosure role=group "Boxes and pictures" frame=16,740,428,277 children=1
-      Container CortadoView role=group "" frame=0,0,428,256 children=5
-        GroupBox NSBox role=group "Brewing" frame=8,8,412,80 children=1
-          Container CortadoView role=group "" frame=0,0,402,58 children=2
-            CheckBox NSButton role=checkbox "Grind fresh" frame=10,10,382,16
-            CheckBox NSButton role=checkbox "Filtered water" frame=10,32,382,16
-        ImageView NSImageView role=image "" frame=8,96,412,20
-        Canvas CortadoView role=group "" frame=8,124,412,20
-        Canvas CortadoView role=group "" frame=8,152,412,44
-        Canvas CortadoView role=group "" frame=8,204,412,44
-    Disclosure CortadoDisclosure role=group "Rows" frame=16,1027,428,185 children=1
-      Container CortadoView role=group "" frame=0,0,428,164 children=2
-        Table NSScrollView role=grid "" frame=8,8,412,80
-        ScrollView NSScrollView role=scrollarea "" frame=8,96,412,60 children=1
-          Container CortadoView role=group "" frame=0,0,412,60 children=3
-            Label NSTextField role=text "More than fits" frame=4,4,404,16
-            Label NSTextField role=text "so the rest scrolls" frame=4,24,404,16
-            Label NSTextField role=text "and nothing is clipped away" frame=4,44,404,16
-    Disclosure CortadoDisclosure role=group "Pages, panes and a browser" frame=16,1222,428,401 children=1
-      Container CortadoView role=group "" frame=0,0,428,380 children=4
-        TabView NSTabView role=tablist "" frame=8,8,412,90 children=2
-          Container CortadoView role=group "" frame=10,33,392,44
-          Container CortadoView role=group "" frame=0,0,392,44
-        SplitView NSSplitView role=separator "" frame=8,106,412,70 children=2
-          Container CortadoView role=group "" frame=0,0,206,70 children=1
-            Label NSTextField role=text "this pane" frame=4,4,198,16
-          Container CortadoView role=group "" frame=207,0,205,70 children=1
-            Label NSTextField role=text "and this one" frame=4,4,196,16
-        OutlineView NSScrollView role=treegrid "" frame=8,184,412,90
-        WebView WKWebView role=document "" frame=8,282,412,90
-    Container CortadoView role=group "" frame=16,1633,428,24 children=1
-      Button NSButton role=button "Order" frame=369,0,59,24
-    Label NSTextField role=text "Nothing ordered yet" frame=16,1667,428,16
+  Container CortadoView role=group "" frame=0,0,460,460 children=1
+    ScrollView NSScrollView role=scrollarea "" frame=16,16,428,428 children=1
+      Container CortadoView role=group "" frame=0,0,428,1667 children=12
+        Label NSTextField role=text "Every control cortado has" frame=0,0,428,21
+        Label NSTextField role=text "31 of 31 kinds on this platform" frame=0,31,428,16
+        Separator NSBox role=separator "" frame=0,57,428,1
+        Disclosure CortadoDisclosure role=group "Words" frame=0,68,428,213 children=1
+          Container CortadoView role=group "" frame=0,0,428,192 children=5
+            Container CortadoView role=group "" frame=8,8,412,24 children=2
+              Label NSTextField role=text "Name" frame=0,0,110,16
+              TextField NSTextField role=textbox "Ada" frame=120,0,292,24
+            Container CortadoView role=group "" frame=8,40,412,24 children=2
+              Label NSTextField role=text "Passphrase" frame=0,0,110,16
+              SecureField NSSecureTextField role=password "" frame=120,0,292,24
+            Container CortadoView role=group "" frame=8,72,412,24 children=2
+              Label NSTextField role=text "Search" frame=0,0,110,16
+              SearchField NSSearchField role=searchbox "" frame=120,0,292,24
+            TextArea NSScrollView role=textbox "no sugar" frame=8,104,412,56
+            Link NSTextField role=link "Read the manual" frame=8,168,412,16
+        Disclosure CortadoDisclosure role=group "Choices" frame=0,291,428,125 children=1
+          Container CortadoView role=group "" frame=0,0,428,104 children=4
+            Container CortadoView role=group "" frame=8,8,412,24 children=2
+              Label NSTextField role=text "Drink" frame=0,0,110,16
+              ComboBox NSPopUpButton role=combobox "flat white" frame=120,0,292,24
+            Container CortadoView role=group "" frame=8,40,412,16 children=3
+              CheckBox NSButton role=checkbox "Rush it" frame=0,0,64,16
+              RadioButton NSButton role=radio "Eat in" frame=74,0,56,16
+              RadioButton NSButton role=radio "Take away" frame=140,0,84,16
+            Container CortadoView role=group "" frame=8,64,412,24 children=2
+              Label NSTextField role=text "Keep warm" frame=0,0,110,16
+              Switch NSSwitch role=switch "" frame=120,0,54,24
+            Segmented NSSegmentedControl role=radiogroup "" frame=8,96,412,0
+        Disclosure CortadoDisclosure role=group "Numbers" frame=0,426,428,159 children=1
+          Container CortadoView role=group "" frame=0,0,428,138 children=5
+            Container CortadoView role=group "" frame=8,8,412,16 children=2
+              Label NSTextField role=text "Shots: 2" frame=0,0,110,16
+              Slider NSSlider role=slider "" frame=120,0,292,16
+            Container CortadoView role=group "" frame=8,32,412,26 children=2
+              Label NSTextField role=text "Exactly" frame=0,0,110,16
+              Stepper NSStepper role=spinbutton "" frame=120,0,20,26
+            ProgressBar NSProgressIndicator role=progressbar "" frame=8,66,412,12
+            LevelIndicator NSLevelIndicator role=meter "" frame=8,86,412,16
+            Spinner NSProgressIndicator role=progressbar "" frame=8,110,412,20
+        Disclosure CortadoDisclosure role=group "A day and a colour" frame=0,595,428,119 children=1
+          Container CortadoView role=group "" frame=0,0,428,98 children=3
+            Container CortadoView role=group "" frame=8,8,412,26 children=2
+              Label NSTextField role=text "When" frame=0,0,110,16
+              DatePicker NSDatePicker role=spinbutton "" frame=120,0,292,26
+            Container CortadoView role=group "" frame=8,42,412,24 children=2
+              Label NSTextField role=text "Marker" frame=0,0,110,16
+              ColorWell NSColorWell role=button "" frame=120,0,60,24
+            Label NSTextField role=text "2026-01-01, marker #3b82f6" frame=8,74,412,16
+        Disclosure CortadoDisclosure role=group "Boxes and pictures" frame=0,724,428,277 children=1
+          Container CortadoView role=group "" frame=0,0,428,256 children=5
+            GroupBox NSBox role=group "Brewing" frame=8,8,412,80 children=1
+              Container CortadoView role=group "" frame=0,0,402,58 children=2
+                CheckBox NSButton role=checkbox "Grind fresh" frame=10,10,382,16
+                CheckBox NSButton role=checkbox "Filtered water" frame=10,32,382,16
+            ImageView NSImageView role=image "" frame=8,96,412,20
+            Canvas CortadoView role=group "" frame=8,124,412,20
+            Canvas CortadoView role=group "" frame=8,152,412,44
+            Canvas CortadoView role=group "" frame=8,204,412,44
+        Disclosure CortadoDisclosure role=group "Rows" frame=0,1011,428,185 children=1
+          Container CortadoView role=group "" frame=0,0,428,164 children=2
+            Table NSScrollView role=grid "" frame=8,8,412,80
+            ScrollView NSScrollView role=scrollarea "" frame=8,96,412,60 children=1
+              Container CortadoView role=group "" frame=0,0,412,64 children=3
+                Label NSTextField role=text "More than fits" frame=4,4,404,16
+                Label NSTextField role=text "so the rest scrolls" frame=4,24,404,16
+                Label NSTextField role=text "and nothing is clipped away" frame=4,44,404,16
+        Disclosure CortadoDisclosure role=group "Pages, panes and a browser" frame=0,1206,428,401 children=1
+          Container CortadoView role=group "" frame=0,0,428,380 children=4
+            TabView NSTabView role=tablist "" frame=8,8,412,90 children=2
+              Container CortadoView role=group "" frame=10,33,392,44
+              Container CortadoView role=group "" frame=0,0,392,44
+            SplitView NSSplitView role=separator "" frame=8,106,412,70 children=2
+              Container CortadoView role=group "" frame=0,0,206,70 children=1
+                Label NSTextField role=text "this pane" frame=4,4,198,16
+              Container CortadoView role=group "" frame=207,0,205,70 children=1
+                Label NSTextField role=text "and this one" frame=4,4,196,16
+            OutlineView NSScrollView role=treegrid "" frame=8,184,412,90
+            WebView WKWebView role=document "" frame=8,282,412,90
+        Container CortadoView role=group "" frame=0,1617,428,24 children=2
+          Button NSButton role=button "Clear" frame=303,0,56,24
+          Button NSButton role=button "Order" frame=369,0,59,24
+        Label NSTextField role=text "Nothing ordered yet" frame=0,1651,428,16

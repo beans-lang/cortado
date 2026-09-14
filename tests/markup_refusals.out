@@ -54,3 +54,12 @@
   a background on a text field refused, saying so: true
   but the same field takes a corner radius compiled, emitting it: true
   a colour that is not one still compiles compiled, emitting it: true
+  a background a field decides compiled, emitting it: true
+  a swatch colour a field decides compiled, emitting it: true
+  a border colour a field decides compiled, emitting it: true
+  align still needs a literal refused, saying so: true
+  and so does justify refused, saying so: true
+-- what a scroll view scrolls --
+  two children in a scroll view refused, saying so: true
+  one is what it takes compiled, emitting it: true
+  and a plain container still holds as many as it likes compiled, emitting it: true

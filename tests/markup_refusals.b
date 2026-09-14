@@ -344,6 +344,53 @@ fn dressing() {
     emits("a colour that is not one still compiles",
           markup([r##"<Button background="#gg0000" />"##]),
           r##"word("background", "#gg0000")"##)
+
+    // A colour a field decides. This was refused as "a fixed set of words"
+    // until the word branch stopped treating a colour as a closed vocabulary.
+    emits("a background a field decides",
+          probe([r#"<Button background={self.tint} />"#],
+                [r##"    pub tint: string = "#3b6ea5""##]),
+          r#"word("background", self.tint)"#)
+    emits("a swatch colour a field decides",
+          probe([r#"<ColorWell color={self.ink} />"#],
+                [r##"    pub ink: string = "#101010""##]),
+          r#"word("color", self.ink)"#)
+    emits("a border colour a field decides",
+          probe([r#"<VStack border_color={self.edge} />"#],
+                [r##"    pub edge: string = "#00000030""##]),
+          r#"word("border_color", self.edge)"#)
+
+    // And the half that is a closed set still needs its literal, which is the
+    // whole reason the branch exists.
+    refuses("align still needs a literal",
+            probe([r#"<VStack align={self.mode} />"#],
+                  [r#"    pub mode: string = "center""#]),
+            "align takes one of a fixed set of words")
+    refuses("and so does justify",
+            probe([r#"<VStack justify={self.mode} />"#],
+                  [r#"    pub mode: string = "center""#]),
+            "justify takes one of a fixed set of words")
+}
+
+/// A scroll view holds one content view on every platform here.
+fn scrolling() {
+    io.println("-- what a scroll view scrolls --")
+    refuses("two children in a scroll view",
+            markup([r#"<ScrollView>"#,
+                    r#"  <Label text="one" />"#,
+                    r#"  <Label text="two" />"#,
+                    r#"</ScrollView>"#]),
+            "<ScrollView> holds 2 children, and a scroll view scrolls one")
+    emits("one is what it takes",
+          markup([r#"<ScrollView>"#,
+                  r#"  <VStack><Label text="one" /><Label text="two" /></VStack>"#,
+                  r#"</ScrollView>"#]),
+          r#"open("ScrollView")"#)
+    // The refusal is about the tag, not about holding children: the same two
+    // labels in the box beside it are fine.
+    emits("and a plain container still holds as many as it likes",
+          markup([r#"<VStack><Label text="one" /><Label text="two" /></VStack>"#]),
+          r#"open("VStack")"#)
 }
 
 fn main() {
@@ -354,4 +401,5 @@ fn main() {
     slots()
     wrong_control()
     dressing()
+    scrolling()
 }

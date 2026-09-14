@@ -311,3 +311,43 @@ root stack frame=0,0,100,60
   first solve sizes it at what it measured: true
   a leaf that grew is solved again, not remembered: true
   and its neighbour moved with it: true
+== content taller than the viewport ==
+scroller scroll frame=0,0,200,40
+  content stack frame=0,0,200,60
+    row0 leaf frame=0,0,200,20
+    row1 leaf frame=0,20,200,20
+    row2 leaf frame=0,40,200,20
+  the viewport is the box it was given: true
+  the content is as tall as it measured: true
+  and that is what the platform is told to scroll: true
+  across, they are the same: true
+== content shorter than the viewport ==
+scroller scroll frame=0,0,200,120
+  content stack frame=0,0,200,120
+    row0 leaf frame=0,0,200,20
+    row1 leaf frame=0,20,200,20
+  the content fills the viewport: true
+  and there is nothing to scroll: true
+== two children in a scroll view ==
+  FAILED too_many_children: "crowded" scrolls 2 children, and a scroll view scrolls one — every platform here has a single content view, so the others would be laid on top of it. Put them in a <VStack> inside it
+== a scroll view with no height ==
+  FAILED unbounded_scroll: "unbounded" is a scroll view with no height of its own, in a run that hands none out — it would grow to its content and scroll nothing. Give it height={ }, or grow={ } inside a VFlex
+== a scroll view told its height ==
+root stack frame=0,0,200,400
+  sized scroll frame=0,0,200,40
+    content stack frame=0,0,200,60
+      row0 leaf frame=0,0,200,20
+      row1 leaf frame=0,20,200,20
+      row2 leaf frame=0,40,200,20
+  it scrolls: true
+== a scroll view that takes the leftover ==
+root flex frame=0,0,200,50
+  grown scroll frame=0,0,200,50
+    content stack frame=0,0,200,120
+      row0 leaf frame=0,0,200,20
+      row1 leaf frame=0,20,200,20
+      row2 leaf frame=0,40,200,20
+      row3 leaf frame=0,60,200,20
+      row4 leaf frame=0,80,200,20
+      row5 leaf frame=0,100,200,20
+  it scrolls: true

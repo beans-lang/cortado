@@ -130,6 +130,30 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
     return CTD_OK;
 }
 
+// A UIScrollView holds its children directly, so the thing behind the viewport
+// is contentSize rather than a document view of its own.
+ctd_status ctd_view_set_content_size(ctd_handle widget, double width, double height) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if (!ctd_kind_scrolls(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+    if (![object isKindOfClass:[UIScrollView class]]) return CTD_ERR_KIND;
+    [(UIScrollView *)object setContentSize:CGSizeMake(width, height)];
+    return CTD_OK;
+}
+
+ctd_status ctd_view_content_size(ctd_handle widget, double *out_size) {
+    id object = ctd_resolve(widget);
+    if (!object) return CTD_ERR_STALE;
+    if (!ctd_kind_scrolls(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+    if (![object isKindOfClass:[UIScrollView class]]) return CTD_ERR_KIND;
+    CGSize held = [(UIScrollView *)object contentSize];
+    if (out_size) {
+        out_size[0] = (double)held.width;
+        out_size[1] = (double)held.height;
+    }
+    return CTD_OK;
+}
+
 ctd_status ctd_view_frame(ctd_handle widget, double *out_frame) {
     UIView *view = (UIView *)ctd_resolve(widget);
     if (!view) return CTD_ERR_STALE;

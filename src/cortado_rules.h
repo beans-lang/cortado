@@ -305,6 +305,15 @@ static inline int ctd_kind_holds_children(int32_t kind) {
         || kind == CTD_W_CANVAS;
 }
 
+/* Whether a kind scrolls content cortado laid out itself.
+ *
+ * Only a scroll view. A text area, a table and an outline view are scrollers
+ * on every platform here, and they are deliberately not this: what they scroll
+ * over is theirs to size, and cortado never places it. */
+static inline int ctd_kind_scrolls(int32_t kind) {
+    return kind == CTD_W_SCROLL_VIEW;
+}
+
 /* Whether a kind divides its children with a handle the user can drag.
  *
  * Only a split view, and it is the one kind whose children the *platform*

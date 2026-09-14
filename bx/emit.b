@@ -433,6 +433,12 @@ pub class Emitter {
                 self.report(element.span, "<{element.tag}> is not a control cortado has — did you mean <{near}>?")
             }
         }
+        // A scroll view scrolls one content view on every platform here, so
+        // the extras would be laid on top of it rather than after it.
+        if !element.component && element.tag == "ScrollView" &&
+           element.children.len() > 1 {
+            self.report(element.span, "<ScrollView> holds {element.children.len()} children, and a scroll view scrolls one — put them in a <VStack> inside it")
+        }
         for attr: Attr in element.attrs {
             var name: string = ""
             match attr as? LiteralAttr {
@@ -590,10 +596,10 @@ pub class Emitter {
     /// One typed attribute call.
     ///
     /// `code` is the Beans expression to pass. `literal` is the same value as
-    /// written in the markup when it came from a quoted string, and `""` when
-    /// it came from `{ }` — a `word` attribute needs the literal, because the
-    /// set of words is closed and a misspelling should be refused here rather
-    /// than reaching the Builder at run time.
+    /// written in the markup when it came from a quoted string, `""` otherwise.
+    ///
+    /// `align` and `justify` need the literal: the set of words is closed, so a
+    /// misspelling is refused here rather than reaching the Builder at run time.
     fn emit_typed(name: string, code: string, literal: string, at: Span, indent: int) {
         let b: string = self.builder_name()
         let call: string = attribute_call(name)
@@ -610,6 +616,12 @@ pub class Emitter {
             return
         }
         if call == "word" {
+            // A colour is not a closed set, so it may be computed. `quoted`
+            // wrote `code` for a literal, so both spellings emit one call.
+            if is_colour_attribute(name) {
+                self.write(indent, "{b}.word(\"{escape_beans_string(name)}\", {code})")
+                return
+            }
             if literal == "" {
                 self.report(at, "{name} takes one of a fixed set of words, so it needs a literal: {name}=\"center\"")
                 return
