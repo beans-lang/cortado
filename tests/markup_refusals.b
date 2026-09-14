@@ -474,6 +474,19 @@ fn bounds() {
             "max_width")
 }
 
+fn wrapping() {
+    io.println("-- a run that wraps --")
+    emits("<HWrap> is a container",
+          markup([r#"<HWrap spacing={8} line_spacing={6}><Label text="a" /><Label text="b" /></HWrap>"#]),
+          r#"open("HWrap")"#)
+    emits("and line_spacing is one of its numbers",
+          markup([r#"<HWrap spacing={8} line_spacing={6}><Label text="a" /></HWrap>"#]),
+          r#"number("line_spacing", (6) as f64)"#)
+    emits("<VWrap> too",
+          markup([r#"<VWrap><Label text="a" /></VWrap>"#]),
+          r#"open("VWrap")"#)
+}
+
 fn main() {
     lexing()
     html_documents()
@@ -486,4 +499,5 @@ fn main() {
     insets()
     placements()
     bounds()
+    wrapping()
 }

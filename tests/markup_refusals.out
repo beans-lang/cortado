@@ -86,3 +86,7 @@
   aspect_ratio on a component tag compiled, emitting it: true
   a breakpoint on the viewport compiled, emitting it: true
   maxWidth refused, saying so: true
+-- a run that wraps --
+  <HWrap> is a container compiled, emitting it: true
+  and line_spacing is one of its numbers compiled, emitting it: true
+  <VWrap> too compiled, emitting it: true

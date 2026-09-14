@@ -1064,6 +1064,77 @@ fn proportions() {
     run("a shape overruled by a pin", overruled, 300.0, 100.0)
 }
 
+// ---- 18. wrapping ----
+
+fn wrapping() {
+    // Five tiles of 100 in a row of 300 with a gap of 8: two per line, then one.
+    var shelf: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.row(8.0))
+    for index: int in 0..5 {
+        shelf.add(leaf("tile", 1))
+    }
+    run("five tiles wrapping in 300", shelf, 300.0, 200.0)
+
+    // A gap between lines, and each line justified on its own.
+    var spaced: layout.WrapLayout = layout.WrapLayout.row(8.0)
+    spaced.set_line_spacing(6.0)
+    spaced.set_justify(layout.Justify.center)
+    var centred: layout.LayoutNode = layout.LayoutNode.group("root", spaced)
+    for index: int in 0..5 {
+        centred.add(leaf("tile", 1))
+    }
+    run("lines spaced apart and centred", centred, 300.0, 200.0)
+
+    // Growing fills each line separately: one grower per line takes that
+    // line's leftover and nothing from the next.
+    var growing: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.row(0.0))
+    growing.add(leaf("fixed", 1))
+    growing.add(spec_leaf("grows", 1, layout.LayoutSpec.flexible(1.0)))
+    growing.add(leaf("fixed", 1))
+    growing.add(spec_leaf("grows", 1, layout.LayoutSpec.flexible(1.0)))
+    run("one grower per line", growing, 250.0, 100.0)
+
+    // Down a column: 20-tall tiles in 50 of height, two per column.
+    var down: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.column(0.0))
+    for index: int in 0..3 {
+        down.add(leaf("tile", 1))
+    }
+    run("three tiles wrapping down a column of 50", down, 300.0, 50.0)
+
+    // Wider than the room: a line of its own, shrunk to fit.
+    var oversize: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.row(4.0))
+    oversize.add(leaf("tile", 1))
+    oversize.add(leaf("banner", 4))
+    oversize.add(leaf("tile", 1))
+    run("a tile wider than the room", oversize, 150.0, 100.0)
+
+    // Mixed heights on one line, aligned to its end.
+    var uneven: layout.WrapLayout = layout.WrapLayout.row(4.0)
+    uneven.set_align(geometry.Align.end)
+    var lined: layout.LayoutNode = layout.LayoutNode.group("root", uneven)
+    lined.add(leaf("short", 1))
+    lined.add(leaf("tall", 2))
+    lined.add(leaf("short", 1))
+    run("a line aligned to its end", lined, 300.0, 100.0)
+
+    // With no width to break against — inside a plain row — it is one line.
+    var boundless: layout.LayoutNode = layout.LayoutNode.group("root", row(0.0))
+    var inner: layout.LayoutNode = layout.LayoutNode.group("wrap", layout.WrapLayout.row(8.0))
+    for index: int in 0..3 {
+        inner.add(leaf("tile", 1))
+    }
+    boundless.add(inner)
+    run("a wrap with no width to break at", boundless, 1000.0, 100.0)
+
+    // Margins take room on the line, so 120 per tile fits twice in 300.
+    var margined: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.row(0.0))
+    for index: int in 0..3 {
+        var spaced_out: layout.LayoutSpec = layout.LayoutSpec.auto()
+        spaced_out.margin = geometry.EdgeInsets.symmetric(10.0, 0.0)
+        margined.add(spec_leaf("tile", 1, spaced_out))
+    }
+    run("margins take room on the line", margined, 300.0, 100.0)
+}
+
 fn main() {
     stacks()
     alignment()
@@ -1082,4 +1153,5 @@ fn main() {
     remeasuring()
     scrolling()
     proportions()
+    wrapping()
 }

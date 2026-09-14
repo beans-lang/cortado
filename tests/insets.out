@@ -33,6 +33,15 @@ HStack stack frame=0,0,400,60
   Label leaf frame=240,6,100,20
 -- a component's root keeps its edges when it is embedded --
   the embedded root carries: 0,0,0,9
+-- a wrapping run --
+  line_spacing=6 reaches the run: 6
+== three tiles of 100 in 250, wrapping ==
+HWrap wrap frame=0,0,250,100
+  Label leaf frame=0,0,100,20
+  Label leaf frame=108,0,100,20
+  Label leaf frame=0,26,100,20
+  line_spacing on a <VStack> is refused: true
+  and the message says why: true
 -- where nothing can be padded --
   padding_left on a <Label> is refused: true
   and the message says why: true

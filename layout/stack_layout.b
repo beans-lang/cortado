@@ -58,6 +58,11 @@ pub class StackLayout extends Layout {
         return self.axis
     }
 
+    /// The cross-axis alignment a child with no opinion takes.
+    pub fn cross_default() -> geometry.Align {
+        return self.cross
+    }
+
     pub override fn padding() -> geometry.EdgeInsets {
         return self.pad
     }

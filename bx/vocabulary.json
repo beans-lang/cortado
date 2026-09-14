@@ -42,7 +42,7 @@
     {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position. It also names the control for Stage.control(key) and Stage.widget(key) in on_mount."},
     {"name": "ref", "detail": "ref={<place>}", "note": "On a component tag only: the instance the tag built, assigned to a place of type Option<T> once the tag is fully configured. A control has no instance to hand back — name it with key= instead."}
   ],
-  "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Disclosure", "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper", "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack", "OutlineView", "WebView"],
+  "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Disclosure", "Grid", "GroupBox", "HFlex", "HStack", "HWrap", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper", "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack", "VWrap", "OutlineView", "WebView"],
   "attributes": [
     {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
     {"name": "alignment", "detail": "number", "note": "text alignment inside the control"},
@@ -65,6 +65,7 @@
     {"name": "hidden", "detail": "flag", "note": "whether the control is drawn"},
     {"name": "indeterminate", "detail": "flag", "note": "a progress bar with no known total"},
     {"name": "justify", "detail": "word", "note": "main-axis distribution: start, center, end, space_between, space_around, space_evenly"},
+    {"name": "line_spacing", "detail": "number", "note": "the gap between one line of a wrapping run and the next"},
     {"name": "margin", "detail": "number", "note": "space kept outside this control, on all four edges"},
     {"name": "margin_bottom", "detail": "number", "note": "margin on the bottom edge only"},
     {"name": "margin_left", "detail": "number", "note": "margin on the left edge only"},

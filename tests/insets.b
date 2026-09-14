@@ -199,6 +199,30 @@ fn drive() -> Result<bool> {
         err(problem) => { io.println("  refused: {problem.msg}") }
     }
 
+    io.println("-- a wrapping run --")
+    var wrapping: component.Builder = new component.Builder()
+    wrapping.open("HWrap")
+    wrapping.number("spacing", 8.0)
+    wrapping.number("line_spacing", 6.0)
+    for index: int in 0..3 {
+        wrapping.open("Label")
+        wrapping.text("tile")
+        wrapping.close()
+    }
+    wrapping.close()
+    let shelf: component.Element = wrapping.finish()?
+    match shelf.arranger {
+        none => { io.println("  an <HWrap> has no arranger") }
+        some(arranger) => {
+            match arranger as? layout.WrapLayout {
+                some(lines) => { io.println("  line_spacing={6} reaches the run: {lines.line_spacing()}") }
+                none => { io.println("  an <HWrap> does not wrap") }
+            }
+        }
+    }
+    show("three tiles of 100 in 250, wrapping", shelf, 250.0, 100.0)
+    refuse("line_spacing on a <VStack>", padded("VStack", ["line_spacing"], [6.0]), "does not wrap")
+
     io.println("-- where nothing can be padded --")
     refuse("padding_left on a <Label>", on_a_leaf("padding_left"), "has no children to pad")
     refuse("padding_x on a <Label>", on_a_leaf("padding_x"), "has no children to pad")

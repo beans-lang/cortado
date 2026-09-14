@@ -28,6 +28,8 @@ pub fn is_widget_tag(tag: string) -> bool {
     if tag == "HStack" { return true }
     if tag == "VFlex" { return true }
     if tag == "HFlex" { return true }
+    if tag == "VWrap" { return true }
+    if tag == "HWrap" { return true }
     if tag == "Grid" { return true }
     if tag == "Box" { return true }
     if tag == "Container" { return true }
@@ -167,7 +169,7 @@ pub fn attribute_call(name: string) -> string {
         return "number"
     }
     if name == "alignment" || name == "selected" { return "number" }
-    if name == "spacing" || name == "padding" || name == "margin" ||
+    if name == "spacing" || name == "line_spacing" || name == "padding" || name == "margin" ||
        name == "grow" || name == "shrink" || name == "basis" ||
        name == "width" || name == "height" ||
        name == "x" || name == "y" {
@@ -226,7 +228,7 @@ pub fn attribute_names() -> List<string> {
             "border_color", "border_width", "checked", "color", "corner_radius",
             "day", "editable", "enabled",
             "font_size", "grow", "height", "height_percent", "hidden", "indeterminate",
-            "justify", "margin", "margin_bottom", "margin_left", "margin_right",
+            "justify", "line_spacing", "margin", "margin_bottom", "margin_left", "margin_right",
             "margin_top", "margin_x", "margin_y", "max", "max_height",
             "max_width", "min", "min_height", "min_width", "opacity",
             "open", "padding", "padding_bottom", "padding_left",
@@ -239,11 +241,11 @@ pub fn attribute_names() -> List<string> {
 pub fn widget_tags() -> List<string> {
     return ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox",
             "Container", "DatePicker", "Disclosure",
-            "Grid", "GroupBox", "HFlex", "HStack", "Image", "Label",
+            "Grid", "GroupBox", "HFlex", "HStack", "HWrap", "Image", "Label",
             "LevelIndicator", "Link",
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",
             "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper",
-            "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack",
+            "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack", "VWrap",
             "OutlineView", "WebView"]
 }
 

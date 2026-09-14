@@ -639,6 +639,18 @@ pub class Builder {
             }
             return
         }
+        if name == "line_spacing" {
+            match element.arranger {
+                none => { self.faults.push("<{element.tag}> has no children to space") }
+                some(arranger) => {
+                    match arranger as? layout.WrapLayout {
+                        some(run) => { run.set_line_spacing(value) }
+                        none => { self.faults.push("<{element.tag}> does not wrap its children, so it has no line spacing — write <HWrap> or <VWrap>") }
+                    }
+                }
+            }
+            return
+        }
         if name == "padding" {
             self.set_padding(element, geometry.EdgeInsets.all(value))
             return

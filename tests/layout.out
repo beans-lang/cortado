@@ -389,3 +389,49 @@ root stack frame=0,0,300,400
 == a shape overruled by a pin ==
 root stack frame=0,0,300,100
   pinned square, asking for 2:1 leaf frame=0,0,80,80
+== five tiles wrapping in 300 ==
+root wrap frame=0,0,300,200
+  tile leaf frame=0,0,100,20
+  tile leaf frame=108,0,100,20
+  tile leaf frame=0,20,100,20
+  tile leaf frame=108,20,100,20
+  tile leaf frame=0,40,100,20
+== lines spaced apart and centred ==
+root wrap frame=0,0,300,200
+  tile leaf frame=46,0,100,20
+  tile leaf frame=154,0,100,20
+  tile leaf frame=46,26,100,20
+  tile leaf frame=154,26,100,20
+  tile leaf frame=100,52,100,20
+== one grower per line ==
+root wrap frame=0,0,250,100
+  fixed leaf frame=0,0,100,20
+  grows leaf frame=100,0,150,20
+  fixed leaf frame=0,20,100,20
+  grows leaf frame=100,20,150,20
+== three tiles wrapping down a column of 50 ==
+root wrap frame=0,0,300,50
+  tile leaf frame=0,0,100,20
+  tile leaf frame=0,20,100,20
+  tile leaf frame=100,0,100,20
+== a tile wider than the room ==
+root wrap frame=0,0,150,100
+  tile leaf frame=0,0,100,20
+  banner leaf frame=0,20,150,16
+  tile leaf frame=0,36,100,20
+== a line aligned to its end ==
+root wrap frame=0,0,300,100
+  short leaf frame=0,10,100,20
+  tall leaf frame=104,0,60,30
+  short leaf frame=168,10,100,20
+== a wrap with no width to break at ==
+root stack frame=0,0,1000,100
+  wrap wrap frame=0,0,316,20
+    tile leaf frame=0,0,100,20
+    tile leaf frame=108,0,100,20
+    tile leaf frame=216,0,100,20
+== margins take room on the line ==
+root wrap frame=0,0,300,100
+  tile leaf frame=10,0,100,20
+  tile leaf frame=130,0,100,20
+  tile leaf frame=10,20,100,20

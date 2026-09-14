@@ -14,6 +14,14 @@ First working macOS host.
   the step before it, from the attribute to the solved frame, against a table
   on every host. `README.md` also claimed `<Label spacing={4} />` was fine; it
   is refused, and the sentence now says so.
+- **A run that wraps.** `layout.WrapLayout`, and `<HWrap>` / `<VWrap>` in
+  markup: children go along the main axis until the next would not fit, then
+  start a new line, `line_spacing` apart. It extends `FlexLayout`, so each
+  line hands out its leftover by `grow` and takes back overflow by `shrink`,
+  `justify` places each line on its own, and `align` sits a child within its
+  line. A child wider than the room takes a line of its own and shrinks to
+  fit; a wrap with no width to break against is one line. Eight engine cases
+  in `tests/layout.b`, to the frame, on every host.
 - **A screen can read the window it is in.** `Component.viewport()` is the
   content size the mount lays it out in, told before every render and on
   every resize, so `$if self.viewport().width < 600 { ... }` is a breakpoint.

@@ -23,6 +23,7 @@ pub class Vocabulary {
     /// The widget behind a tag, or `none` for a tag cortado does not know.
     pub static fn kind_of(tag: string) -> Option<widgets.WidgetKind> {
         if tag == "VStack" || tag == "HStack" || tag == "VFlex" || tag == "HFlex" ||
+           tag == "VWrap" || tag == "HWrap" ||
            tag == "Grid" || tag == "Box" || tag == "Container" {
             return some(widgets.WidgetKind.container)
         }
@@ -68,6 +69,8 @@ pub class Vocabulary {
         if tag == "HStack" { return some(layout.StackLayout.row(0.0)) }
         if tag == "VFlex" { return some(layout.FlexLayout.column(0.0)) }
         if tag == "HFlex" { return some(layout.FlexLayout.row(0.0)) }
+        if tag == "VWrap" { return some(layout.WrapLayout.column(0.0)) }
+        if tag == "HWrap" { return some(layout.WrapLayout.row(0.0)) }
         if tag == "Box" { return some(new layout.AbsoluteLayout()) }
         if tag == "Grid" { return some(layout.GridLayout.uniform(1, 0.0)) }
         // The containers that hold a subtree and have nothing to say about
@@ -204,7 +207,7 @@ pub class Vocabulary {
     /// The per-edge insets are written out one by one because
     /// `tools/check_vocabulary.sh` reads this list and holds `bx/widgets.b` to it.
     pub static fn is_layout_name(name: string) -> bool {
-        return name == "spacing" || name == "padding" || name == "justify" ||
+        return name == "spacing" || name == "line_spacing" || name == "padding" || name == "justify" ||
                name == "align" || name == "grow" || name == "shrink" ||
                name == "basis" || name == "margin" || name == "width" ||
                name == "height" || name == "x" || name == "y" ||

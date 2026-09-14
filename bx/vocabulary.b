@@ -160,6 +160,7 @@ pub fn attributes() -> List<VocabRow> {
 fn attribute_note(name: string) -> string {
     if name == "text" { return "the text this control shows" }
     if name == "spacing" { return "the gap between a container's children" }
+    if name == "line_spacing" { return "the gap between one line of a wrapping run and the next" }
     if name == "padding" { return "space kept inside a container, on all four edges" }
     if name == "padding_x" { return "padding on the left and right edges only; later attributes win, edge by edge" }
     if name == "padding_y" { return "padding on the top and bottom edges only; later attributes win, edge by edge" }

@@ -311,10 +311,11 @@ solver.solve(page, geometry.Rect.at(geometry.Point.zero(), window.content_size()
 sheet.apply(page)?
 ```
 
-Four algorithms, each its own class: `StackLayout` (a row or a column),
+Five algorithms, each its own class: `StackLayout` (a row or a column),
 `FlexLayout` (the same, with children sharing out the space that is left over),
-`GridLayout` (tracks that are fixed, automatic or a fraction of what remains),
-and `AbsoluteLayout` (the escape hatch). Every one takes padding, spacing,
+`WrapLayout` (a flexing run that breaks into lines when its children do not
+fit), `GridLayout` (tracks that are fixed, automatic or a fraction of what
+remains), and `AbsoluteLayout` (the escape hatch). Every one takes padding, spacing,
 main-axis justification and cross-axis alignment, and every child may carry a
 margin, size bounds, a grow and shrink weight, and an alignment of its own.
 Padding and margin are both `geometry.EdgeInsets` — `all(8.0)`,
@@ -970,6 +971,20 @@ once and adjusted on one side.
 
 A margin is the child's own, so every control takes one; padding is a
 container's, so `padding_left` on a `<Label>` is refused the way `padding` is.
+
+**A run that wraps.** `<HWrap>` and `<VWrap>` are `WrapLayout`: children go
+along the main axis until the next would not fit, then start a new line, with
+`spacing` between neighbours and `line_spacing` between lines. Each line is a
+flexing run of its own — `grow` fills that line's leftover, `justify` places
+that line, `align` sits a child within its line — and a child wider than the
+room takes a line of its own and shrinks to fit. A shelf of tags that reflows
+as the window narrows is one tag:
+
+```
+<HWrap spacing={8} line_spacing={8}>
+  $for tag in self.tags { <Button key={tag} text={tag} /> }
+</HWrap>
+```
 
 **A size bound comes one side at a time as well.** `width={n}` pins both
 bounds; `min_width`, `max_width`, `min_height` and `max_height` set one, in
