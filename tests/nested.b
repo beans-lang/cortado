@@ -1,29 +1,5 @@
-// A component tag inside a component tag.
-//
-// `cortado-bx` numbers component tags from zero in every `render` it writes,
-// so the first component tag in *any* `.bx` file is `c0`. The mount's map of
-// prepared children was keyed by that string alone — one map for the whole
-// mount — so a screen whose component contained a component had both asking
-// for `c0`, and the inner one was handed the outer one's instance.
-//
-// It did not even reach the duplicate-key refusal. `obtain` looks in
-// `prepared` first, found a component of the wrong class under `c0` and
-// returned it, so the author was told `<Leaf> came back as something else` —
-// a message about a downcast, for a mistake about identity.
-//
-// Nothing in this repository nested two component tags, which is the only
-// reason it went unseen: `examples/markup/site/checkout.bx` has two of them as
-// siblings, where the numbering already differs. The first `<Card>` with a
-// `<Badge>` in it would have found this.
-//
-// So this case nests **three** deep and puts two siblings at the bottom: two
-// levels would pass against a scheme that qualified a key with only the depth,
-// and one child per level would pass against one that used only the class.
-//
-// Each component writes its own word into a shared log as it renders, so two
-// tags sharing one instance shows up as the wrong words in the wrong order
-// rather than only as a refusal — and the log names no platform class, so
-// every host prints these same bytes.
+// A component tag inside a component tag: both asked for `c0`, so the inner got
+// the outer's instance. Three deep with siblings, or a wrong scheme passes.
 package main
 
 import cortado.platform
@@ -116,9 +92,8 @@ class Top extends component.Component {
     }
 }
 
-/// A render that really does use one key twice. Still a mistake, and still
-/// refused — scoping keys by the component that asked must not turn a genuine
-/// collision into two components quietly sharing an identity.
+/// One key used twice for real. Still refused: scoping must not turn a genuine
+/// collision into two components sharing an identity.
 class Clashing extends component.Component {
     pub fn init() { super.init() }
 

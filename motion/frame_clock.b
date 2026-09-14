@@ -30,24 +30,14 @@ pub class FrameClock {
 
     /// Starts the clock, calling `handler` before every frame.
     ///
-    /// `token` comes back on every frame, and it now also says *which
-    /// listener* the frame is for: a surface may have several, and
-    /// `ClockDesk` hands each one its own token rather than the host's. Two
-    /// clocks on one surface under the same token is refused rather than one
-    /// replacing the other.
+    /// `token` comes back on every frame and says which listener it is for:
+    /// a surface may have several. A repeated token is refused, not replaced.
     ///
-    /// **The host still has one clock per surface**, and that is not worked
-    /// around here — a display link belongs to a display, so several listeners
-    /// share one link. `ClockDesk` is what shares it; before it existed, the
-    /// second thing to ask for frames in a window simply never moved.
+    /// The host keeps one clock per surface, which is right — a display link
+    /// belongs to a display. `ClockDesk` is what shares it.
     pub fn start(token: int, handler: fn(Frame)) -> Result<bool> {
-        // Starting *this* clock twice is still refused, even though a surface
-        // may now carry several. The object holds the one token it will leave
-        // under, so a second start would forget the first and strand that
-        // listener on the surface with nothing able to take it off again.
-        // Two things moving in one window is two FrameClocks, not one started
-        // twice — which is what the message says, because the caller who hit
-        // this is one line away from the arrangement that works.
+        // Starting this clock twice is still refused: the object holds one
+        // token, so a second start would strand the first listener.
         if self.started {
             return err("this frame clock is already running under token {self.token} — a second thing moving on the same surface is its own FrameClock, not this one started again",
                        "wrong_moment")

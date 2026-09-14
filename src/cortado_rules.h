@@ -115,23 +115,14 @@ static inline int ctd_kind_has_color(int32_t kind) {
 
 /* Whether a kind can show a background colour behind its own drawing.
  *
- * **This list was read off a screen, not reasoned about.** `examples/styled.b`
- * puts every control on a window twice, plain and dressed, and the four below
- * are the ones that came back looking exactly as they started. They are the
- * bezelled text-entry controls, and they are alike for one reason: the bezel
- * the platform draws is opaque and it is drawn over anything behind it. A
- * label is the control that proves it is the bezel and not the class — a label
- * is an NSTextField too, has no bezel, and takes a background fine.
+ * Read off a screen, not reasoned about: examples/styled.b showed these four
+ * unchanged, and they are alike in having an opaque bezel drawn over anything.
  *
- * The only way to make one of these show a colour is to take its bezel away,
- * and then it is not the platform's text field any more: no focus ring, no
- * find bar, none of the appearance a person recognises. That is the
- * substitution ctd_widget_supports exists to refuse, so this refuses it one
- * layer up and says which control it was about.
+ * A label is an NSTextField with no bezel and takes one fine, so it is the
+ * bezel and not the class. A bezelled NSButton takes one too.
  *
- * Everything else takes one — a push button included, which is worth saying
- * because the opposite was assumed for a long time: a bezelled NSButton shows
- * a layer colour perfectly well and keeps drawing its title on top.
+ * Removing a bezel to show a colour is the substitution ctd_widget_supports
+ * refuses, so this refuses it a layer up and names the control.
  *
  * Corner radius and border are deliberately *not* here. Every control took
  * both, these four included, so there is nothing for a rule to refuse. */
@@ -144,17 +135,12 @@ static inline int ctd_kind_has_background(int32_t kind) {
 
 /* Whether a kind is one a person types into, and so can be told not to be.
  *
- * The same four `ctd_kind_has_background` refuses, and that is not a
- * coincidence: a control has a bezel because you type into it. Everything else
- * is refused, a label included.
+ * The same four ctd_kind_has_background refuses: a control has a bezel
+ * because you type into it. A label is not one of them.
  *
- * Written down here because the classes lie, and here they lied in both
- * directions at once. A label is an `NSTextField`, so the macOS host let a
- * program make a label typeable — which is not a label any more. A text area
- * is an `NSScrollView` around an `NSTextView`, so the same host refused the
- * one control the whole property is for. iOS answered a third way and GTK4 a
- * fourth. Four hosts, four answers, and none of them was written down
- * anywhere a reader could find it. */
+ * The classes lied in both directions — macOS made a label typeable (an
+ * NSTextField) and refused a text area (an NSScrollView). Four hosts, four
+ * answers, none written down. */
 static inline int ctd_kind_has_editable(int32_t kind) {
     return kind == CTD_W_TEXT_FIELD
         || kind == CTD_W_SECURE_FIELD
@@ -164,37 +150,23 @@ static inline int ctd_kind_has_editable(int32_t kind) {
 
 /* Whether a kind lays out text whose alignment the program chooses.
  *
- * The four you type into, plus a label. A link is deliberately not here: a
- * link is its words, and the four hosts draw one differently enough — an
- * attributed `NSTextField`, a `UIButton`, a `GtkLinkButton`, a custom-drawn
- * static — that "centre it" would mean four things. A button's title is
- * centred by the platform and is not the program's to move. */
+ * The four you type into, plus a label. Not a link: the hosts draw one four
+ * different ways, so "centre it" would mean four things. */
 static inline int ctd_kind_has_alignment(int32_t kind) {
     return ctd_kind_has_editable(kind) || kind == CTD_W_LABEL;
 }
 
 /* Whether a kind draws text whose size the program chooses.
  *
- * Everything whose content is words. Not a container, a canvas, a scroll view,
- * a separator, an image, a slider, a progress bar, a level indicator, a
- * spinner, a colour well or a split view — those draw no text of their own, and
- * a font size set on one is a number that goes in and never shows.
+ * Everything whose content is words. A control that draws none takes a number
+ * that never shows.
  *
- * Five that look like they belong are deliberately out: a table, an outline, a
- * group box, a disclosure and a tab view all show words, but the words are a
- * *title* or a *cell* and not the control's own text. `NSBox` has a
- * `titleFont` and nothing else; an `NSTableView` has no font at all, because
- * its text belongs to the cells cortado makes per row. Giving any of them
- * CTD_P_FONT_SIZE would make one name mean the title on one control and the
- * contents on another. A title font is a different property, and it is not
- * written yet because nothing has asked for it.
+ * A table, an outline, a group box, a disclosure and a tab view are out: their
+ * words are a title or a cell, and one name cannot mean both. A title font is
+ * a separate property nothing has asked for.
  *
- * This is the rule the four hosts disagreed about most, because three of them
- * were answering a different question. GTK4 puts a CSS class on any widget and
- * Win32 sends WM_SETFONT to any window, so both said yes to a container; macOS
- * asked `NSControl`, which says no to an image view and yes to a slider; iOS
- * listed three classes by hand. A size that is accepted on two platforms and
- * refused on two is worse than either answer. */
+ * The rule the hosts disagreed about most: GTK4 and Win32 style any widget,
+ * macOS asked NSControl, iOS listed three classes. */
 static inline int ctd_kind_has_font_size(int32_t kind) {
     return kind == CTD_W_LABEL
         || kind == CTD_W_BUTTON
@@ -212,22 +184,19 @@ static inline int ctd_kind_has_font_size(int32_t kind) {
 
 /* Whether a kind carries an increment — CTD_P_STEP.
  *
- * A stepper, whose whole purpose is one, and a slider, which can be made to
- * land on detents. Note the shape of the answer on a slider: the kind carries
- * it everywhere, and iOS says CTD_ERR_UNSUPPORTED because a UISlider is always
- * continuous. That is the distinction this file exists to keep — "this control
- * has no such thing" is cortado's answer and the same on every platform;
- * "this platform cannot" is the platform's and differs. */
+ * A stepper and a slider. The kind carries it everywhere; iOS answers
+ * CTD_ERR_UNSUPPORTED because a UISlider is always continuous.
+ *
+ * That is the distinction this file keeps: "no such thing" is cortado's and
+ * the same everywhere, "this platform cannot" is the platform's. */
 static inline int ctd_kind_has_step(int32_t kind) {
     return kind == CTD_W_SLIDER || kind == CTD_W_STEPPER;
 }
 
 /* Whether a kind carries a chosen index — CTD_P_SELECTED.
  *
- * Three controls that are each a list of things with one of them current. Two
- * of the three are missing from one platform apiece, which is
- * ctd_widget_supports' business and not this one's: a kind a host cannot build
- * is never asked about. */
+ * Three lists with one item current. Two are missing from one platform each,
+ * which is ctd_widget_supports' business: an unbuilt kind is never asked. */
 static inline int ctd_kind_has_selected(int32_t kind) {
     return kind == CTD_W_COMBO_BOX
         || kind == CTD_W_TAB_VIEW
@@ -236,11 +205,8 @@ static inline int ctd_kind_has_selected(int32_t kind) {
 
 /* Whether a kind can be a bar with no known total — CTD_P_INDETERMINATE.
  *
- * A progress bar alone. Not a spinner: a spinner is *always* indeterminate,
- * which is the difference between the two controls, and a key that could only
- * ever be set to the value it already has is a key with nothing to say. On
- * macOS both are an NSProgressIndicator, so a host asking the class would let
- * a spinner take it — on that one platform. */
+ * A progress bar alone. A spinner is always indeterminate, so the key would
+ * have nothing to say — and on macOS both are an NSProgressIndicator. */
 static inline int ctd_kind_has_indeterminate(int32_t kind) {
     return kind == CTD_W_PROGRESS_BAR;
 }

@@ -106,6 +106,10 @@ pub class Vocabulary {
         if name == "color" { return host.P_COLOR }
         if name == "open" { return host.P_EXPANDED }
         if name == "animating" { return host.P_ANIMATING }
+        if name == "background" { return host.P_BG_COLOR }
+        if name == "corner_radius" { return host.P_CORNER_RADIUS }
+        if name == "border_width" { return host.P_BORDER_WIDTH }
+        if name == "border_color" { return host.P_BORDER_COLOR }
         return -1
     }
 
@@ -126,6 +130,12 @@ pub class Vocabulary {
         return answer == 1
     }
 
+    /// Whether this attribute's value is a colour, written `#rgb`, `#rrggbb`
+    /// or `#rrggbbaa`. Mirrors `bx.is_colour_attribute`.
+    pub static fn is_colour(name: string) -> bool {
+        return name == "color" || name == "background" || name == "border_color"
+    }
+
     /// Which controls carry `name`, for a refusal that says where it belongs.
     pub static fn who_carries(name: string) -> string {
         var carried: List<string> = []
@@ -140,7 +150,7 @@ pub class Vocabulary {
     pub static fn kind_of_property(name: string) -> AttributeKind {
         if name == "min" || name == "max" || name == "value" ||
            name == "font_size" || name == "step" || name == "opacity" ||
-           name == "day" {
+           name == "day" || name == "corner_radius" || name == "border_width" {
             return AttributeKind.real
         }
         // A colour travels as a whole number, packed 0xRRGGBBAA — the same
@@ -148,7 +158,7 @@ pub class Vocabulary {
         // hands back. It is written in markup as `#rrggbbaa`, and `Builder`
         // is what turns the one into the other.
         if name == "checked" || name == "alignment" || name == "selected" ||
-           name == "color" {
+           Vocabulary.is_colour(name) {
             return AttributeKind.whole
         }
         if name == "open" || name == "animating" { return AttributeKind.flag }

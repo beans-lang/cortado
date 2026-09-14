@@ -892,6 +892,22 @@ card.set_corner_radius(10.0)?
 card.set_border(1.0, widgets.Rgba { red: 0, green: 0, blue: 0, alpha: 30 })?
 ```
 
+From markup, the same four names are attributes:
+
+```
+<Button background="#2f6f4f" corner_radius={6}
+        border_width={1} border_color="#00000040">Order</Button>
+```
+
+A colour is a word in markup and a packed integer by the time it reaches the
+ABI, parsed in one place, so `#abc` means the same thing in a control as it
+does in a shader. `<TextField background="#f00" />` is refused where it is
+written.
+
+**A property the platform has not got does not break the screen.** It is
+stepped over, the way a canvas still renders where there is no GPU; every other
+refusal still stops the render, because it is about the program.
+
 **A push button takes a background.** That is the surprise, and it was settled
 by looking at a screen rather than by reasoning: `examples/styled.b` puts every
 control on a window twice, plain on the left and dressed on the right, and a

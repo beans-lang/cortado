@@ -222,11 +222,8 @@ pub const S_URL: int = 2
 pub const S_A11Y_LABEL: int = 3
 
 // ---- which key space a number is in ----
-//
-// The two overlap: P_CHECKED and S_HINT are both 1, because each indexes its
-// own switch. That is fine until something asks about a key without also
-// knowing which call it would be handed to, which is what ctd_kind_carries
-// does.
+// The two overlap: P_CHECKED and S_HINT are both 1, each indexing its own
+// switch, so anything asking about a key without the call must say which.
 pub const KEY_PROPERTY: int = 0
 pub const KEY_TEXT: int = 1
 

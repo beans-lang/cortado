@@ -565,16 +565,20 @@ partial class Shelf {
         }
         b.close()
         b.close()
-        b.open("HStack")  // shelf.bx:209
+        b.open("HStack")  // shelf.bx:211
         b.number("spacing", (10) as f64)
         b.word("justify", "end")
-        b.open("Button")  // shelf.bx:210
+        b.open("Button")  // shelf.bx:212
         b.flag("enabled", self.shots > 0)
+        b.word("background", "#2f6f4f")
+        b.number("corner_radius", (6) as f64)
+        b.number("border_width", (1) as f64)
+        b.word("border_color", "#00000040")
         b.on("click", fn(e: UiEvent) { self.order() })
         b.text("Order")
         b.close()
         b.close()
-        b.open("Label")  // shelf.bx:213
+        b.open("Label")  // shelf.bx:217
         b.text("{self.status}")
         b.close()
         b.close()

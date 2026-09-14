@@ -356,6 +356,20 @@ First working macOS host.
   flip wrong. It is a division and nothing else: a pointer arrives in points,
   `ctd_view_frame` is points, and the 2× lives only inside `size`. A canvas with
   no size has no answer rather than a division by zero.
+- **A control can be dressed from markup.** `background`, `corner_radius`,
+  `border_width` and `border_color` are attributes now, so
+  `<Button background="#2f6f4f" corner_radius={6} />` is a real `NSButton` that
+  keeps its bezel and its title and shows the colour behind them. A colour is a
+  word in markup and a packed integer at the ABI, parsed in one place —
+  `Builder.word` — so `#abc` means the same thing in a control as in a shader.
+  `<TextField background="#f00" />` is refused where it is written, which is
+  what the per-kind table below was blocking.
+- **A property this platform has not got no longer breaks a screen.** The
+  applier treated every refusal alike, so the first GTK4 run of a dressed
+  button failed the whole render with `could not set property 21 of a Button`.
+  `unsupported` is stepped over now and everything else still stops the render:
+  a platform difference is not the author's mistake, and a screen renders where
+  nothing can be dressed the same way a canvas renders where there is no GPU.
 - **`ctd_kind_carries` — which control has which property, answered once.**
   The rules were already written down in `src/cortado_rules.h` for eleven
   properties and not at all for six others, and nothing above the ABI could ask

@@ -56,9 +56,8 @@ pub class Mount implements Composer {
     /// Which keys this render has used, so a duplicate is reported rather than
     /// silently making two components share one identity.
     used: Map<string, bool> = {}
-    /// The scoped key of the component whose `render` is running, or "" for
-    /// the one at the top. Every key asked for while it runs is qualified by
-    /// it — see `scoped_key`.
+    /// The scoped key of the component whose `render` is running, "" at the
+    /// top. Every key asked for while it runs is qualified by it.
     rendering: string = ""
 
     /// Which element each live control stands for. Rebuilt after every apply.

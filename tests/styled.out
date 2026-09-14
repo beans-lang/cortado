@@ -17,3 +17,6 @@
   the border width that went in: true
   and the colour, byte for byte: true
   one nobody dressed reads zero: true
+-- and markup dresses a control the same way --
+  the colour written in markup is the control's: true
+  a colour that is not one is refused at render: true

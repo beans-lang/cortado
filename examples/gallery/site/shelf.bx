@@ -206,8 +206,12 @@
     </VStack>
   </Disclosure>
 
+  <!-- Dressed from markup: a real NSButton that keeps its bezel and its title
+       and shows the colour behind them. The four text controls refuse one. -->
   <HStack spacing={10} justify="end">
-    <Button enabled={self.shots > 0} on:click={fn(e: UiEvent) { self.order() }}>Order</Button>
+    <Button enabled={self.shots > 0} background="#2f6f4f" corner_radius={6}
+            border_width={1} border_color="#00000040"
+            on:click={fn(e: UiEvent) { self.order() }}>Order</Button>
   </HStack>
 
   <Label>$self.status</Label>

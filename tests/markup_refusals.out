@@ -47,3 +47,10 @@
   checked on a check box compiled, emitting it: true
   a font size on a label compiled, emitting it: true
   spacing on a label compiled, emitting it: true
+-- dressing a control in markup --
+  a background on a button compiled, emitting it: true
+  a corner radius compiled, emitting it: true
+  a border compiled, emitting it: true
+  a background on a text field refused, saying so: true
+  but the same field takes a corner radius compiled, emitting it: true
+  a colour that is not one still compiles compiled, emitting it: true

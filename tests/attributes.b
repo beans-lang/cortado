@@ -1,16 +1,5 @@
-// Which control carries which attribute, asked three ways and answered once.
-//
-// The rule lives in `src/cortado_rules.h`; `Vocabulary.carries` asks the host,
-// and `bx.tag_carries` is a written copy because the markup compiler builds
-// with no host. Three copies drift, so this walks 37 tags × 28 attributes and
-// asserts all three agree — then builds a real control of every kind and sets
-// every property on it, holding what happened to what the rule promised.
-//
-// Written by finding that `editable` on a label, `font_size` on a container
-// and `editable` on a text area each had a different answer on each of the
-// four hosts, because each asked its own object system.
-//
-// Agreement rather than inventory, so every host prints the same bytes.
+// Which control carries which attribute, asked three ways and answered once:
+// 37 tags x 28 attributes, then every property set on a real control.
 package main
 
 import cortado.platform
@@ -86,15 +75,14 @@ fn drive() -> Result<bool> {
             }
         }
     }
-    // 37 tags and 28 attributes on every platform, because neither table knows
-    // what this machine can build — which is the property that lets one golden
-    // hold every host.
-    io.println("  every pair was asked: {pairs == 1036}")
+    // The same on every platform: neither table knows what this machine builds.
+    io.println("  every pair was asked: {pairs == 1184}")
     io.println("  and answered the same way by both: {same == pairs}")
 
     io.println("-- and the answer is the one the control gives --")
-    // `wrong_widget` is the kind's answer and must follow the rule exactly;
-    // `unsupported` is the platform's and may differ; `range` cannot happen.
+    // A carried property is never refused as `wrong_widget`; one that is not
+    // carried is never taken. `unsupported` may pre-empt either: a platform
+    // that cannot do a key at all never reaches the question about the kind.
     var tried: int = 0
     var agreed: int = 0
     var surprises: int = 0
@@ -110,8 +98,9 @@ fn drive() -> Result<bool> {
                     let promised: bool = component.Vocabulary.carries(kind, name)
                     let refusal: string = try_set(control, name)
                     if refusal == "range" { ranged = ranged + 1 }
-                    let refused_as_kind: bool = refusal == "wrong_widget"
-                    if refused_as_kind == !promised {
+                    var kept: bool = refusal != ""
+                    if promised { kept = refusal != "wrong_widget" }
+                    if kept {
                         agreed = agreed + 1
                     } else {
                         if surprises < 40 {

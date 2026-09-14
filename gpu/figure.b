@@ -1,39 +1,19 @@
 // Shapes you can name, as distance rather than as triangles.
 package gpu
 
-/// The geometry a `ShapeCanvas` draws.
-///
-/// Not `Shape` — that name is already the primitive topology in `shape.b`, and
-/// two public `Shape` types in one package is a name nobody should have to
-/// disambiguate.
-///
-/// **Four, and not seven.** A rectangle is a rounded rectangle whose radius is
-/// zero; a circle is an ellipse whose halves are equal; a border is a stroke.
-/// Naming those separately would be four ways to write two things, and the
-/// author who wanted a *slightly* rounded rectangle would have to know which
-/// of the four names stops being the right one.
-///
-/// **Why a distance and not a mesh.** Every one of these is one number per
-/// pixel — how far that pixel is from the edge, negative inside — and once a
-/// shader has that number the fill, the stroke and the shadow all fall out of
-/// it by arithmetic. Tessellating a rounded corner into triangles instead
-/// would put the corner's smoothness in the vertex count, where a resize
-/// makes it wrong.
+/// The geometry a `ShapeCanvas` draws. Four, not seven: a rectangle is a
+/// rounded rect at radius 0, a circle an equal-halved ellipse, a border a stroke.
 pub enum(u8) Figure {
-    /// A rectangle, with `radius` rounding every corner. Zero is square, and
-    /// a radius past half the shorter side is clamped to it — which is a
-    /// capsule, and drawing one is better than refusing a number somebody
-    /// arrived at by binding it to a slider.
+    /// A rectangle, `radius` rounding every corner. Past half the shorter side
+    /// it clamps to a capsule rather than refusing a slider-driven number.
     rounded_rect
     /// A circle, or the ellipse inscribed in a canvas that is not square.
     ellipse
-    /// An `ellipse` with its middle taken out. `thickness` is how wide the
-    /// band is, measured **inward** from the edge, for the reason a stroke is
-    /// measured inward: outward needs room the layout never gave it.
+    /// An ellipse with its middle out. `thickness` measures inward, like a
+    /// stroke: outward needs room the layout never gave it.
     ring
-    /// A rectangle with its ends fully rounded, whichever way round it is.
-    /// The same as `rounded_rect` with the largest radius that fits, named
-    /// because that is the shape people mean rather than the radius.
+    /// A rectangle with fully rounded ends — `rounded_rect` at the largest
+    /// radius that fits, named because that is the shape people mean.
     capsule
 
     pub fn name() -> string {
@@ -84,32 +64,18 @@ pub enum(u8) Figure {
         }
     }
 
-    /// The MSL that works out `d` — the signed distance from `p` to this
-    /// figure's edge, in pixels, negative inside.
-    ///
-    /// Written as an ordinary interpolated string, and it works for the one
-    /// reason `Effect.body` names: **none of these contains a `{`**. Every
-    /// line is an expression, so the braces a function needs are supplied by
-    /// the raw string in `ShapeCanvas.wrap` instead. The moment a figure needs
-    /// a block, it needs a builder too.
-    ///
-    /// The names it may read are the ones `wrap` puts in scope: `p`,
-    /// `half_extent`, `radius` and `thickness`, all already in pixels.
+    /// The MSL for `d`: signed distance from `p` to the edge, in pixels.
+    /// No body contains a `{`, so interpolation works; `wrap` supplies the braces.
     pub fn distance_body() -> string {
         return match self {
-            // The standard rounded-box distance. `q` is how far outside the
-            // straight part of each edge the point is; the `length(max(q,0))`
-            // term rounds the corners and the `min(max(...),0)` term carries
-            // the inside, where both are negative.
+            // The standard rounded-box distance: `length(max(q,0))` rounds the
+            // corners, `min(max(...),0)` carries the inside.
             rounded_rect => "    float r = min(radius, min(half_extent.x, half_extent.y));\n    float2 q = abs(p) - (half_extent - r);\n    float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;",
-            // Exact for a circle, and the usual first-order approximation when
-            // the halves differ — an exact ellipse distance needs iteration,
-            // which is a cost per pixel for an error no eye finds at the one
-            // pixel where the coverage ramp is not already 0 or 1.
+            // Exact for a circle, first-order otherwise: an exact ellipse
+            // distance needs iteration, for an error inside one ramp pixel.
             ellipse => "    float d = (length(p / half_extent) - 1.0) * min(half_extent.x, half_extent.y);",
-            // The band just inside the edge: `outer` is the ellipse's own
-            // distance, and the band is where it lies between -thickness and
-            // 0, which is what folding it about -thickness/2 says.
+            // The band just inside the edge, which is `outer` folded about
+            // -thickness/2.
             ring => "    float outer = (length(p / half_extent) - 1.0) * min(half_extent.x, half_extent.y);\n    float d = abs(outer + thickness * 0.5) - thickness * 0.5;",
             // The largest radius that fits, which is what a capsule is.
             capsule => "    float r = min(half_extent.x, half_extent.y);\n    float2 q = abs(p) - (half_extent - r);\n    float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;",

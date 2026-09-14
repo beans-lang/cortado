@@ -1,23 +1,5 @@
-// Shapes, asserted as pixels rather than as "it compiled".
-//
-// `tests/shader.b` checks that every named effect compiles and draws. That is
-// the right claim for a material — a plasma has no answer to compare against —
-// but it is nowhere near enough for a *shape*, where the whole point is which
-// pixels are inside. So this case is the `tests/triangle.b` kind: geometry
-// picked so that every count is exact arithmetic, and the numbers written down
-// here rather than recorded from whatever came out.
-//
-// **Why the counts can be exact at all.** `ShapeCanvas` antialiases with a
-// fixed one-pixel ramp, `clamp(0.5 - d, 0, 1)`, and not with `fwidth` — a
-// screen-space derivative would make a boundary pixel depend on the GPU's quad
-// and this file could then only assert ranges. With the fixed ramp an edge
-// that lands on a pixel boundary gives coverage that is exactly 1 on one side
-// and exactly 0 on the other, so a boundary-aligned rectangle has **no**
-// antialiased pixels at all.
-//
-// The 8x8 target puts pixel centres at half-integers: p runs -3.5, -2.5, -1.5,
-// -0.5, 0.5, 1.5, 2.5, 3.5 from the middle. Every figure below is placed so
-// its edge falls on a whole number, which is why the answers are whole pixels.
+// Shapes asserted as pixels, not as "it compiled". The fixed one-pixel ramp
+// makes a boundary-aligned edge exactly 1 or 0, so every count is arithmetic.
 package main
 
 import cortado.platform
@@ -48,13 +30,8 @@ class Sheet extends component.Component {
     }
 }
 
-/// Draws one `ShapeCanvas`'s own program into an off-screen target and reads
-/// it back.
-///
-/// Through the low-level API rather than through a canvas on screen, for the
-/// reason `tests/shader.b` gives about `solid_lands`: a canvas frame belongs
-/// to the compositor, and this is about the pixels. It is the same program
-/// either way — `program()` is what `on_mount` compiles.
+/// Draws a `ShapeCanvas`'s own program off-screen and reads it back. Low-level
+/// because a canvas frame belongs to the compositor; it is the same program.
 fn drawn(card: gpu.Device, shape: gpu.ShapeCanvas, scale: f64) -> Result<widgets.Snapshot> {
     let source: string = shape.program()?
     var compiled: gpu.Shader = card.shader(gpu.ShaderLanguage.msl, source)?
@@ -103,14 +80,8 @@ fn absolute(value: f64) -> f64 {
     return value
 }
 
-/// The rounded-rectangle distance, worked out in Beans from the numbers this
-/// shape was given.
-///
-/// This is the same arithmetic `Figure.rounded_rect`'s MSL does, written a
-/// second time on purpose: comparing it against the pixels is what proves the
-/// shader was handed the backing scale, because every term here depends on it.
-/// A canvas whose uniform never arrived draws a different shape, and every
-/// probe below says so.
+/// The rounded-rect distance in Beans — the MSL's arithmetic written twice on
+/// purpose, since every term depends on the scale the shader was handed.
 fn corner_distance(px: f64, py: f64, half_w: f64, half_h: f64, radius: f64) -> f64 {
     let shorter: f64 = if half_w < half_h { half_w } else { half_h }
     let r: f64 = if radius < shorter { radius } else { shorter }
@@ -123,11 +94,8 @@ fn corner_distance(px: f64, py: f64, half_w: f64, half_h: f64, radius: f64) -> f
     return math.sqrt(mx * mx + my * my) + within - r
 }
 
-/// How many pixels disagree with the shape this canvas says it is drawing.
-///
-/// Only the pixels the coverage ramp leaves unambiguous are asked about — one
-/// whose distance is inside the ramp is part-covered by design and is neither
-/// colour.
+/// How many pixels disagree with the shape the canvas says it draws. Only the
+/// unambiguous ones: a pixel inside the ramp is part-covered by design.
 fn disagreements(shot: widgets.Snapshot, inset: f64, radius: f64, scale: f64,
                  fill: widgets.Rgba, ground: widgets.Rgba) -> Result<int> {
     let half_w: f64 = (shot.width as f64) * 0.5 - inset * scale
@@ -168,9 +136,8 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     let outline: widgets.Rgba = widgets.Rgba.of_hex("#ffffff")?
 
     io.println("-- a rectangle whose edges land on pixel boundaries --")
-    // inset 2 on an 8-wide canvas puts the edge at |p| = 2, so the four
-    // centres at |p| = 1.5 are inside and the four at 2.5 are outside. Four
-    // per axis, so sixteen pixels, and not one of them part-covered.
+    // Edge at |p| = 2, so centres at 1.5 are in and 2.5 are out: four per axis,
+    // sixteen pixels, none part-covered.
     var block: gpu.ShapeCanvas = new gpu.ShapeCanvas()
     block.figure = "rounded_rect"
     block.background = "#101010"
@@ -185,9 +152,8 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     io.println("  and none is part-covered: {fringe == 0}")
 
     io.println("-- the same rectangle, stroked --")
-    // The band is where the distance lies in [-1, 0]: the outer ring of that
-    // four-by-four block, which is twelve pixels, leaving the inner two-by-two
-    // as fill.
+    // The band is distance in [-1, 0]: the outer ring of the 4x4 block, twelve
+    // pixels, leaving the inner 2x2 as fill.
     var edged: gpu.ShapeCanvas = new gpu.ShapeCanvas()
     edged.figure = "rounded_rect"
     edged.background = "#101010"
@@ -204,9 +170,8 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     io.println("  and forty-eight are untouched: {outer == 48}")
 
     io.println("-- a circle, where the edge does not land on a boundary --")
-    // A circle of radius 2 about the middle. Only the four centres at
-    // length 0.707 are fully inside; the eight at 1.581 and the four at 2.121
-    // straddle the edge. This is the case a fixed ramp still antialiases.
+    // Radius 2 about the middle: four centres at 0.707 are inside, twelve
+    // straddle. The case a fixed ramp still antialiases.
     var round: gpu.ShapeCanvas = new gpu.ShapeCanvas()
     round.figure = "ellipse"
     round.background = "#101010"
@@ -225,9 +190,8 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     io.println("  #40a0c0 reads back as {middle.show()}")
 
     io.println("-- a radius is in points, so the backing scale moves it --")
-    // The same figure at scale 2 rounds twice as far in pixels, so it covers
-    // strictly fewer of them. Asserted as a comparison rather than a count,
-    // because what is being pinned is that the scale is read at all.
+    // At scale 2 the corner rounds twice as far, so it covers fewer pixels.
+    // A comparison, because what is pinned is that the scale is read at all.
     var soft_corner: gpu.ShapeCanvas = new gpu.ShapeCanvas()
     soft_corner.figure = "rounded_rect"
     soft_corner.background = "#101010"
@@ -242,10 +206,8 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     io.println("  and the two are not the same picture: {at_one.differences(at_two)? > 0}")
 
     io.println("-- mounted, the canvas reads the scale from its own surface --")
-    // The section above drives the uniform by hand, which pins the *shader's*
-    // arithmetic and says nothing about whether the component supplies the
-    // number. This is the other half: mount one on a real window and compare
-    // what it recorded against what the surface says.
+    // Above drives the uniform by hand. This half mounts one on a real window
+    // and compares what it recorded against what the surface says.
     var window: surface.Window = app.window(64.0, 64.0, "Shape")?
     var root: widgets.Container = new widgets.Container()
     window.set_root(root)?
@@ -260,9 +222,8 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     mount.show(page)?
     let told: f64 = window.scale()?
     io.println("  it is drawing at the surface's own scale: {page.shape.backing_scale() == told}")
-    // Nothing has drawn yet: `on_mount` runs before `lay_out`, so the canvas
-    // has no size until the first frame. This is the same manual drive
-    // `tests/shader.b` uses, standing in for a display this gate does not have.
+    // `on_mount` runs before `lay_out`, so there is no size until the first
+    // frame. Driven by hand, standing in for a display this gate has not got.
     io.println("  it wants its first frame: {page.shape.needs_redraw()}")
     let drew: bool = page.shape.draw(0.0)
     io.println("  and draws one when asked: {drew}")
@@ -271,11 +232,8 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     // Having drawn at a size that has not changed since, a still shape asks
     // for no more frames — which is what keeps a screen of furniture free.
     io.println("  then asks for no more: {!page.shape.needs_redraw()}")
-    // The assertion that the *scale actually reaches the shader*. Everything
-    // above compares a field against a field; this compares the pixels on the
-    // canvas against the shape those numbers describe, and every term of it
-    // is multiplied by the scale. A canvas drawing at 1 where the display is
-    // at 2 draws a rectangle with the wrong corners, and every probe sees it.
+    // Where the scale actually reaches the shader: the pixels against the shape
+    // those numbers describe, every term multiplied by the scale.
     let picture: widgets.Snapshot = page.shape.snapshot(0.0)?
     let off: int = disagreements(picture, 2.0, 20.0, told, inside, ground)?
     io.println("  and the pixels are the shape those numbers describe: {off == 0}")
@@ -384,9 +342,8 @@ fn drive() -> Result<bool> {
         shapes(app, card)?
         card.close()?
     } else {
-        // Said out loud rather than passed over: a platform with no GPU is a
-        // platform where these claims are untested, and a run that printed
-        // nothing would look the same as one that checked.
+        // Said out loud: a run that printed nothing would look the same as one
+        // that checked.
         io.println("-- pixels: not checked, this platform has no GPU --")
     }
 

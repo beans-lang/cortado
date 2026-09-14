@@ -94,13 +94,13 @@ if ! diff -u "$root/build/.attrs.runtime" "$root/build/.attrs.markup" >"$root/bu
 fi
 
 # And every listed attribute must have a call kind, or the emitter would refuse
-# a name the editor offers. A flag reaches `attribute_call` through
-# `is_boolean_attribute` rather than by name, so both are read.
+# a name the editor offers. Flags and colours reach `attribute_call` through a
+# predicate rather than by name, so those are read too.
 {
-    sed -n '/pub fn attribute_call(/,/^}/p' "$markup" \
-        | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/'
-    sed -n '/pub fn is_boolean_attribute(/,/^}/p' "$markup" \
-        | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/'
+    for reader in attribute_call is_boolean_attribute is_colour_attribute; do
+        sed -n "/pub fn $reader(/,/^}/p" "$markup" \
+            | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/'
+    done
 } | sort -u >"$root/build/.attrs.kinded"
 
 if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.kinded" >"$root/build/.attrs.kind.diff"; then
@@ -109,19 +109,9 @@ if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.kinded" >"$root/bui
 fi
 
 # ---- the framework's own attributes ----
-#
-# `bx/widgets.b` decides which names the *compiler* treats as the framework's
-# and which are true by being present; `bx/vocabulary.b` publishes both lists to
-# an editor. Nothing held the two together until now, and the cost was already
-# on the shelf: `indeterminate`, `open` and `animating` had been boolean
-# attributes in the compiler for three controls' worth of work and were missing
-# from the published list the whole time, so every editor reading it believed
-# `<ProgressBar indeterminate />` needed a value.
-#
-# The pattern is the one above: a hand-written list beside a predicate that
-# cannot be enumerated, and a hand-written list goes one short and stays that
-# way. Each comparison refuses an empty read first, because a grep that matched
-# nothing would make this leg pass by covering nothing at all.
+# `bx/widgets.b` decides what the compiler treats as the framework's;
+# `bx/vocabulary.b` publishes it. Nothing held them together, and three boolean
+# names were missing from the published list the whole time.
 vocabulary="$root/bx/vocabulary.b"
 
 sed -n '/pub fn is_reserved_attribute(/,/^}/p' "$markup" \
@@ -156,12 +146,8 @@ if ! diff -u "$root/build/.bools.markup" "$root/build/.bools.listed" \
          "bx/widgets.b and bx/vocabulary.b have drifted."
 fi
 
-# Every listed attribute must carry a note, or the editor shows a blank.
-# `attributes()` builds each published row as `attribute_note(name)`, and that
-# function ends in `return ""` — so a name added to the list and not to the
-# notes ships an empty description into `bx/vocabulary.json` and nothing
-# anywhere says so. The same shape of hole as the boolean list above, one
-# function along.
+# Every listed attribute must carry a note: `attribute_note` ends in an empty
+# string, so a name with none ships a blank description and nothing says so.
 sed -n '/^fn attribute_note(/,/^}/p' "$vocabulary" \
     | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.attrs.noted"
 if [[ ! -s "$root/build/.attrs.noted" ]]; then
@@ -177,14 +163,8 @@ if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.noted" \
 fi
 
 # ---- property names in goldens ----
-#
-# `component/attribute.b`'s `property_name` turns a host property id back into
-# a word, and it ends in `return "p{property}"` on purpose — a key added to the
-# header and forgotten there prints as `p21=1` rather than as a wrong name.
-# That is the right failure, and nothing was reading it: nine keys reached
-# host/constants.b across the layer-styling and drawn-control work and none of
-# them reached this function, so the first golden to print one would have
-# printed a number.
+# `property_name` ends in `p{property}` on purpose, so a forgotten key prints as
+# a number. Nine had reached the header and not it, and nothing was reading it.
 runtime_attr="$root/component/attribute.b"
 
 grep -oE '^pub const P_[A-Z_0-9]+' "$root/host/constants.b" \
@@ -208,18 +188,11 @@ if ! diff -u "$root/build/.props.declared" "$root/build/.props.named" \
 fi
 
 # ---- an arm written twice ----
+# beansc accepts an unreachable duplicate arm without complaint. Two were here,
+# harmless only because the copies agreed; the next pair will not.
 #
-# beansc accepts a duplicated arm in an exhaustive match: the second is
-# unreachable and nothing warns. Two were already here — `outline_view` twice
-# in `has_state` and `P_ANIMATING` twice in `property_name` — and both were
-# harmless only because the two copies agreed. The next pair will not agree,
-# and it would read as the first copy being wrong rather than as a second copy
-# existing. A text check, because the compiler has no complaint to make; that
-# gap is filed against beansc separately.
-#
-# Each label is tagged with the function it sits in: `button` may legitimately
-# appear in two different matches in one file, and only a repeat inside one of
-# them is the bug.
+# Each label is tagged with its function: one name may appear in two matches in
+# one file, and only a repeat inside one of them is the bug.
 arm_labels() {
     # $1 file, $2 a regex matching one arm label.
     awk -v pattern="$2" '
@@ -240,12 +213,8 @@ for pair in "$root/widgets/widget_kind.b|[a-z_]+ =>" "$runtime_attr|host\.P_[A-Z
     pattern="${pair##*|}"
     short="$(basename "$file")"
     arm_labels "$file" "$pattern" >"$root/build/.arms.$short"
-    # The guard first, and it is the whole reason this leg is worth anything:
-    # an extraction that has stopped matching prints nothing, and "nothing" is
-    # exactly what a file with no duplicates prints. Without this, editing the
-    # pattern wrongly makes the check pass forever while reading no arms at
-    # all — which is the failure this repository keeps finding in its own
-    # gates, and which cost one round here before the guard went in.
+    # The guard first: an extraction that stopped matching prints nothing, and
+    # so does a clean file. Without it a broken pattern passes forever.
     if [[ ! -s "$root/build/.arms.$short" ]]; then
         fail "no match arms were read from $short, so this check covered nothing:" \
              "The pattern in this script no longer matches what $short is written like."

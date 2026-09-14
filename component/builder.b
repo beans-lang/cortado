@@ -119,7 +119,6 @@ pub class Builder {
         }
     }
 
-    /// A true/false property: `enabled`, `hidden`, `checked`, `editable`.
     /// Refuses a property this control has not got, and says which do.
     /// `true` when refused. One spelling for three call sites.
     fn refuse_unless_carried(element: Element, name: string) -> bool {
@@ -128,6 +127,7 @@ pub class Builder {
         return true
     }
 
+    /// A true/false property: `enabled`, `hidden`, `checked`, `editable`.
     pub fn flag(name: string, value: bool) {
         match self.current() {
             none => { self.faults.push("{name} with no element open") }
@@ -187,17 +187,14 @@ pub class Builder {
                     }
                     return
                 }
-                // A colour, written the way a colour is written everywhere
-                // else in cortado. Parsed here rather than in the markup
-                // compiler so `#abc` means the same thing in `<ColorWell />`
-                // as it does in a shader — one parser, one set of rules, one
-                // refusal when the digits are wrong.
-                if name == "color" {
+                // Parsed here rather than in the markup compiler, so `#abc`
+                // means one thing in `<ColorWell />` and in a shader.
+                if Vocabulary.is_colour(name) {
                     if self.refuse_unless_carried(element, name) { return }
                     match widgets.Rgba.of_hex(value) {
                         err(problem) => { self.faults.push(problem.msg) }
                         ok(shade) => {
-                            element.set(Attribute.of_whole(host.P_COLOR,
+                            element.set(Attribute.of_whole(Vocabulary.property_of(name),
                                                            widgets.ColorWell.pack(shade)))
                         }
                     }

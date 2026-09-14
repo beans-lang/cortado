@@ -57,7 +57,15 @@ pub class Applier {
                 // here, at the one place in cortado where a property is
                 // written, rather than at each of the setters.
                 self.owner.wrote_to(target.handle().raw)
-                return WidgetMaker.write(target, change.attribute)
+                // Stepped over where the platform has not got the property,
+                // for the reason `write_all` gives: a screen still renders.
+                match WidgetMaker.write(target, change.attribute) {
+                    ok(done) => { return ok(true) }
+                    err(problem) => {
+                        if problem.kind == "unsupported" { return ok(true) }
+                        return err(problem.msg, problem.kind)
+                    }
+                }
             }
             bind => {
                 // The closure looks the handler up at the moment the event

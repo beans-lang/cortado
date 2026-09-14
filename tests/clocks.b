@@ -1,20 +1,5 @@
-// Several things moving in one window.
-//
-// The host has one frame clock per surface and refuses a second, which is the
-// right rule — a display link belongs to a display, so two canvases in one
-// window should share one link rather than open two. What was missing was the
-// layer that shares it: before `motion.ClockDesk`, the second thing to ask a
-// window for frames got a refusal it stored and never moved again, and nothing
-// in the suite could see that because every case that draws puts each canvas
-// in a window of its own (`tests/shader.b` opens a fresh window per effect).
-//
-// So this case is the one that puts three on one surface. **Three, not two**:
-// a fan-out with an off-by-one delivers to two listeners correctly and drops
-// the third, and taking the *middle* one away is what catches a list rebuilt
-// by index rather than by identity.
-//
-// The times are synthesized with `step`, so the arithmetic is exact on every
-// host and this golden pins delivery and never floating point.
+// Several things moving in one window. Three, not two: an off-by-one fan-out
+// still serves two, and removing the middle one catches a list keyed by index.
 package main
 
 import cortado.platform
@@ -23,9 +8,8 @@ import cortado.widgets
 import cortado.motion
 import std.io
 
-// Handlers capture this rather than the thing they are attached to, for the
-// reason `tests/events.b` gives: the other way is a cycle the collector cannot
-// see through.
+// Handlers capture this rather than the thing they are attached to: the other
+// way is a cycle the collector cannot see through.
 class Counter {
     pub seen: int = 0
     pub tokens: List<int> = []
@@ -45,9 +29,8 @@ fn drive() -> Result<bool> {
     app.check_abi()?
     var window: surface.Window = app.window(320.0, 200.0, "Clocks")?
 
-    // One counter per listener, and one shared order log: the counters say
-    // everybody was told, the order log says they were told in the order they
-    // joined, and those are different claims.
+    // Counters say everybody was told; the order log says in what order. Two
+    // different claims.
     let first: Counter = new Counter()
     let second: Counter = new Counter()
     let third: Counter = new Counter()
@@ -88,9 +71,8 @@ fn drive() -> Result<bool> {
     let counted: motion.ClockState = one.state()?
     io.println("  the host counted them once: {counted.frames == 3}")
 
-    // Each listener is told its own token, not the host's. Before the desk the
-    // host echoed one word to one handler; now one frame reaches three
-    // handlers and each needs to know which of them it is.
+    // Each listener is told its own token: one frame now reaches three handlers
+    // and each needs to know which it is.
     io.println("  each was told its own token: {first.tokens[0] == 11 && second.tokens[0] == 22 && third.tokens[0] == 33}")
     io.println("  and told in the order they joined: {order.tokens[0] == 11 && order.tokens[1] == 22 && order.tokens[2] == 33}")
 
@@ -124,9 +106,8 @@ fn drive() -> Result<bool> {
     var clash: motion.FrameClock = new motion.FrameClock(window.handle(), app.router)
     io.println(refusal("a second listener under a token already joined",
                        clash.start(44, fn(frame: motion.Frame) {})))
-    // Starting one clock twice is still wrong even though a surface may carry
-    // several: the object holds the one token it will leave under, so the
-    // first listener would be stranded with nothing able to take it off.
+    // Starting one clock twice is still wrong: the object holds one token, so
+    // the first listener would be stranded.
     io.println(refusal("one clock started twice",
                        rejoin.start(55, fn(frame: motion.Frame) {})))
     rejoin.stop()?

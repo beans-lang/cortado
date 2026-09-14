@@ -186,6 +186,10 @@ fn attribute_note(name: string) -> string {
     if name == "color" { return "a colour well's colour, written #rgb, #rrggbb or #rrggbbaa" }
     if name == "open" { return "whether a disclosure is showing what is under it" }
     if name == "animating" { return "whether a spinner is turning" }
+    if name == "background" { return "the colour behind this control, written #rgb, #rrggbb or #rrggbbaa; refused on the four bezelled text controls" }
+    if name == "corner_radius" { return "how far the corners are rounded, in points" }
+    if name == "border_width" { return "how thick the outline is, in points, drawn inside the bounds" }
+    if name == "border_color" { return "the outline's colour, written #rgb, #rrggbb or #rrggbbaa" }
     return ""
 }
 

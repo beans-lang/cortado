@@ -1,21 +1,5 @@
-// A control a program draws itself, that a person can actually use.
-//
-// **What was already true, and had to be tested rather than assumed:** a
-// canvas already receives a pointer. The hit test finds it like any other
-// view, and the position arrives in the control's own points, top-left and y
-// down. So `<Canvas on:pointer_down={...}>` worked before any of this, and the
-// three things below are what was genuinely missing.
-//
-//   * a canvas cannot take the keyboard — a plain view answers no to
-//     `acceptsFirstResponder`, so `focus` was refused as `unsupported`
-//   * a canvas cannot say what it is — `ctd_a11y_role` hardcoded `group`
-//   * nothing named the conversion from a pointer's position to the `uv` its
-//     shader was given, so every program would have re-derived it and one of
-//     them would have got the flip wrong
-//
-// Every line asks whether what happened agrees with what the platform and the
-// kind promised, so a host that does all of this and a host that does none of
-// it print the same bytes.
+// A control a program draws itself, that a person can use. A canvas already
+// heard a pointer; the keyboard, the role and the uv conversion were missing.
 package main
 
 import cortado.platform
@@ -36,11 +20,8 @@ class Seen {
     pub fn init() {}
 }
 
-/// What a screen reader would say, or "" where this host has no such idea.
-///
-/// A reader rather than `?` at every call site, because a host that has not
-/// been taught this key answers `unsupported` and the case still has to print
-/// the same bytes as one that has.
+/// What a screen reader would say, or "" where the host has no such idea.
+/// A reader rather than `?`, so an untaught host prints the same bytes.
 fn spoken(control: widgets.Widget) -> string {
     match control.a11y_label() {
         ok(said) => { return said }
@@ -66,10 +47,8 @@ fn drive() -> Result<bool> {
             seen.hits = seen.hits + 1
             seen.at = event.position
         })
-    // Through the platform's own dispatch where it can be — a synthesised
-    // NSEvent goes into the application's queue and comes out the far side,
-    // so this tests how the event is *reached* and not only that the handler
-    // runs.
+    // Through the platform's own dispatch, so this tests how the event is
+    // reached and not only that the handler runs.
     let driven: bool = plot.point_as_user(events.EventKind.pointer_down,
                                           geometry.Point.at(25.0, 15.0),
                                           events.PointerButton.left).is_ok()
@@ -97,19 +76,13 @@ fn drive() -> Result<bool> {
         err(problem) => { io.println("  a canvas with no size says so: {problem.kind == "no_size"}") }
     }
 
-    // **Not a capability, and deliberately so.** This is not a platform
-    // difference — a UIView and a GtkWidget both take focus, and both could
-    // carry a role; the cases are simply not written for those hosts yet. A
-    // Capability member would say "this platform cannot", which would be a
-    // claim about UIKit that is not true. So the case asks once and holds
-    // every later line to that answer, and the golden is the same bytes
-    // wherever it runs.
+    // Not a capability: a UIView and a GtkWidget both take focus, so claiming
+    // they cannot would be untrue. The case asks once and holds every line to it.
     let drawn: bool = plot.set_focusable(true).is_ok()
 
     io.println("-- taking the keyboard is asked for, not assumed --")
-    // Refused as `wrong_moment` and not `unsupported`: this platform *can*
-    // point the keyboard at a canvas, and the program has not said it wants
-    // that. Two different answers to two different questions.
+    // `wrong_moment`, not `unsupported`: this platform can, and the program
+    // has not asked. Two answers to two questions.
     var quiet: widgets.Canvas = new widgets.Canvas()
     quiet.set_frame(geometry.Rect.of(0.0, 70.0, 40.0, 20.0))?
     root.add(quiet)?
@@ -146,9 +119,8 @@ fn drive() -> Result<bool> {
     root.add(order)?
     match order.set_focusable(true) {
         ok(done) => { io.println("  a button was allowed one, and should not have been") }
-        // `wrong_widget` where the key is known and this is the wrong control
-        // for it; `unsupported` where the host has never heard of the key.
-        // Both are right, and they are answers to different questions.
+        // `wrong_widget` where the key is known and the control is wrong;
+        // `unsupported` where the host never heard of the key.
         err(problem) => { io.println("  a button is refused: {problem.kind == (if drawn { "wrong_widget" } else { "unsupported" })}") }
     }
 
@@ -173,10 +145,8 @@ fn drive() -> Result<bool> {
     io.println("  a canvas can be named: {spoken(plot) == (if named { "Sales, last twelve months" } else { "" })}")
     order.set_a11y_label("Place the order")
     io.println("  and so can a button: {spoken(order) == (if named { "Place the order" } else { "" })}")
-    // What a screen reader will *say*, not what cortado was told: a button
-    // nobody named is still announced by its own title, and a canvas nobody
-    // named is announced by nothing at all. Both are the platform's answer and
-    // both are the useful one.
+    // What a screen reader will say, not what cortado was told: an unnamed
+    // button is announced by its title, an unnamed canvas by nothing.
     var plain: widgets.Button = widgets.Button.of("Cancel")?
     root.add(plain)?
     io.println("  an unnamed button is announced by its title: {spoken(plain) == (if named { "Cancel" } else { "" })}")

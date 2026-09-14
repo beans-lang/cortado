@@ -163,7 +163,7 @@ pub fn attribute_call(name: string) -> string {
     if is_boolean_attribute(name) { return "flag" }
     if name == "min" || name == "max" || name == "value" ||
        name == "font_size" || name == "step" || name == "opacity" ||
-       name == "day" {
+       name == "day" || name == "corner_radius" || name == "border_width" {
         return "number"
     }
     if name == "alignment" || name == "selected" { return "number" }
@@ -172,18 +172,23 @@ pub fn attribute_call(name: string) -> string {
        name == "width" || name == "height" {
         return "number"
     }
-    // A colour is a word here — `color="#ff8800"` — and a whole number by the
-    // time it reaches the ABI. `Builder.word` is where the one becomes the
-    // other, so the hex spelling is parsed in exactly one place and `#abc`
-    // means the same thing in markup as it does in a shader.
-    if name == "align" || name == "justify" || name == "color" { return "word" }
+    // A colour is a word here and a whole number by the time it reaches the
+    // ABI, parsed once in `Builder.word` so `#abc` means one thing everywhere.
+    if name == "align" || name == "justify" || is_colour_attribute(name) { return "word" }
     return ""
+}
+
+/// The attributes whose value is a colour, written `#rgb`, `#rrggbb` or
+/// `#rrggbbaa`. One list, so the spelling is parsed in exactly one place.
+pub fn is_colour_attribute(name: string) -> bool {
+    return name == "color" || name == "background" || name == "border_color"
 }
 
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
 pub fn attribute_names() -> List<string> {
-    return ["align", "alignment", "animating", "basis", "checked", "color", "day",
-            "editable", "enabled",
+    return ["align", "alignment", "animating", "background", "basis",
+            "border_color", "border_width", "checked", "color", "corner_radius",
+            "day", "editable", "enabled",
             "font_size", "grow", "height", "hidden", "indeterminate",
             "justify", "margin", "max", "min", "opacity", "open", "padding",
             "selected", "shrink", "spacing", "step", "text", "value", "width"]
@@ -230,6 +235,9 @@ pub fn tag_carries(tag: string, name: string) -> bool {
                                                  "CheckBox", "RadioButton", "ComboBox",
                                                  "Link", "Segmented", "DatePicker"]) }
     if name == "step" { return one_of(tag, ["Slider", "Stepper"]) }
+    // The four bezelled text controls draw an opaque bezel over anything set
+    // behind them. Corners and borders have no such rule.
+    if name == "background" { return !is_typed_into(tag) }
     if name == "selected" { return one_of(tag, ["ComboBox", "TabView", "Segmented"]) }
     // Not a spinner: a spinner is always indeterminate, which is the whole
     // difference between the two controls.

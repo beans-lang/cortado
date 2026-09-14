@@ -319,6 +319,33 @@ fn wrong_control() {
           r#"number("spacing"#)
 }
 
+/// Dressing a control from markup.
+///
+/// The four layer keys reach `.bx` the way every other property does. A colour
+/// is a word here and a packed integer by the time it reaches the ABI.
+fn dressing() {
+    io.println("-- dressing a control in markup --")
+    emits("a background on a button", markup([r##"<Button background="#ff8800" />"##]),
+          r##"word("background", "#ff8800")"##)
+    emits("a corner radius", markup([r#"<Button corner_radius={6} />"#]),
+          r#"number("corner_radius"#)
+    emits("a border", markup([r##"<VStack border_width={1} border_color="#00000030" />"##]),
+          r##"word("border_color", "#00000030")"##)
+    // The one control the rule refuses, refused where it is written rather
+    // than at run time.
+    refuses("a background on a text field", markup([r##"<TextField background="#ff8800" />"##]),
+            "<TextField> has no background")
+    // Corners and borders have no per-kind rule, so the same field takes both.
+    emits("but the same field takes a corner radius",
+          markup([r#"<TextField corner_radius={4} />"#]),
+          r#"number("corner_radius"#)
+    // A value that is the wrong *shape* is the Builder's to refuse, uniformly:
+    // `align="nonsense"` compiles here too. One parser for a colour, not two.
+    emits("a colour that is not one still compiles",
+          markup([r##"<Button background="#gg0000" />"##]),
+          r##"word("background", "#gg0000")"##)
+}
+
 fn main() {
     lexing()
     html_documents()
@@ -326,4 +353,5 @@ fn main() {
     references()
     slots()
     wrong_control()
+    dressing()
 }

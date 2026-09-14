@@ -20,35 +20,14 @@ import std.fmt
 ///              shadow="#00000060" shadow_radius={8} shadow_y={2} inset={10} />
 /// ```
 ///
-/// **Why this is a second tag and not six more `Effect` cases.** An `Effect`
-/// is a *material*: a function of `uv` that returns a colour everywhere, and
-/// the six are mutually exclusive by construction. A shape is a *mask*. Masks
-/// and materials multiply — a rounded rectangle filled with a gradient is the
-/// first thing anybody asks for — and `effect=` is one string, so
-/// `effect="rounded_rect"` and `effect="gradient"` could never both be set.
-/// Adding shapes to that enum would be thirteen names for what is really six
-/// materials times four shapes, and the first person who wanted a circle with
-/// a gradient in it would find the enum unable to say it.
+/// A shape is a mask and an `Effect` is a material, so they multiply: all six
+/// fills work with all four figures and `gpu/effect.b` did not change.
 ///
-/// So the fill here **is** an `Effect`, reused unchanged: all six work with
-/// all four figures on the day this lands, and `gpu/effect.b` did not have to
-/// be touched to do it.
+/// The edge is a fixed one-pixel ramp, not `fwidth`: a screen-space derivative
+/// would make a boundary pixel the GPU's business rather than this program's.
 ///
-/// **Antialiasing is a fixed one-pixel ramp, deliberately not `fwidth`.** The
-/// textbook SDF edge divides by a screen-space derivative, which is computed
-/// from a hardware quad and so is the GPU's business rather than this
-/// program's — a pixel on a boundary would not be the same byte on two
-/// devices. `tests/triangle.b` exists because the same triangle gives the same
-/// checksum on this Mac and in the iOS Simulator, and a derivative throws that
-/// away. With the fixed ramp an edge landing on a pixel boundary produces
-/// coverage that is exactly 1 on one side and exactly 0 on the other, so a
-/// boundary-aligned rectangle has **no** antialiased pixels and exact colours
-/// — and a circle is still smooth.
-///
-/// **Compositing is `mix(under, over, coverage * over.a)`.** Exact wherever
-/// the colours are opaque, which is what the goldens assert; for a translucent
-/// paint over a translucent background it is the ordinary approximation every
-/// SDF shader makes, and it is written here rather than left to be discovered.
+/// Compositing is `mix(under, over, coverage * over.a)` — exact where the
+/// colours are opaque, the usual approximation where they are not.
 pub class ShapeCanvas extends component.Component {
     /// Which shape: `"rounded_rect"`, `"ellipse"`, `"ring"` or `"capsule"`.
     pub figure: string = "rounded_rect"
@@ -67,18 +46,16 @@ pub class ShapeCanvas extends component.Component {
     pub color_to: string = "#0d1b2a"
     /// Rings, squares, or the scale of the noise, for the fills that have one.
     pub detail: f64 = 0.0
-    /// How fast the fill moves. **Zero by default here**, unlike
-    /// `ShaderCanvas`: a shape is usually furniture, and furniture that
-    /// animates costs a frame clock for ever.
+    /// How fast the fill moves. Zero by default, unlike `ShaderCanvas`:
+    /// furniture that animates costs a frame clock for ever.
     pub speed: f64 = 0.0
     /// The direction of a gradient fill, in degrees.
     pub angle: f64 = 90.0
 
     /// The outline's colour. `""` is no outline.
     pub stroke: string = ""
-    /// How thick the outline is, in points, drawn **inward** from the edge —
-    /// the way `CALayer.borderWidth` and every design tool mean it, and
-    /// because an outward one needs room the layout never gave it.
+    /// Outline thickness in points, drawn inward like `CALayer.borderWidth`:
+    /// an outward one needs room the layout never gave it.
     pub stroke_width: f64 = 1.0
 
     /// The shadow's colour, alpha included. `""` is no shadow.
@@ -127,25 +104,14 @@ pub class ShapeCanvas extends component.Component {
         return self.drawn
     }
 
-    /// The backing scale this canvas is drawing at — 1 on a standard display,
-    /// 2 on a Retina one, and 1 before it is mounted.
-    ///
-    /// Public because every measurement a `ShapeCanvas` is given is in points
-    /// and everything it draws is in pixels, so a program that goes on to draw
-    /// its own overlay into the same canvas needs the number that converts
-    /// between them — and because the alternative is each caller reading it
-    /// from the surface again and one of them getting it wrong.
+    /// The backing scale this canvas draws at, 1 before it is mounted. Public
+    /// because everything it is given is points and everything it draws is pixels.
     pub fn backing_scale() -> f64 {
         return self.scale
     }
 
-    /// Whether this shape's fill moves, and so whether every frame would look
-    /// different from the one before.
-    ///
-    /// A still shape draws when it first has a size and whenever that size
-    /// changes, and does nothing on the frames in between — see
-    /// `needs_redraw`. `ShaderCanvas` redraws on every frame whatever it was
-    /// given, which is right for a plasma and pure cost for a rectangle.
+    /// Whether the fill moves. A still shape draws on its first size and on
+    /// each change, and nothing between — see `needs_redraw`.
     pub fn animates() -> bool {
         if self.speed == 0.0 { return false }
         match Effect.of(self.fill) {
@@ -178,12 +144,8 @@ pub class ShapeCanvas extends component.Component {
         }
     }
 
-    /// Everything this canvas is being asked to draw, checked together.
-    ///
-    /// Checked here rather than at the first odd-looking pixel, because every
-    /// one of these is a thing that would otherwise draw *something* — and a
-    /// shape that quietly ignored half of what it was told is what somebody
-    /// debugs for an afternoon before reading the source.
+    /// Everything this canvas is asked to draw, checked together — each of
+    /// these would otherwise draw something and ignore the rest.
     priv fn settled() -> Result<bool> {
         let shape: Figure = self.chosen()?
         let paint: Effect = self.material()?
@@ -201,8 +163,7 @@ pub class ShapeCanvas extends component.Component {
                        "no_thickness")
         }
 
-        // Half a stroke is a description somebody left unfinished, and either
-        // half alone draws nothing. Both are named so the message is about
+        // Half a stroke draws nothing. Both are named, so the message is about
         // whichever one is missing.
         if self.stroke == "" && self.stroke_width != 1.0 && self.stroke_width > 0.0 {
             return err("a ShapeCanvas was given stroke_width={self.stroke_width} and no stroke colour — give it a stroke, or take the width off",
@@ -221,11 +182,8 @@ pub class ShapeCanvas extends component.Component {
                            "no_room")
             }
         }
-        // **Every colour is parsed here**, including the ones only `program`
-        // goes on to use. Checking each where it happens to be needed meant
-        // `body()` accepted `color="#gg0000"` and only `program()` refused it
-        // — the same canvas answering two different things about the same
-        // mistake, depending on which way in you came. One place, one answer.
+        // Every colour is parsed here, including ones only `program` uses:
+        // otherwise the same canvas answers two things about one mistake.
         let _ground: widgets.Rgba = widgets.Rgba.of_hex(self.background)?
         let _first: widgets.Rgba = widgets.Rgba.of_hex(self.color)?
         let _second: widgets.Rgba = widgets.Rgba.of_hex(self.color_to)?
@@ -253,13 +211,8 @@ pub class ShapeCanvas extends component.Component {
 
     // --------------------------------------------------------------- the MSL
 
-    /// What the fragment does with the distance: background, then shadow, then
-    /// fill, then stroke, in that order because that is the order they sit in
-    /// depth.
-    ///
-    /// An ordinary interpolated string, which works for the reason
-    /// `Effect.body` and `Figure.distance_body` both name: **none of these
-    /// lines contains a `{`**. The braces belong to `wrap`, which is raw.
+    /// Background, shadow, fill, stroke — the order they sit in depth. An
+    /// interpolated string, which works because no line contains a `{`.
     pub fn body() -> Result<string> {
         self.settled()?
         let ground: widgets.Rgba = widgets.Rgba.of_hex(self.background)?
@@ -269,9 +222,8 @@ pub class ShapeCanvas extends component.Component {
 
         if self.shadow != "" {
             let shade: widgets.Rgba = widgets.Rgba.of_hex(self.shadow)?
-            // The same figure, moved and widened. Widening by subtracting from
-            // the distance rather than by growing the extent keeps a shadow
-            // the same shape as the thing casting it.
+            // Widened by subtracting from the distance rather than growing the
+            // extent, so the shadow keeps the caster's shape.
             out.push("    float2 cast_at = p - float2({self.shadow_x}, {self.shadow_y}) * scale;\n")
             out.push("    float cast_d = cortado_distance(cast_at, half_extent, radius, thickness) - {self.shadow_radius} * scale;\n")
             out.push("    float4 cast_colour = {Effect.msl_color(shade)};\n")
@@ -294,11 +246,8 @@ pub class ShapeCanvas extends component.Component {
         return ok(out.to_string())
     }
 
-    /// The whole Metal program this canvas runs.
-    ///
-    /// Public for the reason `ShaderCanvas.wrap` is: a program that has
-    /// outgrown `<ShapeCanvas>` should be able to print what cortado was
-    /// already running and start from that rather than from a blank file.
+    /// The whole Metal program this canvas runs. Public so a program that has
+    /// outgrown `<ShapeCanvas>` starts from this rather than a blank file.
     pub fn program() -> Result<string> {
         let shape: Figure = self.chosen()?
         let paint: Effect = self.material()?
@@ -312,11 +261,8 @@ pub class ShapeCanvas extends component.Component {
                                    shape_body))
     }
 
-    /// The program, assembled.
-    ///
-    /// Raw strings and a builder rather than one interpolated string, because
-    /// a shader is full of `{` and an ordinary Beans string reads that as an
-    /// interpolation. The three inserted pieces contain none.
+    /// The program, assembled from raw strings: a shader is full of `{`, which
+    /// an ordinary Beans string reads as interpolation.
     pub static fn wrap(shape: Figure, fill_body: string,
                        radius: f64, thickness: f64, inset: f64,
                        shape_body: string) -> string {
@@ -430,10 +376,8 @@ fragment float4 cortado_fragment(CortadoOut v [[stage_in]],
             // Headless: set up and drawable, with no display asking for it.
             return ok(true)
         }
-        // **Nothing is drawn here, and that is not an oversight.** `on_mount`
-        // runs inside `Mount.refresh` *before* `lay_out`, so the canvas has no
-        // frame yet: drawing now reads 0 by 0 and reports a canvas with no
-        // size. The first frame is the earliest moment the control has one.
+        // Nothing is drawn here: `on_mount` runs before `lay_out`, so the
+        // canvas is still 0 by 0. The first frame is the earliest it has a size.
         var beat: motion.FrameClock = new motion.FrameClock(surface, stage.router())
         self.clock = some(beat)
         beat.start(ShapeCanvas.token_of(control), fn(frame: motion.Frame) {
@@ -473,23 +417,11 @@ fragment float4 cortado_fragment(CortadoOut v [[stage_in]],
         return control.raw as int
     }
 
-    /// Whether the next frame would look any different from the last one.
-    ///
-    /// A still shape draws when it first has a size and whenever that size
-    /// changes, and does nothing on every frame in between — so a screen of
-    /// furniture costs the GPU nothing per frame while still being correct
-    /// when the window is dragged.
-    ///
-    /// **It still rides the frame clock rather than a resize subscription**,
-    /// and that is forced: `EventRouter.watch` replaces per (target, kind),
-    /// and `Mount` already watches the surface for `surface_resized` and
-    /// `scale_changed` to lay the tree out. A component that watched them too
-    /// would take the Mount's watcher off and the whole tree would stop
-    /// following its window. Since `motion.ClockDesk` shares one host clock
-    /// across every listener on a surface, a screen of shapes costs one
-    /// display link in total — which is what made this the cheaper trade.
-    /// What would remove it is a per-widget resize event, or a component
-    /// lifecycle hook that runs after layout; neither exists today.
+    /// Whether the next frame would differ from the last. It rides the clock
+    /// rather than watching resizes because `EventRouter.watch` replaces per
+    /// (target, kind) and `Mount` already holds the surface's watcher — taking
+    /// it would stop the tree following its window. A per-widget resize event
+    /// or a post-layout lifecycle hook would remove this; neither exists.
     pub fn needs_redraw() -> bool {
         if self.animates() { return true }
         if self.drawn == 0 { return true }
@@ -537,13 +469,8 @@ fragment float4 cortado_fragment(CortadoOut v [[stage_in]],
         }
     }
 
-    /// Draws one frame and reads it back instead of presenting it.
-    ///
-    /// Public because a shape is a picture, and "give me what this draws" is a
-    /// thing a program legitimately wants — an export, a thumbnail, a test.
-    /// It goes down the **same** path `draw` does, uniforms and all, which is
-    /// the point: a snapshot that built its own pass would prove nothing about
-    /// what the screen is showing.
+    /// Draws one frame and reads it back instead of presenting it. The same
+    /// path `draw` takes, uniforms and all, or it would prove nothing.
     pub fn snapshot(seconds: f64) -> Result<widgets.Snapshot> {
         match self.paint {
             none => { return err("this shape has no canvas to draw into", "not_ready") }
@@ -564,16 +491,12 @@ fragment float4 cortado_fragment(CortadoOut v [[stage_in]],
                         var pass: Pass = surface.begin(0.0, 0.0, 0.0, 0.0)?
                         pass.pipeline(line)?
                         pass.vertices(corners)?
-                        // seconds, the canvas in real pixels, and the backing
-                        // scale — which is what turns a radius in points into
-                        // a radius in pixels. `ShaderCanvas` leaves that
-                        // fourth number spare; a shape cannot, because every
-                        // measurement it was given is in points.
+                        // seconds, the canvas in pixels, and the backing scale.
+                        // `ShaderCanvas` leaves the fourth spare; a shape cannot.
                         pass.uniform([seconds, extent.width, extent.height, self.scale])?
                         pass.draw(Shape.triangles, 0, 6)?
-                        // Finished rather than presented when the caller means
-                        // to read it: a frame handed to the compositor is not
-                        // ours to look at any more.
+                        // Finished rather than presented: a frame handed to the
+                        // compositor is not ours to read.
                         if !show { return pass.finish() }
                         return pass.present()
                     }

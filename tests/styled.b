@@ -1,27 +1,12 @@
-// Dressing a control: a background, rounded corners, a border.
-//
-// **This case's list came off a screen.** `examples/styled.b` puts every
-// control on a window twice, plain and dressed, and the four that came back
-// looking exactly as they started are the bezelled text-entry ones. An
-// offscreen snapshot could not settle it — rendered alone a bezelled button
-// reports one thing and rendered in a window another — so the rule was read
-// rather than reasoned about, and this holds the code to what was read.
-//
-// The one everybody expects to fail is the one that works: **a push button
-// takes a background**, keeps its bezel's shape and draws its title on top.
-// Only the text-entry controls refuse, and they refuse for a reason that is
-// about the bezel rather than the class — a label is an `NSTextField` too, has
-// no bezel, and takes a background fine.
-//
-// Every line asks whether what happened agrees with what the platform and the
-// kind promised, so the same bytes come out of a host that does all of this
-// and a host that does none of it.
+// Dressing a control. The list came off a screen, not off a guess: a push
+// button takes a background, and only the four bezelled text controls refuse.
 package main
 
 import cortado.platform
 import cortado.surface
 import cortado.widgets
 import cortado.component
+import cortado.geometry
 import std.io
 
 /// The widget kinds that must refuse a background, and why they are alike.
@@ -36,9 +21,7 @@ fn drive() -> Result<bool> {
     var app: surface.Application = new surface.Application(platform.AppRole.headless)
     app.check_abi()?
 
-    // Never printed, only compared against. A platform that dresses controls
-    // and one that does not must produce the same bytes here, which is what
-    // lets one golden hold all four hosts — the shape `tests/gpu.b` uses.
+    // Never printed, only compared against, so one golden holds all four hosts.
     let dressed: bool = platform.Capability.layer_style.available()
 
     let red: widgets.Rgba = widgets.Rgba { red: 220, green: 60, blue: 60, alpha: 255 }
@@ -59,13 +42,11 @@ fn drive() -> Result<bool> {
         match component.WidgetMaker.of_kind(kind) {
             err(problem) => { io.println("  {kind.name()} could not be built: {problem.kind}") }
             ok(control) => {
-                // A background is promised exactly where the platform can
-                // dress a control *and* the kind is not one whose own chrome
-                // would cover it.
+                // Promised where the platform dresses and the kind's own chrome
+                // would not cover it.
                 let want_background: bool = dressed && !refuses_background(kind)
-                // Counted from the kinds actually walked rather than from
-                // `offered - 4`: a host that does not offer one of the four
-                // text controls would make that arithmetic quietly wrong.
+                // Counted from the kinds walked, not `offered - 4`: a host
+                // missing one text control would make that quietly wrong.
                 if want_background { owed_background = owed_background + 1 }
                 if dressed && refuses_background(kind) { owed_refusal = owed_refusal + 1 }
                 var got_background: bool = false
@@ -78,9 +59,8 @@ fn drive() -> Result<bool> {
                     refused_background = refused_background + 1
                 }
 
-                // Corners and borders have no such rule: every control took
-                // both, the four text ones included, so there is nothing for a
-                // per-kind rule to say.
+                // Corners and borders have no rule: every control took both,
+                // the four text ones included.
                 var got_radius: bool = false
                 match control.set_corner_radius(6.0) {
                     ok(done) => { got_radius = true }
@@ -110,9 +90,8 @@ fn drive() -> Result<bool> {
     io.println("  and so were borders: {took_border == (if dressed { offered } else { 0 })}")
 
     io.println("-- the four that draw their own background --")
-    // Four, and the count matters: a rule that refused three of them, or every
-    // control, would still pass a test that only asked whether *some* control
-    // refused.
+    // The count matters: a rule refusing three of them, or all of them, would
+    // pass a test that only asked whether some control refused.
     io.println("  every one of them refused: {refused_background == owed_refusal}")
     io.println("  and everything else took one: {took_background == owed_background}")
     // The count itself, because a rule that refused *every* control would
@@ -139,9 +118,8 @@ fn drive() -> Result<bool> {
         ok(done) => {}
         err(problem) => {
             field_refused = true
-            // `wrong_widget` where the platform dresses controls — this
-            // control cannot. `unsupported` where it dresses none of them, and
-            // that is a different fact about a different thing.
+            // `wrong_widget` where the platform dresses and this control
+            // cannot; `unsupported` where it dresses none. Different facts.
             field_named = problem.msg.contains("TextField") &&
                           problem.kind == (if dressed { "wrong_widget" } else { "unsupported" })
         }
@@ -162,9 +140,8 @@ fn drive() -> Result<bool> {
     box.release()
 
     io.println("-- and what was set reads back --")
-    // Nothing read any of these back, which is how the corner radius and
-    // border width getters shipped as copies of their own setters: asking for
-    // the radius set it to zero and answered nothing.
+    // Nothing read these back, which is how the radius and border getters
+    // shipped as copies of their setters: asking set the radius to zero.
     var card: widgets.Container = new widgets.Container()
     card.set_background(red)
     card.set_corner_radius(6.0)
@@ -200,8 +177,103 @@ fn drive() -> Result<bool> {
     card.release()
     plain_box.release()
 
+    io.println("-- and markup dresses a control the same way --")
+    // The other half of the same property: `<Button background="#dc3c3c" .../>`
+    // through a real Builder, so the markup path is held to the control's state.
+    var screen: widgets.Container = new widgets.Container()
+    var mount: component.Mount = new component.Mount(screen, app.router)
+    let screen_component: Dressed = new Dressed()
+    let seen: Seen = screen_component.watch
+    mount.show(screen_component)?
+    mount.set_bounds(geometry.Size.of(200.0, 60.0))
+    mount.refresh()?
+    io.println("  the colour written in markup is the control's: {seen.dressed_right(dressed)}")
+
+    // A value of the wrong shape is the Builder's to refuse, uniformly — the
+    // markup compiler parses no colours, so there is one parser and not two.
+    var bad: widgets.Container = new widgets.Container()
+    var second: component.Mount = new component.Mount(bad, app.router)
+    second.set_bounds(geometry.Size.of(200.0, 60.0))
+    var said: string = ""
+    match second.show(new Misspelt()) {
+        ok(done) => {
+            match second.refresh() {
+                ok(again) => {}
+                err(problem) => { said = problem.msg }
+            }
+        }
+        err(problem) => { said = problem.msg }
+    }
+    io.println("  a colour that is not one is refused at render: {said.contains("gg0000")}")
+
     app.shutdown()
     return ok(true)
+}
+
+/// What the mounted button read back, so the assertion is outside the mount.
+class Seen {
+    pub built: bool = false
+    pub red: int = 0
+    pub green: int = 0
+    pub blue: int = 0
+    pub alpha: int = 0
+    pub refused: bool = false
+
+    pub fn init() {}
+
+    pub fn dressed_right(dressed: bool) -> bool {
+        if !self.built { return false }
+        if !dressed { return self.refused }
+        return self.red == 220 && self.green == 60 && self.blue == 60 && self.alpha == 255
+    }
+}
+
+/// A button dressed the way markup dresses one.
+class Dressed extends component.Component {
+    pub watch: Seen = new Seen()
+
+    pub fn init() { super.init() }
+
+    pub override fn on_mount(stage: component.Stage) {
+        match stage.widget("order") {
+            none => {}
+            some(order) => {
+                self.watch.built = true
+                match order.background() {
+                    err(problem) => { self.watch.refused = true }
+                    ok(shade) => {
+                        self.watch.red = shade.red
+                        self.watch.green = shade.green
+                        self.watch.blue = shade.blue
+                        self.watch.alpha = shade.alpha
+                    }
+                }
+            }
+        }
+    }
+
+    pub override fn render(into: component.Builder) {
+        into.open("Button")
+        into.key("order")
+        into.text("Order")
+        into.word("background", "#dc3c3c")
+        into.number("corner_radius", 6.0)
+        into.number("border_width", 2.0)
+        into.word("border_color", "#2850dc")
+        into.close()
+    }
+}
+
+/// The same, with a colour that is not one.
+class Misspelt extends component.Component {
+    pub fn init() { super.init() }
+
+    pub override fn render(into: component.Builder) {
+        into.open("Button")
+        into.text("Order")
+        into.word("background", "#gg0000")
+        into.close()
+    }
 }
 
 fn main() {

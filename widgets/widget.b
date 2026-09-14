@@ -150,22 +150,14 @@ pub abstract class Widget {
     }
 
     // ---- how a control is dressed ----
-    //
-    // **No control refuses any of these yet, and that is the honest state.**
-    // A platform draws its own chrome and may cover a background cortado set
-    // behind it; which controls do is a question about AppKit, UIKit, GTK and
-    // Win32 rather than about cortado, and the answer belongs in
-    // `src/cortado_rules.h` beside the other per-kind rules once somebody has
-    // *looked* at all of them on a screen. Guessing it would put a refusal in
-    // four hosts that might be denying something that works.
+    // Which controls refuse a background is `ctd_kind_has_background`, read off
+    // a screen. Corners and borders have no rule: every control takes both.
 
     /// The colour behind this control's own drawing.
     ///
-    /// Refused on the four bezelled text-entry controls, by name. Their bezel
-    /// is opaque and drawn over anything behind it, so the only way to show a
-    /// colour there is to take the bezel away — and then it is not the
-    /// platform's text field any more. See `ctd_kind_has_background`, whose
-    /// list was read off a screen rather than reasoned about.
+    /// Refused by name on the four bezelled text controls: the only way to
+    /// show a colour there is to remove the bezel, and then it is not the
+    /// platform's text field. See `ctd_kind_has_background`.
     pub fn set_background(shade: Rgba) -> Result<bool> {
         unsafe {
             return host.check(
@@ -194,9 +186,8 @@ pub abstract class Widget {
                               "read the corner radius of a {self.kind_value.name()}")
     }
 
-    /// An outline, drawn **inside** the control's bounds — the way CALayer,
-    /// CSS and every design tool mean a border, and because an outside one
-    /// would need room the layout never gave it.
+    /// An outline drawn inside the bounds, like CALayer and CSS: an outside
+    /// one needs room the layout never gave it.
     pub fn set_border(points: f64, shade: Rgba) -> Result<bool> {
         self.set_property(host.P_BORDER_COLOR, ColorWell.pack(shade))?
         unsafe {
@@ -216,9 +207,7 @@ pub abstract class Widget {
     /// Whether this control can take the keyboard.
     ///
     /// A canvas and nothing else: every other control's answer is the
-    /// platform's, and cortado overriding it would be cortado inventing a
-    /// control. Off by default, so a decorative canvas stays out of the tab
-    /// order and a program that draws something usable turns it on.
+    /// platform's. Off by default, so a decorative canvas stays out of the way.
     pub fn set_focusable(on: bool) -> Result<bool> {
         return self.set_flag(host.P_FOCUSABLE, on,
                              "let a {self.kind_value.name()} take the keyboard")
@@ -229,9 +218,8 @@ pub abstract class Widget {
                               "read whether a {self.kind_value.name()} takes the keyboard")
     }
 
-    /// What a screen reader calls this control, when the control's own text is
-    /// not it — an icon-only button, or a canvas, which says nothing at all
-    /// because nothing it draws is text cortado wrote.
+    /// What a screen reader calls this control when its own text is not it —
+    /// an icon-only button, or a canvas, which draws no text cortado wrote.
     ///
     /// Carried by every kind. Reading it back answers **what a screen reader
     /// will say** — the label when one was set, and the control's own text

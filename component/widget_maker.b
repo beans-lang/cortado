@@ -98,10 +98,20 @@ pub class WidgetMaker {
     }
 
     /// Writes every attribute an element carries onto a control.
+    ///
+    /// A property this platform has not got is stepped over, not fatal: a
+    /// screen written with `background="#2f6f4f"` still renders where nothing
+    /// can be dressed, the same way a canvas renders where there is no GPU.
+    /// Every other refusal stops the render, because it is about the program.
     pub static fn write_all(control: widgets.Widget, element: Element) -> Result<bool> {
         var index: int = 0
         for index: int in 0..element.attribute_count() {
-            WidgetMaker.write(control, element.attribute_at(index))?
+            match WidgetMaker.write(control, element.attribute_at(index)) {
+                ok(done) => {}
+                err(problem) => {
+                    if problem.kind != "unsupported" { return err(problem.msg, problem.kind) }
+                }
+            }
         }
         return ok(true)
     }

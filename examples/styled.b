@@ -1,18 +1,5 @@
-// Which controls actually take a background, a corner radius and a border.
-//
-// This is a probe you look at, not a test that asserts. cortado is about to
-// decide which kinds may be dressed and which must refuse by name, and that
-// decision belongs in `src/cortado_rules.h` for all four hosts — so it had
-// better be made from what a screen shows rather than from what anybody
-// expects. An offscreen snapshot could not settle it: rendered on its own a
-// bezeled button reports one thing and rendered in a window another, and the
-// two disagree.
-//
-// Every row is the same control twice: plain on the left, dressed on the
-// right. A control whose own chrome covers what cortado set looks identical on
-// both sides, and that is the answer this program exists to give.
-//
-//     beansc build examples/styled.b -o build/styled && ./build/styled
+// A probe you look at, not a test: every control twice, plain left and dressed
+// right. Build with `beansc build examples/styled.b -o build/styled`.
 package main
 
 import cortado.platform

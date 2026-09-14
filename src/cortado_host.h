@@ -174,16 +174,11 @@ void       ctd_post(int64_t token);
 #define CTD_CAP_BLUETOOTH      15  /* what is nearby                          */
 #define CTD_CAP_CAPTURE        16  /* cameras and microphones                 */
 #define CTD_CAP_SCREEN         17  /* recording the screen                    */
-/* Dressing a control: a background colour, rounded corners, a border.
+/* Dressing a control: background, rounded corners, border. One capability and
+ * not three — one mechanism, and no platform has some of it and not the rest.
  *
- * One capability and not three, because they are one mechanism — a layer on
- * Apple's platforms, a CSS box on GTK — and a platform that has one has all
- * three. Three would be three tables to keep in step for a difference no
- * platform actually makes.
- *
- * Which *controls* accept a background is a separate question with its own
- * answer, ctd_kind_has_background, because it is cortado's rather than a
- * platform's. This one asks whether there is anything to ask at all. */
+ * Which controls accept a background is ctd_kind_has_background, which is
+ * cortado's answer; this asks whether there is anything to ask at all. */
 #define CTD_CAP_LAYER_STYLE    18  /* background, corner radius, border       */
 
 int32_t    ctd_capability(int32_t capability);
@@ -657,18 +652,14 @@ ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset);
  * the honest state: cortado does not yet know.
  */
 
-/* The colour behind the control's own drawing, packed 0xRRGGBBAA — the same
- * packing CTD_P_COLOR uses, and the same refusal for anything above the low
- * 32 bits. */
+/* The colour behind the control's own drawing, packed 0xRRGGBBAA like
+ * CTD_P_COLOR, with the same refusal above the low 32 bits. */
 #define CTD_P_BG_COLOR    21
-/* Corner rounding in points. 0 is square. Negative is CTD_ERR_RANGE; larger
- * than half the shorter side is not, because that is a capsule and every
- * platform draws it. */
+/* Corner rounding in points; 0 is square, negative is CTD_ERR_RANGE. Past half
+ * the shorter side is allowed — that is a capsule, and every platform draws it. */
 #define CTD_P_CORNER_RADIUS 22
-/* Border thickness in points, drawn *inside* the control's bounds. Inside
- * rather than centred because that is what CALayer, CSS and every design tool
- * mean by a border, and because an outside border would need room the layout
- * never gave it. */
+/* Border thickness in points, drawn inside the bounds — what CALayer, CSS and
+ * every design tool mean, and an outside one needs room the layout never gave. */
 #define CTD_P_BORDER_WIDTH  23
 #define CTD_P_BORDER_COLOR  24
 
@@ -681,29 +672,17 @@ ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset);
  * cannot say what it is.
  */
 
-/* Whether this control can take the keyboard.
+/* Whether this control can take the keyboard. Carried by CTD_W_CANVAS alone:
+ * every other kind's answer is the platform's, and a canvas holds a program's.
  *
- * Carried by CTD_W_CANVAS and nothing else. Every other kind's answer belongs
- * to the platform — a label takes the keyboard on none of the four, a button
- * on some and not others, and cortado overriding that would be cortado
- * inventing a control. A canvas is the one kind whose answer cortado genuinely
- * cannot know, because what is in it is the program's.
- *
- * Off by default, so no screen that exists today changes its tab order, and a
- * program that draws something you can use turns it on. ctd_widget_focus on a
- * canvas that has not asked for it is CTD_ERR_STATE and not
- * CTD_ERR_UNSUPPORTED: the platform can, and the program has not said it
- * wants to — two different answers to two different questions. */
+ * Off by default, so no screen changes its tab order. ctd_widget_focus on one
+ * that has not asked is CTD_ERR_STATE, not CTD_ERR_UNSUPPORTED. */
 #define CTD_P_FOCUSABLE     25
 
-/* What kind of thing a canvas is, to a screen reader.
+/* What a canvas is, to a screen reader. Four existing words and no new ones:
+ * an invented one is a word no screen reader knows.
  *
- * Four values out of the vocabulary ctd_a11y_role already publishes, and no
- * new words: inventing one would be a word no screen reader knows, which is
- * the argument the canvas's own case in ctd_a11y_role makes.
- *
- * Carried by CTD_W_CANVAS and nothing else. A program must not be able to tell
- * a screen reader that a text field is an image. */
+ * Carried by CTD_W_CANVAS alone, so no control can misdescribe itself. */
 #define CTD_P_A11Y_ROLE     26
 #define CTD_A11Y_AUTO    0  /* whatever the kind says; the default           */
 #define CTD_A11Y_BUTTON  1
@@ -808,24 +787,14 @@ ctd_status ctd_view_content_inset(ctd_handle widget, double *out_inset);
  * A program that wants to handle the click itself wants a Button with a URL
  * in its title — which is a different control and says so. */
 #define CTD_S_URL   2  /* where a link goes                                   */
-/* What a screen reader calls this control, when its own text is not it.
+/* What a screen reader calls this control when its own text is not it. A
+ * canvas draws no text cortado wrote, so this is how a program names one.
  *
- * A button says its title and a label says its words. A canvas says nothing,
- * because nothing it draws is text cortado wrote — and ctd_a11y_role's own
- * comment already says a canvas that matters to a user gets a label. This is
- * how a program gives it one.
+ * Carried by every kind: it is how a toolbar of icons is usable at all.
  *
- * Carried by every kind: a label on a button is a legitimate override, and it
- * is how a toolbar of icons is usable at all.
- *
- * **Reading it back answers what a screen reader will say**, which is the
- * label when one was set and the control's own text when none was — not "what
- * cortado was told". That is the platform's own behaviour and it is the more
- * useful of the two: a caller asking this wants to know whether the control is
- * announced sensibly, and "" then means genuinely silent rather than merely
- * unset. Keeping the other contract would have meant a side table remembering
- * which labels cortado wrote, which is a second lifetime to keep in step with
- * the first for a worse answer. */
+ * Reading it back answers what a screen reader will say — the label when one
+ * was set, the control's own text when none was, so "" means genuinely silent.
+ * The other contract would need a side table, for a worse answer. */
 #define CTD_S_A11Y_LABEL  3
 
 ctd_status ctd_set_string(ctd_handle widget, int32_t key,
@@ -843,11 +812,9 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out);
 ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value);
 ctd_status ctd_get_real(ctd_handle widget, int32_t key, double *out);
 
-/* Which of the two key spaces a number is in. They overlap — CTD_P_CHECKED and
- * CTD_S_HINT are both 1 — because each is an index into its own switch, and
- * that is fine right up until something has to ask about a key without also
- * knowing which call it would be passed to. ctd_kind_carries is that
- * something. */
+/* Which key space a number is in. They overlap — CTD_P_CHECKED and CTD_S_HINT
+ * are both 1 — so anything asking about a key without knowing the call needs
+ * to say which. */
 #define CTD_KEY_PROPERTY 0  /* CTD_P_*: ctd_set_int and ctd_set_real */
 #define CTD_KEY_TEXT     1  /* CTD_S_*: ctd_set_string               */
 
