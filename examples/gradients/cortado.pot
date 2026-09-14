@@ -1,0 +1,4 @@
+# An animated mesh gradient, with the controls of a real screen over it.
+name       Gradients
+identifier org.beans-lang.cortado.gradients
+markup     site

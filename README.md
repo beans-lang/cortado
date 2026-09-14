@@ -911,6 +911,40 @@ Layout names are nobody's to refuse. `spacing`, `padding`, `grow` and the rest
 belong to the parent's layout and never reach the control, so `<Label
 spacing={4} />` is fine.
 
+### A screen laid out by coordinate
+
+`<Box>` is `AbsoluteLayout` in markup: it puts each child at the `x` and `y`
+that child carries, in points from the box's top-left corner. It is what an
+overlay is — a title over a canvas, a chip pinned to an edge, a toast at the
+top — and there is nothing for a run to compute in any of those.
+
+```
+<Box width={900} height={640}>
+  <VFlex x={0} y={0} width={900} height={640} align="stretch">
+    <MeshGradient grow={1} color_1="#EAF4FC" color_2="#1E50A2" />
+  </VFlex>
+  <Label x={0} y={264} width={900} alignment={1} font_size={64}>Petrichor</Label>
+</Box>
+```
+
+**`x` and `y` are refused anywhere else**, in the sentence `grow` already gets
+in a run that does not flex: a coordinate written inside a `<VStack>` would
+otherwise be a silent no-op, which is the failure this library refuses
+everywhere. The refusal names `<Box>`.
+
+**A component tag carries them too**, and that took fixing something older. A
+component renders into a builder of its own, so its root element has no parent
+at the moment `x` — or `grow` — is written on it. The requirement is now
+carried on the element and answered by `Builder.embed`, where the container it
+landed in is known. Before that, `<ShaderCanvas grow={1} />` inside a `<VFlex>`
+was refused for sitting in a run that does not flex, while sitting in one that
+does; nothing in the tree used it, so nothing said so.
+
+`examples/gradients` is the screen: a `<MeshGradient>` behind everything and
+the other five on a shelf along the bottom, with a title, a toast and four
+colour chips placed over them as ordinary native controls. Six shaders on one
+screen, and not a line of shader in the file.
+
 ### Dressing a control
 
 A control can be given a background, rounded corners and a border without
@@ -928,6 +962,25 @@ From markup, the same four names are attributes:
 <Button background="#2f6f4f" corner_radius={6}
         border_width={1} border_color="#00000040">Order</Button>
 ```
+
+**And the text's own colour, which is `text_color`.** Without it `background`
+was half a property: a program could put a pale colour behind a label and had
+no way to stop the system drawing white text on it, so a light card on a
+dark-mode machine was unreadable and nothing in the API said why.
+
+```
+<Label background="#ffffffe8" corner_radius={15} text_color="#1b1b20">LAPIS</Label>
+```
+
+**Five controls carry it, and everything else is refused by name:** a label and
+the four you type into — the same five that carry `alignment`, and for the same
+reason. Each is a plain text view on all four hosts, so one name means one
+call. A button, a check box and a radio button draw their words as a *title*
+inside the platform's own bezel — an attributed string on AppKit, a CSS rule on
+GTK, an owner-draw on Win32 — so one name would be three mechanisms, and a
+link's colour is the system's on all four. `examples/gradients` is the screen
+that needed this: its toast is dark precisely because the buttons in it are not
+something `text_color` reaches.
 
 A colour is a word in markup and a packed integer by the time it reaches the
 ABI, parsed in one place, so `#abc` means the same thing in a control as it
@@ -1308,6 +1361,57 @@ a canvas you cannot read is a canvas whose test is somebody looking at it. It
 costs a little — the drawable gives up lossless compression to be readable —
 and if that ever shows, the way out is a flag on attach, not a silently
 unreadable canvas.
+
+### Six gradients, and not a line of shader in any of them
+
+An `effect=` is one shape and two colours. A background usually wants more than
+that, and writing it by hand means writing MSL — which works on Metal and
+nowhere else, forever. So the six shapes worth naming are named:
+
+```xml
+<MeshGradient grow={1} lobe={2}
+              color_1="#EAF4FC" reach_1={18}
+              color_2="#1E50A2" reach_2={12}
+              color_3="#F09199" reach_3={10}
+              color_4="#895B8A" reach_4={11} />
+
+<AuroraGradient  grow={1} bands={3} drop={1.2} />
+<FlowGradient    grow={1} color="#1B3365" color_to="#53B0C7" highlight="#F5E3C2" />
+<PrismGradient   grow={1} angle={35} spread={0.62} saturation={0.8} />
+<GlowGradient    grow={1} orbs={2} radius={1.2} pulse={0.5} />
+<SkyGradient     grow={1} zenith="#2D5FC6" horizon="#F2D1B4" sun_height={0.3} />
+```
+
+```beans
+import {MeshGradient, AuroraGradient, FlowGradient,
+        PrismGradient, GlowGradient, SkyGradient} from cortado.gpu
+```
+
+Every one takes `speed` and `grain` as multiples of its own pace, and `height`
+or `grow` like any canvas. `speed={0}` holds a gradient still, which is a
+legitimate thing to ask a background for.
+
+**Why this is a class and not six more `effect=` names.** `Effect` writes MSL
+directly, in one string, and its signature is two colours and three numbers —
+there is no room in it for four colour stops with a reach each. A `Gradient`
+writes its body through a `ShaderDialect` instead, and never names a type or a
+built-in itself.
+
+**That is the whole portability story, and it is deliberately small.** MSL,
+HLSL and GLSL disagree about a handful of spellings for this kind of shader:
+`float3` against `vec3`, `fract` against `frac`, `mix` against `lerp`. A
+dialect is that table. Landing Windows or Linux is a row in `ShaderDialect.of`,
+a branch in `ShaderCanvas.wrap_in`, and one more entry in
+`ShaderCanvas.languages` — and not one character of any markup above, because
+no screen ever wrote the shader down.
+
+**Where it stops today, said plainly.** `ShaderCanvas.languages()` answers
+`msl` and nothing else, so a host that accepted only HLSL would be refused by
+name, before a driver ever saw a program written for the wrong compiler. The
+missing half is not the arithmetic — it is the whole-program wrapper: the
+vertex stage, the uniform struct, and the entry points. `tests/named_gradients.b`
+holds the seam to its shape, so the day a second language lands, the three
+lines that have to change are the ones that say so.
 
 ### A shader in markup, with no shader in it
 

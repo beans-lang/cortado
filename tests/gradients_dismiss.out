@@ -1,0 +1,3 @@
+-- the toast does what its buttons say --
+  the ✕ is on the screen: true, runs its handler: true, and the toast goes: true
+  restore draft is on the screen: true, runs its handler: true, and the toast goes: true

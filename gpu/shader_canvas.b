@@ -86,6 +86,12 @@ pub class ShaderCanvas extends component.Component {
     /// recompiling on every render would compile one per keystroke in an
     /// editor.
     pub shader: string = ""
+    /// Which language `shader` is written in.
+    ///
+    /// A hand-written body is in one language and cortado will not guess, so
+    /// this defaults to MSL. A `Gradient` sets it to whatever it wrote.
+    pub written_in: ShaderLanguage = ShaderLanguage.msl
+
     /// How tall the canvas is, in points. Zero lets the run it sits in decide.
     pub height: f64 = 0.0
     /// How much of the leftover space it takes, in a flex run. Zero means
@@ -180,7 +186,7 @@ pub class ShaderCanvas extends component.Component {
 
         var device: Device = Device.open()?
         var painter: Canvas = Canvas.on(control, device)?
-        var compiled: Shader = device.shader(ShaderLanguage.msl, ShaderCanvas.wrap(body))?
+        var compiled: Shader = device.shader(self.written_in, ShaderCanvas.wrap_in(self.written_in, body)?)?
         var line: Pipeline = compiled.pipeline("cortado_vertex", "cortado_fragment")?
         line.attr(0, 2, 0)?
         line.attr(1, 2, 2)?
@@ -328,6 +334,39 @@ fragment float4 cortado_fragment(CortadoOut v [[stage_in]],
 }
 ")
         return out.to_string()
+    }
+
+    /// Every language cortado can write a whole shader program in.
+    ///
+    /// One today. This is the list a `Gradient` picks from, and it is shorter
+    /// than `ShaderDialect.of` answers for on purpose: knowing how to spell
+    /// `float3` is not knowing how to write a vertex stage.
+    pub static fn languages() -> List<ShaderLanguage> {
+        var written: List<ShaderLanguage> = []
+        written.push(ShaderLanguage.msl)
+        return move written
+    }
+
+    /// Wraps a body in the program `language` needs, or says cortado cannot.
+    ///
+    /// The refusal names the language rather than the emitter, because the
+    /// reader's screen is what failed to draw, not a compiler stage.
+    pub static fn wrap_in(language: ShaderLanguage, body: string) -> Result<string> {
+        return match language {
+            msl => ok(ShaderCanvas.wrap(body)),
+            hlsl => err("cortado cannot write a shader program in hlsl yet — it writes {ShaderCanvas.written_names()}", "no_wrapper"),
+            spirv => err("cortado cannot write a shader program in spirv yet — it writes {ShaderCanvas.written_names()}", "no_wrapper"),
+            glsl => err("cortado cannot write a shader program in glsl yet — it writes {ShaderCanvas.written_names()}", "no_wrapper"),
+        }
+    }
+
+    /// The languages of `languages`, for a message.
+    pub static fn written_names() -> string {
+        var names: List<string> = []
+        for language: ShaderLanguage in ShaderCanvas.languages() {
+            names.push(language.name())
+        }
+        return names.join(", ")
     }
 
     /// The vertices `ShaderCanvas` draws with: two triangles covering the

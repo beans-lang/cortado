@@ -1,0 +1,100 @@
+<Box width={self.wide} height={self.tall}>
+  <!-- The background, and the only thing here that is drawn rather than
+       placed. A <Box> gives a child its measured size, so a run stretches it. -->
+  <VFlex x={0} y={0} width={self.wide} height={self.tall} align="stretch">
+    <MeshGradient grow={1} lobe={2}
+                  color_1="#EAF4FC" reach_1={18}
+                  color_2="#1E50A2" reach_2={12}
+                  color_3="#F09199" reach_3={10}
+                  color_4="#895B8A" reach_4={11} />
+  </VFlex>
+
+  <Label x={0} y={264} width={self.wide} alignment={1} font_size={64}
+         text_color="#241c22" text="Petrichor" />
+  <Label x={0} y={344} width={self.wide} alignment={1} font_size={12}
+         text_color="#463c46" text={self.caption} />
+
+  $if !self.dismissed {
+    <!-- Dark, so the buttons read. A button's title colour is not `text_color`
+         — see the note on the class below. -->
+    <HStack x={266} y={16} spacing={10} padding={8} align="center"
+            background="#1c1a22e8" corner_radius={18}
+            border_width={1} border_color="#ffffff22">
+      <Label font_size={12} text_color="#f2eef4" text="Pick up where you left off?" />
+      <Button text="Restore draft" font_size={12} corner_radius={9}
+              on:click={fn(e: UiEvent) { self.restore() }} />
+      <Button text="✕" font_size={11} width={26} corner_radius={9}
+              on:click={fn(e: UiEvent) { self.dismiss() }} />
+    </HStack>
+  }
+
+  <Swatch x={640} y={96}  name="MOON WHITE"     hex="#EAF4FC" tint="#EAF4FC" />
+  <Swatch x={640} y={220} name="LAPIS"          hex="#1E50A2" tint="#1E50A2" />
+  <Swatch x={640} y={344} name="PEACH PINK"     hex="#F09199" tint="#F09199" />
+  <Swatch x={640} y={468} name="ANCIENT PURPLE" hex="#895B8A" tint="#895B8A" />
+  <!-- The other five, running at the same time on the same screen. Each needs
+       a run to stretch it, for the reason the background above does. -->
+  <VFlex x={12}  y={510} width={168} height={86} align="stretch"><AuroraGradient grow={1} /></VFlex>
+  <VFlex x={190} y={510} width={168} height={86} align="stretch"><FlowGradient   grow={1} /></VFlex>
+  <VFlex x={368} y={510} width={168} height={86} align="stretch"><PrismGradient  grow={1} /></VFlex>
+  <VFlex x={546} y={510} width={168} height={86} align="stretch"><GlowGradient   grow={1} /></VFlex>
+  <VFlex x={724} y={510} width={168} height={86} align="stretch"><SkyGradient    grow={1} /></VFlex>
+
+  <Label x={12}  y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="AURORA" />
+  <Label x={190} y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="FLOW" />
+  <Label x={368} y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="PRISM" />
+  <Label x={546} y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="GLOW" />
+  <Label x={724} y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="SKY" />
+</Box>
+<beans>
+package site
+
+import cortado.component
+import cortado.events
+import {MeshGradient, AuroraGradient, FlowGradient,
+        PrismGradient, GlowGradient, SkyGradient} from cortado.gpu
+import {view} from cortado.annotations
+
+/// Four colours blended by distance, drifting, with a screen of real controls
+/// on top of them.
+///
+/// **What is drawn here and what is placed.** Six tags are drawn — the
+/// `<MeshGradient>` behind everything and the five on the shelf below it. Not
+/// one of them carries a line of shader: they are named attributes.
+///
+/// Everything over it is an ordinary native control placed by `<Box>`. The
+/// title is an NSTextField, the chips are stacks, the toast tabs like a button.
+///
+/// That split is the point. A web page draws the whole screen and then
+/// reimplements focus; this draws only the part that has to be drawn.
+///
+/// **No Beans code runs per frame.** The gradient redraws off the frame clock;
+/// the controls over it are laid out once, because nothing about them changed.
+@view
+pub partial class Petrichor extends component.Component {
+    /// The screen's own size. Set by `main.b` from the window, because a
+    /// window is whatever was asked for and a phone's is the screen.
+    pub wide: f64 = 900.0
+    pub tall: f64 = 640.0
+
+    pub dismissed: bool = false
+    pub caption: string = "four colours, blended by distance, drifting"
+
+
+    pub fn init() { super.init() }
+
+    // Both of these end in `request_render`, and that is not a formality.
+    // The mount asks rather than being told, so a handler that changes a field
+    // and stops leaves the screen showing the old answer for ever.
+    fn restore() {
+        self.caption = "draft restored"
+        self.dismissed = true
+        self.request_render()
+    }
+
+    fn dismiss() {
+        self.dismissed = true
+        self.request_render()
+    }
+}
+</beans>

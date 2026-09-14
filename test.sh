@@ -118,7 +118,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events attributes bridge mount nested slots shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader)
+cases=(tree events attributes bridge mount nested slots shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -194,7 +194,7 @@ cases=(tree events attributes bridge mount nested slots shelf menu system roles 
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles attributes nested slots styled custom events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock clocks anim gpu canvas shader)
+cross_host=(roles attributes nested slots styled custom events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock clocks anim gpu canvas shader named_gradients)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -709,7 +709,7 @@ pass
 # last week's screen, and says nothing.
 # Each example names its own markup folder, because a project does — which is
 # why the mirror hangs off the module root and not off a folder called `site`.
-markup_roots=(examples/markup/site examples/gallery/site examples/cask/screens)
+markup_roots=(examples/markup/site examples/gallery/site examples/gradients/site examples/cask/screens)
 for source in $(find "${markup_roots[@]}" -name '*.bx' | sort); do
     module="${source%/*}"
     while [[ "$module" == */* && ! -f "$root/$module/beans.pot" ]]; do
@@ -1016,6 +1016,18 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         "$BEANSC" build "$root/examples/gallery/main.b" -o "$tmp/gallery.bin" >/dev/null
         "$tmp/gallery.bin" --dump >"$tmp/gallery.out" 2>&1
         diff -u "$root/tests/gallery.out" "$tmp/gallery.out"
+        pass
+        # A screen laid out by coordinate rather than by a run, with a shader
+        # under it. The tree is the assertion: where a <Box> put each control.
+        "$BEANSC" build "$root/examples/gradients/main.b" -o "$tmp/gradients.bin" >/dev/null
+        "$tmp/gradients.bin" --dump >"$tmp/gradients.out" 2>&1
+        diff -u "$root/tests/gradients.out" "$tmp/gradients.out"
+        pass
+        # And what the dump cannot see. The toast is in the tree whether or not
+        # its buttons work, and for a while they did not: the handlers set the
+        # field and never asked for a render.
+        "$tmp/gradients.bin" --dismiss >"$tmp/gradients_dismiss.out" 2>&1
+        diff -u "$root/tests/gradients_dismiss.out" "$tmp/gradients_dismiss.out"
         pass
         echo "ok markup: a .bx screen mounts to real controls, and the gallery shows every one"
 

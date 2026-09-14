@@ -1,0 +1,20 @@
+-- every named gradient --
+  mesh   moves: true, an hour in: true, holds still: true, more than a slide: true
+  aurora moves: true, an hour in: true, holds still: true, more than a slide: true
+  flow   moves: true, an hour in: true, holds still: true, more than a slide: true
+  prism  moves: true, an hour in: true, holds still: true, more than a slide: true
+  glow   moves: true, an hour in: true, holds still: true, more than a slide: true
+  sky    moves: true, an hour in: true, holds still: true, more than a slide: true
+-- the knobs that can be wrong --
+  a colour with no # refused, saying so: true
+  a lobe that names no colour refused, saying so: true
+  no curtains at all refused, saying so: true
+  a curtain with no height refused, saying so: true
+  more orbs than there are refused, saying so: true
+  an orb with no size refused, saying so: true
+-- the seam a second language lands on --
+  cortado writes a whole program in: msl
+  every one of them has a dialect: true
+  and a whole-program wrapper: true
+  a language cortado cannot write refused, saying so: true
+  and no gradient ever picks one: true
