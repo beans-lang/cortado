@@ -88,7 +88,7 @@ fn run() -> Result<bool> {
     // nothing, because its width is whatever room it is given. Without this
     // line the table is 0 points wide, laid out correctly and invisible.
     body.set_align(geometry.Align.stretch)
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
     page.add(sheet.leaf("heading", heading))
     // The table takes the room that is left. A fixed height would leave a gap
     // under it on a big screen and cut it off on a small one.

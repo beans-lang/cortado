@@ -20,6 +20,7 @@
   a colour of five digits refused, saying so: true
   a colour with a digit that is not one refused, saying so: true
   a canvas with no size says so rather than drawing nothing: true
+  and stops saying so once it has one: true
 -- after it goes --
   drawing stops once the component is unmounted: true
 drove=true

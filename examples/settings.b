@@ -67,13 +67,13 @@ fn run() -> Result<bool> {
     var body: layout.StackLayout = layout.StackLayout.column(12.0)
     body.set_padding(geometry.EdgeInsets.all(20.0))
     body.set_align(geometry.Align.stretch)
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
     page.add(sheet.leaf("heading", heading))
 
     var inside: layout.StackLayout = layout.StackLayout.column(10.0)
     inside.set_padding(geometry.EdgeInsets.all(12.0))
     inside.set_align(geometry.Align.stretch)
-    var frame: layout.LayoutNode = sheet.group("box", box, inside)
+    var frame: layout.LayoutNode = sheet.group("box", box, inside)?
     frame.spec = layout.LayoutSpec.fixed(320.0, 100.0)
     frame.add(sheet.leaf("sizes", sizes))
     frame.add(sheet.leaf("oat", oat))

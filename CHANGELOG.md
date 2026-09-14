@@ -72,6 +72,30 @@ First working macOS host.
 - `examples/cask` moved its markup from `site/` to `screens/`, and the gate's
   markup leg now takes each example's markup folder from a list rather than
   assuming every one of them is called `site`.
+- **A layout pass no longer takes a released control for one that keeps
+  nothing.** `WidgetLayout.group` answers a `Result` and `Mount.node_for` does
+  too. The two calls a pass makes to build its tree — `ctd_view_content_inset`
+  and a split view's two property reads — answer no platform difference at all,
+  so the only refusal either can give is a widget that has been released. Both
+  were swallowed. The split view is the one that showed: a `<SplitView>` whose
+  control went away was quietly re-arranged with the generic fill arranger, its
+  panes laid on top of each other, and the pass returned `ok` — the frame it
+  had already been told was unchanged, so nothing later in the pass asked the
+  platform anything either.
+- **A teardown that is refused finishes, and then says so.** `Mount.close`
+  returned at the first refusal, which left the mount still holding its
+  component tree, its layout sheet, and every control after the one that
+  failed — so a screen whose control went away behind its back leaked the rest
+  of itself. It now remembers the first refusal, tears the rest down, and
+  answers it. A control that did not come out of its parent is not released
+  either: letting go of one still parented leaves the parent holding a handle
+  the platform has already reclaimed.
+- **A canvas that draws again stops reporting the frame it missed.**
+  `problem()` is the only thing `ShaderCanvas` and `ShapeCanvas` can say, and
+  it was never cleared — so a canvas laid out at no width on the pass before
+  its parent stretched it went on saying "there is nothing to draw into" for as
+  long as the screen was up. The message is what both classes' own
+  documentation calls "why nothing is drawing, or "" when something is".
 
 - `cortado.host` — the flat C ABI (`src/cortado_host.h`, 40 entry points) and
   its generated Beans binding. Handles carry a generation, so a handle used

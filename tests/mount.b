@@ -203,16 +203,16 @@ fn sheet_forgets() -> Result<bool> {
     var frame: layout.StackLayout = layout.StackLayout.column(4.0)
     var sheet: widgets.WidgetLayout = new widgets.WidgetLayout()
 
-    sheet.group("box", box, frame)
+    sheet.group("box", box, frame)?
     io.println("  a container new to the sheet is asked: {sheet.chrome_asked() == 1}")
 
     sheet.reset()
-    sheet.group("box", box, frame)
+    sheet.group("box", box, frame)?
     io.println("  and not asked again on the next pass: {sheet.chrome_asked() == 0}")
 
     sheet.forget(box.handle().raw)
     sheet.reset()
-    sheet.group("box", box, frame)
+    sheet.group("box", box, frame)?
     io.println("  until something writes to it: {sheet.chrome_asked() == 1}")
 
     // The chrome a group box really keeps, so a forgotten answer is a

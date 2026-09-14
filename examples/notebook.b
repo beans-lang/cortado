@@ -93,19 +93,19 @@ fn run() -> Result<bool> {
     var body: layout.FlexLayout = layout.FlexLayout.column(12.0)
     body.set_padding(geometry.EdgeInsets.all(20.0))
     body.set_align(geometry.Align.stretch)
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
 
     var inside: layout.StackLayout = layout.StackLayout.column(10.0)
     inside.set_padding(geometry.EdgeInsets.all(12.0))
     inside.set_align(geometry.Align.stretch)
-    var one: layout.LayoutNode = sheet.group("general", general, inside)
+    var one: layout.LayoutNode = sheet.group("general", general, inside)?
     one.add(sheet.leaf("grind", grind))
     one.add(sheet.leaf("milk", milk))
 
     var other: layout.StackLayout = layout.StackLayout.column(10.0)
     other.set_padding(geometry.EdgeInsets.all(12.0))
     other.set_align(geometry.Align.stretch)
-    var two: layout.LayoutNode = sheet.group("advanced", advanced, other)
+    var two: layout.LayoutNode = sheet.group("advanced", advanced, other)?
     two.add(sheet.leaf("pressure", pressure))
     two.add(sheet.leaf("bars", bars))
 
@@ -114,7 +114,7 @@ fn run() -> Result<bool> {
         // room the pages get — and the number is AppKit's, GTK's or Windows',
         // never one written here.
         var stack: layout.AbsoluteLayout = new layout.AbsoluteLayout()
-        var book: layout.LayoutNode = sheet.group("tabs", tabs, stack)
+        var book: layout.LayoutNode = sheet.group("tabs", tabs, stack)?
         book.spec = layout.LayoutSpec.flexible(1.0)
         // Both pages are laid out at the full size of the content area. The
         // platform shows one; which one is not the layout's business.

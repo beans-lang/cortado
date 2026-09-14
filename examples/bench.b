@@ -111,7 +111,7 @@ fn drive() -> Result<bool> {
     var body: layout.StackLayout = layout.StackLayout.column(4.0)
     body.set_padding(geometry.EdgeInsets.all(8.0))
     body.set_align(geometry.Align.stretch)
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
     var made: int = 0
     for made < widgets_wanted {
         var one: widgets.Label = widgets.Label.of("row {made}")?

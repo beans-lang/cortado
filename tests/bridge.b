@@ -49,7 +49,7 @@ fn build() -> Result<bool> {
     body.set_padding(geometry.EdgeInsets.all(inset))
     body.set_align(geometry.Align.stretch)
 
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
     page.add(sheet.leaf("heading", heading))
     page.add(sheet.leaf("drink", drink))
     page.add(sheet.leaf("extra", extra))

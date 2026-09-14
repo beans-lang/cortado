@@ -26,6 +26,7 @@ import cortado.surface
 import cortado.widgets
 import cortado.component
 import cortado.geometry
+import cortado.layout
 import cortado.host
 import cortado.events
 import std.io
@@ -393,9 +394,138 @@ fn drive() -> Result<bool> {
     io.println("  a program moves the handle quietly, and a resize is not a drag: {split_quiet}")
     io.println("  a user dragging the handle raises where it landed: {split_raise}")
 
+    // ------------------------------------------------- a control that is gone
+    //
+    // Both calls a layout pass makes about chrome — `ctd_view_content_inset`
+    // and a split view's two property reads — answer no platform difference at
+    // all. Every host has them for every control it can build, so the only
+    // refusal either can give is a widget that has been released.
+    //
+    // That is a bug in the program's lifetime handling, and a pass that took
+    // the refusal for "keeps nothing" would lay the tree out around a dead
+    // control and never say so. Worse than never: a frame the sheet has
+    // already written is not written again, so nothing later in the pass
+    // touches the control either, and the screen goes on looking right.
+
+    io.println("-- a layout node from a control that is gone --")
+    var sheet: widgets.WidgetLayout = new widgets.WidgetLayout()
+    var column: layout.StackLayout = layout.StackLayout.column(4.0)
+    var alive: widgets.Container = new widgets.Container()
+    var gone: widgets.Container = new widgets.Container()
+    gone.release()
+
+    // The live one first, so the refusal below is about the release and not
+    // about a `group` that refuses everything.
+    var live_made: bool = false
+    match sheet.group("alive", alive, column) {
+        ok(node) => { live_made = true }
+        err(problem) => { live_made = false }
+    }
+    var dead_said: string = ""
+    match sheet.group("gone", gone, column) {
+        ok(node) => { dead_said = "" }
+        err(problem) => { dead_said = problem.kind }
+    }
+    alive.release()
+    io.println("  a live container still becomes one: {live_made}")
+    io.println("  a released one is refused, not taken for keeping nothing: {dead_said == "stale_handle"}")
+
+    // And the teardown. A control released behind the tree's back refuses to
+    // come out of its parent, and a close that stopped there would leave the
+    // mount holding its component tree, its sheet and every control after the
+    // one that failed — so it says so *and* finishes.
+    var held_box: widgets.Container = new widgets.Container()
+    var held_mount: component.Mount = new component.Mount(held_box, app.router)
+    held_mount.set_bounds(geometry.Size.of(300.0, 200.0))
+    var page_screen: Held = new Held()
+    held_mount.show(page_screen)?
+    match page_screen.held {
+        none => {}
+        some(control) => { control.release() }
+    }
+    var closed_said: string = ""
+    match held_mount.close() {
+        ok(done) => { closed_said = "" }
+        err(problem) => { closed_said = problem.kind }
+    }
+    var after_close: string = ""
+    match held_mount.refresh() {
+        ok(done) => { after_close = "" }
+        err(problem) => { after_close = problem.kind }
+    }
+    io.println("  a teardown the platform refuses says so: {closed_said == "stale_handle"}")
+    io.println("  and finishes anyway: {after_close == "not_mounted"}")
+
+    // A split view reads its divider back the same way, and the mount asks it
+    // on every pass to arrange the panes.
+    var split_gone: bool = true
+    if widgets.WidgetKind.split_view.available() {
+        var divided_box: widgets.Container = new widgets.Container()
+        var divided_mount: component.Mount = new component.Mount(divided_box, app.router)
+        divided_mount.set_bounds(geometry.Size.of(300.0, 200.0))
+        var divided_screen: Divided = new Divided()
+        divided_mount.show(divided_screen)?
+        divided_mount.refresh()?
+        match divided_screen.held {
+            none => { split_gone = false }
+            some(control) => {
+                control.release()
+                match divided_mount.refresh() {
+                    ok(done) => { split_gone = false }
+                    err(problem) => { split_gone = problem.kind == "stale_handle" }
+                }
+            }
+        }
+        divided_mount.close()
+    }
+    io.println("  a released split view is not arranged on a guess: {split_gone}")
+
     window.close()?
     app.shutdown()
     return ok(true)
+}
+
+/// A screen whose root is a run, so the mount asks its control for chrome, and
+/// which keeps that control so a test can release it behind the tree's back.
+class Held extends component.Component {
+    pub held: Option<widgets.Widget> = none
+
+    pub fn init() { super.init() }
+
+    pub override fn on_mount(stage: component.Stage) {
+        self.held = stage.widget("page")
+    }
+
+    pub override fn render(into: component.Builder) {
+        into.open("VStack")
+        into.key("page")
+        into.open("Label")
+        into.text("in a run")
+        into.close()
+        into.close()
+    }
+}
+
+/// The same, with a split view as its root: the mount asks that control where
+/// its divider is on every pass.
+class Divided extends component.Component {
+    pub held: Option<widgets.Widget> = none
+
+    pub fn init() { super.init() }
+
+    pub override fn on_mount(stage: component.Stage) {
+        self.held = stage.widget("panes")
+    }
+
+    pub override fn render(into: component.Builder) {
+        into.open("SplitView")
+        into.key("panes")
+        into.open("Container")
+        into.close()
+        into.open("Container")
+        into.close()
+        into.close()
+    }
 }
 
 fn main() {

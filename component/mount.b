@@ -262,7 +262,15 @@ pub class Mount implements Composer {
 
     /// Takes everything down: unsubscribes, unmounts, and empties the
     /// container.
+    ///
+    /// A step the platform refuses does not stop the rest. A teardown that
+    /// returned at the first refusal left the mount still holding its component
+    /// tree, its layout sheet and every control after the one that failed —
+    /// so the refusal is remembered, everything else is torn down, and the
+    /// first refusal is what this answers.
     pub fn close() -> Result<bool> {
+        var refused: string = ""
+        var refused_kind: string = ""
         // The surface first. A mount that let go of its component tree and
         // left its surface watched keeps the host delivering a resize on every
         // frame of a drag to a closure that will never lay anything out again
@@ -302,7 +310,16 @@ pub class Mount implements Composer {
                         none => {}
                     }
                     let leaving: Option<widgets.Widget> = box.child_at(back)
-                    box.remove(back)?
+                    var detached: bool = false
+                    match box.remove(back) {
+                        ok(done) => { detached = true }
+                        err(problem) => {
+                            if refused == "" {
+                                refused = problem.msg
+                                refused_kind = problem.kind
+                            }
+                        }
+                    }
                     // And the controls themselves. Until this was here, `close`
                     // let go of the component tree and the router table and
                     // left every native control alive — because the layout
@@ -311,9 +328,14 @@ pub class Mount implements Composer {
                     // closed and reopened twenty times held twenty screens'
                     // worth of AppKit objects, and `tests/leaks.b` is the gate
                     // that says so.
-                    match leaving {
-                        some(gone) => { self.let_go(gone) }
-                        none => {}
+                    //
+                    // Only what really came out. Releasing a control still
+                    // parented leaves the parent holding a handle already gone.
+                    if detached {
+                        match leaving {
+                            some(gone) => { self.let_go(gone) }
+                            none => {}
+                        }
                     }
                     back = back - 1
                 }
@@ -331,6 +353,7 @@ pub class Mount implements Composer {
         // named in `close` was already being cleared.
         self.sheet = new widgets.WidgetLayout()
         self.solver = new layout.Solver(self.sheet)
+        if refused != "" { return err(refused, refused_kind) }
         return ok(true)
     }
 
@@ -718,7 +741,7 @@ pub class Mount implements Composer {
         // first refresh.
         self.solver.set_scale(self.scaling)
         self.solver.set_direction(self.reading_order)
-        var page: layout.LayoutNode = self.node_for(element, control)
+        var page: layout.LayoutNode = self.node_for(element, control)?
         self.solver.solve(page, geometry.Rect.at(geometry.Point.zero(), self.bounds))?
         return self.sheet.apply(page)
     }
@@ -732,12 +755,7 @@ pub class Mount implements Composer {
         return false
     }
 
-    fn node_for(element: Element, control: widgets.Widget) -> layout.LayoutNode {
-        var node: layout.LayoutNode = layout.LayoutNode.leaf(element.tag, -1)
-        match element.arranger {
-            none => { node = self.sheet.leaf(element.tag, control) }
-            some(arranger) => { node = self.sheet.group(element.tag, control, arranger) }
-        }
+    fn node_for(element: Element, control: widgets.Widget) -> Result<layout.LayoutNode> {
         // **A split view arranges its own panes, and only it can.**
         //
         // Where the divider sits is the control's own state — a person drags
@@ -747,32 +765,37 @@ pub class Mount implements Composer {
         // laid its panes on top of each other until this line existed, and
         // `examples/gallery` did not catch it because the two panes it shows
         // are empty containers.
+        //
+        // Chosen before the node is made rather than replacing one already
+        // registered, which used to enter the same control in the sheet twice.
+        var arranger: Option<layout.Layout> = element.arranger
         match control as? widgets.SplitView {
             none => {}
-            some(divided) => {
-                match divided.split_layout() {
-                    ok(arranger) => { node = self.sheet.group(element.tag, control, arranger) }
-                    // A split that cannot say where its divider is has not
-                    // been laid out yet. Left as it was: the next pass, after
-                    // it has a frame, is the one that can answer.
-                    err(problem) => {}
-                }
-            }
+            // Not swallowed. A divider is read back with `ctd_get_int` and
+            // `ctd_get_real`, which answer no platform difference for a control
+            // that exists — so the only refusal here is a released split view,
+            // and laying its panes out on a guess would hide that.
+            some(divided) => { arranger = some(divided.split_layout()?) }
+        }
+        var node: layout.LayoutNode = layout.LayoutNode.leaf(element.tag, -1)
+        match arranger {
+            none => { node = self.sheet.leaf(element.tag, control) }
+            some(chosen) => { node = self.sheet.group(element.tag, control, chosen)? }
         }
         node.spec = element.spec
         match control as? widgets.ChildHolder {
-            none => { return node }
+            none => { return ok(node) }
             some(box) => {
                 var index: int = 0
                 for index: int in 0..element.count() {
                     match box.child_at(index) {
-                        some(child) => { node.add(self.node_for(element.child_at(index), child)) }
+                        some(child) => { node.add(self.node_for(element.child_at(index), child)?) }
                         none => {}
                     }
                 }
             }
         }
-        return node
+        return ok(node)
     }
 
     // ---- events ----

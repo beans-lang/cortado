@@ -217,7 +217,15 @@ pub class ShaderCanvas extends component.Component {
                 match painter.next() {
                     ok(surface) => {
                         match self.draw_into(surface, seconds) {
-                            ok(drew) => { self.drawn = self.drawn + 1; return true }
+                            // Cleared on a frame that landed. A canvas laid out
+                            // at no width draws nothing and says so, and gets a
+                            // size on the pass after — and a `problem()` still
+                            // naming the old one is a report that is not true.
+                            ok(drew) => {
+                                self.trouble = ""
+                                self.drawn = self.drawn + 1
+                                return true
+                            }
                             err(problem) => { self.trouble = problem.msg; return false }
                         }
                     }

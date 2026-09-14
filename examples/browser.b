@@ -96,7 +96,7 @@ fn run() -> Result<bool> {
     var body: layout.FlexLayout = layout.FlexLayout.column(8.0)
     body.set_padding(geometry.EdgeInsets.all(12.0))
     body.set_align(geometry.Align.stretch)
-    var frame: layout.LayoutNode = sheet.group("page", root, body)
+    var frame: layout.LayoutNode = sheet.group("page", root, body)?
 
     var bar: layout.FlexLayout = layout.FlexLayout.row(8.0)
     var row: layout.LayoutNode = sheet.spacer("bar", bar)

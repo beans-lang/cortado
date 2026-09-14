@@ -85,7 +85,7 @@ fn run() -> Result<bool> {
     var body: layout.StackLayout = layout.StackLayout.column(10.0)
     body.set_padding(geometry.EdgeInsets.all(20.0))
     body.set_align(geometry.Align.stretch)
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
 
     page.add(sheet.leaf("heading", heading))
     page.add(sheet.leaf("who", who))

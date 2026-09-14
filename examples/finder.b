@@ -111,7 +111,7 @@ fn run() -> Result<bool> {
     // Stretch, because a column hands a child the width it *measures* and a
     // table measures to nothing — its width is whatever room it is given.
     body.set_align(geometry.Align.stretch)
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
 
     // FlexLayout, not StackLayout: the search field asks to grow, and a stack
     // hands nothing out — it refuses a growing child rather than laying it out

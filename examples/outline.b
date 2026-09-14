@@ -40,6 +40,22 @@ import cortado.events
 import std.io
 
 /// What the screen is holding. A class, because the handlers capture it.
+
+/// The node for a container, with a refusal said out loud rather than dropped.
+///
+/// A closure that re-arranges a window returns nothing, so this is where a
+/// `group` refusal is reported — the same way `solve` and `apply` are below.
+fn grouped(sheet: widgets.WidgetLayout, name: string, control: widgets.Widget,
+           arranger: layout.Layout) -> layout.LayoutNode {
+    match sheet.group(name, control, arranger) {
+        ok(node) => { return node }
+        err(problem) => {
+            io.println("{problem.kind}: {problem.msg}")
+            return layout.LayoutNode.group(name, arranger)
+        }
+    }
+}
+
 class Sheet {
     pub open: bool = true
     pub fn init() {}
@@ -108,7 +124,7 @@ fn run() -> Result<bool> {
         var body: layout.StackLayout = layout.StackLayout.column(12.0)
         body.set_padding(geometry.EdgeInsets.all(20.0))
         body.set_align(geometry.Align.stretch)
-        var page: layout.LayoutNode = pages.group("page", root, body)
+        var page: layout.LayoutNode = grouped(pages, "page", root, body)
         page.add(pages.leaf("heading", heading))
 
         if have_box {
@@ -118,7 +134,7 @@ fn run() -> Result<bool> {
             // `group` and not `spacer`: a group asks the control how much of
             // its own frame it keeps, and a group box keeps its border and its
             // title band.
-            var frame: layout.LayoutNode = pages.group("box", box, inside)
+            var frame: layout.LayoutNode = grouped(pages, "box", box, inside)
             frame.add(pages.leaf("beans", beans))
             frame.add(pages.leaf("water", water))
             page.add(frame)
@@ -130,7 +146,7 @@ fn run() -> Result<bool> {
             var under: layout.StackLayout = layout.StackLayout.column(8.0)
             under.set_padding(geometry.EdgeInsets.all(8.0))
             under.set_align(geometry.Align.stretch)
-            var section: layout.LayoutNode = pages.group("fold", fold, under)
+            var section: layout.LayoutNode = grouped(pages, "fold", fold, under)
             // Only while it is open. A shut disclosure that still described
             // its body would keep the body's height and show nothing in it.
             if sheet_state.open { section.add(pages.leaf("detail", detail)) }

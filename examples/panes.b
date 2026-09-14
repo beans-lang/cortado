@@ -29,6 +29,22 @@ import cortado.events
 import std.io
 
 /// Where the handle is. A class, because the handler captures it.
+
+/// The node for a container, with a refusal said out loud rather than dropped.
+///
+/// A closure that re-arranges a window returns nothing, so this is where a
+/// `group` refusal is reported — the same way `solve` and `apply` are below.
+fn grouped(sheet: widgets.WidgetLayout, name: string, control: widgets.Widget,
+           arranger: layout.Layout) -> layout.LayoutNode {
+    match sheet.group(name, control, arranger) {
+        ok(node) => { return node }
+        err(problem) => {
+            io.println("{problem.kind}: {problem.msg}")
+            return layout.LayoutNode.group(name, arranger)
+        }
+    }
+}
+
 class Held {
     pub where: f64 = 160.0
     pub fn init() {}
@@ -85,16 +101,16 @@ fn run() -> Result<bool> {
         var body: layout.FlexLayout = layout.FlexLayout.column(10.0)
         body.set_padding(geometry.EdgeInsets.all(16.0))
         body.set_align(geometry.Align.stretch)
-        var page: layout.LayoutNode = sheet.group("page", root, body)
+        var page: layout.LayoutNode = grouped(sheet, "page", root, body)
 
         var left: layout.StackLayout = layout.StackLayout.column(8.0)
         left.set_align(geometry.Align.stretch)
-        var one: layout.LayoutNode = sheet.group("list", list, left)
+        var one: layout.LayoutNode = grouped(sheet, "list", list, left)
         one.add(sheet.leaf("heading", heading))
 
         var right: layout.StackLayout = layout.StackLayout.column(8.0)
         right.set_align(geometry.Align.stretch)
-        var two: layout.LayoutNode = sheet.group("detail", detail, right)
+        var two: layout.LayoutNode = grouped(sheet, "detail", detail, right)
         two.add(sheet.leaf("name", name))
         var body_notes: layout.LayoutNode = sheet.leaf("notes", notes)
         body_notes.spec = layout.LayoutSpec.tall(120.0)
@@ -105,7 +121,7 @@ fn run() -> Result<bool> {
                 err(problem) => { io.println("{problem.kind}: {problem.msg}") }
                 ok(divided) => {
                     divided.set_padding(geometry.EdgeInsets.all(8.0))
-                    var pair: layout.LayoutNode = sheet.group("split", split, divided)
+                    var pair: layout.LayoutNode = grouped(sheet, "split", split, divided)
                     pair.spec = layout.LayoutSpec.flexible(1.0)
                     pair.add(one)
                     pair.add(two)

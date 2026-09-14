@@ -20,4 +20,10 @@
   a third pane is refused, and so is a handle off the control: true
   a program moves the handle quietly, and a resize is not a drag: true
   a user dragging the handle raises where it landed: true
+-- a layout node from a control that is gone --
+  a live container still becomes one: true
+  a released one is refused, not taken for keeping nothing: true
+  a teardown the platform refuses says so: true
+  and finishes anyway: true
+  a released split view is not arranged on a guess: true
 drove=true

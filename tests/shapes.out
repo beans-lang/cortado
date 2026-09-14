@@ -36,6 +36,8 @@ a colour that is not one refused: not_a_colour
   then asks for no more: true
   and the pixels are the shape those numbers describe: true
   and one clock carries it: true
+  a shape with no width says so: true
+  and stops saying so once it has one: true
 -- every figure cortado names --
   cortado names this many figures: 4
   every one compiles and draws something: true

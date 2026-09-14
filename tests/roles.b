@@ -150,7 +150,7 @@ fn build() -> Result<bool> {
     body.set_padding(geometry.EdgeInsets.all(16.0))
     body.set_align(geometry.Align.stretch)
 
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
     page.add(fixed(sheet, "heading", heading, 20.0))
     page.add(fixed(sheet, "drink", drink, 24.0))
     page.add(fixed(sheet, "note", note, 60.0))
@@ -170,7 +170,7 @@ fn build() -> Result<bool> {
 
     var bar: layout.StackLayout = layout.StackLayout.row(8.0)
     bar.set_justify(layout.Justify.end)
-    var row: layout.LayoutNode = sheet.group("buttons", buttons, bar)
+    var row: layout.LayoutNode = sheet.group("buttons", buttons, bar)?
     row.spec = pinned(28.0)
     row.add(sized(sheet, "order", order, 90.0, 28.0))
     row.add(sized(sheet, "cancel", cancel, 90.0, 28.0))

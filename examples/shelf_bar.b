@@ -84,7 +84,7 @@ fn run() -> Result<bool> {
     var stack: layout.StackLayout = layout.StackLayout.column(8.0)
     stack.set_padding(geometry.EdgeInsets.all(12.0))
     stack.set_align(geometry.Align.stretch)
-    var panel: layout.LayoutNode = inner.group("panel", inside, stack)
+    var panel: layout.LayoutNode = inner.group("panel", inside, stack)?
     panel.add(inner.leaf("strength", strength))
     panel.add(inner.leaf("bars", bars))
     var inner_solver: layout.Solver = new layout.Solver(inner)
@@ -97,7 +97,7 @@ fn run() -> Result<bool> {
     var body: layout.StackLayout = layout.StackLayout.column(12.0)
     body.set_padding(geometry.EdgeInsets.all(20.0))
     body.set_align(geometry.Align.stretch)
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
     page.add(sheet.leaf("what", what))
     var pressable: layout.LayoutNode = sheet.leaf("options", options)
     pressable.spec = layout.LayoutSpec.fixed(110.0, 24.0)

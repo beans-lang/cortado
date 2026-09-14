@@ -198,6 +198,7 @@ fn drive() -> Result<bool> {
     // alignment is not `stretch`, and it used to be a silent empty rectangle.
     var narrow: Screen = new Screen()
     narrow.effect.effect = "solid"
+    narrow.effect.height = 32.0
     var thin: widgets.Container = new widgets.Container()
     var side: surface.Window = app.window(160.0, 120.0, "Thin")?
     side.set_root(thin)?
@@ -206,6 +207,15 @@ fn drive() -> Result<bool> {
     second.show(narrow)?
     narrow.effect.draw(0.0)
     io.println("  a canvas with no size says so rather than drawing nothing: {promised == narrow.effect.problem().contains("nothing to draw into")}")
+
+    // And stops saying it once it has one. `problem()` is the only thing this
+    // class can say, so a message kept after the frame it complained about
+    // arrived is a report that is no longer true — and the one shape that
+    // reaches it is the common one: a canvas laid out at no width on the pass
+    // before its parent stretched it.
+    second.resized(geometry.Size.of(160.0, 120.0))?
+    narrow.effect.draw(0.0)
+    io.println("  and stops saying so once it has one: {promised == (narrow.effect.problem() == "")}")
     second.close()?
 
     mount.close()?

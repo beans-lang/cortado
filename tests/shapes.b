@@ -242,6 +242,26 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     io.println("  and one clock carries it: {riders == 1}")
     mount.close()?
 
+    // A shape laid out at no width says so, and stops saying it once it has
+    // one. `problem()` is the only thing this class can say, so a message kept
+    // after the frame it complained about arrived is a report that is untrue —
+    // and being laid out narrow before a parent stretches it is the way in.
+    var thin_root: widgets.Container = new widgets.Container()
+    var thin_window: surface.Window = app.window(64.0, 64.0, "Thin")?
+    thin_window.set_root(thin_root)?
+    var thin_page: Sheet = new Sheet()
+    thin_page.shape.figure = "rounded_rect"
+    thin_page.shape.height = 32.0
+    var thin_mount: component.Mount = new component.Mount(thin_root, app.router)
+    thin_mount.set_bounds(geometry.Size.of(0.0, 64.0))
+    thin_mount.show(thin_page)?
+    thin_page.shape.draw(0.0)
+    io.println("  a shape with no width says so: {thin_page.shape.problem().contains("nothing to draw into")}")
+    thin_mount.resized(geometry.Size.of(64.0, 64.0))?
+    thin_page.shape.draw(0.0)
+    io.println("  and stops saying so once it has one: {thin_page.shape.problem() == ""}")
+    thin_mount.close()?
+
     io.println("-- every figure cortado names --")
     var working: int = 0
     let names: List<string> = gpu.Figure.names()

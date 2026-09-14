@@ -105,7 +105,7 @@ fn run() -> Result<bool> {
     var body: layout.FlexLayout = layout.FlexLayout.column(12.0)
     body.set_padding(geometry.EdgeInsets.all(20.0))
     body.set_align(geometry.Align.stretch)
-    var page: layout.LayoutNode = sheet.group("page", root, body)
+    var page: layout.LayoutNode = sheet.group("page", root, body)?
     page.add(sheet.leaf("heading", heading))
     // The canvas takes the room left over. It is an ordinary control to the
     // solver and gets no special treatment for being a canvas — `flexible` is

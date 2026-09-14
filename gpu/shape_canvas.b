@@ -449,7 +449,12 @@ fragment float4 cortado_fragment(CortadoOut v [[stage_in]],
                 match painter.next() {
                     ok(surface) => {
                         match self.draw_into(surface, seconds, true) {
+                            // Cleared on a frame that landed, for the reason
+                            // `ShaderCanvas.draw` gives: a shape laid out at no
+                            // width says so and gets a size on the pass after,
+                            // and the old message is then no longer true.
                             ok(drew) => {
+                                self.trouble = ""
                                 self.drawn = self.drawn + 1
                                 let now: geometry.Size = self.control_size()
                                 self.last_width = now.width

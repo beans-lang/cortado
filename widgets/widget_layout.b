@@ -22,7 +22,7 @@ import cortado.layout
 /// var body: layout.StackLayout = layout.StackLayout.column(12.0)
 /// body.set_padding(geometry.EdgeInsets.all(24.0))
 ///
-/// var root: layout.LayoutNode = sheet.group("root", container, body)
+/// var root: layout.LayoutNode = sheet.group("root", container, body)?
 /// root.add(sheet.leaf("heading", heading))
 /// root.add(sheet.leaf("buy", button))
 ///
@@ -141,8 +141,11 @@ pub class WidgetLayout implements layout.Measure {
     /// never measured: a group's size comes from `arranger` and the children
     /// inside it, and asking the platform as well would let a native minimum
     /// override a layout the application asked for.
+    ///
+    /// Refused where the control cannot say what it keeps: `ctd_view_content_inset`
+    /// answers only `stale_handle` or `wrong_widget`, and both name a bug.
     pub fn group(name: string, control: Widget,
-                 arranger: layout.Layout) -> layout.LayoutNode {
+                 arranger: layout.Layout) -> Result<layout.LayoutNode> {
         var node: layout.LayoutNode = layout.LayoutNode.group(name, arranger)
         node.key = self.register(control)
         // What the platform keeps for itself: a group box's border and title
@@ -151,9 +154,11 @@ pub class WidgetLayout implements layout.Measure {
         // group box on it added twelve points by eye and was wrong on the
         // other three platforms, whose borders are not twelve points.
         //
-        // A control that cannot answer leaves it at zero rather than failing
-        // the build: a chrome nobody can name is no chrome, and a layout is
-        // not the place to discover a stale handle.
+        // The refusal is not swallowed. No host answers `unsupported` here, so
+        // the only answers are a released widget and a handle that is no view.
+        //
+        // A zero taken for either is a container laid out as if it drew no
+        // chrome, and a released one nothing else in the pass need ever notice.
         //
         // Asked once per control rather than once per pass — see `chrome`.
         let slot: u64 = control.handle().raw
@@ -161,19 +166,12 @@ pub class WidgetLayout implements layout.Measure {
             some(known) => { node.chrome = known }
             none => {
                 self.asked = self.asked + 1
-                match control.content_inset() {
-                    ok(inset) => {
-                        node.chrome = inset
-                        self.chrome[slot] = inset
-                    }
-                    // Not remembered, so a control that could not answer now
-                    // is asked again rather than being held to a zero it never
-                    // gave.
-                    err(problem) => {}
-                }
+                let inset: geometry.EdgeInsets = control.content_inset()?
+                node.chrome = inset
+                self.chrome[slot] = inset
             }
         }
-        return node
+        return ok(node)
     }
 
     /// A node with no control behind it, for grouping that exists only in the

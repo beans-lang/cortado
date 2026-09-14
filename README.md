@@ -295,7 +295,7 @@ var body: layout.StackLayout = layout.StackLayout.column(12.0)
 body.set_padding(geometry.EdgeInsets.all(24.0))
 body.set_align(geometry.Align.stretch)
 
-var page: layout.LayoutNode = sheet.group("page", container, body)
+var page: layout.LayoutNode = sheet.group("page", container, body)?
 page.add(sheet.leaf("heading", heading))
 page.add(sheet.leaf("drink", drink))
 
