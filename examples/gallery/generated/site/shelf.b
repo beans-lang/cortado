@@ -464,14 +464,12 @@ partial class Shelf {
         b.number("height", (20) as f64)
         b.close()
         b.child<ShaderCanvas>("c8", fn(_cortado_c: ShaderCanvas) {  // shelf.bx:133
-            _cortado_c.height = 44
             _cortado_c.effect = "ripple"
             _cortado_c.color = "#4088bf"
             _cortado_c.color_to = "#0d1b2a"
             _cortado_c.detail = 26
-        })
+        }).number("height", (44) as f64)
         b.child<ShapeCanvas>("c9", fn(_cortado_c: ShapeCanvas) {  // shelf.bx:137
-            _cortado_c.height = 44
             _cortado_c.figure = "rounded_rect"
             _cortado_c.radius = 10
             _cortado_c.inset = 6
@@ -480,7 +478,7 @@ partial class Shelf {
             _cortado_c.color_to = "#0d1b2a"
             _cortado_c.stroke = "#8fb7d4"
             _cortado_c.stroke_width = 1
-        })
+        }).number("height", (44) as f64)
         b.close()
         b.close()
         b.open("Disclosure")  // shelf.bx:146

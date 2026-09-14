@@ -6,6 +6,7 @@ import cortado.host
 import cortado.events
 import cortado.layout
 import cortado.geometry
+import std.reflect
 
 /// Collects a render into a tree of `Element`s.
 ///
@@ -150,7 +151,7 @@ pub class Builder {
             none => { self.faults.push("{name} with no element open") }
             some(element) => {
                 if Vocabulary.is_layout_name(name) {
-                    self.layout_number(element, name, value)
+                    self.layout_number(element, name, value, self.parent_of_open())
                     return
                 }
                 let property: int = Vocabulary.property_of(name)
@@ -251,18 +252,22 @@ pub class Builder {
     ///     into.close()
     /// }
     /// ```
-    pub fn show(key: string, sub: Component) {
+    pub fn show(key: string, sub: Component) -> Placement {
         match self.composer {
             none => {
                 self.faults.push("child \"{key}\" cannot be rendered: this builder is not attached to a mount")
+                return Placement.nowhere(self)
             }
             some(who) => {
                 // The composer is handed the qualified key and the fault names
                 // the one the author wrote, which is why the qualifying
                 // happens here and not inside the mount.
                 match who.compose(self.scoped_key(key), sub) {
-                    ok(subtree) => { self.embed(subtree) }
-                    err(problem) => { self.faults.push("child \"{key}\": {problem.msg}") }
+                    ok(subtree) => { return self.place(subtree, some(reflect.value(sub).type())) }
+                    err(problem) => {
+                        self.faults.push("child \"{key}\": {problem.msg}")
+                        return Placement.nowhere(self)
+                    }
                 }
             }
         }
@@ -276,6 +281,9 @@ pub class Builder {
     /// into.child<Price>("c4", fn(c: Price) { c.drink = self.drink })
     /// ```
     ///
+    /// The `Placement` answered is where `<Price margin_top={8} />` lands:
+    /// `.number("margin_top", 8.0)` chained on the call, after the child rendered.
+    ///
     /// The mount owns the instance and hands the same one back on every later
     /// render, so the child keeps its state; `setup` runs each time, which is
     /// what carries a changed parameter down.
@@ -285,11 +293,11 @@ pub class Builder {
     /// interface answers a boxed value and the downcast happens here — legal
     /// because a `reflect.Value` is the one source `as?` may narrow to an
     /// instantiation.
-    pub fn child<T>(key: string, setup: fn(T)) {
+    pub fn child<T>(key: string, setup: fn(T)) -> Placement {
         match self.composer {
             none => {
                 self.faults.push("<{type_of(T).name()}> cannot be rendered: this builder is not attached to a mount")
-                return
+                return Placement.nowhere(self)
             }
             some(who) => {
                 // The same qualification `show` applies below, so the instance
@@ -298,19 +306,22 @@ pub class Builder {
                 match who.obtain(self.scoped_key(key), type_of(T)) {
                     err(problem) => {
                         self.faults.push("<{type_of(T).name()}>: {problem.msg}")
+                        return Placement.nowhere(self)
                     }
                     ok(boxed) => {
                         match boxed as? T {
                             none => {
                                 self.faults.push("<{type_of(T).name()}> came back as something else")
+                                return Placement.nowhere(self)
                             }
                             some(built) => {
                                 setup(built)
                                 match boxed as? Component {
                                     none => {
                                         self.faults.push("<{type_of(T).name()}> is not a Component")
+                                        return Placement.nowhere(self)
                                     }
-                                    some(shown) => { self.show(key, shown) }
+                                    some(shown) => { return self.show(key, shown) }
                                 }
                             }
                         }
@@ -404,19 +415,81 @@ pub class Builder {
     /// This is how one component shows another. The child's own render
     /// produced the subtree — or, when nothing about the child changed, the
     /// subtree it produced last time, unchanged and not re-rendered.
-    pub fn embed(subtree: Element) {
+    pub fn embed(subtree: Element) -> Placement {
+        return self.place(subtree, none)
+    }
+
+    /// `embed`, knowing the class the subtree came from — what `show` and
+    /// `child` know, and what a placement checks a field name against.
+    fn place(subtree: Element, kind: Option<reflect.Type>) -> Placement {
         if self.open_stack.len() == 0 {
             match self.root {
                 none => { self.root = some(subtree) }
                 some(already) => {
                     self.faults.push("a render has two roots: <{already.tag}> and <{subtree.tag}>")
+                    return Placement.nowhere(self)
                 }
             }
-            return
+            return new Placement(self, some(subtree), kind)
         }
         let parent: Element = self.open_stack[self.open_stack.len() - 1]
         self.settle(subtree, parent)
         parent.add(subtree)
+        return new Placement(self, some(subtree), kind)
+    }
+
+    /// Framework use, from `Placement`: `name={value}` on a component tag,
+    /// applied to the child's root inside the element open here.
+    pub fn place_number(root: Element, kind: Option<reflect.Type>, name: string, value: f64) {
+        if !self.placement_allowed(root, kind, name) { return }
+        self.layout_number(root, name, value, self.current())
+    }
+
+    /// Framework use, from `Placement`: `align="..."` on a component tag. The
+    /// one word a root asks of its run, and on a component tag always its own.
+    pub fn place_word(root: Element, kind: Option<reflect.Type>, name: string, value: string) {
+        if !self.placement_allowed(root, kind, name) { return }
+        match Vocabulary.align_of(value) {
+            none => { self.faults.push("align=\"{value}\" is not one of start, center, end, stretch") }
+            some(mode) => { root.spec.align = mode }
+        }
+    }
+
+    /// Whether `name` may be written on a component tag whose root is `root`.
+    /// Refused by name: the component's own, a control's property, or a field.
+    fn placement_allowed(root: Element, kind: Option<reflect.Type>, name: string) -> bool {
+        var who: string = root.tag
+        match kind {
+            none => {}
+            some(described) => { who = described.name() }
+        }
+        if !Vocabulary.is_placement_name(name) {
+            if Vocabulary.is_layout_name(name) {
+                self.faults.push("{name} is <{who}>'s own to set — a component tag takes what its root asks of the run around it: margin and its edges, grow, shrink, basis, width, height, x, y and align. Give <{who}> a parameter and let its render write {name}")
+            } else if Vocabulary.property_of(name) >= 0 || name == "text" {
+                self.faults.push("{name} is a control's property, and <{who}> is a component — its render names the control that carries it. Give <{who}> a parameter and let its render write {name}")
+            } else {
+                self.faults.push("<{who}> has no attribute called '{name}'")
+            }
+            return false
+        }
+        // A public field of the same name would be set by the same markup,
+        // and one spelling meaning two things is refused rather than decided.
+        match kind {
+            none => {}
+            some(described) => {
+                match described.field(name) {
+                    none => {}
+                    some(field) => {
+                        if field.is_public() {
+                            self.faults.push("<{who}> has a field called {name}, and {name} on a component tag places the component rather than setting it — rename the field, or write {name} inside <{who}>'s own render")
+                            return false
+                        }
+                    }
+                }
+            }
+        }
+        return true
     }
 
     /// Answers the requirement a component's root element carried out of its
@@ -479,14 +552,15 @@ pub class Builder {
         return some(self.open_stack[self.open_stack.len() - 1])
     }
 
-    /// Whether the element the open one sits inside shares out leftover space.
-    ///
-    /// A root element has no parent here, so it answers false — which is
-    /// right: whatever mounts it decides its size, and a `grow` on it would be
-    /// read by nobody.
-    fn parent_flexes() -> bool {
-        if self.open_stack.len() < 2 { return false }
-        match self.open_stack[self.open_stack.len() - 2].arranger {
+    /// The element the open one sits inside, or `none` at a render's root.
+    fn parent_of_open() -> Option<Element> {
+        if self.open_stack.len() < 2 { return none }
+        return some(self.open_stack[self.open_stack.len() - 2])
+    }
+
+    /// Whether `around` shares out leftover space.
+    static fn flexes(around: Element) -> bool {
+        match around.arranger {
             none => { return false }
             some(arranger) => {
                 match arranger as? layout.FlexLayout {
@@ -497,29 +571,45 @@ pub class Builder {
         }
     }
 
-    /// Whether `name` may be written on `element` here.
+    /// Whether `around` places its children at the coordinates they carry,
+    /// which is the only thing that reads `x` and `y`.
+    static fn places(around: Element) -> bool {
+        match around.arranger {
+            none => { return false }
+            some(arranger) => {
+                match arranger as? layout.AbsoluteLayout {
+                    some(box) => { return true }
+                    none => { return false }
+                }
+            }
+        }
+    }
+
+    /// Whether `name` may be written on `element`, inside `container`.
     ///
-    /// A parent in this render answers at once. A component's root element has
-    /// none yet — its render is a builder of its own — so the requirement is
-    /// recorded and `embed` answers it against the container it lands in.
-    fn parent_allows(element: Element, name: string, want: string) -> bool {
-        if self.open_stack.len() < 2 {
-            if element.pending != "" && element.pending != want {
-                self.faults.push("<{element.tag}> asks both to be placed and to flex, and no one container does both")
+    /// No container means a root still to be embedded — a component's own
+    /// render, or a placement on it — so the requirement is recorded for `embed`.
+    fn parent_allows(element: Element, container: Option<Element>, name: string, want: string) -> bool {
+        match container {
+            none => {
+                if element.pending != "" && element.pending != want {
+                    self.faults.push("<{element.tag}> asks both to be placed and to flex, and no one container does both")
+                    return false
+                }
+                element.pending = want
+                element.pending_name = name
+                return true
+            }
+            some(around) => {
+                if want == "flex" {
+                    if Builder.flexes(around) { return true }
+                } else if Builder.places(around) {
+                    return true
+                }
+                self.faults.push(Builder.wrong_parent(element.tag, name, want))
                 return false
             }
-            element.pending = want
-            element.pending_name = name
-            return true
         }
-        if want == "flex" {
-            if self.parent_flexes() { return true }
-            self.faults.push(Builder.wrong_parent(element.tag, name, want))
-            return false
-        }
-        if self.parent_places() { return true }
-        self.faults.push(Builder.wrong_parent(element.tag, name, want))
-        return false
     }
 
     /// The one sentence for a requirement no container around it answers,
@@ -531,27 +621,12 @@ pub class Builder {
         return "{name} is a coordinate a placing container reads, and <{tag}> sits in one that arranges its children itself — write <Box> around it, or use spacing and padding instead"
     }
 
-    /// Whether the container around this element places its children at the
-    /// coordinates they carry, which is the only thing that reads `x` and `y`.
-    fn parent_places() -> bool {
-        if self.open_stack.len() < 2 { return false }
-        match self.open_stack[self.open_stack.len() - 2].arranger {
-            none => { return false }
-            some(arranger) => {
-                match arranger as? layout.AbsoluteLayout {
-                    some(box) => { return true }
-                    none => { return false }
-                }
-            }
-        }
-    }
-
     // `spacing` and `padding` configure the container's own arrangement;
     // everything else is what this element asks of the run around it. The
     // split matters because the two live on different objects and are read at
     // different moments — one when this element lays its children out, the
     // other when this element's parent lays *it* out.
-    fn layout_number(element: Element, name: string, value: f64) {
+    fn layout_number(element: Element, name: string, value: f64, container: Option<Element>) {
         if name == "spacing" {
             match element.arranger {
                 none => { self.faults.push("<{element.tag}> has no children to space") }
@@ -591,7 +666,7 @@ pub class Builder {
         // parent is checked here, where both markup and hand-written code go
         // through.
         if name == "grow" || name == "shrink" || name == "basis" {
-            if !self.parent_allows(element, name, "flex") { return }
+            if !self.parent_allows(element, container, name, "flex") { return }
             if name == "grow" { element.spec.grow = value }
             if name == "shrink" { element.spec.shrink = value }
             if name == "basis" { element.spec.basis = value }
@@ -602,7 +677,7 @@ pub class Builder {
         // `<VStack>` would get a control at the run's coordinate and no word
         // about why.
         if name == "x" || name == "y" {
-            if !self.parent_allows(element, name, "place") { return }
+            if !self.parent_allows(element, container, name, "place") { return }
             if name == "x" { element.spec.x = value }
             if name == "y" { element.spec.y = value }
             return

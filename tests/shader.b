@@ -25,6 +25,8 @@ import std.io
 /// A screen with one shader canvas on it, the way markup writes one.
 class Screen extends component.Component {
     pub effect: gpu.ShaderCanvas = new gpu.ShaderCanvas()
+    /// How tall the effect is placed; zero lets the column decide.
+    pub height: f64 = 0.0
 
     pub fn init() { super.init() }
 
@@ -35,7 +37,8 @@ class Screen extends component.Component {
         // control that paints nothing of its own is nothing at all. It is the
         // first thing anybody gets wrong, so `Canvas.next` says so by name.
         into.word("align", "stretch")
-        into.show("effect", self.effect)
+        var placed: component.Placement = into.show("effect", self.effect)
+        if self.height > 0.0 { placed.number("height", self.height) }
         into.close()
     }
 }
@@ -69,7 +72,7 @@ fn draws_with(app: surface.Application, name: string) -> Result<bool> {
     window.set_root(root)?
     var screen: Screen = new Screen()
     screen.effect.effect = name
-    screen.effect.height = 32.0
+    screen.height = 32.0
     var mount: component.Mount = new component.Mount(root, app.router)
     mount.set_bounds(geometry.Size.of(64.0, 32.0))
     mount.show(screen)?
@@ -122,7 +125,7 @@ fn drive() -> Result<bool> {
     float ignore = uv.x * 0.0 + seconds * 0.0 + size.x * 0.0;
     return float4(1.0 + ignore, 0.0, 0.0, 1.0);
 "
-    screen.effect.height = 32.0
+    screen.height = 32.0
 
     var mount: component.Mount = new component.Mount(root, app.router)
     mount.set_bounds(geometry.Size.of(160.0, 120.0))
@@ -198,7 +201,7 @@ fn drive() -> Result<bool> {
     // alignment is not `stretch`, and it used to be a silent empty rectangle.
     var narrow: Screen = new Screen()
     narrow.effect.effect = "solid"
-    narrow.effect.height = 32.0
+    narrow.height = 32.0
     var thin: widgets.Container = new widgets.Container()
     var side: surface.Window = app.window(160.0, 120.0, "Thin")?
     side.set_root(thin)?

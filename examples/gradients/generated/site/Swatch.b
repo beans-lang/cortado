@@ -19,16 +19,13 @@ import {view, param} from cortado.annotations
 
 /// One colour of the mesh, named and pinned where the screen wants it.
 ///
-/// It carries `x` and `y` itself rather than being wrapped in a placed
-/// container: a chip is a thing that sits somewhere, so the coordinate belongs
-/// to the chip.
+/// Where it sits is the screen's to say — `<Swatch x={640} y={96} />` places
+/// the chip — so it carries no coordinate of its own.
 @view
 pub partial class Swatch extends component.Component {
     @param pub name: string = ""
     @param pub hex: string = ""
     @param pub tint: string = "#888888"
-    @param pub x: f64 = 0.0
-    @param pub y: f64 = 0.0
 
     /// Pinned rather than measured, so four chips line up on both edges.
     @param pub across: f64 = 232.0
@@ -39,8 +36,6 @@ pub partial class Swatch extends component.Component {
 partial class Swatch {
     pub override fn render(b: Builder) {
         b.open("HFlex")  // Swatch.bx:1
-        b.number("x", (self.x) as f64)
-        b.number("y", (self.y) as f64)
         b.number("width", (self.across) as f64)
         b.number("spacing", (8) as f64)
         b.number("padding", (9) as f64)

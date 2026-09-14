@@ -71,3 +71,11 @@
   margin_y from an expression compiled, emitting it: true
   padding_horizontal refused, saying so: true
   marginTop refused, saying so: true
+-- what a component tag carries --
+  margin_left on a component tag compiled, emitting it: true
+  a parameter beside it is still the component's field compiled, emitting it: true
+  and every placement rides the one call compiled, emitting it: true
+  a placement from an expression compiled, emitting it: true
+  padding on a component tag is its parameter compiled, emitting it: true
+  a placement with no value refused, saying so: true
+  align from an expression refused, saying so: true

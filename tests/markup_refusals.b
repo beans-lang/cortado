@@ -423,6 +423,34 @@ fn insets() {
             "margin_top")
 }
 
+fn placements() {
+    io.println("-- what a component tag carries --")
+    // A placement is the parent's to write, so it rides the call that shows
+    // the child rather than the setup closure that sets its fields.
+    emits("margin_left on a component tag",
+          markup([r#"<VStack><Tile margin_left={8} /></VStack>"#]),
+          r#"}).number("margin_left", (8) as f64)"#)
+    emits("a parameter beside it is still the component's field",
+          markup([r#"<VStack><Tile title="x" grow={1} /></VStack>"#]),
+          r#"c.title = "x""#)
+    emits("and every placement rides the one call",
+          markup([r#"<VFlex><Tile grow={1} align="center" /></VFlex>"#]),
+          r#"}).number("grow", (1) as f64).word("align", "center")"#)
+    emits("a placement from an expression",
+          markup([r#"<Box><Tile x={self.left} /></Box>"#]),
+          r#"}).number("x", (self.left) as f64)"#)
+    // `padding` is the component's own: a field it may forward to its root.
+    emits("padding on a component tag is its parameter",
+          markup([r#"<VStack><Tile padding={8} /></VStack>"#]),
+          "c.padding = 8")
+    refuses("a placement with no value",
+            markup([r#"<VFlex><Tile grow /></VFlex>"#]),
+            "needs a value")
+    refuses("align from an expression",
+            markup([r#"<VFlex><Tile align={self.mode} /></VFlex>"#]),
+            "needs a literal")
+}
+
 fn main() {
     lexing()
     html_documents()
@@ -433,4 +461,5 @@ fn main() {
     dressing()
     scrolling()
     insets()
+    placements()
 }

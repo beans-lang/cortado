@@ -27,10 +27,6 @@ pub abstract class Gradient extends component.Component {
     pub speed: f64 = 1.0
     /// Film grain, as a multiple of the gradient's own. Zero is clean.
     pub grain: f64 = 1.0
-    /// How tall the canvas is, in points. Zero lets the run it sits in decide.
-    pub height: f64 = 0.0
-    /// How much of the leftover space it takes, in a flex run.
-    pub grow: f64 = 0.0
 
     priv paint: ShaderCanvas = new ShaderCanvas()
     priv trouble: string = ""
@@ -126,8 +122,6 @@ pub abstract class Gradient extends component.Component {
 
     pub override fn render(into: component.Builder) {
         self.paint.shader = self.built
-        self.paint.height = self.height
-        self.paint.grow = self.grow
         match Gradient.dialect() {
             ok(chosen) => { self.paint.written_in = chosen.language }
             err(problem) => {}

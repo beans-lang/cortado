@@ -216,6 +216,17 @@ pub class Vocabulary {
                name == "margin_bottom" || name == "margin_left"
     }
 
+    /// Whether a component tag may carry `name`: what the component's root asks
+    /// of the run around it, written by the parent that places it.
+    pub static fn is_placement_name(name: string) -> bool {
+        return name == "margin" || name == "margin_x" || name == "margin_y" ||
+               name == "margin_top" || name == "margin_right" ||
+               name == "margin_bottom" || name == "margin_left" ||
+               name == "grow" || name == "shrink" || name == "basis" ||
+               name == "width" || name == "height" ||
+               name == "x" || name == "y" || name == "align"
+    }
+
     /// The edge a padding name writes: `top`, `right`, `bottom`, `left`, `x` for
     /// both sides or `y` for top and bottom. `""` for anything else, `padding` included.
     pub static fn padding_edge(name: string) -> string {

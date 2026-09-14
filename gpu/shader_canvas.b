@@ -92,11 +92,6 @@ pub class ShaderCanvas extends component.Component {
     /// this defaults to MSL. A `Gradient` sets it to whatever it wrote.
     pub written_in: ShaderLanguage = ShaderLanguage.msl
 
-    /// How tall the canvas is, in points. Zero lets the run it sits in decide.
-    pub height: f64 = 0.0
-    /// How much of the leftover space it takes, in a flex run. Zero means
-    /// none, which is right inside a plain stack.
-    pub grow: f64 = 0.0
 
     priv card: Option<Device> = none
     priv paint: Option<Canvas> = none
@@ -158,8 +153,6 @@ pub class ShaderCanvas extends component.Component {
         // this component, so a screen with three of these does not need three
         // different names.
         into.key("surface")
-        if self.height > 0.0 { into.number("height", self.height) }
-        if self.grow > 0.0 { into.number("grow", self.grow) }
         into.close()
     }
 

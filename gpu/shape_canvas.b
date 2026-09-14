@@ -73,10 +73,6 @@ pub class ShapeCanvas extends component.Component {
     /// stroke or a shadow needs.
     pub inset: f64 = 0.0
 
-    /// How tall the canvas is, in points. Zero lets the run it sits in decide.
-    pub height: f64 = 0.0
-    /// How much of the leftover space it takes, in a flex run.
-    pub grow: f64 = 0.0
 
     priv card: Option<Device> = none
     priv paint: Option<Canvas> = none
@@ -327,8 +323,6 @@ fragment float4 cortado_fragment(CortadoOut v [[stage_in]],
     pub override fn render(into: component.Builder) {
         into.open("Canvas")
         into.key("surface")
-        if self.height > 0.0 { into.number("height", self.height) }
-        if self.grow > 0.0 { into.number("grow", self.grow) }
         into.close()
     }
 

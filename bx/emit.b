@@ -679,6 +679,8 @@ pub class Emitter {
         let key: string = "\"c{self.site_of(seq)}\""
         self.write(indent, "{b}.child<{element.tag}>({key}, fn({c}: {element.tag}) \{{self.trace(element.span)}")
         for attr: Attr in element.attrs {
+            // A placement is the parent's to write, on the call and not on `c`.
+            if is_placement_attribute(attr.name()) { continue }
             self.emit_parameter(element, attr, c, indent + 1)
         }
         // The children that are not `$slot:name { ... }` definitions are the
@@ -720,8 +722,55 @@ pub class Emitter {
                 none => {}
             }
         }
-        self.write(indent, "\})")
+        self.write(indent, "\}){self.placements_of(element)}")
         self.setup_depth = self.setup_depth - 1
+    }
+
+    /// Every placement on a component tag, chained on the call that shows it:
+    /// `}).number("margin_left", (8) as f64).word("align", "center")`.
+    fn placements_of(element: ElementNode) -> string {
+        var chained: string = ""
+        for attr: Attr in element.attrs {
+            if !is_placement_attribute(attr.name()) { continue }
+            chained = "{chained}{self.placement_call(attr)}"
+        }
+        return chained
+    }
+
+    /// One placement as a chained call, or `""` after a report.
+    fn placement_call(attr: Attr) -> string {
+        let name: string = attr.name()
+        match attr as? LiteralAttr {
+            some(literal) => {
+                return self.placement_typed(name, quoted(literal.value), literal.value, literal.span)
+            }
+            none => {}
+        }
+        match attr as? ExprAttr {
+            some(expr) => {
+                self.check_code(expr.code, expr.span, "a placement")
+                if expr.code.contains("\n") {
+                    self.report(expr.span, "{name}=\{ \} on a component tag is chained onto the call that shows it, so it takes an expression written on one line")
+                    return ""
+                }
+                return self.placement_typed(name, expr.code, "", expr.span)
+            }
+            none => {}
+        }
+        self.report(attr.span, "{name} is not a true/false attribute, so it needs a value: {name}=\{ ... \}")
+        return ""
+    }
+
+    /// The same value rules a control's attribute follows, as a chained call.
+    fn placement_typed(name: string, code: string, literal: string, at: Span) -> string {
+        if attribute_call(name) == "number" {
+            return ".number(\"{escape_beans_string(name)}\", ({code}) as f64)"
+        }
+        if literal == "" {
+            self.report(at, "{name} takes one of a fixed set of words, so it needs a literal: {name}=\"center\"")
+            return ""
+        }
+        return ".word(\"{escape_beans_string(name)}\", \"{escape_beans_string(literal)}\")"
     }
 
     /// `ref=` on a component tag: an assignment inside the setup closure.

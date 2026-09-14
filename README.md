@@ -666,6 +666,27 @@ is set. On a *control* it is refused: a control is made and owned by the mount,
 not by the render that described it, so a control is named with `key="..."` and
 reached from `on_mount` through `Stage.control(key)` or `Stage.widget(key)`.
 
+**A component tag takes what its root asks of the run around it.** `margin`
+and its six edges, `grow`, `shrink`, `basis`, `width`, `height`, `x`, `y` and
+`align` are *placements*: written on the tag by the parent, applied to the
+child's root after it has rendered, so the parent's word is the last one. It is
+checked against the container the tag sits in — `grow` inside a `<VStack>` is
+refused the way it is on a control. Everything else on a component tag is a
+parameter, by its Beans name, `padding` included: what a component keeps inside
+itself is its own, and one that wants it set from outside declares the field
+and forwards it. A component whose *public* field shares a placement's name is
+refused by name, because one spelling would otherwise mean two things.
+
+```
+<VFlex spacing={12} align="stretch">
+  <Tile grow={1} margin_x={8} title="Today" />
+  <Price height={44} align="end" drink={self.drink} />
+</VFlex>
+```
+
+By hand it is the value `child` and `show` answer:
+`into.child<Price>("price", fn(c: Price) { c.drink = self.drink }).number("height", 44.0)`.
+
 **What cortado's markup refuses, it refuses by name.** `<!DOCTYPE>`, `$html`,
 `attrs={...}` and `preserve` are all real in the HTML-shaped markup language
 this one grew out of, and none of them has anything here to act on — there is
@@ -954,13 +975,15 @@ in a run that does not flex: a coordinate written inside a `<VStack>` would
 otherwise be a silent no-op, which is the failure this library refuses
 everywhere. The refusal names `<Box>`.
 
-**A component tag carries them too**, and that took fixing something older. A
-component renders into a builder of its own, so its root element has no parent
-at the moment `x` — or `grow` — is written on it. The requirement is now
-carried on the element and answered by `Builder.embed`, where the container it
-landed in is known. Before that, `<ShaderCanvas grow={1} />` inside a `<VFlex>`
-was refused for sitting in a run that does not flex, while sitting in one that
-does; nothing in the tree used it, so nothing said so.
+**A component tag carries them too**, as placements. A component renders into
+a builder of its own, so its root has no parent at the moment anything is
+written on it; `<Swatch x={640} y={96} />` is written by the screen, applied to
+the chip's root once it has rendered, and checked against the container the
+tag sits in. Before that a component had to declare `x` and `y` as parameters
+and forward them to its root — every shader canvas carried a `height` and a
+`grow` field for no other reason — and `<ShaderCanvas grow={1} />` inside a
+`<VFlex>` was refused for sitting in a run that does not flex, while sitting in
+one that does.
 
 `examples/gradients` is the screen: a `<MeshGradient>` behind everything and
 the other five on a shelf along the bottom, with a title, a toast and four

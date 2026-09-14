@@ -1,4 +1,4 @@
-<HFlex x={self.x} y={self.y} width={self.across} spacing={8} padding={9}
+<HFlex width={self.across} spacing={8} padding={9}
        align="center" background="#ffffffe8" corner_radius={15}
        border_width={1} border_color="#00000016">
   <Label text="" width={14} height={14} background={self.tint} corner_radius={7}
@@ -17,16 +17,13 @@ import {view, param} from cortado.annotations
 
 /// One colour of the mesh, named and pinned where the screen wants it.
 ///
-/// It carries `x` and `y` itself rather than being wrapped in a placed
-/// container: a chip is a thing that sits somewhere, so the coordinate belongs
-/// to the chip.
+/// Where it sits is the screen's to say — `<Swatch x={640} y={96} />` places
+/// the chip — so it carries no coordinate of its own.
 @view
 pub partial class Swatch extends component.Component {
     @param pub name: string = ""
     @param pub hex: string = ""
     @param pub tint: string = "#888888"
-    @param pub x: f64 = 0.0
-    @param pub y: f64 = 0.0
 
     /// Pinned rather than measured, so four chips line up on both edges.
     @param pub across: f64 = 232.0

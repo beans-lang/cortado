@@ -108,6 +108,30 @@ if ! diff -u "$root/build/.attrs.markup" "$root/build/.attrs.kinded" >"$root/bui
     fail "attribute_names() and attribute_call() disagree about which names exist:"
 fi
 
+# ---- placements ----
+# What a component tag may carry, answered by the Builder at run time and by
+# the emitter at compile time. One list, and every name in it a layout name.
+sed -n '/pub static fn is_placement_name(/,/^    }/p' "$runtime" \
+    | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.place.runtime"
+sed -n '/pub fn is_placement_attribute(/,/^}/p' "$markup" \
+    | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.place.markup"
+if [[ ! -s "$root/build/.place.runtime" ]]; then
+    fail "no placement names were read from component/vocabulary.b, so this check covered nothing:" \
+         "Look for 'pub static fn is_placement_name(' in component/vocabulary.b."
+fi
+if ! diff -u "$root/build/.place.runtime" "$root/build/.place.markup" >"$root/build/.place.diff"; then
+    cat "$root/build/.place.diff" >&2
+    echo "  < answered by is_placement_name      > answered by is_placement_attribute" >&2
+    fail "a placement name is in one vocabulary and not the other:"
+fi
+sed -n '/pub static fn is_layout_name(/,/^    }/p' "$runtime" \
+    | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.layout.runtime"
+if ! comm -23 "$root/build/.place.runtime" "$root/build/.layout.runtime" | grep -q .; then :; else
+    comm -23 "$root/build/.place.runtime" "$root/build/.layout.runtime" >&2
+    fail "a placement name is not a layout name, so no root could act on it:" \
+         "is_placement_name() must be a subset of is_layout_name() in component/vocabulary.b."
+fi
+
 # ---- the framework's own attributes ----
 # `bx/widgets.b` decides what the compiler treats as the framework's;
 # `bx/vocabulary.b` publishes it. Nothing held them together, and three boolean
@@ -318,4 +342,4 @@ if [[ $hosts_read -eq 0 ]]; then
          "src/ has no platform directories, so this check covered nothing."
 fi
 
-echo "ok vocabulary: $(wc -l <"$root/build/.kinds.declared" | tr -d ' ') kinds, $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes ($(wc -l <"$root/build/.bools.markup" | tr -d ' ') boolean, $(wc -l <"$root/build/.reserved.markup" | tr -d ' ') reserved), $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles and as many yes-or-no answers in $hosts_read hosts, in both tables"
+echo "ok vocabulary: $(wc -l <"$root/build/.kinds.declared" | tr -d ' ') kinds, $(wc -l <"$root/build/.tags.markup" | tr -d ' ') tags, $(wc -l <"$root/build/.events.markup" | tr -d ' ') events, $(wc -l <"$root/build/.attrs.markup" | tr -d ' ') attributes ($(wc -l <"$root/build/.bools.markup" | tr -d ' ') boolean, $(wc -l <"$root/build/.reserved.markup" | tr -d ' ') reserved, $(wc -l <"$root/build/.place.markup" | tr -d ' ') placements), $(wc -l <"$root/build/.roles.header" | tr -d ' ') roles and as many yes-or-no answers in $hosts_read hosts, in both tables"

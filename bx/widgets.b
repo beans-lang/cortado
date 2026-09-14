@@ -189,6 +189,17 @@ pub fn attribute_call(name: string) -> string {
     return ""
 }
 
+/// Whether `name` on a component tag places the component rather than setting
+/// a field: what its root asks of the run around it. Mirrors `Vocabulary`.
+pub fn is_placement_attribute(name: string) -> bool {
+    return name == "margin" || name == "margin_x" || name == "margin_y" ||
+           name == "margin_top" || name == "margin_right" ||
+           name == "margin_bottom" || name == "margin_left" ||
+           name == "grow" || name == "shrink" || name == "basis" ||
+           name == "width" || name == "height" ||
+           name == "x" || name == "y" || name == "align"
+}
+
 /// The attributes whose value is a colour, written `#rgb`, `#rrggbb` or
 /// `#rrggbbaa`. One list, so the spelling is parsed in exactly one place.
 pub fn is_colour_attribute(name: string) -> bool {

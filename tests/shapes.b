@@ -17,6 +17,8 @@ const SIDE: int = 8
 /// A screen with one shape on it, the way markup writes one.
 class Sheet extends component.Component {
     pub shape: gpu.ShapeCanvas = new gpu.ShapeCanvas()
+    /// How tall the shape is placed; zero lets the column decide.
+    pub height: f64 = 0.0
 
     pub fn init() { super.init() }
 
@@ -25,7 +27,8 @@ class Sheet extends component.Component {
         // Without this the canvas is as wide as it measures, which for a
         // control that paints nothing of its own is nothing at all.
         into.word("align", "stretch")
-        into.show("shape", self.shape)
+        var placed: component.Placement = into.show("shape", self.shape)
+        if self.height > 0.0 { placed.number("height", self.height) }
         into.close()
     }
 }
@@ -216,7 +219,7 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     page.shape.color = "#40a0c0"
     page.shape.inset = 2.0
     page.shape.radius = 20.0
-    page.shape.height = 64.0
+    page.height = 64.0
     var mount: component.Mount = new component.Mount(root, app.router)
     mount.set_bounds(geometry.Size.of(64.0, 64.0))
     mount.show(page)?
@@ -251,7 +254,7 @@ fn shapes(app: surface.Application, card: gpu.Device) -> Result<bool> {
     thin_window.set_root(thin_root)?
     var thin_page: Sheet = new Sheet()
     thin_page.shape.figure = "rounded_rect"
-    thin_page.shape.height = 32.0
+    thin_page.height = 32.0
     var thin_mount: component.Mount = new component.Mount(thin_root, app.router)
     thin_mount.set_bounds(geometry.Size.of(0.0, 64.0))
     thin_mount.show(thin_page)?

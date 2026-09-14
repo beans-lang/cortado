@@ -14,6 +14,19 @@ First working macOS host.
   the step before it, from the attribute to the solved frame, against a table
   on every host. `README.md` also claimed `<Label spacing={4} />` was fine; it
   is refused, and the sentence now says so.
+- **A component tag takes what its root asks of the run around it.**
+  `margin` and its edges, `grow`, `shrink`, `basis`, `width`, `height`, `x`,
+  `y` and `align` on a component tag are placements now: written by the
+  parent, applied to the child's root after it rendered, checked against the
+  container the tag sits in, and refused by name when the component has a
+  public field of that name. `Builder.child`, `show` and `embed` answer a
+  `Placement` to chain them on. Before this a component tag took only its
+  Beans fields, so `ShaderCanvas`, `ShapeCanvas` and every `Gradient` carried
+  `height` and `grow` fields whose only job was to be forwarded to their root,
+  and `Swatch` carried `x` and `y`; those fields are gone and every example
+  dump is byte-identical. `padding`, `spacing` and `justify` stay the
+  component's own, and a control's property on a component tag is refused
+  with a sentence about where it belongs.
 - **`<ScrollView>` scrolls.** It never had. Its arranger was `FillLayout`,
   which hands every child the container's own box, so the content could not be
   taller than the viewport and there was nothing to scroll; the macOS document

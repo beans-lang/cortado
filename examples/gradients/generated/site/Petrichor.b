@@ -87,7 +87,6 @@ partial class Petrichor {
         b.number("height", (self.tall) as f64)
         b.word("align", "stretch")
         b.child<MeshGradient>("c0", fn(_cortado_c: MeshGradient) {  // Petrichor.bx:5
-            _cortado_c.grow = 1
             _cortado_c.lobe = 2
             _cortado_c.color_1 = "#EAF4FC"
             _cortado_c.reach_1 = 18
@@ -97,7 +96,7 @@ partial class Petrichor {
             _cortado_c.reach_3 = 10
             _cortado_c.color_4 = "#895B8A"
             _cortado_c.reach_4 = 11
-        })
+        }).number("grow", (1) as f64)
         b.close()
         b.open("Label")  // Petrichor.bx:12
         b.number("x", (0) as f64)
@@ -149,33 +148,25 @@ partial class Petrichor {
             b.close()
         }
         b.child<Swatch>("c1", fn(_cortado_c: Swatch) {  // Petrichor.bx:31
-            _cortado_c.x = 640
-            _cortado_c.y = 96
             _cortado_c.name = "MOON WHITE"
             _cortado_c.hex = "#EAF4FC"
             _cortado_c.tint = "#EAF4FC"
-        })
+        }).number("x", (640) as f64).number("y", (96) as f64)
         b.child<Swatch>("c2", fn(_cortado_c: Swatch) {  // Petrichor.bx:32
-            _cortado_c.x = 640
-            _cortado_c.y = 220
             _cortado_c.name = "LAPIS"
             _cortado_c.hex = "#1E50A2"
             _cortado_c.tint = "#1E50A2"
-        })
+        }).number("x", (640) as f64).number("y", (220) as f64)
         b.child<Swatch>("c3", fn(_cortado_c: Swatch) {  // Petrichor.bx:33
-            _cortado_c.x = 640
-            _cortado_c.y = 344
             _cortado_c.name = "PEACH PINK"
             _cortado_c.hex = "#F09199"
             _cortado_c.tint = "#F09199"
-        })
+        }).number("x", (640) as f64).number("y", (344) as f64)
         b.child<Swatch>("c4", fn(_cortado_c: Swatch) {  // Petrichor.bx:34
-            _cortado_c.x = 640
-            _cortado_c.y = 468
             _cortado_c.name = "ANCIENT PURPLE"
             _cortado_c.hex = "#895B8A"
             _cortado_c.tint = "#895B8A"
-        })
+        }).number("x", (640) as f64).number("y", (468) as f64)
         b.open("VFlex")  // Petrichor.bx:37
         b.number("x", (12) as f64)
         b.number("y", (510) as f64)
@@ -183,8 +174,7 @@ partial class Petrichor {
         b.number("height", (86) as f64)
         b.word("align", "stretch")
         b.child<AuroraGradient>("c5", fn(_cortado_c: AuroraGradient) {
-            _cortado_c.grow = 1
-        })
+        }).number("grow", (1) as f64)
         b.close()
         b.open("VFlex")  // Petrichor.bx:38
         b.number("x", (190) as f64)
@@ -193,8 +183,7 @@ partial class Petrichor {
         b.number("height", (86) as f64)
         b.word("align", "stretch")
         b.child<FlowGradient>("c6", fn(_cortado_c: FlowGradient) {
-            _cortado_c.grow = 1
-        })
+        }).number("grow", (1) as f64)
         b.close()
         b.open("VFlex")  // Petrichor.bx:39
         b.number("x", (368) as f64)
@@ -203,8 +192,7 @@ partial class Petrichor {
         b.number("height", (86) as f64)
         b.word("align", "stretch")
         b.child<PrismGradient>("c7", fn(_cortado_c: PrismGradient) {
-            _cortado_c.grow = 1
-        })
+        }).number("grow", (1) as f64)
         b.close()
         b.open("VFlex")  // Petrichor.bx:40
         b.number("x", (546) as f64)
@@ -213,8 +201,7 @@ partial class Petrichor {
         b.number("height", (86) as f64)
         b.word("align", "stretch")
         b.child<GlowGradient>("c8", fn(_cortado_c: GlowGradient) {
-            _cortado_c.grow = 1
-        })
+        }).number("grow", (1) as f64)
         b.close()
         b.open("VFlex")  // Petrichor.bx:41
         b.number("x", (724) as f64)
@@ -223,8 +210,7 @@ partial class Petrichor {
         b.number("height", (86) as f64)
         b.word("align", "stretch")
         b.child<SkyGradient>("c9", fn(_cortado_c: SkyGradient) {
-            _cortado_c.grow = 1
-        })
+        }).number("grow", (1) as f64)
         b.close()
         b.open("Label")  // Petrichor.bx:43
         b.number("x", (12) as f64)

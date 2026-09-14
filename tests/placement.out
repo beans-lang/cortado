@@ -1,0 +1,43 @@
+-- the parent's word comes last --
+  margin=6 inside, margin_left=20 on the tag: 6,6,6,20
+  margin_x=7 on a tag with no margin of its own: 0,7,0,7
+-- what a run hands out is checked against the run the tag sits in --
+  grow=1 in a <VFlex>: 1
+  grow=1 in a <VStack> is refused: true
+  and the message says why: true
+  x=44 in a <Box>: 44
+  y=44 in an <HFlex> is refused: true
+  and the message says why: true
+-- width, height and align --
+  width=120 pins both bounds: 120,120
+  height=30 pins both bounds: 30,30
+  align="center" is the child's own: true
+  align="middle" is refused: true
+  and the message says why: true
+-- refused by name, with the reason --
+  padding on a tag is refused: true
+  and the message says why: true
+  spacing on a tag is refused: true
+  and the message says why: true
+  justify on a tag is refused: true
+  and the message says why: true
+  background on a tag is refused: true
+  and the message says why: true
+  font_size on a tag is refused: true
+  and the message says why: true
+  a name nobody has is refused: true
+  and the message says why: true
+-- a field of the same name --
+  x on a <Chip> with a public x is refused: true
+  and the message says why: true
+  y on a <Chip> whose y is private places it: 5
+-- two placements on one tag, solved --
+== one that grows above one that is 30 tall with 5 above it, in 300 x 100 ==
+VFlex flex frame=0,0,300,100
+  HStack stack frame=0,0,300,65
+    Label leaf frame=0,0,100,20
+  HStack stack frame=0,70,300,30
+    Label leaf frame=0,0,100,20
+-- a root nothing contains yet --
+  the requirement is still open: true
+  and it names the attribute that asked: true
