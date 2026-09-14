@@ -954,6 +954,13 @@ once and adjusted on one side.
 A margin is the child's own, so every control takes one; padding is a
 container's, so `padding_left` on a `<Label>` is refused the way `padding` is.
 
+**A size bound comes one side at a time as well.** `width={n}` pins both
+bounds; `min_width`, `max_width`, `min_height` and `max_height` set one, in
+source order, so `width={150} max_width={200}` may stretch to 200 and the
+reverse order is pinned at 150. A range that ends up reversed — a minimum
+above a maximum — is refused naming both numbers, because the solver would
+otherwise fold them together silently.
+
 ### A screen laid out by coordinate
 
 `<Box>` is `AbsoluteLayout` in markup: it puts each child at the `x` and `y`

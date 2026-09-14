@@ -213,7 +213,9 @@ pub class Vocabulary {
                name == "padding_bottom" || name == "padding_left" ||
                name == "margin_x" || name == "margin_y" ||
                name == "margin_top" || name == "margin_right" ||
-               name == "margin_bottom" || name == "margin_left"
+               name == "margin_bottom" || name == "margin_left" ||
+               name == "min_width" || name == "max_width" ||
+               name == "min_height" || name == "max_height"
     }
 
     /// Whether a component tag may carry `name`: what the component's root asks
@@ -224,6 +226,8 @@ pub class Vocabulary {
                name == "margin_bottom" || name == "margin_left" ||
                name == "grow" || name == "shrink" || name == "basis" ||
                name == "width" || name == "height" ||
+               name == "min_width" || name == "max_width" ||
+               name == "min_height" || name == "max_height" ||
                name == "x" || name == "y" || name == "align"
     }
 

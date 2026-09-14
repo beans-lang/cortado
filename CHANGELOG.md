@@ -14,6 +14,12 @@ First working macOS host.
   the step before it, from the attribute to the solved frame, against a table
   on every host. `README.md` also claimed `<Label spacing={4} />` was fine; it
   is refused, and the sentence now says so.
+- **One size bound at a time.** `min_width`, `max_width`, `min_height` and
+  `max_height` are markup attributes, `Builder.number` names and placements
+  now; `width` and `height` were the only way to bound a control and pinned
+  both sides. Later attributes win, bound by bound, and a range that ends up
+  reversed is refused naming both numbers rather than folded together by the
+  solver. `tests/bounds.b` holds it, to the frame, on every host.
 - **A component tag takes what its root asks of the run around it.**
   `margin` and its edges, `grow`, `shrink`, `basis`, `width`, `height`, `x`,
   `y` and `align` on a component tag are placements now: written by the

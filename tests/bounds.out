@@ -1,0 +1,38 @@
+-- one bound, and the frame it moves --
+  max_width=60: w -1..60, h -1..-1
+== a label that measures 100 wide, capped at 60, stretched in 300 ==
+VStack stack frame=0,0,300,100
+  Label leaf frame=0,0,60,20
+  min_width=140: w 140..-1, h -1..-1
+  max_height=12: w -1..-1, h -1..12
+== a label that measures 20 tall, capped at 12 ==
+VStack stack frame=0,0,300,100
+  Label leaf frame=0,0,300,12
+  min_height=40: w -1..-1, h 40..-1
+== and one raised to 40 ==
+VStack stack frame=0,0,300,100
+  Label leaf frame=0,0,300,40
+-- source order decides, bound by bound --
+  width=150 then max_width=200: w 150..200, h -1..-1
+== which stretches to the cap, not the pin ==
+VStack stack frame=0,0,300,100
+  Label leaf frame=0,0,200,20
+  max_width=200 then width=150: w 150..150, h -1..-1
+== which is pinned ==
+VStack stack frame=0,0,300,100
+  Label leaf frame=0,0,150,20
+-- a range that ends up reversed --
+  min_width=200 max_width=100 is refused: true
+  and the message says why: true
+  max_height=10 min_height=20 is refused: true
+  and the message says why: true
+  width=150 then min_width=200 is refused: true
+  and the message says why: true
+  but equal bounds are a pin, and fine: w 100..100, h -1..-1
+-- on a component tag --
+  max_width=200 places the root: w -1..200, h -1..-1
+-- a bound inside a flexing row --
+== two growing labels in 300, the first capped at 120 ==
+HFlex flex frame=0,0,300,40
+  Label leaf frame=0,0,120,20
+  Label leaf frame=120,0,180,20

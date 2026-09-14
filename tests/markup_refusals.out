@@ -79,3 +79,7 @@
   padding on a component tag is its parameter compiled, emitting it: true
   a placement with no value refused, saying so: true
   align from an expression refused, saying so: true
+-- one size bound at a time --
+  max_width on a control compiled, emitting it: true
+  min_height on a component tag compiled, emitting it: true
+  maxWidth refused, saying so: true

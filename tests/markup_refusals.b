@@ -451,6 +451,19 @@ fn placements() {
             "needs a literal")
 }
 
+fn bounds() {
+    io.println("-- one size bound at a time --")
+    emits("max_width on a control",
+          markup([r#"<VStack><Label max_width={200} text="hi" /></VStack>"#]),
+          r#"number("max_width", (200) as f64)"#)
+    emits("min_height on a component tag",
+          markup([r#"<VStack><Tile min_height={20} /></VStack>"#]),
+          r#"}).number("min_height", (20) as f64)"#)
+    refuses("maxWidth",
+            markup([r#"<VStack><Label maxWidth={200} text="hi" /></VStack>"#]),
+            "max_width")
+}
+
 fn main() {
     lexing()
     html_documents()
@@ -462,4 +475,5 @@ fn main() {
     scrolling()
     insets()
     placements()
+    bounds()
 }

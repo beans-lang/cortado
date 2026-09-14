@@ -692,7 +692,27 @@ pub class Builder {
             element.spec.max_height = value
             return
         }
+        // One bound at a time. Later attributes win, so `width={150}` after a
+        // `max_width` pins both, and a range that ends up reversed is refused.
+        if name == "min_width" || name == "max_width" {
+            if name == "min_width" { element.spec.min_width = value } else { element.spec.max_width = value }
+            self.check_range(element, "width", element.spec.min_width, element.spec.max_width)
+            return
+        }
+        if name == "min_height" || name == "max_height" {
+            if name == "min_height" { element.spec.min_height = value } else { element.spec.max_height = value }
+            self.check_range(element, "height", element.spec.min_height, element.spec.max_height)
+            return
+        }
         self.faults.push("<{element.tag}> has no attribute called '{name}'")
+    }
+
+    /// A minimum above a maximum is no box at all. The solver would fold the
+    /// two together silently, so it is refused here, naming both numbers.
+    fn check_range(element: Element, axis: string, least: f64, most: f64) {
+        if least >= 0.0 && most >= 0.0 && least > most {
+            self.faults.push("<{element.tag}> asks for a {axis} of at least {least} and at most {most}, and no box has one — the two bounds are reversed")
+        }
     }
 
     /// What `element` keeps inside its box so far, for a per-edge attribute to

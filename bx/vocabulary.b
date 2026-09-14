@@ -177,8 +177,12 @@ fn attribute_note(name: string) -> string {
     if name == "grow" { return "share of leftover space along the main axis" }
     if name == "shrink" { return "share of overflow this control gives up" }
     if name == "basis" { return "main-axis size to grow or shrink from" }
-    if name == "width" { return "pins the width" }
-    if name == "height" { return "pins the height" }
+    if name == "width" { return "pins the width: min_width and max_width at once" }
+    if name == "height" { return "pins the height: min_height and max_height at once" }
+    if name == "min_width" { return "the least width this control takes, in points" }
+    if name == "max_width" { return "the most width this control takes, in points" }
+    if name == "min_height" { return "the least height this control takes, in points" }
+    if name == "max_height" { return "the most height this control takes, in points" }
     if name == "align" { return "cross-axis placement: start, center, end, stretch" }
     if name == "justify" { return "main-axis distribution: start, center, end, space_between, space_around, space_evenly" }
     if name == "enabled" { return "whether the control responds" }

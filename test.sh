@@ -250,8 +250,8 @@ ios_builds_only=(anim)
 # Windows machine regenerate a project's screens.
 #
 # `placed` is here for the same reason, and it started out in the wrong list.
-# `insets` and `placement` are the same shape again: per-edge insets, and what
-# a component tag carries, each from the attribute to the solved frame.
+# `insets`, `placement` and `bounds` are the same shape again: per-edge insets,
+# what a component tag carries, and one size bound at a time, to the frame.
 # It was written reading frames off real controls and put in `cross_host` on
 # the claim that a coordinate is arithmetic — which is true of the coordinate
 # and not of the frame: an unmapped GTK4 widget has no allocation and answered
@@ -259,7 +259,7 @@ ios_builds_only=(anim)
 # `tests/layout.b` already holds it. What is left is the step before, which
 # really is arithmetic: that `x={10}` reaches `spec.x`, and that a coordinate
 # written where nothing reads one is refused rather than dropped.
-portable=(layout diff sweep markup_refusals placed insets placement)
+portable=(layout diff sweep markup_refusals placed insets placement bounds)
 
 # `--case` narrows every list to the one name, and leaves the lists it is not
 # in empty — so a case that is macOS-only runs on macOS and the GTK4 loop runs

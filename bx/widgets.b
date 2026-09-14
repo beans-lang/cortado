@@ -183,6 +183,11 @@ pub fn attribute_call(name: string) -> string {
        name == "margin_bottom" || name == "margin_left" {
         return "number"
     }
+    // A bound on one side. `width` is `min_width` and `max_width` at once.
+    if name == "min_width" || name == "max_width" ||
+       name == "min_height" || name == "max_height" {
+        return "number"
+    }
     // A colour is a word here and a whole number by the time it reaches the
     // ABI, parsed once in `Builder.word` so `#abc` means one thing everywhere.
     if name == "align" || name == "justify" || is_colour_attribute(name) { return "word" }
@@ -197,6 +202,8 @@ pub fn is_placement_attribute(name: string) -> bool {
            name == "margin_bottom" || name == "margin_left" ||
            name == "grow" || name == "shrink" || name == "basis" ||
            name == "width" || name == "height" ||
+           name == "min_width" || name == "max_width" ||
+           name == "min_height" || name == "max_height" ||
            name == "x" || name == "y" || name == "align"
 }
 
@@ -214,7 +221,8 @@ pub fn attribute_names() -> List<string> {
             "day", "editable", "enabled",
             "font_size", "grow", "height", "hidden", "indeterminate",
             "justify", "margin", "margin_bottom", "margin_left", "margin_right",
-            "margin_top", "margin_x", "margin_y", "max", "min", "opacity",
+            "margin_top", "margin_x", "margin_y", "max", "max_height",
+            "max_width", "min", "min_height", "min_width", "opacity",
             "open", "padding", "padding_bottom", "padding_left",
             "padding_right", "padding_top", "padding_x", "padding_y",
             "selected", "shrink", "spacing", "step", "text", "text_color",
