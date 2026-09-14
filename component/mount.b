@@ -127,7 +127,27 @@ pub class Mount implements Composer {
         }
         self.bounds = size
         self.lay_out()?
+        // A render that decides by the room is stale now. It is asked for,
+        // not done here: the next `refresh_if_needed` renders it, once.
+        match self.top {
+            none => {}
+            some(component) => { self.wake_for_room(component) }
+        }
+        for key: string in self.prepared.keys() {
+            match self.prepared.get(key) {
+                some(child) => { self.wake_for_room(child) }
+                none => {}
+            }
+        }
         return ok(true)
+    }
+
+    /// Tells `component` the new room, and asks it to render if it follows it.
+    fn wake_for_room(component: Component) {
+        component.note_viewport(self.bounds)
+        if component.follows_viewport() {
+            component.request_render()
+        }
     }
 
     pub fn reading(direction: layout.TextDirection) {
@@ -390,6 +410,7 @@ pub class Mount implements Composer {
         // this one comes back.
         let outer: string = self.rendering
         self.rendering = path
+        component.note_viewport(self.bounds)
         component.render(into)
         self.rendering = outer
         self.renders = self.renders + 1

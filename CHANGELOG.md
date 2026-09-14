@@ -14,6 +14,12 @@ First working macOS host.
   the step before it, from the attribute to the solved frame, against a table
   on every host. `README.md` also claimed `<Label spacing={4} />` was fine; it
   is refused, and the sentence now says so.
+- **A screen can read the window it is in.** `Component.viewport()` is the
+  content size the mount lays it out in, told before every render and on
+  every resize, so `$if self.viewport().width < 600 { ... }` is a breakpoint.
+  A component that reads it overrides `follows_viewport()` to true and is
+  rendered again after a resize — once, on the next refresh — while every
+  other component is only laid out again, as before.
 - **A share of the room, and a shape.** `width_percent`, `height_percent` and
   `aspect_ratio` on `LayoutSpec`, in markup, and as placements. A share is 0 to
   100 of the room the container offers the child, its content box less the

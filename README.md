@@ -444,6 +444,21 @@ constructor returns and `init` runs long before anything has a container to ask
 — so prefer constructor injection for what a component cannot work without, and
 `@inject` where a constructor cannot reach.
 
+**Reading the window.** `self.viewport()` is the content size the mount lays
+the component out in, as of its last render — so a render can decide by it,
+and in markup a breakpoint is a `$if`:
+
+```
+$if self.viewport().width < 600 { <Sidebar folded /> } else { <Sidebar /> }
+```
+
+A component whose render reads it overrides `follows_viewport()` to answer
+true, and the mount renders it again after every resize — once, on the next
+refresh, however many resize events a drag produced. One that does not is
+laid out again and not rendered, which is why the default is off: most
+screens never read their size, and a resize that re-rendered every one of
+them would pay for that on every frame of the drag.
+
 **Dependency injection** is [barista](https://github.com/beans-lang/barista),
 and the whole of the dependency is one class in a *separate module*,
 `cortado_app`. `cortado.component` asks for a `ServiceSource` — an interface

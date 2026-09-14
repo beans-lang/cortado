@@ -1,0 +1,24 @@
+== at 400 x 300 ==
+Container CortadoView role=group "" frame=0,0,400,300 children=1
+  Container CortadoView role=group "" frame=0,0,400,300 children=2
+    Label NSTextField role=text "narrow at 400x300" frame=0,0,400,16
+    Label NSTextField role=text "fixed" frame=0,16,400,16
+  the first render saw the room: 400x300
+  and so did the child that never asked: 400
+== dragged to 640 x 480 ==
+  the room changed: true
+  a following screen asks to render: true
+  and is rendered on the next refresh: true
+Container CortadoView role=group "" frame=0,0,400,300 children=1
+  Container CortadoView role=group "" frame=0,0,640,480 children=2
+    Label NSTextField role=text "wide at 640x480" frame=0,0,640,16
+    Label NSTextField role=text "fixed" frame=0,16,640,16
+  the memoised child kept its render: true
+  but was told the room anyway: 640
+== the same size again ==
+  nothing changed: true
+== a screen that reads the room and does not follow it ==
+  a resize does not wake it: true
+  so its label is stale: true
+Container CortadoView role=group "" frame=0,0,400,300 children=1
+  Label NSTextField role=text "deaf at 400" frame=0,0,640,480

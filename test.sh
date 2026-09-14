@@ -118,7 +118,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events attributes bridge mount nested slots shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
+cases=(tree events attributes bridge mount viewport nested slots shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run

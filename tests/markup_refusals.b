@@ -465,6 +465,10 @@ fn bounds() {
     emits("aspect_ratio on a component tag",
           markup([r#"<VStack><Tile aspect_ratio={1.5} /></VStack>"#]),
           r#"}).number("aspect_ratio", (1.5) as f64)"#)
+    // The window's size is a plain method call, so a breakpoint is a `$if`.
+    emits("a breakpoint on the viewport",
+          markup([r#"<VStack>"#, r#"  $if self.viewport().width < 600 { <Label text="narrow" /> }"#, r#"</VStack>"#]),
+          "if self.viewport().width < 600")
     refuses("maxWidth",
             markup([r#"<VStack><Label maxWidth={200} text="hi" /></VStack>"#]),
             "max_width")

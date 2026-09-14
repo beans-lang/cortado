@@ -84,4 +84,5 @@
   min_height on a component tag compiled, emitting it: true
   width_percent on a control compiled, emitting it: true
   aspect_ratio on a component tag compiled, emitting it: true
+  a breakpoint on the viewport compiled, emitting it: true
   maxWidth refused, saying so: true

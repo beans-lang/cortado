@@ -1,6 +1,8 @@
 // A piece of user interface, and its life.
 package component
 
+import cortado.geometry
+
 /// Something that describes an interface and can be shown.
 ///
 /// A component is an ordinary Beans class. Its fields are its state, its
@@ -65,6 +67,7 @@ pub abstract class Component {
     /// told, and it cannot leak.
     needs_render: bool = false
     mounted: bool = false
+    room: geometry.Size = geometry.Size.zero()
 
     pub fn init() {}
 
@@ -126,6 +129,23 @@ pub abstract class Component {
 
     pub fn is_mounted() -> bool {
         return self.mounted
+    }
+
+    /// The room the mount lays this component out in — the window's content
+    /// size — as of its last render. Zero before the first.
+    pub fn viewport() -> geometry.Size {
+        return self.room
+    }
+
+    /// Framework use: the mount, before every render and on every resize.
+    pub fn note_viewport(size: geometry.Size) {
+        self.room = size
+    }
+
+    /// Whether a resize is a reason to render again. Off unless `render`
+    /// reads `viewport()`, and a render that does must answer true here.
+    pub fn follows_viewport() -> bool {
+        return false
     }
 
     /// Framework use: records that this component's controls exist.
