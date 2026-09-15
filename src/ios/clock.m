@@ -81,6 +81,13 @@ static void ctd_clock_deliver(ctd_handle surface, uint32_t epoch, double at) {
 
 @implementation CortadoTick
 - (void)tick:(CADisplayLink *)link {
+    // The rule src/mac/clock.m states. A backgrounded app is suspended here
+    // and its link stops with it, so what is left to catch is a hidden window.
+    if (g_role != CTD_ROLE_HEADLESS) {
+        id object = ctd_resolve(self.surface);
+        if (![object isKindOfClass:[UIWindow class]]) return;
+        if ([(UIWindow *)object isHidden]) return;
+    }
     (void)link;
     uint32_t slot = (uint32_t)(self.surface & 0xffffffffu);
     ctd_clock_deliver(self.surface, g_clock[slot].epoch, ctd_monotonic());

@@ -60,6 +60,11 @@ fn main() {
         report_dismiss()
         return
     }
+    // Nor is the frame rate, which is a number that has to be counted.
+    if args.len() > 0 && args[0] == "--rate" {
+        report_rate()
+        return
+    }
     // A second dump, at a window too narrow for the chips beside the title.
     // The layout is the screen's own now, so the only way to check it holds at
     // another size is to mount it at one.

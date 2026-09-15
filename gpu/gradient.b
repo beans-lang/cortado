@@ -44,6 +44,14 @@ pub abstract class Gradient extends component.Component {
     ///
     /// One answer, not two: a gradient that could not choose a language says
     /// so, and otherwise the canvas underneath speaks for itself.
+    /// How many frames this gradient has actually put on screen.
+    ///
+    /// The canvas's own count, not the clock's: a tick that found no drawable
+    /// free drew nothing, and a frame rate built from ticks would not know it.
+    pub fn frames() -> int {
+        return self.paint.frames()
+    }
+
     pub fn problem() -> string {
         if self.trouble != "" { return self.trouble }
         return self.paint.problem()

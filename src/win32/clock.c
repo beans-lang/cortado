@@ -88,7 +88,16 @@ static void ctd_clock_deliver(ctd_handle surface, uint32_t epoch, double at) {
 }
 
 // WM_TIMER, from the surface's own window procedure.
+// Whether a frame is worth delivering — the rule src/mac/clock.m states, on
+// the host whose timer has the same fault: WM_TIMER keeps arriving for a window
+// that is minimised or hidden, so without this a buried window still draws.
+static int ctd_clock_showing(HWND window) {
+    if (g_role == CTD_ROLE_HEADLESS) return 1;
+    return (IsWindowVisible(window) && !IsIconic(window)) ? 1 : 0;
+}
+
 void ctd_clock_ticked(HWND window) {
+    if (!ctd_clock_showing(window)) return;
     ctd_handle surface = ctd_handle_of(window);
     if (!surface) return;
     uint32_t slot = (uint32_t)(surface & 0xffffffffu);

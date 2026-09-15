@@ -9,9 +9,10 @@ Container CortadoView role=group "" frame=0,0,900,640 children=1
           Button NSButton role=button "Restore draft" frame=172,8,98,24
           Button NSButton role=button "✕" frame=280,8,26,24
       Container CortadoView role=group "" frame=16,56,868,457 children=2
-        Container CortadoView role=group "" frame=0,0,620,457 children=2
-          Label NSTextField role=text "Petrichor" frame=0,178,620,76
-          Label NSTextField role=text "four colours, blended by distance, drifting" frame=0,264,620,15
+        Container CortadoView role=group "" frame=0,0,620,457 children=3
+          Label NSTextField role=text "Petrichor" frame=0,168,620,76
+          Label NSTextField role=text "four colours, blended by distance, drifting" frame=0,254,620,15
+          Label NSTextField role=text "measuring" frame=0,275,620,14
         Container CortadoView role=group "" frame=636,0,232,457 children=4
           Container CortadoView role=group "" frame=0,127,232,34 children=4
             Label NSTextField role=text "" frame=9,10,14,14

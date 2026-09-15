@@ -1037,6 +1037,14 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         "$tmp/gradients.bin" --dismiss >"$tmp/gradients_dismiss.out" 2>&1
         diff -u "$root/tests/gradients_dismiss.out" "$tmp/gradients_dismiss.out"
         pass
+        # Nor is the frame rate on it, which is a number that has to be
+        # counted. The golden holds what is true on any machine — that a
+        # reading was taken, that it counts frames the canvas put on screen,
+        # and that it is a rate a display could produce — because the number
+        # itself is whatever this machine managed while the suite ran.
+        "$tmp/gradients.bin" --rate >"$tmp/gradients_rate.out" 2>&1
+        diff -u "$root/tests/gradients_rate.out" "$tmp/gradients_rate.out"
+        pass
         echo "ok markup: a .bx screen mounts to real controls, and the gallery shows every one"
 
         # ---------------------------------------------------------- bundling

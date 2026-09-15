@@ -1050,7 +1050,36 @@ two full-bleed layers in a `<Box>`, sized with `width_percent`; the shelf is an
 (`<AuroraGradient width={160} aspect_ratio={1.95} />`), and the chips beside
 the title are dropped under a `viewport()` breakpoint. `--dump` and
 `--dump-narrow` record it at two window sizes, because one golden proves a
-layout and two prove it is responsive.
+layout and two prove it is responsive. The frame rate under the title is
+counted, not estimated: frames the background canvas actually put on screen
+between two readings of the clock, divided by the seconds between them.
+
+### A clock does not tick for a surface nobody is being shown
+
+A frame drives drawing, and drawing into a surface the window server is not
+showing is a full GPU pass that nobody sees. `CVDisplayLink` belongs to the
+**display**, not to the window, so it keeps firing for a window that is
+minimised, hidden or entirely covered — and `examples/gradients` has six
+canvases riding it. Before this, that example held WindowServer at two to
+three times its idle cost while its window was buried behind whatever you were
+actually working in, which is the whole machine going slow, not one app.
+
+So the tick is gated on what the window server says it is showing:
+`occlusionState` on macOS, `IsWindowVisible` and `IsIconic` on Win32, the
+window's own `hidden` on iOS. GTK4 needed nothing — a
+`gtk_widget_add_tick_callback` only runs while its widget is on screen, which
+is the behaviour the other three now have.
+
+**Time is not stopped, only the drawing.** A window that comes back has
+skipped the frames, not the seconds: `elapsed` is still measured from the
+start, so an animation resumes where real time has got to rather than where it
+was paused. That is a decision rather than a default — the other reading, in
+which a hidden window's animation freezes and resumes, is equally defensible
+and is what the frame *count* would suggest.
+
+**Headless is exempt**, because it has no window server: nothing there is ever
+being shown, and its frames are the program's to drive. `tests/frames.b` is
+built on exactly that and fails if the exemption goes.
 
 ### Dressing a control
 

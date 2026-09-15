@@ -94,6 +94,25 @@ static void ctd_clock_deliver(ctd_handle surface, uint32_t epoch, double at) {
     g_sink(g_sink_context, &event);
 }
 
+// Whether a frame the display produced is worth delivering.
+//
+// A frame drives drawing, and drawing into a surface the window server is not
+// showing is a full GPU pass nobody sees — six of them, in examples/gradients,
+// which is a third of WindowServer on a machine whose owner has the window
+// buried. CVDisplayLink belongs to the *display*, not to the window, so it
+// keeps firing for a window that is minimised, hidden or entirely covered.
+//
+// Headless has no window server: nothing there is ever showing, and its frames
+// are the program's to drive, so they always land. Time is not stopped either
+// way — a window that comes back has skipped the frames, not the seconds.
+static int ctd_clock_showing(ctd_handle surface) {
+    if (g_role == CTD_ROLE_HEADLESS) return 1;
+    id object = ctd_resolve(surface);
+    if (![object isKindOfClass:[NSWindow class]]) return 0;
+    NSWindow *window = (NSWindow *)object;
+    return ([window occlusionState] & NSWindowOcclusionStateVisible) ? 1 : 0;
+}
+
 // The display link's callback, on the display link's own thread.
 //
 // It does as little as it is possible to do. Nothing here touches the handle
@@ -109,6 +128,8 @@ static CVReturn ctd_clock_ticked(CVDisplayLinkRef link, const CVTimeStamp *now,
     uint32_t epoch = g_clock[(uint32_t)(surface & 0xffffffffu)].epoch;
     double at = ctd_monotonic();
     dispatch_async(dispatch_get_main_queue(), ^{
+        // On the main thread, which is the only place AppKit may be asked.
+        if (!ctd_clock_showing(surface)) return;
         ctd_clock_deliver(surface, epoch, at);
     });
     return kCVReturnSuccess;

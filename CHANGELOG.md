@@ -14,6 +14,25 @@ First working macOS host.
   the step before it, from the attribute to the solved frame, against a table
   on every host. `README.md` also claimed `<Label spacing={4} />` was fine; it
   is refused, and the sentence now says so.
+- **A clock does not tick for a surface nobody is being shown.** A frame
+  drives drawing, and drawing into a window the window server is not showing
+  is a GPU pass nobody sees. `CVDisplayLink` is the display's, not the
+  window's, so it fired for a window that was minimised, hidden or buried —
+  and `examples/gradients`, which has six canvases on it, held WindowServer at
+  two to three times its idle cost while its own window was behind something
+  else. Measured on an M1: hidden, the app went from 14% of a core and
+  WindowServer at 22-42%, to 0.5% and WindowServer below its idle baseline.
+  The tick is now gated on `occlusionState` (macOS), `IsWindowVisible` and
+  `IsIconic` (Win32) and the window's `hidden` (iOS); GTK4 already had it,
+  because a tick callback only runs while its widget is on screen. Time is not
+  stopped, only the drawing — a window that comes back has skipped the frames,
+  not the seconds. Headless is exempt and `tests/frames.b` guards that;
+  `--rate` on the gradients example guards the gate itself.
+- **The gradients example counts its own frame rate.** `Gradient.frames()` is
+  what the canvas actually put on screen, and the reading under the title is
+  that count between two readings of the clock over the seconds between them.
+  Nothing in it is the display's refresh rate, and a tick that found no
+  drawable free drew nothing and is not in it.
 - **A run that wraps.** `layout.WrapLayout`, and `<HWrap>` / `<VWrap>` in
   markup: children go along the main axis until the next would not fit, then
   start a new line, `line_spacing` apart. It extends `FlexLayout`, so each

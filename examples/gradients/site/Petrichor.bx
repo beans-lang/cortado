@@ -2,7 +2,7 @@
   <!-- The background, and the only thing here that is drawn rather than
        placed. Two full-bleed layers in a <Box>: this one, and the screen. -->
   <VFlex width_percent={100} height_percent={100} align="stretch">
-    <MeshGradient grow={1} lobe={2}
+    <MeshGradient ref={self.mesh} grow={1} lobe={2}
                   color_1="#EAF4FC" reach_1={18}
                   color_2="#1E50A2" reach_2={12}
                   color_3="#F09199" reach_3={10}
@@ -32,6 +32,8 @@
                text_color="#241c22" text="Petrichor" />
         <Label margin_top={10} alignment={1} font_size={12}
                text_color="#463c46" text={self.caption} />
+        <Label margin_top={6} alignment={1} font_size={11}
+               text_color="#6b6b74" text={self.rate} />
       </VStack>
 
       <!-- The chips are the first thing to go when the window narrows: they
@@ -77,6 +79,8 @@ package site
 
 import cortado.component
 import cortado.events
+import cortado.motion
+import cortado.host
 import {MeshGradient, AuroraGradient, FlowGradient,
         PrismGradient, GlowGradient, SkyGradient} from cortado.gpu
 import {view} from cortado.annotations
@@ -102,7 +106,70 @@ pub partial class Petrichor extends component.Component {
     pub dismissed: bool = false
     pub caption: string = "four colours, blended by distance, drifting"
 
+    /// What the background gradient is actually achieving, in frames a second.
+    ///
+    /// Counted, never estimated: the number below is frames the canvas *put on
+    /// screen* between two readings of the clock, divided by the seconds
+    /// between them. A tick that found no drawable free drew nothing and is
+    /// not in it, and the display's refresh rate is nowhere in the sum.
+    pub rate: string = "measuring"
+    /// The same reading as a number, which is what a test can assert on.
+    /// Negative until one has been taken.
+    pub measured: f64 = 0.0 - 1.0
+
+    /// The gradient behind everything, handed back by `ref=` on its own tag.
+    priv mesh: Option<MeshGradient> = none
+    /// This screen's own listener on the surface's clock, for the reading.
+    priv beat: Option<motion.FrameClock> = none
+    priv counted: int = 0
+    priv marked: f64 = 0.0
+
     pub fn init() { super.init() }
+
+    /// A token no control can collide with: `ShaderCanvas` keys its own by the
+    /// control's handle, and a handle carries a generation in its high half.
+    static fn reading_token() -> int {
+        return 1
+    }
+
+    pub override fn on_mount(stage: component.Stage) {
+        let surface: host.Handle = stage.surface()
+        // Nothing to ride: a tree mounted outside a window, which is the
+        // headless dump. The reading stays at what it was born with.
+        if surface.raw == 0 { return }
+        var beat: motion.FrameClock = new motion.FrameClock(surface, stage.router())
+        match beat.start(Petrichor.reading_token(), fn(frame: motion.Frame) { self.sample(frame) }) {
+            ok(started) => { self.beat = some(beat) }
+            err(problem) => { self.rate = "no reading: {problem.kind}" }
+        }
+    }
+
+    pub override fn on_unmount() {
+        match self.beat {
+            some(beat) => { beat.stop() }
+            none => {}
+        }
+        self.beat = none
+    }
+
+    /// One reading a second, because a label rewritten every frame would be
+    /// the thing being measured.
+    fn sample(frame: motion.Frame) {
+        match self.mesh {
+            none => {}
+            some(gradient) => {
+                let span: f64 = frame.elapsed - self.marked
+                if span < 1.0 { return }
+                let now: int = gradient.frames()
+                let drawn: f64 = (now - self.counted) as f64
+                self.counted = now
+                self.marked = frame.elapsed
+                self.measured = drawn / span
+                self.rate = "{self.measured as int} fps"
+                self.request_render()
+            }
+        }
+    }
 
     /// This render reads `viewport()`, so a resize is a reason to run it again.
     pub override fn follows_viewport() -> bool { return true }

@@ -1,6 +1,10 @@
 // The frame clock: the display's own beat, and the one place a frame is raised.
 //
 // GTK has the idea built in. A GdkFrameClock belongs to a mapped window and
+// This host gets for free what src/mac/clock.m and src/win32/clock.c each had
+// to be told: a tick callback does not run while its widget is off screen, so
+// a buried window here never drew in the first place.
+//
 // drives every animation GTK does itself, and `gtk_widget_add_tick_callback`
 // is how a program joins in — so this host does not reach past the toolkit for
 // a display link the way the Apple ones do.

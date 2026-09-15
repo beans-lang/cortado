@@ -16,6 +16,8 @@ import {UiEvent} from cortado.events
 
 import cortado.component
 import cortado.events
+import cortado.motion
+import cortado.host
 import {MeshGradient, AuroraGradient, FlowGradient,
         PrismGradient, GlowGradient, SkyGradient} from cortado.gpu
 import {view} from cortado.annotations
@@ -41,7 +43,70 @@ pub partial class Petrichor extends component.Component {
     pub dismissed: bool = false
     pub caption: string = "four colours, blended by distance, drifting"
 
+    /// What the background gradient is actually achieving, in frames a second.
+    ///
+    /// Counted, never estimated: the number below is frames the canvas *put on
+    /// screen* between two readings of the clock, divided by the seconds
+    /// between them. A tick that found no drawable free drew nothing and is
+    /// not in it, and the display's refresh rate is nowhere in the sum.
+    pub rate: string = "measuring"
+    /// The same reading as a number, which is what a test can assert on.
+    /// Negative until one has been taken.
+    pub measured: f64 = 0.0 - 1.0
+
+    /// The gradient behind everything, handed back by `ref=` on its own tag.
+    priv mesh: Option<MeshGradient> = none
+    /// This screen's own listener on the surface's clock, for the reading.
+    priv beat: Option<motion.FrameClock> = none
+    priv counted: int = 0
+    priv marked: f64 = 0.0
+
     pub fn init() { super.init() }
+
+    /// A token no control can collide with: `ShaderCanvas` keys its own by the
+    /// control's handle, and a handle carries a generation in its high half.
+    static fn reading_token() -> int {
+        return 1
+    }
+
+    pub override fn on_mount(stage: component.Stage) {
+        let surface: host.Handle = stage.surface()
+        // Nothing to ride: a tree mounted outside a window, which is the
+        // headless dump. The reading stays at what it was born with.
+        if surface.raw == 0 { return }
+        var beat: motion.FrameClock = new motion.FrameClock(surface, stage.router())
+        match beat.start(Petrichor.reading_token(), fn(frame: motion.Frame) { self.sample(frame) }) {
+            ok(started) => { self.beat = some(beat) }
+            err(problem) => { self.rate = "no reading: {problem.kind}" }
+        }
+    }
+
+    pub override fn on_unmount() {
+        match self.beat {
+            some(beat) => { beat.stop() }
+            none => {}
+        }
+        self.beat = none
+    }
+
+    /// One reading a second, because a label rewritten every frame would be
+    /// the thing being measured.
+    fn sample(frame: motion.Frame) {
+        match self.mesh {
+            none => {}
+            some(gradient) => {
+                let span: f64 = frame.elapsed - self.marked
+                if span < 1.0 { return }
+                let now: int = gradient.frames()
+                let drawn: f64 = (now - self.counted) as f64
+                self.counted = now
+                self.marked = frame.elapsed
+                self.measured = drawn / span
+                self.rate = "{self.measured as int} fps"
+                self.request_render()
+            }
+        }
+    }
 
     /// This render reads `viewport()`, so a resize is a reason to run it again.
     pub override fn follows_viewport() -> bool { return true }
@@ -107,6 +172,7 @@ partial class Petrichor {
             _cortado_c.reach_3 = 10
             _cortado_c.color_4 = "#895B8A"
             _cortado_c.reach_4 = 11
+            self.mesh = some(_cortado_c)
         }).number("grow", (1) as f64)
         b.close()
         b.open("VFlex")  // Petrichor.bx:12
@@ -167,28 +233,35 @@ partial class Petrichor {
         b.word("text_color", "#463c46")
         b.text("{self.caption}")
         b.close()
+        b.open("Label")  // Petrichor.bx:35
+        b.number("margin_top", (6) as f64)
+        b.number("alignment", (1) as f64)
+        b.number("font_size", (11) as f64)
+        b.word("text_color", "#6b6b74")
+        b.text("{self.rate}")
         b.close()
-        if self.roomy() {  // Petrichor.bx:39
-            b.open("VStack")  // Petrichor.bx:40
+        b.close()
+        if self.roomy() {  // Petrichor.bx:41
+            b.open("VStack")  // Petrichor.bx:42
             b.number("width", (232) as f64)
             b.number("spacing", (22) as f64)
             b.word("justify", "center")
-            b.child<Swatch>("c1", fn(_cortado_c: Swatch) {  // Petrichor.bx:41
+            b.child<Swatch>("c1", fn(_cortado_c: Swatch) {  // Petrichor.bx:43
                 _cortado_c.name = "MOON WHITE"
                 _cortado_c.hex = "#EAF4FC"
                 _cortado_c.tint = "#EAF4FC"
             })
-            b.child<Swatch>("c2", fn(_cortado_c: Swatch) {  // Petrichor.bx:42
+            b.child<Swatch>("c2", fn(_cortado_c: Swatch) {  // Petrichor.bx:44
                 _cortado_c.name = "LAPIS"
                 _cortado_c.hex = "#1E50A2"
                 _cortado_c.tint = "#1E50A2"
             })
-            b.child<Swatch>("c3", fn(_cortado_c: Swatch) {  // Petrichor.bx:43
+            b.child<Swatch>("c3", fn(_cortado_c: Swatch) {  // Petrichor.bx:45
                 _cortado_c.name = "PEACH PINK"
                 _cortado_c.hex = "#F09199"
                 _cortado_c.tint = "#F09199"
             })
-            b.child<Swatch>("c4", fn(_cortado_c: Swatch) {  // Petrichor.bx:44
+            b.child<Swatch>("c4", fn(_cortado_c: Swatch) {  // Petrichor.bx:46
                 _cortado_c.name = "ANCIENT PURPLE"
                 _cortado_c.hex = "#895B8A"
                 _cortado_c.tint = "#895B8A"
@@ -196,65 +269,65 @@ partial class Petrichor {
             b.close()
         }
         b.close()
-        b.open("HWrap")  // Petrichor.bx:51
+        b.open("HWrap")  // Petrichor.bx:53
         b.number("spacing", (10) as f64)
         b.number("line_spacing", (10) as f64)
         b.word("justify", "center")
         b.number("margin_top", (12) as f64)
-        b.open("VStack")  // Petrichor.bx:52
+        b.open("VStack")  // Petrichor.bx:54
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<AuroraGradient>("c5", fn(_cortado_c: AuroraGradient) {  // Petrichor.bx:53
+        b.child<AuroraGradient>("c5", fn(_cortado_c: AuroraGradient) {  // Petrichor.bx:55
         }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:54
+        b.open("Label")  // Petrichor.bx:56
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("AURORA")
         b.close()
         b.close()
-        b.open("VStack")  // Petrichor.bx:56
+        b.open("VStack")  // Petrichor.bx:58
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<FlowGradient>("c6", fn(_cortado_c: FlowGradient) {  // Petrichor.bx:57
+        b.child<FlowGradient>("c6", fn(_cortado_c: FlowGradient) {  // Petrichor.bx:59
         }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:58
+        b.open("Label")  // Petrichor.bx:60
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("FLOW")
         b.close()
         b.close()
-        b.open("VStack")  // Petrichor.bx:60
+        b.open("VStack")  // Petrichor.bx:62
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<PrismGradient>("c7", fn(_cortado_c: PrismGradient) {  // Petrichor.bx:61
+        b.child<PrismGradient>("c7", fn(_cortado_c: PrismGradient) {  // Petrichor.bx:63
         }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:62
+        b.open("Label")  // Petrichor.bx:64
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("PRISM")
         b.close()
         b.close()
-        b.open("VStack")  // Petrichor.bx:64
+        b.open("VStack")  // Petrichor.bx:66
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<GlowGradient>("c8", fn(_cortado_c: GlowGradient) {  // Petrichor.bx:65
+        b.child<GlowGradient>("c8", fn(_cortado_c: GlowGradient) {  // Petrichor.bx:67
         }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:66
+        b.open("Label")  // Petrichor.bx:68
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("GLOW")
         b.close()
         b.close()
-        b.open("VStack")  // Petrichor.bx:68
+        b.open("VStack")  // Petrichor.bx:70
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<SkyGradient>("c9", fn(_cortado_c: SkyGradient) {  // Petrichor.bx:69
+        b.child<SkyGradient>("c9", fn(_cortado_c: SkyGradient) {  // Petrichor.bx:71
         }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:70
+        b.open("Label")  // Petrichor.bx:72
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")

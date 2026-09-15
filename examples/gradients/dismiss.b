@@ -76,7 +76,92 @@ fn press(label: string) -> Result<List<bool>> {
 }
 
 /// The `--dismiss` report. One line per button, the same on any host.
-pub fn report_dismiss() {
+/// Runs the screen for long enough to take a frame-rate reading, and answers
+/// whether the number on it was counted rather than guessed.
+///
+/// Headless, and that is not a dodge: a headless app on this platform still
+/// gets real display-link ticks (`tests/frames.b` is built on it), so the
+/// canvas really draws and the reading really counts what it drew.
+pub fn report_rate() {
+    match take_reading() {
+        ok(answers) => {
+            io.println("a reading was taken: {answers[0]}")
+            io.println("it counts frames that reached the screen: {answers[1]}")
+            io.println("and the label says so: {answers[2]}")
+            io.println("at a rate a display could produce: {answers[3]}")
+        }
+        err(problem) => { io.println("{problem.kind}: {problem.msg}") }
+    }
+    io.println("-- a window the window server is not showing --")
+    match unshown() {
+        ok(answers) => {
+            io.println("nothing was drawn into it: {answers[0]}")
+            io.println("so no reading was taken: {answers[1]}")
+        }
+        err(problem) => { io.println("{problem.kind}: {problem.msg}") }
+    }
+}
+
+/// The same screen in a real application whose window is never shown.
+///
+/// A frame drives drawing, and drawing into a surface nobody is being shown
+/// costs a full GPU pass for nothing — six of them here. The display link is
+/// the *display's*, so it fires for a window that is hidden, minimised or
+/// buried, and before the clock was gated on what the window server is
+/// actually showing this drew flat out behind whatever you were working in.
+fn unshown() -> Result<List<bool>> {
+    var app: surface.Application = new surface.Application(platform.AppRole.gui)
+    app.check_abi()?
+    var window: surface.Window = app.window(900.0, 640.0, "Petrichor")?
+    var root: widgets.Container = new widgets.Container()
+    window.set_root(root)?
+    var mount: component.Mount = new component.Mount(root, app.router)
+    mount.set_bounds(geometry.Size.of(900.0, 640.0))
+    var screen: Petrichor = new Petrichor()
+    // No `window.show()`. Everything else is what the shown case does.
+    mount.show(screen)?
+    app.run_for(1.4)?
+    mount.refresh_if_needed()?
+    let quiet: bool = screen.rate == "measuring"
+    let unread: bool = screen.measured < 0.0
+    mount.close()?
+    app.shutdown()
+    var answers: List<bool> = []
+    answers.push(quiet)
+    answers.push(unread)
+    return ok(move answers)
+}
+
+fn take_reading() -> Result<List<bool>> {
+    var app: surface.Application = new surface.Application(platform.AppRole.headless)
+    app.check_abi()?
+    var window: surface.Window = app.window(900.0, 640.0, "Petrichor")?
+    var root: widgets.Container = new widgets.Container()
+    window.set_root(root)?
+    var mount: component.Mount = new component.Mount(root, app.router)
+    mount.set_bounds(geometry.Size.of(900.0, 640.0))
+    var screen: Petrichor = new Petrichor()
+    mount.show(screen)?
+    // Longer than the one-second window the reading is taken over.
+    app.run_for(1.4)?
+    mount.refresh_if_needed()?
+    let took: bool = screen.measured >= 0.0
+    let counted: bool = screen.measured > 0.0
+    let said: bool = screen.rate.contains("fps")
+    // A number rather than a range would be a golden that fails on a busy
+    // machine; nought and ten thousand are the two answers that are bugs.
+    let sane: bool = screen.measured > 0.5 && screen.measured < 400.0
+    mount.close()?
+    app.shutdown()
+    var answers: List<bool> = []
+    answers.push(took)
+    answers.push(counted)
+    answers.push(said)
+    answers.push(sane)
+    return ok(move answers)
+}
+
+fn report_dismiss() {
     io.println("-- the toast does what its buttons say --")
     say("the ✕", "✕")
     say("restore draft", "Restore draft")
