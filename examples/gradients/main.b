@@ -3,8 +3,8 @@
 //     build/cortado-bx build examples/gradients/site
 //     beansc build examples/gradients/main.b -o build/gradients && ./build/gradients
 //
-// The screen is `site/Petrichor.bx`. This file opens a window, tells the screen
-// how big it is, and mounts it.
+// The screen is `site/Petrichor.bx`. This file opens a window and mounts it;
+// the screen lays itself out at whatever size the window turns out to be.
 package main
 
 import cortado_app
@@ -17,23 +17,20 @@ import std.io
 import std.os
 import {Petrichor} from gradients.generated.site
 
-fn open(role: platform.AppRole, dumping: bool) -> Result<bool> {
+fn open(role: platform.AppRole, dumping: bool, wide: f64, tall: f64) -> Result<bool> {
     var app: surface.Application = new surface.Application(role)
     app.check_abi()?
 
-    var window: surface.Window = app.window(900.0, 640.0, "Petrichor")?
+    var window: surface.Window = app.window(wide, tall, "Petrichor")?
     var root: widgets.Container = new widgets.Container()
     window.set_root(root)?
 
     var mount: component.Mount = new component.Mount(root, app.router)
-    let area: geometry.Size = window.content_size()?
-    mount.set_bounds(area)
+    mount.set_bounds(window.content_size()?)
 
-    // The screen places its controls by coordinate, so it has to be told the
-    // size rather than measured into it.
+    // Nothing is passed in. The screen reads `viewport()` for the two things
+    // it decides by size, and the mount tells it that before every render.
     var screen: Petrichor = new Petrichor()
-    screen.wide = area.width
-    screen.tall = area.height
     mount.show(screen)?
 
     if dumping {
@@ -63,10 +60,20 @@ fn main() {
         report_dismiss()
         return
     }
-    let dumping: bool = args.len() > 0 && args[0] == "--dump"
+    // A second dump, at a window too narrow for the chips beside the title.
+    // The layout is the screen's own now, so the only way to check it holds at
+    // another size is to mount it at one.
+    let narrow: bool = args.len() > 0 && args[0] == "--dump-narrow"
+    let dumping: bool = narrow || (args.len() > 0 && args[0] == "--dump")
     var role: platform.AppRole = platform.AppRole.gui
     if dumping { role = platform.AppRole.headless }
-    match open(role, dumping) {
+    var wide: f64 = 900.0
+    var tall: f64 = 640.0
+    if narrow {
+        wide = 520.0
+        tall = 760.0
+    }
+    match open(role, dumping, wide, tall) {
         ok(done) => {}
         err(problem) => { io.println("{problem.kind}: {problem.msg}") }
     }

@@ -47,8 +47,6 @@ fn press(label: string) -> Result<List<bool>> {
     var mount: component.Mount = new component.Mount(root, app.router)
     mount.set_bounds(geometry.Size.of(900.0, 640.0))
     var screen: Petrichor = new Petrichor()
-    screen.wide = 900.0
-    screen.tall = 640.0
     mount.show(screen)?
 
     var found: bool = false

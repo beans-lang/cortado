@@ -1,7 +1,7 @@
-<Box width={self.wide} height={self.tall}>
+<Box>
   <!-- The background, and the only thing here that is drawn rather than
-       placed. A <Box> gives a child its measured size, so a run stretches it. -->
-  <VFlex x={0} y={0} width={self.wide} height={self.tall} align="stretch">
+       placed. Two full-bleed layers in a <Box>: this one, and the screen. -->
+  <VFlex width_percent={100} height_percent={100} align="stretch">
     <MeshGradient grow={1} lobe={2}
                   color_1="#EAF4FC" reach_1={18}
                   color_2="#1E50A2" reach_2={12}
@@ -9,42 +9,68 @@
                   color_4="#895B8A" reach_4={11} />
   </VFlex>
 
-  <Label x={0} y={264} width={self.wide} alignment={1} font_size={64}
-         text_color="#241c22" text="Petrichor" />
-  <Label x={0} y={344} width={self.wide} alignment={1} font_size={12}
-         text_color="#463c46" text={self.caption} />
+  <VFlex width_percent={100} height_percent={100} padding={16} align="stretch">
+    $if !self.dismissed {
+      <HStack justify="end">
+        <!-- Dark, so the buttons read. A button's title colour is not
+             `text_color` — see the note on the class below. -->
+        <HStack spacing={10} padding={8} align="center"
+                background="#1c1a22e8" corner_radius={18}
+                border_width={1} border_color="#ffffff22">
+          <Label font_size={12} text_color="#f2eef4" text="Pick up where you left off?" />
+          <Button text="Restore draft" font_size={12} corner_radius={9}
+                  on:click={fn(e: UiEvent) { self.restore() }} />
+          <Button text="✕" font_size={11} width={26} corner_radius={9}
+                  on:click={fn(e: UiEvent) { self.dismiss() }} />
+        </HStack>
+      </HStack>
+    }
 
-  $if !self.dismissed {
-    <!-- Dark, so the buttons read. A button's title colour is not `text_color`
-         — see the note on the class below. -->
-    <HStack x={266} y={16} spacing={10} padding={8} align="center"
-            background="#1c1a22e8" corner_radius={18}
-            border_width={1} border_color="#ffffff22">
-      <Label font_size={12} text_color="#f2eef4" text="Pick up where you left off?" />
-      <Button text="Restore draft" font_size={12} corner_radius={9}
-              on:click={fn(e: UiEvent) { self.restore() }} />
-      <Button text="✕" font_size={11} width={26} corner_radius={9}
-              on:click={fn(e: UiEvent) { self.dismiss() }} />
-    </HStack>
-  }
+    <HFlex grow={1} spacing={16} align="stretch">
+      <VStack grow={1} justify="center" align="stretch">
+        <Label alignment={1} font_size={self.title_size()}
+               text_color="#241c22" text="Petrichor" />
+        <Label margin_top={10} alignment={1} font_size={12}
+               text_color="#463c46" text={self.caption} />
+      </VStack>
 
-  <Swatch x={640} y={96}  name="MOON WHITE"     hex="#EAF4FC" tint="#EAF4FC" />
-  <Swatch x={640} y={220} name="LAPIS"          hex="#1E50A2" tint="#1E50A2" />
-  <Swatch x={640} y={344} name="PEACH PINK"     hex="#F09199" tint="#F09199" />
-  <Swatch x={640} y={468} name="ANCIENT PURPLE" hex="#895B8A" tint="#895B8A" />
-  <!-- The other five, running at the same time on the same screen. Each needs
-       a run to stretch it, for the reason the background above does. -->
-  <VFlex x={12}  y={510} width={168} height={86} align="stretch"><AuroraGradient grow={1} /></VFlex>
-  <VFlex x={190} y={510} width={168} height={86} align="stretch"><FlowGradient   grow={1} /></VFlex>
-  <VFlex x={368} y={510} width={168} height={86} align="stretch"><PrismGradient  grow={1} /></VFlex>
-  <VFlex x={546} y={510} width={168} height={86} align="stretch"><GlowGradient   grow={1} /></VFlex>
-  <VFlex x={724} y={510} width={168} height={86} align="stretch"><SkyGradient    grow={1} /></VFlex>
+      <!-- The chips are the first thing to go when the window narrows: they
+           are a legend, and the gradient itself is the subject. -->
+      $if self.roomy() {
+        <VStack width={232} spacing={22} justify="center">
+          <Swatch name="MOON WHITE"     hex="#EAF4FC" tint="#EAF4FC" />
+          <Swatch name="LAPIS"          hex="#1E50A2" tint="#1E50A2" />
+          <Swatch name="PEACH PINK"     hex="#F09199" tint="#F09199" />
+          <Swatch name="ANCIENT PURPLE" hex="#895B8A" tint="#895B8A" />
+        </VStack>
+      }
+    </HFlex>
 
-  <Label x={12}  y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="AURORA" />
-  <Label x={190} y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="FLOW" />
-  <Label x={368} y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="PRISM" />
-  <Label x={546} y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="GLOW" />
-  <Label x={724} y={601} width={168} alignment={1} font_size={10} text_color="#2b2430" text="SKY" />
+    <!-- The other five, running at the same time on the same screen. Each is
+         sized by the tag that places it, and the shelf reflows when it must. -->
+    <HWrap spacing={10} line_spacing={10} justify="center" margin_top={12}>
+      <VStack spacing={4} align="stretch">
+        <AuroraGradient width={160} aspect_ratio={1.95} />
+        <Label alignment={1} font_size={10} text_color="#2b2430" text="AURORA" />
+      </VStack>
+      <VStack spacing={4} align="stretch">
+        <FlowGradient width={160} aspect_ratio={1.95} />
+        <Label alignment={1} font_size={10} text_color="#2b2430" text="FLOW" />
+      </VStack>
+      <VStack spacing={4} align="stretch">
+        <PrismGradient width={160} aspect_ratio={1.95} />
+        <Label alignment={1} font_size={10} text_color="#2b2430" text="PRISM" />
+      </VStack>
+      <VStack spacing={4} align="stretch">
+        <GlowGradient width={160} aspect_ratio={1.95} />
+        <Label alignment={1} font_size={10} text_color="#2b2430" text="GLOW" />
+      </VStack>
+      <VStack spacing={4} align="stretch">
+        <SkyGradient width={160} aspect_ratio={1.95} />
+        <Label alignment={1} font_size={10} text_color="#2b2430" text="SKY" />
+      </VStack>
+    </HWrap>
+  </VFlex>
 </Box>
 <beans>
 package site
@@ -62,26 +88,41 @@ import {view} from cortado.annotations
 /// `<MeshGradient>` behind everything and the five on the shelf below it. Not
 /// one of them carries a line of shader: they are named attributes.
 ///
-/// Everything over it is an ordinary native control placed by `<Box>`. The
-/// title is an NSTextField, the chips are stacks, the toast tabs like a button.
+/// Everything over it is an ordinary native control placed by a run. The title
+/// is an NSTextField, the chips are stacks, the toast tabs like a button.
 ///
-/// That split is the point. A web page draws the whole screen and then
-/// reimplements focus; this draws only the part that has to be drawn.
+/// **Nothing here is a coordinate.** The screen is two full-bleed layers in a
+/// `<Box>`, and every size below them is a share of the room, a shape, or what
+/// a run hands out — so the same file is the phone layout and the desk one.
 ///
 /// **No Beans code runs per frame.** The gradient redraws off the frame clock;
 /// the controls over it are laid out once, because nothing about them changed.
 @view
 pub partial class Petrichor extends component.Component {
-    /// The screen's own size. Set by `main.b` from the window, because a
-    /// window is whatever was asked for and a phone's is the screen.
-    pub wide: f64 = 900.0
-    pub tall: f64 = 640.0
-
     pub dismissed: bool = false
     pub caption: string = "four colours, blended by distance, drifting"
 
-
     pub fn init() { super.init() }
+
+    /// This render reads `viewport()`, so a resize is a reason to run it again.
+    pub override fn follows_viewport() -> bool { return true }
+
+    /// Whether there is room beside the title for the colour chips.
+    ///
+    /// 232 points of chip, 16 of gap and a title that stops reading as a title
+    /// under about 380 — the breakpoint is that sum rather than a round number.
+    pub fn roomy() -> bool {
+        return self.viewport().width >= 660.0
+    }
+
+    /// The title, as large as the window can carry: a tenth of the width,
+    /// held between what is legible and what the design was drawn at.
+    pub fn title_size() -> f64 {
+        var size: f64 = self.viewport().width / 10.0
+        if size > 64.0 { size = 64.0 }
+        if size < 28.0 { size = 28.0 }
+        return size
+    }
 
     // Both of these end in `request_render`, and that is not a formality.
     // The mount asks rather than being told, so a handler that changes a field

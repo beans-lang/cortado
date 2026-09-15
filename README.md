@@ -1043,8 +1043,14 @@ one that does.
 
 `examples/gradients` is the screen: a `<MeshGradient>` behind everything and
 the other five on a shelf along the bottom, with a title, a toast and four
-colour chips placed over them as ordinary native controls. Six shaders on one
-screen, and not a line of shader in the file.
+colour chips over them as ordinary native controls. Six shaders on one screen,
+and not a line of shader in the file — **and not a coordinate either.** It is
+two full-bleed layers in a `<Box>`, sized with `width_percent`; the shelf is an
+`<HWrap>` that reflows, each tile sized by the tag that places it
+(`<AuroraGradient width={160} aspect_ratio={1.95} />`), and the chips beside
+the title are dropped under a `viewport()` breakpoint. `--dump` and
+`--dump-narrow` record it at two window sizes, because one golden proves a
+layout and two prove it is responsive.
 
 ### Dressing a control
 

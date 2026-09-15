@@ -1019,11 +1019,17 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         "$tmp/gallery.bin" --dump >"$tmp/gallery.out" 2>&1
         diff -u "$root/tests/gallery.out" "$tmp/gallery.out"
         pass
-        # A screen laid out by coordinate rather than by a run, with a shader
-        # under it. The tree is the assertion: where a <Box> put each control.
+        # A screen that lays itself out, with a shader under it. The tree is
+        # the assertion: what each run and each share of the room came to.
         "$BEANSC" build "$root/examples/gradients/main.b" -o "$tmp/gradients.bin" >/dev/null
         "$tmp/gradients.bin" --dump >"$tmp/gradients.out" 2>&1
         diff -u "$root/tests/gradients.out" "$tmp/gradients.out"
+        pass
+        # And the same screen at a window too narrow for the chips beside the
+        # title. One golden proves a layout; two prove it is responsive — the
+        # chips are gone, the title is smaller and the shelf has wrapped.
+        "$tmp/gradients.bin" --dump-narrow >"$tmp/gradients_narrow.out" 2>&1
+        diff -u "$root/tests/gradients_narrow.out" "$tmp/gradients_narrow.out"
         pass
         # And what the dump cannot see. The toast is in the tree whether or not
         # its buttons work, and for a while they did not: the handlers set the
