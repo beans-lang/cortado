@@ -14,6 +14,25 @@ First working macOS host.
   the step before it, from the attribute to the solved frame, against a table
   on every host. `README.md` also claimed `<Label spacing={4} />` was fine; it
   is refused, and the sentence now says so.
+- **The macOS clock rides the window's own screen.** `-[NSView
+  displayLinkWithTarget:selector:]` (macOS 14) where the app has a window on a
+  screen, `CVDisplayLink` everywhere else. Three things follow. The rate now
+  follows the screen the window is *on*, rather than a link bound to all active
+  displays that was never re-bound when the window moved. The link carries a
+  `preferredFrameRateRange`, which is the only way to ask a ProMotion display
+  for 120 rather than accept the adaptive rate it chooses — cortado asks for
+  the screen's own `maximumFramesPerSecond`. And the callback is a run-loop
+  source on the main thread, so the per-frame hop to the main queue is gone:
+  the gradients example holds the same 60 fps at 8% of a core instead of 14%,
+  and 0.0% while hidden.
+  **Headless keeps CVDisplayLink, and that is the whole reason this was not
+  done sooner.** An `NSWindow` that was never ordered front still answers a
+  `screen`, so a view link is created and then never fires — `tests/frames.b`
+  went from five frames to none on the first attempt. The choice is made on
+  the app's role, the same discriminator the visibility gate uses.
+  **A range the system may pick inside is a range it will pick inside.**
+  Asking for 60 with a floor of 30 measured a steady 42 on a 60 Hz panel, so
+  the floor is the wanted rate unless a program says otherwise.
 - **A clock does not tick for a surface nobody is being shown.** A frame
   drives drawing, and drawing into a window the window server is not showing
   is a GPU pass nobody sees. `CVDisplayLink` is the display's, not the

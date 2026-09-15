@@ -12,16 +12,27 @@
 
 #import "internal.h"
 #include <CoreVideo/CoreVideo.h>
+#import <QuartzCore/QuartzCore.h>
 #include <time.h>
 
-// CVDisplayLink is deprecated from macOS 15 in favour of
-// -[NSWindow displayLinkWithTarget:selector:], and this host keeps calling it
-// for one concrete reason: a window that has never been shown is on no screen,
-// and a display link bound to a window's screen has no display to follow.
-// cortado's whole gate is headless — every case builds a window and never
-// orders it front — so the replacement would tick on a desk and go silent on a
-// build machine, which is the worst way round for a test to fail. The warning
-// is turned off here, in the one file that calls it, and nowhere else.
+// **Two links, and which one runs is decided per surface.**
+//
+// `-[NSView displayLinkWithTarget:selector:]` (macOS 14) is the one to want: it
+// follows the screen its view is actually on, so a window dragged to a second
+// display changes rate with it, and it takes a `preferredFrameRateRange` — the
+// only way to *ask* a ProMotion display for 120 rather than accept whatever
+// adaptive rate the system settles on.
+//
+// It cannot be the only one. A view that is on no screen has no display to
+// follow and its link never fires, and cortado's whole gate is headless: every
+// case builds a window and never orders it front. A wholesale swap would tick
+// on a desk and go silent on a build machine, which is the worst way round for
+// a test to fail.
+//
+// So a surface with a screen gets the view link and the frame rate it asked
+// for, and a surface with none keeps CVDisplayLink, which is bound to the
+// active displays rather than to a window. `ctd_clock_start` picks, every
+// start, because a window gains a screen when it is first shown.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -30,7 +41,8 @@
 // there is no second table to keep in step with the first — the Win32 host
 // keeps a progress bar's range the same way.
 typedef struct {
-    CVDisplayLinkRef link;   // made on the first start, kept until the slot goes
+    CVDisplayLinkRef link;   // the fallback, for a surface on no screen
+    void    *view_link;      // CADisplayLink, retained while it exists
     int64_t  token;
     int64_t  frames;         // delivered to the sink since the last start
     double   started;        // the monotonic reading when it last started
@@ -40,6 +52,23 @@ typedef struct {
 } CtdClock;
 
 static CtdClock g_clock[CTD_SLOTS];
+
+// The rate a surface asks its display for: 0 means "whatever the screen runs
+// at", which is what every clock starts out wanting.
+typedef struct {
+    double lowest;
+    double highest;
+    double wanted;
+} CtdRate;
+
+static CtdRate g_rate[CTD_SLOTS];
+
+// The target for the view link's callback. One per surface, retained by the
+// link, so the selector has a surface to name without a global.
+@interface CortadoBeat : NSObject
+@property (assign) ctd_handle surface;
+- (void)beat:(id)link;
+@end
 
 // Seconds from an arbitrary origin that only ever goes forward. Not the wall
 // clock: the time a frame arrives must not move because somebody changed the
@@ -113,6 +142,81 @@ static int ctd_clock_showing(ctd_handle surface) {
     return ([window occlusionState] & NSWindowOcclusionStateVisible) ? 1 : 0;
 }
 
+// The frame rate a surface's screen can actually produce, or 60 where the
+// platform will not say — every Mac panel does at least that.
+static double ctd_clock_top(ctd_handle surface) {
+    id object = ctd_resolve(surface);
+    if (![object isKindOfClass:[NSWindow class]]) return 60.0;
+    NSScreen *screen = [(NSWindow *)object screen];
+    if (!screen) screen = [NSScreen mainScreen];
+    if (!screen) return 60.0;
+    NSInteger top = [screen maximumFramesPerSecond];
+    return top > 0 ? (double)top : 60.0;
+}
+
+@implementation CortadoBeat
+// On the main thread already: a view link is a run-loop source, so unlike
+// CVDisplayLink there is no hop and no window in which the surface can go.
+- (void)beat:(id)link {
+    (void)link;
+    ctd_handle surface = self.surface;
+    if (!ctd_clock_showing(surface)) return;
+    ctd_clock_deliver(surface, g_clock[(uint32_t)(surface & 0xffffffffu)].epoch,
+                      ctd_monotonic());
+}
+@end
+
+// Starts the view link for a surface that is on a screen, or answers 0 when
+// there is none to bind to and the CVDisplayLink fallback has to serve.
+static int ctd_clock_start_view(ctd_handle surface) {
+    if (@available(macOS 14.0, *)) {
+        // Headless keeps the older link, and the reason is not tidiness: an
+        // NSWindow that was never ordered front still answers a `screen`, so
+        // the view link is created and then never fires. tests/frames.b went
+        // from five frames to none, which is this rule being discovered.
+        if (g_role == CTD_ROLE_HEADLESS) return 0;
+        id object = ctd_resolve(surface);
+        if (![object isKindOfClass:[NSWindow class]]) return 0;
+        NSWindow *window = (NSWindow *)object;
+        NSView *view = [window contentView];
+        if (!view) return 0;
+
+        uint32_t slot = (uint32_t)(surface & 0xffffffffu);
+        CtdClock *clock = &g_clock[slot];
+        if (!clock->view_link) {
+            CortadoBeat *beat = [[CortadoBeat alloc] init];
+            beat.surface = surface;
+            CADisplayLink *link = [view displayLinkWithTarget:beat
+                                                     selector:@selector(beat:)];
+            if (!link) return 0;
+            [link addToRunLoop:[NSRunLoop currentRunLoop]
+                       forMode:NSRunLoopCommonModes];
+            clock->view_link = (void *)CFBridgingRetain(link);
+        }
+        CADisplayLink *link = (__bridge CADisplayLink *)clock->view_link;
+        // What this surface asked for, or the screen's own maximum. A range
+        // rather than one number is what the system wants: it may drop below
+        // the preferred rate under load, and saying so beats being dropped to
+        // a rate the program never considered.
+        double top = ctd_clock_top(surface);
+        double wanted = g_rate[slot].wanted > 0.0 ? g_rate[slot].wanted : top;
+        double highest = g_rate[slot].highest > 0.0 ? g_rate[slot].highest : top;
+        // The floor is the wanted rate unless the program said otherwise, and
+        // that is not a detail: a range the system is allowed to pick inside
+        // is a range it *will* pick inside. Asking for 60 with a floor of 30
+        // measured 42 on a 60 Hz panel, steady, for no reason the program
+        // could see. A constant animation asks for one rate.
+        double lowest = g_rate[slot].lowest > 0.0 ? g_rate[slot].lowest : wanted;
+        if (wanted > highest) wanted = highest;
+        if (lowest > wanted) lowest = wanted;
+        link.preferredFrameRateRange =
+            CAFrameRateRangeMake((float)lowest, (float)highest, (float)wanted);
+        link.paused = NO;
+        return 1;
+    }
+    return 0;
+}
+
 // The display link's callback, on the display link's own thread.
 //
 // It does as little as it is possible to do. Nothing here touches the handle
@@ -141,6 +245,19 @@ ctd_status ctd_clock_start(ctd_handle surface, int64_t token) {
     if (problem != CTD_OK) return problem;
     if (clock->running) return CTD_ERR_STATE;
 
+    // Written before either link is started: a view link is a run-loop source
+    // and can fire before this function has returned.
+    clock->token = token;
+    clock->frames = 0;
+    clock->last = 0.0;
+    clock->started = ctd_monotonic();
+    clock->epoch += 1;
+    clock->running = 1;
+
+    // The screen's own link where there is a screen, with the rate this
+    // surface asked for. Everything below is the fallback.
+    if (ctd_clock_start_view(surface)) return CTD_OK;
+
     if (!clock->link) {
         // The active displays rather than the one this window is on: a window
         // that has never been shown is on no display at all, and a clock that
@@ -157,20 +274,15 @@ ctd_status ctd_clock_start(ctd_handle surface, int64_t token) {
         // machine's state.
         uint32_t awake = 0;
         CGGetActiveDisplayList(0, NULL, &awake);
-        if (awake == 0) return CTD_ERR_STATE;
+        if (awake == 0) { clock->running = 0; return CTD_ERR_STATE; }
         if (CVDisplayLinkCreateWithActiveCGDisplays(&clock->link) != kCVReturnSuccess ||
             !clock->link) {
+            clock->running = 0;
             return CTD_ERR_PLATFORM;
         }
         CVDisplayLinkSetOutputCallback(clock->link, ctd_clock_ticked,
                                        (void *)(uintptr_t)surface);
     }
-    clock->token = token;
-    clock->frames = 0;
-    clock->last = 0.0;
-    clock->started = ctd_monotonic();
-    clock->epoch += 1;
-    clock->running = 1;
     if (CVDisplayLinkStart(clock->link) != kCVReturnSuccess) {
         clock->running = 0;
         return CTD_ERR_PLATFORM;
@@ -188,6 +300,11 @@ ctd_status ctd_clock_stop(ctd_handle surface) {
     // main queue. Bumping the epoch is what makes those refuse to deliver
     // instead of arriving after the program asked for silence.
     clock->epoch += 1;
+    if (clock->view_link) {
+        if (@available(macOS 14.0, *)) {
+            ((__bridge CADisplayLink *)clock->view_link).paused = YES;
+        }
+    }
     if (clock->link) CVDisplayLinkStop(clock->link);
     return CTD_OK;
 }
@@ -219,6 +336,16 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds) {
 
 void ctd_clock_forget(uint32_t slot) {
     CtdClock *clock = &g_clock[slot];
+    if (clock->view_link) {
+        // Invalidate takes it off the run loop, which is what makes the
+        // retained target go too.
+        if (@available(macOS 14.0, *)) {
+            CADisplayLink *link = (CADisplayLink *)CFBridgingRelease(clock->view_link);
+            [link invalidate];
+        }
+        clock->view_link = NULL;
+    }
+    memset(&g_rate[slot], 0, sizeof g_rate[slot]);
     if (clock->link) {
         // Stop before release: CVDisplayLinkStop does not return while its
         // callback is running, so after it the link's thread is out of here.
