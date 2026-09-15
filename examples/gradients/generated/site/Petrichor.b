@@ -98,6 +98,15 @@ pub partial class Petrichor extends component.Component {
                 let span: f64 = frame.elapsed - self.marked
                 if span < 1.0 { return }
                 let now: int = gradient.frames()
+                // Frames stop while the window is not being shown and the
+                // seconds do not, so the window either side of that gap holds
+                // no drawing and a rate taken over it would be a true sum and
+                // a false answer to what is this achieving now. Re-base.
+                if span > 2.0 {
+                    self.counted = now
+                    self.marked = frame.elapsed
+                    return
+                }
                 let drawn: f64 = (now - self.counted) as f64
                 self.counted = now
                 self.marked = frame.elapsed
