@@ -9,6 +9,14 @@ while running: running=true frames=3 elapsed=0.75
 beans counted 3, the host counted 3
 a step of no time at all refused: out_of_range
 a step backwards refused: out_of_range
+-- the rate a surface asks its display for --
+asking for the screen's maximum: allowed
+asking for one rate, held: allowed
+a rate below zero refused: out_of_range
+a floor above the ceiling refused: out_of_range
+crossed ends and no wish refused: out_of_range
+a wish above the ceiling refused: out_of_range
+a wish below the floor refused: out_of_range
 after stop: running=false frames=3
 a step after the clock stopped refused: wrong_moment
 handlers left registered: 0

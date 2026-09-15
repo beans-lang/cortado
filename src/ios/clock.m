@@ -32,6 +32,36 @@ typedef struct {
 
 static CtdClock g_clock[CTD_SLOTS];
 
+// The rate a surface asks its screen for; 0 means the screen's maximum. The
+// same three numbers the macOS host keeps, for the same CADisplayLink.
+typedef struct {
+    double lowest;
+    double highest;
+    double wanted;
+} CtdRate;
+
+static CtdRate g_rate[CTD_SLOTS];
+
+// The screen's top rate, or 60 where the platform will not say. A phone with
+// ProMotion answers 120 here and a range is the only way to ask for it.
+static double ctd_clock_top(void) {
+    NSInteger top = [UIScreen mainScreen].maximumFramesPerSecond;
+    return top > 0 ? (double)top : 60.0;
+}
+
+// Puts this surface's wish on its link.
+static void ctd_clock_apply_rate(ctd_handle surface) {
+    uint32_t slot = (uint32_t)(surface & 0xffffffffu);
+    CADisplayLink *link = (CADisplayLink *)g_clock[slot].link;
+    if (!link) return;
+    double top = ctd_clock_top();
+    double aim = g_rate[slot].wanted > 0.0 ? g_rate[slot].wanted : top;
+    double most = g_rate[slot].highest > 0.0 ? g_rate[slot].highest : top;
+    double least = g_rate[slot].lowest > 0.0 ? g_rate[slot].lowest : aim;
+    link.preferredFrameRateRange =
+        CAFrameRateRangeMake((float)least, (float)most, (float)aim);
+}
+
 // Seconds from an arbitrary origin that only ever goes forward. Not the wall
 // clock: a frame's time must not move because the phone corrected its date.
 static double ctd_monotonic(void) {
@@ -121,6 +151,7 @@ ctd_status ctd_clock_start(ctd_handle surface, int64_t token) {
     clock->started = ctd_monotonic();
     clock->epoch += 1;
     clock->running = 1;
+    ctd_clock_apply_rate(surface);
     [(CADisplayLink *)clock->link setPaused:NO];
     return CTD_OK;
 }
@@ -133,6 +164,24 @@ ctd_status ctd_clock_stop(ctd_handle surface) {
     clock->running = 0;
     clock->epoch += 1;
     if (clock->link) [(CADisplayLink *)clock->link setPaused:YES];
+    return CTD_OK;
+}
+
+ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
+                            double highest, double wanted) {
+    CtdClock *clock = NULL;
+    ctd_status problem = ctd_clock_surface(surface, &clock);
+    if (problem != CTD_OK) return problem;
+    if (lowest < 0.0 || highest < 0.0 || wanted < 0.0) return CTD_ERR_RANGE;
+    if (highest > 0.0 && lowest > highest) return CTD_ERR_RANGE;
+    if (wanted > 0.0 && highest > 0.0 && wanted > highest) return CTD_ERR_RANGE;
+    if (wanted > 0.0 && lowest > 0.0 && wanted < lowest) return CTD_ERR_RANGE;
+
+    uint32_t slot = (uint32_t)(surface & 0xffffffffu);
+    g_rate[slot].lowest = lowest;
+    g_rate[slot].highest = highest;
+    g_rate[slot].wanted = wanted;
+    if (clock->link) ctd_clock_apply_rate(surface);
     return CTD_OK;
 }
 

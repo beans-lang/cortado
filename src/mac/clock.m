@@ -309,6 +309,36 @@ ctd_status ctd_clock_stop(ctd_handle surface) {
     return CTD_OK;
 }
 
+ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
+                            double highest, double wanted) {
+    CtdClock *clock = NULL;
+    ctd_status problem = ctd_clock_surface(surface, &clock);
+    if (problem != CTD_OK) return problem;
+    if (lowest < 0.0 || highest < 0.0 || wanted < 0.0) return CTD_ERR_RANGE;
+    if (highest > 0.0 && lowest > highest) return CTD_ERR_RANGE;
+    if (wanted > 0.0 && highest > 0.0 && wanted > highest) return CTD_ERR_RANGE;
+    if (wanted > 0.0 && lowest > 0.0 && wanted < lowest) return CTD_ERR_RANGE;
+
+    uint32_t slot = (uint32_t)(surface & 0xffffffffu);
+    g_rate[slot].lowest = lowest;
+    g_rate[slot].highest = highest;
+    g_rate[slot].wanted = wanted;
+    // A link that is already running takes it now; one that is not will read
+    // this when it starts. CVDisplayLink has no rate to set, so a surface on
+    // the fallback stores the wish and honours it if it ever gets a view link.
+    if (clock->view_link) {
+        if (@available(macOS 14.0, *)) {
+            double top = ctd_clock_top(surface);
+            double aim = wanted > 0.0 ? wanted : top;
+            double most = highest > 0.0 ? highest : top;
+            double least = lowest > 0.0 ? lowest : aim;
+            ((__bridge CADisplayLink *)clock->view_link).preferredFrameRateRange =
+                CAFrameRateRangeMake((float)least, (float)most, (float)aim);
+        }
+    }
+    return CTD_OK;
+}
+
 ctd_status ctd_clock_state(ctd_handle surface, double *out) {
     CtdClock *clock = NULL;
     ctd_status problem = ctd_clock_surface(surface, &clock);

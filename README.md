@@ -1081,6 +1081,40 @@ and is what the frame *count* would suggest.
 being shown, and its frames are the program's to drive. `tests/frames.b` is
 built on exactly that and fails if the exemption goes.
 
+### Asking a display for a frame rate
+
+On macOS 14 and later a surface with a window on a screen rides
+`-[NSView displayLinkWithTarget:selector:]` rather than `CVDisplayLink`. The
+rate then follows the screen the window is actually *on* — the old link was
+bound to the active displays and never re-bound when a window moved — and the
+link carries a `preferredFrameRateRange`, which is the only way to ask a
+variable-rate display for 120 rather than accept whatever it settles on.
+
+```beans
+clock.prefer(0.0, 0.0, 0.0)        // as fast as this display goes
+clock.prefer(60.0, 60.0, 60.0)     // sixty, held
+```
+
+A clock asks for the screen's own `maximumFramesPerSecond` until it is told
+otherwise, so a cortado program is already asking for 120 on a display that
+has it. Measured on a 60 Hz panel: 60.0 by default, and 30.0 after asking for
+thirty.
+
+**A range is permission, not a hint.** Asking for 60 with a floor of 30 was
+measured holding a steady 42 — the system took the room it was given. Pass one
+number three times for a constant rate, which is what an animation that
+integrates its own time wants.
+
+**Headless keeps `CVDisplayLink`, and that is load-bearing.** An `NSWindow`
+that was never ordered front still answers a `screen`, so a view link is made
+and then never fires; `tests/frames.b` went from five frames to none on the
+first attempt at this. Which link a surface gets is decided on the app's role,
+the same discriminator the visibility gate uses.
+
+GTK4 refuses `prefer` as `unsupported` — a `GdkFrameClock` is the display's
+and takes no instruction — and Win32, whose clock is a timer, turns the wanted
+rate into the timer's period.
+
 ### Dressing a control
 
 A control can be given a background, rounded corners and a border without

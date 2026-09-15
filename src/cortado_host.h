@@ -264,6 +264,27 @@ ctd_status ctd_clock_state(ctd_handle surface, double *out);
  * would run the clock backwards. */
 ctd_status ctd_clock_step(ctd_handle surface, double seconds);
 
+/* The frame rate this surface would like, in frames a second.
+ *
+ * Three numbers rather than one, because that is what a variable-rate display
+ * takes: `wanted` is the rate to aim for, `lowest` and `highest` the range the
+ * system may move inside when it cannot hold it or when there is room to
+ * spare. Zero for any of them means "the screen's own maximum", which is what
+ * a clock asks for until it is told otherwise.
+ *
+ * **A range is not a hint, it is permission.** A clock asking for 60 with a
+ * floor of 30 was measured holding a steady 42 on a 60 Hz panel: the system
+ * took the room it was given. Pass the same number three times for a constant
+ * rate, which is what an animation that integrates its own time wants.
+ *
+ * Answers CTD_ERR_UNSUPPORTED where the platform's clock has no rate control
+ * of its own — GTK4's frame clock is the display's and takes no instruction —
+ * and CTD_ERR_RANGE for a negative rate or a range whose ends are crossed.
+ * Takes effect on the next start where a host can only set the rate when the
+ * link is made. */
+ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
+                            double highest, double wanted);
+
 /* ---- widgets ----------------------------------------------------------- */
 
 #define CTD_W_CONTAINER     0

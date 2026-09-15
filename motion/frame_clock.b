@@ -67,6 +67,29 @@ pub class FrameClock {
         return ok(true)
     }
 
+    /// The rate this surface asks its display for, in frames a second.
+    ///
+    /// `wanted` is the rate to aim for; `lowest` and `highest` bound where the
+    /// system may move when it cannot hold it or has room to spare. Zero for
+    /// any of them means the screen's own maximum, which is what a clock asks
+    /// for until it is told otherwise — so `prefer(0.0, 0.0, 0.0)` is "as fast
+    /// as this display goes" and `prefer(60.0, 60.0, 60.0)` is "sixty, held".
+    ///
+    /// **A range is permission, not a hint.** Asking for 60 with a floor of 30
+    /// was measured holding a steady 42 on a 60 Hz panel: the system took the
+    /// room it was given. Pass one number three times for a constant rate.
+    ///
+    /// Refused as `unsupported` on GTK4, whose frame clock is the display's
+    /// and takes no instruction, and as `range` for a negative rate or a range
+    /// whose ends are crossed.
+    pub fn prefer(lowest: f64, highest: f64, wanted: f64) -> Result<bool> {
+        unsafe {
+            return host.check(host.ctd_clock_prefer(self.surface.raw, lowest,
+                                                    highest, wanted) as int,
+                              "ask a display for a frame rate")
+        }
+    }
+
     /// What the host says: running or not, how many frames it has delivered,
     /// and where the clock has got to.
     pub fn state() -> Result<ClockState> {

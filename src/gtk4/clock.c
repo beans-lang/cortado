@@ -121,6 +121,22 @@ ctd_status ctd_clock_stop(ctd_handle surface) {
     return CTD_OK;
 }
 
+ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
+                            double highest, double wanted) {
+    CtdClock *clock = NULL;
+    ctd_status problem = ctd_clock_surface(surface, &clock);
+    if (problem != CTD_OK) return problem;
+    if (lowest < 0.0 || highest < 0.0 || wanted < 0.0) return CTD_ERR_RANGE;
+    if (highest > 0.0 && lowest > highest) return CTD_ERR_RANGE;
+    if (wanted > 0.0 && highest > 0.0 && wanted > highest) return CTD_ERR_RANGE;
+    if (wanted > 0.0 && lowest > 0.0 && wanted < lowest) return CTD_ERR_RANGE;
+    // A GdkFrameClock is the display's and takes no instruction: there is no
+    // call to ask it for a rate, and a tick callback gets what the compositor
+    // is giving. Refused rather than accepted and dropped, which is the rule
+    // this host keeps everywhere — "this platform cannot" is not "yes".
+    return CTD_ERR_UNSUPPORTED;
+}
+
 ctd_status ctd_clock_state(ctd_handle surface, double *out) {
     CtdClock *clock = NULL;
     ctd_status problem = ctd_clock_surface(surface, &clock);

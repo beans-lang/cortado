@@ -30,6 +30,26 @@ typedef struct {
 
 static CtdClock g_clock[CTD_SLOTS];
 
+// The rate a surface asks for; 0 means this host's default period.
+typedef struct {
+    double lowest;
+    double highest;
+    double wanted;
+} CtdRate;
+
+static CtdRate g_rate[CTD_SLOTS];
+
+// The timer period for a surface's wish, in milliseconds. A timer cannot beat
+// faster than about a millisecond, and a period of zero would spin.
+static UINT ctd_clock_period(uint32_t slot) {
+    double wanted = g_rate[slot].wanted;
+    if (wanted <= 0.0) return CTD_CLOCK_PERIOD;
+    double period = 1000.0 / wanted;
+    if (period < 1.0) period = 1.0;
+    if (period > 1000.0) period = 1000.0;
+    return (UINT)(period + 0.5);
+}
+
 // CTD_CLOCK_PERIOD is sixteen milliseconds, about sixty frames a second.
 // USER_TIMER_MINIMUM is ten and a WM_TIMER is not accurate to either, so
 // sixteen is the honest name for what a message-queue timer can do.
@@ -117,7 +137,7 @@ ctd_status ctd_clock_start(ctd_handle surface, int64_t token) {
     clock->started = ctd_monotonic();
     clock->epoch += 1;
     clock->running = 1;
-    if (!SetTimer(window, CTD_CLOCK_TIMER, CTD_CLOCK_PERIOD, NULL)) {
+    if (!SetTimer(window, CTD_CLOCK_TIMER, ctd_clock_period((uint32_t)(surface & 0xffffffffu)), NULL)) {
         clock->running = 0;
         return CTD_ERR_PLATFORM;
     }
@@ -136,6 +156,32 @@ ctd_status ctd_clock_stop(ctd_handle surface) {
     // asked for silence.
     clock->epoch += 1;
     KillTimer(window, CTD_CLOCK_TIMER);
+    return CTD_OK;
+}
+
+ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
+                            double highest, double wanted) {
+    CtdClock *clock = NULL;
+    HWND window = NULL;
+    ctd_status problem = ctd_clock_surface(surface, &clock, &window);
+    if (problem != CTD_OK) return problem;
+    if (lowest < 0.0 || highest < 0.0 || wanted < 0.0) return CTD_ERR_RANGE;
+    if (highest > 0.0 && lowest > highest) return CTD_ERR_RANGE;
+    if (wanted > 0.0 && highest > 0.0 && wanted > highest) return CTD_ERR_RANGE;
+    if (wanted > 0.0 && lowest > 0.0 && wanted < lowest) return CTD_ERR_RANGE;
+
+    uint32_t slot = (uint32_t)(surface & 0xffffffffu);
+    // This host's clock is a timer, so there is no range to hand anyone: the
+    // period is one number and the rate asked for is what it becomes. The
+    // floor and the ceiling are kept so a later host that can use them reads
+    // the same wish, and so the refusals above mean the same thing here.
+    g_rate[slot].lowest = lowest;
+    g_rate[slot].highest = highest;
+    g_rate[slot].wanted = wanted;
+    if (clock->running && window) {
+        UINT period = ctd_clock_period(slot);
+        if (!SetTimer(window, CTD_CLOCK_TIMER, period, NULL)) return CTD_ERR_PLATFORM;
+    }
     return CTD_OK;
 }
 

@@ -77,6 +77,25 @@ fn drive() -> Result<bool> {
     io.println(refusal("a step of no time at all", clock.step(0.0)))
     io.println(refusal("a step backwards", clock.step(-0.25)))
 
+    io.println("-- the rate a surface asks its display for --")
+    // Zero is "the screen's own maximum", which is what a clock asks for
+    // until it is told otherwise, so it is a real request and not a no-op.
+    match clock.prefer(0.0, 0.0, 0.0) {
+        ok(done) => { io.println("asking for the screen's maximum: allowed") }
+        err(problem) => { io.println("asking for the screen's maximum refused: {problem.kind}") }
+    }
+    match clock.prefer(60.0, 60.0, 60.0) {
+        ok(done) => { io.println("asking for one rate, held: allowed") }
+        err(problem) => { io.println("asking for one rate refused: {problem.kind}") }
+    }
+    io.println(refusal("a rate below zero", clock.prefer(0.0, 0.0, 0.0 - 1.0)))
+    io.println(refusal("a floor above the ceiling", clock.prefer(120.0, 60.0, 60.0)))
+    // With no rate wished for, the crossed ends are the only thing wrong —
+    // which is what makes this case the one that tests that rule alone.
+    io.println(refusal("crossed ends and no wish", clock.prefer(120.0, 60.0, 0.0)))
+    io.println(refusal("a wish above the ceiling", clock.prefer(0.0, 60.0, 120.0)))
+    io.println(refusal("a wish below the floor", clock.prefer(60.0, 0.0, 30.0)))
+
     clock.stop()?
     let stopped: motion.ClockState = clock.state()?
     io.println("after stop: {stopped.show()}")

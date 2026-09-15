@@ -33,6 +33,14 @@ First working macOS host.
   **A range the system may pick inside is a range it will pick inside.**
   Asking for 60 with a floor of 30 measured a steady 42 on a 60 Hz panel, so
   the floor is the wanted rate unless a program says otherwise.
+- **`ctd_clock_prefer`** (ABI 185) — the frame rate a surface asks its display
+  for, as a range: `wanted` to aim for, `lowest` and `highest` to move between.
+  Zero means the screen's own maximum, which is what every clock asks for until
+  it is told otherwise. `motion.FrameClock.prefer` is the Beans side. macOS and
+  iOS hand it to `CADisplayLink.preferredFrameRateRange`; Win32 turns the
+  wanted rate into its timer period; GTK4 refuses it as `unsupported`, because
+  a `GdkFrameClock` is the display's and takes no instruction. Measured on a
+  60 Hz panel: 60.0 by default, 30.0 after asking for thirty.
 - **A clock does not tick for a surface nobody is being shown.** A frame
   drives drawing, and drawing into a window the window server is not showing
   is a GPU pass nobody sees. `CVDisplayLink` is the display's, not the
