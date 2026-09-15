@@ -10,6 +10,7 @@ package main
 
 import cortado.component
 import cortado.layout
+import cortado.geometry
 import std.io
 
 /// One element with a coordinate on it, inside `parent`.
@@ -51,7 +52,32 @@ fn embedded_in(parent: string, name: string, value: f64) -> Result<component.Ele
 fn corner_of(box: component.Element, index: int) -> string {
     if index >= box.count() { return "missing" }
     let spec: layout.LayoutSpec = box.child_at(index).spec
-    return "{spec.x as int},{spec.y as int}"
+    return "{spec.left as int},{spec.top as int}"
+}
+
+/// Reports a refusal by a clue in its message.
+fn refuse_with(what: string, outcome: Result<component.Element>, clue: string) {
+    match outcome {
+        ok(tree) => { io.println("  {what} was allowed, and should not have been") }
+        err(problem) => {
+            io.println("  {what} is refused: {problem.kind == "bad_render"}")
+            io.println("  and the message says why: {problem.msg.contains(clue)}")
+        }
+    }
+}
+
+/// A box with one label carrying several numbers.
+fn boxed(names: List<string>, values: List<f64>) -> Result<component.Element> {
+    var into: component.Builder = new component.Builder()
+    into.open("Box")
+    into.open("Label")
+    into.text("layer")
+    for index: int in 0..names.len() {
+        into.number(names[index], values[index])
+    }
+    into.close()
+    into.close()
+    return into.finish()
 }
 
 /// Reports a render that had to be refused, by what its message says.
@@ -115,7 +141,7 @@ fn drive() -> Result<bool> {
 
     io.println("-- a coordinate where nothing reads one --")
     refuse("x in a <VStack>", under("VStack", "x", 30.0))
-    refuse("y in an <HFlex>", under("HFlex", "y", 30.0))
+    refuse("y in an <HStack>", under("HStack", "y", 30.0))
     refuse("x in a <Grid>", under("Grid", "x", 30.0))
 
     io.println("-- a component's root, which had no parent when it was written --")
@@ -124,15 +150,15 @@ fn drive() -> Result<bool> {
     // could it take `grow`: both were refused for sitting in a container the
     // component's own builder could not see.
     match embedded_in("Box", "x", 600.0) {
-        ok(tree) => { io.println("  a <Box> takes it: {corner_of(tree, 0) == "600,0"}") }
+        ok(tree) => { io.println("  a <Box> takes it: {tree.child_at(0).spec.left == 600.0}") }
         err(problem) => { io.println("  refused inside a <Box>: {problem.msg}") }
     }
     refuse("the same subtree in a <VStack>", embedded_in("VStack", "x", 600.0))
-    match embedded_in("VFlex", "grow", 1.0) {
+    match embedded_in("VStack", "grow", 1.0) {
         ok(tree) => {
-            io.println("  and a <VFlex> takes a grow from one: {tree.child_at(0).spec.grow == 1.0}")
+            io.println("  and a <VStack> takes a grow from one: {tree.child_at(0).spec.grow == 1.0}")
         }
-        err(problem) => { io.println("  grow refused inside a <VFlex>: {problem.msg}") }
+        err(problem) => { io.println("  grow refused inside a <VStack>: {problem.msg}") }
     }
 
     io.println("-- and a root nothing contains at all --")
@@ -146,7 +172,47 @@ fn drive() -> Result<bool> {
         }
         err(problem) => { io.println("  refused too early: {problem.msg}") }
     }
+
+    io.println("-- the far edges --")
+    match boxed(["right", "bottom"], [12.0, 3.0]) {
+        ok(tree) => { io.println("  right={12} bottom={3} reach the spec: {tree.child_at(0).spec.right as int},{tree.child_at(0).spec.bottom as int}") }
+        err(problem) => { io.println("  refused: {problem.msg}") }
+    }
+    refuse("right in a <VStack>", under("VStack", "right", 12.0))
+    refuse_with("x, right and width on one layer", boxed(["x", "right", "width"], [10.0, 10.0, 50.0]), "decided three times")
+    refuse_with("y, bottom and height_percent on one layer", boxed(["height_percent", "y", "bottom"], [50.0, 10.0, 10.0]), "decided three times")
+    refuse_with("a negative x", boxed(["x"], [0.0 - 4.0]), "0 or more")
+    refuse_with("align on a layer", under_word("Box", "align", "center"), "placed by its insets")
+    refuse_with("align on a <Box> itself", box_word("align", "center"), "align_self")
+    match under_word("HStack", "align_self", "center") {
+        ok(tree) => { io.println("  align_self on a child of a run is its own: {tree.child_at(0).spec.align == geometry.Align.center}") }
+        err(problem) => { io.println("  refused: {problem.msg}") }
+    }
     return ok(true)
+}
+
+/// One label with a word on it, inside `parent`.
+fn under_word(parent: string, name: string, value: string) -> Result<component.Element> {
+    var into: component.Builder = new component.Builder()
+    into.open(parent)
+    into.open("Label")
+    into.text("placed")
+    into.word(name, value)
+    into.close()
+    into.close()
+    return into.finish()
+}
+
+/// A word on a <Box> tag itself, with one layer inside.
+fn box_word(name: string, value: string) -> Result<component.Element> {
+    var into: component.Builder = new component.Builder()
+    into.open("Box")
+    into.word(name, value)
+    into.open("Label")
+    into.text("layer")
+    into.close()
+    into.close()
+    return into.finish()
 }
 
 fn main() {

@@ -3,6 +3,15 @@ package component
 
 import cortado.geometry
 
+/// CSS's `clamp`: the low bound wins when the two are the wrong way round,
+/// which is what the web specifies rather than something guessed here.
+fn held(want: f64, low: f64, high: f64) -> f64 {
+    var answer: f64 = want
+    if answer > high { answer = high }
+    if answer < low { answer = low }
+    return answer
+}
+
 /// Something that describes an interface and can be shown.
 ///
 /// A component is an ordinary Beans class. Its fields are its state, its
@@ -68,6 +77,12 @@ pub abstract class Component {
     needs_render: bool = false
     mounted: bool = false
     room: geometry.Size = geometry.Size.zero()
+    /// Whether the last render read `room`, and whether one is running — a
+    /// read from an event handler is not a dependency.
+    room_read: bool = false
+    in_render: bool = false
+    frame: geometry.Rect = geometry.Rect.of(0.0, 0.0, 0.0, 0.0)
+    box_read: bool = false
 
     pub fn init() {}
 
@@ -134,6 +149,8 @@ pub abstract class Component {
     /// The room the mount lays this component out in — the window's content
     /// size — as of its last render. Zero before the first.
     pub fn viewport() -> geometry.Size {
+        // Reading it during a render is what declares the dependency.
+        if self.in_render { self.room_read = true }
         return self.room
     }
 
@@ -142,10 +159,72 @@ pub abstract class Component {
         self.room = size
     }
 
-    /// Whether a resize is a reason to render again. Off unless `render`
-    /// reads `viewport()`, and a render that does must answer true here.
+    /// Whether a resize is a reason to render again. Answered by whether the
+    /// last render read `viewport()`; override it to decide otherwise.
     pub fn follows_viewport() -> bool {
-        return false
+        return self.room_read
+    }
+
+    /// Framework use: brackets one render. Opening it clears the record, so a
+    /// branch that stops reading the room stops following it.
+    pub fn note_rendering(state: bool) {
+        if state {
+            self.room_read = false
+            self.box_read = false
+        }
+        self.in_render = state
+    }
+
+    /// The box the solver gave this component's root on the last pass — what
+    /// `onLayout` hands a React Native view. Zero before the first.
+    ///
+    /// The *last* pass, and that is the whole contract: a size read from here
+    /// is one pass behind, and the mount lays out again when it moves. A
+    /// component whose own content decides its box cannot also be sized from
+    /// it, and the mount refuses that rather than laying out for ever.
+    pub fn box() -> geometry.Rect {
+        if self.in_render { self.box_read = true }
+        return self.frame
+    }
+
+    /// Framework use: the mount, after every layout pass.
+    pub fn note_box(frame: geometry.Rect) {
+        self.frame = frame
+    }
+
+    /// Whether a box that moved is a reason to render again. Answered by
+    /// whether the last render read `box()`.
+    pub fn follows_box() -> bool {
+        return self.box_read
+    }
+
+    /// Run when the box this component was laid out in changed.
+    pub fn on_layout(frame: geometry.Rect) {}
+
+    /// A share of this component's own width, held between two points.
+    pub fn cw(share: f64, low: f64, high: f64) -> f64 {
+        return held(self.box().width * share / 100.0, low, high)
+    }
+
+    /// A share of this component's own height, held between two points.
+    pub fn ch(share: f64, low: f64, high: f64) -> f64 {
+        return held(self.box().height * share / 100.0, low, high)
+    }
+
+    /// A share of the window's width, held between two points — the web's
+    /// `clamp(low, share vw, high)`. `share` is 0 to 100, like `width_percent`.
+    ///
+    /// This is the size a control property cannot ask for on its own:
+    /// `font_size`, `padding` and the rest leave a render as plain points, so
+    /// a share of the room has to be worked out before they go. Reading it
+    /// here is what makes the screen follow a resize — see `viewport`.
+    pub fn vw(share: f64, low: f64, high: f64) -> f64 {
+        return held(self.viewport().width * share / 100.0, low, high)
+    }
+
+    /// A share of the window's height, held between two points.
+    pub fn vh(share: f64, low: f64, high: f64) -> f64 {
+        return held(self.viewport().height * share / 100.0, low, high)
     }
 
     /// Framework use: records that this component's controls exist.

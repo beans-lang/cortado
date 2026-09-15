@@ -32,6 +32,17 @@ typedef struct {
 
 static CtdClock g_clock[CTD_SLOTS];
 
+// The rate a surface asks its display for; 0 is the screen's own maximum,
+// which is what every clock wants until told otherwise.
+typedef struct {
+    double lowest;
+    double highest;
+    double wanted;
+    double due;              // when the next paced frame is owed, monotonic
+} CtdRate;
+
+static CtdRate g_rate[CTD_SLOTS];
+
 // Seconds from an arbitrary origin that only ever goes forward. Not the wall
 // clock: a frame's time must not move because somebody corrected the date.
 static double ctd_monotonic(void) {
@@ -77,12 +88,39 @@ static void ctd_clock_deliver(ctd_handle surface, uint32_t epoch, double at) {
     g_sink(g_sink_context, &event);
 }
 
+// How long one display frame lasts, or 0 where the compositor will not say.
+static double ctd_clock_interval(GdkFrameClock *frame_clock) {
+    GdkFrameTimings *timings = frame_clock
+        ? gdk_frame_clock_get_current_timings(frame_clock) : NULL;
+    gint64 interval = timings ? gdk_frame_timings_get_refresh_interval(timings) : 0;
+    return interval > 0 ? (double)interval / 1000000.0 : 0.0;
+}
+
+// Whether a display tick at `now` is owed a frame. A GdkFrameClock takes no
+// instruction, so a rate is asked for by dropping the ticks in between.
+static int ctd_clock_owed(uint32_t slot, double now, double interval) {
+    double wanted = g_rate[slot].wanted;
+    if (!(wanted > 0.0)) return 1;              // the screen's own maximum
+    double period = 1.0 / wanted;
+    // Ticks land an interval apart, so one within half an interval of due is
+    // the nearest the display will get.
+    if (now + interval * 0.5 < g_rate[slot].due) return 0;
+    double next = g_rate[slot].due + period;
+    // Re-based, not caught up: a gap must not pay out the frames it owed.
+    g_rate[slot].due = next > now ? next : now + period;
+    return 1;
+}
+
 static gboolean ctd_clock_ticked(GtkWidget *widget, GdkFrameClock *frame_clock,
                                  gpointer data) {
-    (void)widget; (void)frame_clock;
+    (void)widget;
     ctd_handle surface = (ctd_handle)(uintptr_t)data;
     uint32_t slot = (uint32_t)(surface & 0xffffffffu);
-    ctd_clock_deliver(surface, g_clock[slot].epoch, ctd_monotonic());
+    double now = ctd_monotonic();
+    if (!ctd_clock_owed(slot, now, ctd_clock_interval(frame_clock))) {
+        return G_SOURCE_CONTINUE;
+    }
+    ctd_clock_deliver(surface, g_clock[slot].epoch, now);
     return G_SOURCE_CONTINUE;
 }
 
@@ -98,6 +136,7 @@ ctd_status ctd_clock_start(ctd_handle surface, int64_t token) {
     clock->started = ctd_monotonic();
     clock->epoch += 1;
     clock->running = 1;
+    g_rate[(uint32_t)(surface & 0xffffffffu)].due = clock->started;
     clock->tick = gtk_widget_add_tick_callback(GTK_WIDGET(ctd_resolve(surface)),
                                                ctd_clock_ticked,
                                                (gpointer)(uintptr_t)surface, NULL);
@@ -137,11 +176,16 @@ ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
     if (highest > 0.0 && lowest > highest) return CTD_ERR_RANGE;
     if (wanted > 0.0 && highest > 0.0 && wanted > highest) return CTD_ERR_RANGE;
     if (wanted > 0.0 && lowest > 0.0 && wanted < lowest) return CTD_ERR_RANGE;
-    // A GdkFrameClock is the display's and takes no instruction: there is no
-    // call to ask it for a rate, and a tick callback gets what the compositor
-    // is giving. Refused rather than accepted and dropped, which is the rule
-    // this host keeps everywhere — "this platform cannot" is not "yes".
-    return CTD_ERR_UNSUPPORTED;
+    uint32_t slot = (uint32_t)(surface & 0xffffffffu);
+    // No call asks a GdkFrameClock for a rate, so this host paces its own tick
+    // instead; the ends are kept for a compositor that one day takes a range.
+    g_rate[slot].lowest = lowest;
+    g_rate[slot].highest = highest;
+    g_rate[slot].wanted = wanted;
+    // From now, not from the clock's start: a rate asked for mid-run owes its
+    // next frame a period away.
+    g_rate[slot].due = ctd_monotonic();
+    return CTD_OK;
 }
 
 ctd_status ctd_clock_state(ctd_handle surface, double *out) {
@@ -170,9 +214,8 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds) {
 }
 
 void ctd_clock_forget(uint32_t slot) {
-    // The tick callback is not removed here. The widget it belongs to is on
-    // its way out, and GTK drops a widget's tick callbacks when it finalizes
-    // it; a callback that outlives the slot carries a handle, not a pointer,
-    // so the delivery resolves nothing and returns.
+    // The tick callback is not removed: GTK drops it with the widget, and one
+    // that outlives the slot carries a handle, so its delivery resolves none.
     memset(&g_clock[slot], 0, sizeof g_clock[slot]);
+    memset(&g_rate[slot], 0, sizeof g_rate[slot]);
 }

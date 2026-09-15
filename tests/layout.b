@@ -92,6 +92,19 @@ fn stretched_row(spacing: f64) -> layout.StackLayout {
 
 // ---- 1. stacks ----
 
+/// A flexing row told to wrap: what `<HWrap>` was before wrap became a flag.
+fn wrap_row(spacing: f64) -> layout.FlexLayout {
+    var run: layout.FlexLayout = layout.FlexLayout.row(spacing)
+    run.set_wrap(true)
+    return run
+}
+
+fn wrap_column(spacing: f64) -> layout.FlexLayout {
+    var run: layout.FlexLayout = layout.FlexLayout.column(spacing)
+    run.set_wrap(true)
+    return run
+}
+
 fn stacks() {
     var plain: layout.LayoutNode = layout.LayoutNode.group("root", column(0.0))
     plain.add(leaf("a", 1))
@@ -546,6 +559,50 @@ fn absolute() {
     var spilling: layout.LayoutNode = layout.LayoutNode.group("root", new layout.AbsoluteLayout())
     spilling.add(spec_leaf("outside", 5, layout.LayoutSpec.at(290.0, 150.0)))
     run("absolute past the edge", spilling, 300.0, 160.0)
+
+    // A layer with no opinion fills the box; one with a margin fills what
+    // the margin leaves.
+    var layers: layout.LayoutNode = layout.LayoutNode.group("root", new layout.AbsoluteLayout())
+    layers.add(leaf("backdrop", 5))
+    var inset_layer: layout.LayoutSpec = layout.LayoutSpec.auto()
+    inset_layer.margin = geometry.EdgeInsets.all(5.0)
+    layers.add(spec_leaf("sheet", 5, inset_layer))
+    run("layers with no opinion fill", layers, 300.0, 160.0)
+
+    // The far edges: pinned by `right` and `bottom` at the measured size.
+    var corner: layout.LayoutSpec = layout.LayoutSpec.auto()
+    corner.right = 10.0
+    corner.bottom = 10.0
+    var pinned: layout.LayoutNode = layout.LayoutNode.group("root", new layout.AbsoluteLayout())
+    pinned.add(spec_leaf("badge", 5, corner))
+    run("pinned to the far edges", pinned, 300.0, 160.0)
+    run_rtl("pinned to the far edges, right to left", pinned, 300.0, 160.0)
+
+    // Two opposite insets stretch between them; the other axis still fills.
+    var banded: layout.LayoutSpec = layout.LayoutSpec.auto()
+    banded.left = 20.0
+    banded.right = 20.0
+    var stretched: layout.LayoutNode = layout.LayoutNode.group("root", new layout.AbsoluteLayout())
+    stretched.add(spec_leaf("band", 5, banded))
+    run("stretched between two insets", stretched, 300.0, 160.0)
+
+    // A size beside one inset sits against that edge; a shape with no size
+    // fills the width and takes its height from it.
+    var sized: layout.LayoutSpec = layout.LayoutSpec.wide(50.0)
+    sized.right = 30.0
+    var shaped: layout.LayoutSpec = layout.LayoutSpec.auto()
+    shaped.aspect_ratio = 2.0
+    var mixed: layout.LayoutNode = layout.LayoutNode.group("root", new layout.AbsoluteLayout())
+    mixed.add(spec_leaf("sidebar", 5, sized))
+    mixed.add(spec_leaf("poster", 5, shaped))
+    run("a width against the right edge, and a shape that fills across", mixed, 300.0, 160.0)
+
+    // A trailing inset is part of what the box needs when nobody sizes it.
+    var solver: layout.Solver = new layout.Solver(ruler())
+    match solver.fit(pinned, layout.Constraint.loose(geometry.Size.of(300.0, 160.0))) {
+        ok(size) => { io.println("  a badge 24 wide with right=10 needs: {size.width} x {size.height}") }
+        err(problem) => { io.println("  FAILED {problem.kind}: {problem.msg}") }
+    }
 }
 
 // ---- 10. right to left ----
@@ -955,6 +1012,16 @@ fn scrolling() {
     flexed.add(grown)
     run("a scroll view that takes the leftover", flexed, 200.0, 50.0)
     io.println("  it scrolls: {grown.content.height == 120.0}")
+
+    // A grower inside a scroll view whose content is shorter than the viewport:
+    // the content is placed at the viewport's height, so the leftover is real.
+    var roomy: layout.LayoutNode = layout.LayoutNode.group("content", layout.FlexLayout.column(0.0))
+    roomy.add(leaf("row", 1))
+    var filler: layout.LayoutNode = spec_leaf("filler", 1, layout.LayoutSpec.flexible(1.0))
+    roomy.add(filler)
+    var spacious: layout.LayoutNode = scroller("scroller", roomy)
+    run("a grower inside a scroll view", spacious, 200.0, 400.0)
+    io.println("  the leftover inside a scroll view is real: {filler.frame().height == 380.0}")
 }
 
 // ---- 17. a share of the room, and a shape ----
@@ -1068,14 +1135,14 @@ fn proportions() {
 
 fn wrapping() {
     // Five tiles of 100 in a row of 300 with a gap of 8: two per line, then one.
-    var shelf: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.row(8.0))
+    var shelf: layout.LayoutNode = layout.LayoutNode.group("root", wrap_row(8.0))
     for index: int in 0..5 {
         shelf.add(leaf("tile", 1))
     }
     run("five tiles wrapping in 300", shelf, 300.0, 200.0)
 
     // A gap between lines, and each line justified on its own.
-    var spaced: layout.WrapLayout = layout.WrapLayout.row(8.0)
+    var spaced: layout.FlexLayout = wrap_row(8.0)
     spaced.set_line_spacing(6.0)
     spaced.set_justify(layout.Justify.center)
     var centred: layout.LayoutNode = layout.LayoutNode.group("root", spaced)
@@ -1086,7 +1153,7 @@ fn wrapping() {
 
     // Growing fills each line separately: one grower per line takes that
     // line's leftover and nothing from the next.
-    var growing: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.row(0.0))
+    var growing: layout.LayoutNode = layout.LayoutNode.group("root", wrap_row(0.0))
     growing.add(leaf("fixed", 1))
     growing.add(spec_leaf("grows", 1, layout.LayoutSpec.flexible(1.0)))
     growing.add(leaf("fixed", 1))
@@ -1094,21 +1161,21 @@ fn wrapping() {
     run("one grower per line", growing, 250.0, 100.0)
 
     // Down a column: 20-tall tiles in 50 of height, two per column.
-    var down: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.column(0.0))
+    var down: layout.LayoutNode = layout.LayoutNode.group("root", wrap_column(0.0))
     for index: int in 0..3 {
         down.add(leaf("tile", 1))
     }
     run("three tiles wrapping down a column of 50", down, 300.0, 50.0)
 
     // Wider than the room: a line of its own, shrunk to fit.
-    var oversize: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.row(4.0))
+    var oversize: layout.LayoutNode = layout.LayoutNode.group("root", wrap_row(4.0))
     oversize.add(leaf("tile", 1))
     oversize.add(leaf("banner", 4))
     oversize.add(leaf("tile", 1))
     run("a tile wider than the room", oversize, 150.0, 100.0)
 
     // Mixed heights on one line, aligned to its end.
-    var uneven: layout.WrapLayout = layout.WrapLayout.row(4.0)
+    var uneven: layout.FlexLayout = wrap_row(4.0)
     uneven.set_align(geometry.Align.end)
     var lined: layout.LayoutNode = layout.LayoutNode.group("root", uneven)
     lined.add(leaf("short", 1))
@@ -1118,7 +1185,7 @@ fn wrapping() {
 
     // With no width to break against — inside a plain row — it is one line.
     var boundless: layout.LayoutNode = layout.LayoutNode.group("root", row(0.0))
-    var inner: layout.LayoutNode = layout.LayoutNode.group("wrap", layout.WrapLayout.row(8.0))
+    var inner: layout.LayoutNode = layout.LayoutNode.group("wrap", wrap_row(8.0))
     for index: int in 0..3 {
         inner.add(leaf("tile", 1))
     }
@@ -1126,13 +1193,167 @@ fn wrapping() {
     run("a wrap with no width to break at", boundless, 1000.0, 100.0)
 
     // Margins take room on the line, so 120 per tile fits twice in 300.
-    var margined: layout.LayoutNode = layout.LayoutNode.group("root", layout.WrapLayout.row(0.0))
+    var margined: layout.LayoutNode = layout.LayoutNode.group("root", wrap_row(0.0))
     for index: int in 0..3 {
         var spaced_out: layout.LayoutSpec = layout.LayoutSpec.auto()
         spaced_out.margin = geometry.EdgeInsets.symmetric(10.0, 0.0)
         margined.add(spec_leaf("tile", 1, spaced_out))
     }
     run("margins take room on the line", margined, 300.0, 100.0)
+}
+
+// ---- 19. children past their box, and a dump that says so ----
+
+fn overflowing() {
+    // Two rigid children in a row too small for both: nothing shrinks, and
+    // the dump says by how much they run past the box.
+    var rigid: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.row(0.0))
+    var stiff: layout.LayoutSpec = layout.LayoutSpec.auto()
+    stiff.shrink = 0.0
+    rigid.add(spec_leaf("a", 4, stiff))
+    rigid.add(spec_leaf("b", 4, stiff))
+    run("two rigid children overflowing", rigid, 300.0, 60.0)
+    io.println("  the run knows by how much: {rigid.overflow == 100.0}")
+
+    // Two fixed columns wider than the grid: the row runs past, and says so.
+    var grid: layout.GridLayout = new layout.GridLayout()
+    grid.add_column(layout.Track.fixed(200.0))
+    grid.add_column(layout.Track.fixed(200.0))
+    var wide: layout.LayoutNode = layout.LayoutNode.group("root", grid)
+    wide.add(leaf("a", 1))
+    wide.add(leaf("b", 1))
+    run("two fixed columns overflowing", wide, 300.0, 60.0)
+
+    // A box whose child is placed past its edge.
+    var box: layout.LayoutNode = layout.LayoutNode.group("root", new layout.AbsoluteLayout())
+    box.add(spec_leaf("far", 1, layout.LayoutSpec.at(250.0, 0.0)))
+    run("a child placed past the edge", box, 300.0, 60.0)
+
+    // A wrap whose one rigid tile is wider than the line it has to itself.
+    var shelf: layout.LayoutNode = layout.LayoutNode.group("root", wrap_row(0.0))
+    var firm: layout.LayoutSpec = layout.LayoutSpec.auto()
+    firm.shrink = 0.0
+    shelf.add(spec_leaf("banner", 4, firm))
+    run("a rigid tile wider than its line", shelf, 150.0, 60.0)
+}
+
+// ---- 21. words that reflow to the width they are given ----
+
+/// The measurements plus one line of text: key 7 is 500 wide on a line of 20.
+fn ruler_with_text() -> layout.TableMeasure {
+    var table: layout.TableMeasure = ruler()
+    table.put_text(7, 500.0, 20.0)
+    return table
+}
+
+fn run_text(name: string, root: layout.LayoutNode, width: f64, height: f64) {
+    var solver: layout.Solver = new layout.Solver(ruler_with_text())
+    show(name, root, solver, width, height)
+}
+
+fn reflow() {
+    // A sentence 500 wide in a stretched column: two lines at 300, five at 100.
+    var column: layout.LayoutNode = layout.LayoutNode.group("root", stretched_column(0.0))
+    column.add(leaf("sentence", 7))
+    column.add(leaf("after", 1))
+    run_text("a sentence in a column of 300", column, 300.0, 200.0)
+    run_text("the same sentence in 100", column, 100.0, 200.0)
+
+    // In a grid, the column's width decides the row's height.
+    var grid: layout.GridLayout = layout.GridLayout.uniform(2, 0.0)
+    grid.set_align(geometry.Align.stretch)
+    var cells: layout.LayoutNode = layout.LayoutNode.group("root", grid)
+    cells.add(leaf("sentence", 7))
+    cells.add(leaf("beside", 1))
+    cells.add(leaf("below", 1))
+    run_text("a sentence in half a grid of 400", cells, 400.0, 200.0)
+
+    // In a flexing row beside a rigid sibling, shrink settles the width and
+    // the second measure gives the height for it.
+    var row: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.row(0.0))
+    var rigid: layout.LayoutSpec = layout.LayoutSpec.auto()
+    rigid.shrink = 0.0
+    row.add(spec_leaf("fixed", 1, rigid))
+    row.add(leaf("sentence", 7))
+    run_text("a sentence squeezed beside a rigid sibling in 350", row, 350.0, 200.0)
+}
+
+// ---- 20. children hidden by the room they are in ----
+
+/// A leaf shown only while its parent's box is at least `below` wide and
+/// under `above`; -1 for no bound on that side.
+fn hider(name: string, key: int, below: f64, above: f64) -> layout.LayoutNode {
+    var spec: layout.LayoutSpec = layout.LayoutSpec.auto()
+    spec.hide_below = below
+    spec.hide_above = above
+    return spec_leaf(name, key, spec)
+}
+
+fn culling() {
+    // a(100), a side of 60 hidden under 250, z(40), spacing 8. At 200 the side
+    // goes and takes its spacing with it: z lands at 108, not 116 or 176.
+    var strip: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.row(8.0))
+    strip.add(leaf("a", 1))
+    strip.add(hider("side", 2, 250.0, -1.0))
+    strip.add(leaf("z", 3))
+    run("a side hidden under 250, at 200", strip, 200.0, 60.0)
+    run("a side hidden under 250, at 300", strip, 300.0, 60.0)
+    run("a side hidden under 250, at 400", strip, 400.0, 60.0)
+    // Nobody offered a width: the side counts, and is measured in.
+    var solver: layout.Solver = new layout.Solver(ruler())
+    match solver.fit(strip, layout.Constraint.unbounded()) {
+        ok(size) => { io.println("  with no room to judge by, the side counts: {size.width}") }
+        err(problem) => { io.println("  FAILED {problem.kind}: {problem.msg}") }
+    }
+
+    // The other bound: a badge shown only under 350.
+    var badged: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.row(8.0))
+    badged.add(leaf("a", 1))
+    badged.add(hider("badge", 5, -1.0, 350.0))
+    run("a badge hidden from 350, at 300", badged, 300.0, 60.0)
+    run("a badge hidden from 350, at 400", badged, 400.0, 60.0)
+
+    // Five tiles wrapping in 300 with the third hidden under 500: four tiles, two a line.
+    var shelf: layout.LayoutNode = layout.LayoutNode.group("root", wrap_row(8.0))
+    for index: int in 0..5 {
+        if index == 2 {
+            shelf.add(hider("tile", 1, 500.0, -1.0))
+        } else {
+            shelf.add(leaf("tile", 1))
+        }
+    }
+    run("a wrap with a tile hidden", shelf, 300.0, 200.0)
+
+    // An auto-fit grid of four with one hidden: three cells, three columns.
+    var fit: layout.GridLayout = new layout.GridLayout()
+    fit.set_min_column(100.0)
+    var cells: layout.LayoutNode = layout.LayoutNode.group("root", fit)
+    cells.add(leaf("a", 1))
+    cells.add(hider("b", 1, 1000.0, -1.0))
+    cells.add(leaf("c", 1))
+    cells.add(leaf("d", 1))
+    run("a grid with a cell hidden", cells, 300.0, 100.0)
+
+    // A box with a layer hidden: its extent is the other layer's.
+    var layers: layout.LayoutNode = layout.LayoutNode.group("root", new layout.AbsoluteLayout())
+    layers.add(spec_leaf("under", 1, layout.LayoutSpec.at(0.0, 0.0)))
+    var wide: layout.LayoutSpec = layout.LayoutSpec.at(0.0, 0.0)
+    wide.hide_below = 1000.0
+    layers.add(spec_leaf("banner", 4, wide))
+    run("a box with a layer hidden", layers, 300.0, 100.0)
+    match solver.fit(layers, layout.Constraint.loose(geometry.Size.of(300.0, 100.0))) {
+        ok(size) => { io.println("  the hidden layer is not in the extent: {size.width}") }
+        err(problem) => { io.println("  FAILED {problem.kind}: {problem.msg}") }
+    }
+
+    // Hidden outright, in a column: gone at every width.
+    var column: layout.LayoutNode = layout.LayoutNode.group("root", layout.FlexLayout.column(4.0))
+    column.add(leaf("a", 1))
+    var gone: layout.LayoutSpec = layout.LayoutSpec.auto()
+    gone.hidden = true
+    column.add(spec_leaf("b", 2, gone))
+    column.add(leaf("c", 3))
+    run("a child hidden outright", column, 300.0, 100.0)
 }
 
 fn main() {
@@ -1154,4 +1375,7 @@ fn main() {
     scrolling()
     proportions()
     wrapping()
+    overflowing()
+    culling()
+    reflow()
 }

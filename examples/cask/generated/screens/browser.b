@@ -117,7 +117,7 @@ pub partial class Browser extends component.Component {
 
 partial class Browser {
     pub override fn render(b: Builder) {
-        b.open("VFlex")  // browser.bx:1
+        b.open("VStack")  // browser.bx:1
         b.number("spacing", (8) as f64)
         b.number("padding", (10) as f64)
         b.word("align", "stretch")
@@ -126,7 +126,7 @@ partial class Browser {
             b.key("{"split"}")
             b.number("grow", (1) as f64)
             b.on("change", fn(e: UiEvent) { self.work.divider_moved(e) })
-            b.open("VFlex")  // browser.bx:11
+            b.open("VStack")  // browser.bx:11
             b.number("spacing", (6) as f64)
             b.word("align", "stretch")
             b.open("Label")  // browser.bx:12
@@ -147,14 +147,14 @@ partial class Browser {
                 b.close()
             }
             b.close()
-            b.open("VFlex")  // browser.bx:26
+            b.open("VStack")  // browser.bx:26
             b.key("{"editor"}")
             b.word("align", "stretch")
             if self.has_tabs {  // browser.bx:27
                 b.open("TabView")  // browser.bx:28
                 b.key("{"tabs"}")
                 b.number("grow", (1) as f64)
-                b.open("VFlex")  // browser.bx:33
+                b.open("VStack")  // browser.bx:33
                 b.number("spacing", (8) as f64)
                 b.number("padding", (10) as f64)
                 b.word("align", "stretch")
@@ -172,7 +172,7 @@ partial class Browser {
                 b.text("Open a table in the navigator")
                 b.close()
                 b.close()
-                b.open("VFlex")  // browser.bx:42
+                b.open("VStack")  // browser.bx:42
                 b.number("spacing", (8) as f64)
                 b.number("padding", (10) as f64)
                 b.word("align", "stretch")
@@ -181,7 +181,7 @@ partial class Browser {
                 b.number("grow", (1) as f64)
                 b.close()
                 b.close()
-                b.open("VFlex")  // browser.bx:47
+                b.open("VStack")  // browser.bx:47
                 b.number("spacing", (8) as f64)
                 b.number("padding", (10) as f64)
                 b.word("align", "stretch")
@@ -190,7 +190,7 @@ partial class Browser {
                 b.number("grow", (1) as f64)
                 b.close()
                 b.close()
-                b.open("VFlex")  // browser.bx:53
+                b.open("VStack")  // browser.bx:53
                 b.number("spacing", (8) as f64)
                 b.number("padding", (10) as f64)
                 b.word("align", "stretch")
@@ -199,7 +199,7 @@ partial class Browser {
                     b.key("{"editor_split"}")
                     b.number("grow", (1) as f64)
                     b.on("change", fn(e: UiEvent) { self.work.editor_moved(e) })
-                    b.open("VFlex")  // browser.bx:57
+                    b.open("VStack")  // browser.bx:57
                     b.number("spacing", (8) as f64)
                     b.number("padding", (8) as f64)
                     b.word("align", "stretch")
@@ -207,7 +207,7 @@ partial class Browser {
                     b.key("{"sql"}")
                     b.number("grow", (1) as f64)
                     b.close()
-                    b.open("HFlex")  // browser.bx:59
+                    b.open("HStack")  // browser.bx:59
                     b.number("spacing", (8) as f64)
                     b.number("height", (26) as f64)
                     b.open("Label")  // browser.bx:60
@@ -235,7 +235,7 @@ partial class Browser {
                     b.close()
                     b.close()
                     b.close()
-                    b.open("VFlex")  // browser.bx:73
+                    b.open("VStack")  // browser.bx:73
                     b.number("spacing", (6) as f64)
                     b.number("padding", (8) as f64)
                     b.word("align", "stretch")
@@ -251,11 +251,11 @@ partial class Browser {
                     b.close()
                 }
                 b.close()
-                b.open("VFlex")  // browser.bx:82
+                b.open("VStack")  // browser.bx:82
                 b.number("spacing", (8) as f64)
                 b.number("padding", (10) as f64)
                 b.word("align", "stretch")
-                b.open("HFlex")  // browser.bx:83
+                b.open("HStack")  // browser.bx:83
                 b.number("spacing", (8) as f64)
                 b.number("height", (26) as f64)
                 b.open("Label")  // browser.bx:84
@@ -311,7 +311,7 @@ partial class Browser {
             b.text("{self.no_split()}")
             b.close()
         }
-        b.open("HFlex")  // browser.bx:115
+        b.open("HStack")  // browser.bx:115
         b.number("spacing", (8) as f64)
         b.number("height", (24) as f64)
         b.open("Label")  // browser.bx:116

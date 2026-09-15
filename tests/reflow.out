@@ -1,0 +1,13 @@
+== words reflow to the width they are offered ==
+  a long sentence is taller at 120 than at 1000: true
+  and at 1000 it is one line tall: true
+  a short one is the same height at both: true
+  neither answers wider than offered: true
+  and both answer their whole width when there is room: true
+  a button with the same words does not grow taller: true
+== lines caps it ==
+  lines=1 brings the sentence back to one line: true
+  lines=2 sits between one line and the whole: true
+  lines=0 is no cap again: true
+  a negative cap is refused: out_of_range
+  lines on a button is refused: wrong_widget

@@ -1,0 +1,30 @@
+== at 640: the side is in, the never is not ==
+Container CortadoView role=group "" frame=0,0,640,200 children=1
+  Container CortadoView role=group "" frame=0,0,640,200 children=4
+    Label NSTextField role=text "left" frame=0,0,24,16
+    Label NSTextField role=text "side" frame=32,0,30,16
+    Label NSTextField role=text "right" frame=70,0,32,16
+    Label NSTextField role=text "never" frame=0,0,0,0 hidden
+== dragged to 400: the side goes, and nothing renders ==
+  the room changed: true
+  nothing asked to render: true
+Container CortadoView role=group "" frame=0,0,640,200 children=1
+  Container CortadoView role=group "" frame=0,0,400,200 children=4
+    Label NSTextField role=text "left" frame=0,0,24,16
+    Label NSTextField role=text "side" frame=32,0,30,16 hidden
+    Label NSTextField role=text "right" frame=32,0,33,16
+    Label NSTextField role=text "never" frame=0,0,0,0 hidden
+  and no render ran: true
+== back to 640: the side is back, and still nothing renders ==
+  the room changed: true
+Container CortadoView role=group "" frame=0,0,640,200 children=1
+  Container CortadoView role=group "" frame=0,0,640,200 children=4
+    Label NSTextField role=text "left" frame=0,0,24,16
+    Label NSTextField role=text "side" frame=32,0,30,16
+    Label NSTextField role=text "right" frame=70,0,32,16
+    Label NSTextField role=text "never" frame=0,0,0,0 hidden
+  and no render ran: true
+== a root that asks to hide ==
+  refused (bad_render): <Label> is the screen's root, and nothing contains it to hide it — hide what is inside it instead
+== bounds with no width between them ==
+  refused (bad_render): <Label> is hidden at every width: hide_below=600 is not under hide_above=400

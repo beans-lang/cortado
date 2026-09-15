@@ -85,7 +85,7 @@ root stack frame=0,0,300,60
 root stack frame=0,0,300,60
   only leaf frame=138,0,24,24
 == justify with overflow ==
-root stack frame=0,0,300,60
+root stack frame=0,0,300,60 overflows by 100
   a leaf frame=0,0,200,16
   b leaf frame=200,0,200,16
 == margins in a column ==
@@ -243,8 +243,26 @@ root absolute frame=0,0,300,160
 root absolute frame=0,0,300,160
   pinned leaf frame=20,20,24,24
 == absolute past the edge ==
-root absolute frame=0,0,300,160
+root absolute frame=0,0,300,160 overflows by 14
   outside leaf frame=290,150,24,24
+== layers with no opinion fill ==
+root absolute frame=0,0,300,160
+  backdrop leaf frame=0,0,300,160
+  sheet leaf frame=5,5,290,150
+== pinned to the far edges ==
+root absolute frame=0,0,300,160
+  badge leaf frame=266,126,24,24
+== pinned to the far edges, right to left ==
+root absolute frame=0,0,300,160
+  badge leaf frame=266,126,24,24
+== stretched between two insets ==
+root absolute frame=0,0,300,160
+  band leaf frame=20,0,260,160
+== a width against the right edge, and a shape that fills across ==
+root absolute frame=0,0,300,160
+  sidebar leaf frame=220,0,50,160
+  poster leaf frame=0,0,300,150
+  a badge 24 wide with right=10 needs: 34 x 34
 == row, left to right ==
 root stack frame=0,0,300,60
   first leaf frame=0,0,24,24
@@ -331,7 +349,7 @@ scroller scroll frame=0,0,200,120
 == two children in a scroll view ==
   FAILED too_many_children: "crowded" scrolls 2 children, and a scroll view scrolls one — every platform here has a single content view, so the others would be laid on top of it. Put them in a <VStack> inside it
 == a scroll view with no height ==
-  FAILED unbounded_scroll: "unbounded" is a scroll view with no height of its own, in a run that hands none out — it would grow to its content and scroll nothing. Give it height={ }, or grow={ } inside a VFlex
+  FAILED unbounded_scroll: "unbounded" is a scroll view with no height of its own, in a run that hands none out — it would grow to its content and scroll nothing. Give it height={ }, or flex={ } inside a VStack
 == a scroll view told its height ==
 root stack frame=0,0,200,400
   sized scroll frame=0,0,200,40
@@ -351,6 +369,12 @@ root flex frame=0,0,200,50
       row4 leaf frame=0,80,200,20
       row5 leaf frame=0,100,200,20
   it scrolls: true
+== a grower inside a scroll view ==
+scroller scroll frame=0,0,200,400
+  content flex frame=0,0,200,400
+    row leaf frame=0,0,100,20
+    filler leaf frame=0,20,100,380
+  the leftover inside a scroll view is real: true
 == shares across a stretched column ==
 root stack frame=0,0,300,200
   half leaf frame=0,0,150,20
@@ -435,3 +459,82 @@ root wrap frame=0,0,300,100
   tile leaf frame=10,0,100,20
   tile leaf frame=130,0,100,20
   tile leaf frame=10,20,100,20
+== two rigid children overflowing ==
+root flex frame=0,0,300,60 overflows by 100
+  a leaf frame=0,0,200,16
+  b leaf frame=200,0,200,16
+  the run knows by how much: true
+== two fixed columns overflowing ==
+root grid frame=0,0,300,60 overflows by 100
+  a leaf frame=0,0,100,20
+  b leaf frame=200,0,100,20
+== a child placed past the edge ==
+root absolute frame=0,0,300,60 overflows by 50
+  far leaf frame=250,0,100,20
+== a rigid tile wider than its line ==
+root wrap frame=0,0,150,60 overflows by 50
+  banner leaf frame=0,0,200,16
+== a side hidden under 250, at 200 ==
+root flex frame=0,0,200,60
+  a leaf frame=0,0,100,20
+  side leaf frame=0,0,0,0 hidden
+  z leaf frame=108,0,40,40
+== a side hidden under 250, at 300 ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,100,20
+  side leaf frame=108,0,60,30
+  z leaf frame=176,0,40,40
+== a side hidden under 250, at 400 ==
+root flex frame=0,0,400,60
+  a leaf frame=0,0,100,20
+  side leaf frame=108,0,60,30
+  z leaf frame=176,0,40,40
+  with no room to judge by, the side counts: 216
+== a badge hidden from 350, at 300 ==
+root flex frame=0,0,300,60
+  a leaf frame=0,0,100,20
+  badge leaf frame=108,0,24,24
+== a badge hidden from 350, at 400 ==
+root flex frame=0,0,400,60
+  a leaf frame=0,0,100,20
+  badge leaf frame=0,0,0,0 hidden
+== a wrap with a tile hidden ==
+root wrap frame=0,0,300,200
+  tile leaf frame=0,0,100,20
+  tile leaf frame=108,0,100,20
+  tile leaf frame=0,0,0,0 hidden
+  tile leaf frame=0,20,100,20
+  tile leaf frame=108,20,100,20
+== a grid with a cell hidden ==
+root grid frame=0,0,300,100
+  a leaf frame=0,0,100,20
+  b leaf frame=0,0,0,0 hidden
+  c leaf frame=100,0,100,20
+  d leaf frame=200,0,100,20
+== a box with a layer hidden ==
+root absolute frame=0,0,300,100
+  under leaf frame=0,0,100,20
+  banner leaf frame=0,0,0,0 hidden
+  the hidden layer is not in the extent: 100
+== a child hidden outright ==
+root flex frame=0,0,300,100
+  a leaf frame=0,0,100,20
+  b leaf frame=0,0,0,0 hidden
+  c leaf frame=0,24,40,40
+== a sentence in a column of 300 ==
+root stack frame=0,0,300,200
+  sentence leaf frame=0,0,300,40
+  after leaf frame=0,40,300,20
+== the same sentence in 100 ==
+root stack frame=0,0,100,200
+  sentence leaf frame=0,0,100,100
+  after leaf frame=0,100,100,20
+== a sentence in half a grid of 400 ==
+root grid frame=0,0,400,200
+  sentence leaf frame=0,0,200,60
+  beside leaf frame=200,0,200,60
+  below leaf frame=0,60,200,20
+== a sentence squeezed beside a rigid sibling in 350 ==
+root flex frame=0,0,350,200
+  fixed leaf frame=0,0,100,20
+  sentence leaf frame=100,0,250,40

@@ -6,4 +6,6 @@ every delta positive: true
 elapsed rose every frame: true
 the deltas add up to the elapsed: true
 frames delivered after the clock stopped: 0
+asked for 20 frames a second, and 5 arrived
+five of them took at least a fifth of a second: true
 drove=true

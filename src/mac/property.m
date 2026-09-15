@@ -260,6 +260,16 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             [(NSView *)object setHidden:value ? YES : NO];
             return CTD_OK;
+        case CTD_P_LINES: {
+            if (!ctd_kind_has_lines(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0) return CTD_ERR_RANGE;
+            NSTextField *label = (NSTextField *)object;
+            [label setMaximumNumberOfLines:(NSInteger)value];
+            // One line is cut short rather than wrapped into a box one line tall.
+            [[label cell] setLineBreakMode:value == 1 ? NSLineBreakByTruncatingTail
+                                                      : NSLineBreakByWordWrapping];
+            return CTD_OK;
+        }
         case CTD_P_AXIS: {
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -464,6 +474,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         case CTD_P_HIDDEN:
             value = [(NSView *)object isHidden] ? 1 : 0;
+            break;
+        case CTD_P_LINES:
+            if (!ctd_kind_has_lines(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = (int64_t)[(NSTextField *)object maximumNumberOfLines];
             break;
         case CTD_P_AXIS:
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;

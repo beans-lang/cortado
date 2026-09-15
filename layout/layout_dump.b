@@ -28,7 +28,10 @@ pub class LayoutDump {
 
     /// One node, with no children and no trailing newline.
     pub static fn line(node: LayoutNode) -> string {
-        return "{node.name} {node.layout().label()} frame={show(node.frame())}"
+        let text: string = "{node.name} {node.layout().label()} frame={show(node.frame())}"
+        if node.culled { return "{text} hidden" }
+        if node.overflow > 0.0 { return "{text} overflows by {node.overflow}" }
+        return text
     }
 
     /// A rectangle printed exactly as the solver computed it.
@@ -44,6 +47,8 @@ fn write(node: LayoutNode, depth: int, inout out: string) {
         indent = "{indent}  "
     }
     out = "{out}{indent}{LayoutDump.line(node)}\n"
+    // Nothing under a culled node was placed, so there is nothing to print.
+    if node.culled { return }
     for child: LayoutNode in node.children() {
         write(child, depth + 1, inout out)
     }

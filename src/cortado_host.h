@@ -527,7 +527,11 @@ ctd_status ctd_view_set_frame(ctd_handle widget, double x, double y,
 ctd_status ctd_view_frame(ctd_handle widget, double *out_frame);
 /* What this control wants to be, given the space on offer. The layout solver's
  * only dependency on the platform: everything else about layout is arithmetic
- * cortado does itself. Pass a negative available size for "unbounded". */
+ * cortado does itself. Pass a negative available size for "unbounded".
+ *
+ * A label offered less width than its words need answers the height it needs
+ * at that width, never a width past the offer; a control that does not reflow
+ * (a button, a field) answers its natural size, clamped. */
 /* Writes width and height into out[0..1]. */
 ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_height,
                             double *out_size);
@@ -719,6 +723,11 @@ ctd_status ctd_view_content_size(ctd_handle widget, double *out_size);
  * pale background behind a label and had no way to stop the system drawing
  * white text on it. */
 #define CTD_P_FG_COLOR      27
+
+/* How many lines a label may wrap onto: 0 for as many as its words need,
+ * 1 for one line cut with an ellipsis, negative is CTD_ERR_RANGE. Carried by
+ * CTD_W_LABEL alone; every other kind draws its text on one line. */
+#define CTD_P_LINES         28
 
 /* ---- a control a program draws itself ------------------------------------
  *

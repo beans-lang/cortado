@@ -127,6 +127,7 @@ pub class Mount implements Composer {
         }
         self.bounds = size
         self.lay_out()?
+        self.note_boxes()
         // A render that decides by the room is stale now. It is asked for,
         // not done here: the next `refresh_if_needed` renders it, once.
         match self.top {
@@ -158,6 +159,11 @@ pub class Mount implements Composer {
         self.scaling = value
     }
 
+    /// The backing scale frames snap to: the surface's, once one is followed.
+    pub fn scale_in_use() -> f64 {
+        return self.scaling
+    }
+
     /// How many renders have happened. A test's cheapest proof that a
     /// `should_render` really pruned something.
     pub fn render_count() -> int {
@@ -182,6 +188,12 @@ pub class Mount implements Composer {
 
     pub fn chrome_asked() -> int {
         return self.sheet.chrome_asked()
+    }
+
+    /// How many runs on the screen have children past their box, as of the
+    /// last layout pass. A screen that fits answers zero at every size.
+    pub fn overflows() -> int {
+        return self.sheet.overflowing()
     }
 
     /// Puts a component on this surface and renders it for the first time.
@@ -224,6 +236,14 @@ pub class Mount implements Composer {
         }
         if found == 0 { return }
         self.surface = host.Handle.of(found)
+        // The grid the first solve snaps to. Before this the first pass
+        // snapped at 1 on every display until a scale_changed arrived.
+        let scratch: host.HostScratch = host.HostScratch.instance
+        var read: int = 0
+        unsafe {
+            read = host.ctd_surface_scale(found, scratch.reals) as int
+        }
+        if read == 0 && scratch.real(0) > 0.0 { self.scaling = scratch.real(0) }
         let owner: Mount = self
         self.router.watch(self.surface, events.EventKind.surface_resized,
             fn(event: events.UiEvent) {
@@ -261,6 +281,86 @@ pub class Mount implements Composer {
     /// Safe to call when nothing changed: the differ answers an empty list and
     /// no platform call happens at all.
     pub fn refresh() -> Result<bool> {
+        self.render_round()?
+        var round: int = 0
+        for round: int in 0..Mount.settle_rounds() {
+            let again: string = self.note_boxes()
+            if again == "" { return ok(true) }
+            if round + 1 == Mount.settle_rounds() {
+                return err("{again} is sized from the box it is laid out in, and that box is still moving after {Mount.settle_rounds()} passes — a component whose own content decides its box cannot also be sized from it",
+                           "unsettled_layout")
+            }
+            self.render_round()?
+        }
+        return ok(true)
+    }
+
+    /// How many times one refresh will lay out and render again for the
+    /// components sized from their own box.
+    ///
+    /// A chain of them settles one link a pass, so the bound is on how deep
+    /// that chain may be rather than on anything about time. Past it the
+    /// layout is circular, and saying so beats laying out for ever.
+    static fn settle_rounds() -> int {
+        return 4
+    }
+
+    /// Tells every component the box it was laid out in, and answers the path
+    /// of one that asked to render again because that box moved.
+    fn note_boxes() -> string {
+        var again: string = ""
+        match self.top {
+            none => {}
+            some(component) => {
+                match self.shown {
+                    none => {}
+                    some(element) => {
+                        if self.note_box_of(component, element) { again = "the screen" }
+                    }
+                }
+            }
+        }
+        for key: string in self.prepared.keys() {
+            match self.prepared.get(key) {
+                none => {}
+                some(child) => {
+                    match self.cached.get(key) {
+                        none => {}
+                        some(element) => {
+                            if self.note_box_of(child, element) { again = key }
+                        }
+                    }
+                }
+            }
+        }
+        return again
+    }
+
+    /// One component's own box, and whether it asked to render over it.
+    fn note_box_of(component: Component, element: Element) -> bool {
+        let slot: u64 = element.control.raw
+        if slot == 0 { return false }
+        match self.sheet.frame_of(slot) {
+            none => { return false }
+            some(frame) => {
+                let before: geometry.Rect = component.box()
+                let moved: bool = before.x != frame.x || before.y != frame.y ||
+                                  before.width != frame.width || before.height != frame.height
+                component.note_box(frame)
+                if !moved { return false }
+                component.on_layout(frame)
+                if component.follows_box() {
+                    component.request_render()
+                    return true
+                }
+                return false
+            }
+        }
+    }
+
+    /// One render, applied and laid out. The half of `refresh` that runs again
+    /// when a component's own box moved under it.
+    fn render_round() -> Result<bool> {
         match self.top {
             none => { return err("this mount has nothing to show", "not_mounted") }
             some(component) => {
@@ -270,6 +370,11 @@ pub class Mount implements Composer {
                 // of leftover space written on it can never be answered.
                 if next.pending != "" {
                     return err(Builder.wrong_parent(next.tag, next.pending_name, next.pending),
+                               "bad_render")
+                }
+                // Nor can anything judge the room a root would hide in.
+                if next.spec.hidden || next.spec.hide_below >= 0.0 || next.spec.hide_above >= 0.0 {
+                    return err("<{next.tag}> is the screen's root, and nothing contains it to hide it — hide what is inside it instead",
                                "bad_render")
                 }
                 var differ: Differ = new Differ()
@@ -411,7 +516,9 @@ pub class Mount implements Composer {
         let outer: string = self.rendering
         self.rendering = path
         component.note_viewport(self.bounds)
+        component.note_rendering(true)
         component.render(into)
+        component.note_rendering(false)
         self.rendering = outer
         self.renders = self.renders + 1
         return into.finish()

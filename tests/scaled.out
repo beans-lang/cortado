@@ -1,0 +1,9 @@
+== the first solve is on the display's grid ==
+  the mount took the surface's scale: true
+  every edge is on that grid: true
+  the same scale again is not a pass: true
+== thirds of 100, at 2x and at 1x ==
+  at 2x: 0, 33.5, 66.5
+  every edge on half points: true
+  at 1x: 0, 33, 67
+  every edge on whole points: true

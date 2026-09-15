@@ -66,6 +66,19 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             if (!ctd_kind_has_enabled(kind)) return CTD_ERR_KIND;
             EnableWindow(view, value ? TRUE : FALSE);
             return CTD_OK;
+        case CTD_P_LINES: {
+            if (!ctd_kind_has_lines(kind)) return CTD_ERR_KIND;
+            if (value < 0) return CTD_ERR_RANGE;
+            // One line is a static that does not wrap and ends in an ellipsis;
+            // more than one wraps as before, and ctd_view_measure caps the height.
+            LONG_PTR style = GetWindowLongPtrW(view, GWL_STYLE);
+            style &= ~(LONG_PTR)(SS_LEFTNOWORDWRAP | SS_ENDELLIPSIS);
+            if (value == 1) style |= SS_LEFTNOWORDWRAP | SS_ENDELLIPSIS;
+            SetWindowLongPtrW(view, GWL_STYLE, style);
+            g_lines[(uint32_t)(widget & 0xffffffffu)] = value;
+            InvalidateRect(view, NULL, TRUE);
+            return CTD_OK;
+        }
         case CTD_P_HIDDEN:
             ShowWindow(view, value ? SW_HIDE : SW_SHOW);
             return CTD_OK;
@@ -208,6 +221,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_ENABLED:
             if (!ctd_kind_has_enabled(kind)) return CTD_ERR_KIND;
             value = IsWindowEnabled(view) ? 1 : 0;
+            break;
+        case CTD_P_LINES:
+            if (!ctd_kind_has_lines(kind)) return CTD_ERR_KIND;
+            value = g_lines[(uint32_t)(widget & 0xffffffffu)];
             break;
         case CTD_P_HIDDEN:
             // The style bit, not `IsWindowVisible`, which also answers no for

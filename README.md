@@ -311,13 +311,15 @@ solver.solve(page, geometry.Rect.at(geometry.Point.zero(), window.content_size()
 sheet.apply(page)?
 ```
 
-Five algorithms, each its own class: `StackLayout` (a row or a column),
-`FlexLayout` (the same, with children sharing out the space that is left over),
-`WrapLayout` (a flexing run that breaks into lines when its children do not
-fit), `GridLayout` (tracks that are fixed, automatic or a fraction of what
-remains), and `AbsoluteLayout` (the escape hatch). Every one takes padding, spacing,
-main-axis justification and cross-axis alignment, and every child may carry a
-margin, size bounds, a grow and shrink weight, and an alignment of its own.
+Four algorithms, each its own class: `StackLayout` (a row or a column that
+gives every child the size it measures), `FlexLayout` (the same, with children
+sharing out the space that is left over, and `set_wrap` to break the run into
+lines when they do not fit), `GridLayout` (tracks that are fixed, automatic or
+a fraction of what remains), and `AbsoluteLayout` (layers in one box, each
+placed by its insets). Every one takes padding, spacing, main-axis
+justification and cross-axis alignment, and every child may carry a margin,
+size bounds, a grow and shrink weight, and an alignment of its own. In markup
+every stack is a `FlexLayout`; `StackLayout` is for a tree built by hand.
 Padding and margin are both `geometry.EdgeInsets` — `all(8.0)`,
 `symmetric(16.0, 8.0)` or `of(top, right, bottom, left)` — so a lopsided box
 is one call, not four. A child may also ask for a share of its room
@@ -346,16 +348,26 @@ the other three did not.
 Two things about it are refused rather than guessed. It holds **one** child,
 because every toolkit here scrolls a single content view and the extras would
 land on top of it. And it must be told a height — `height={...}`, or
-`grow={1}` inside a `<VFlex>` — because a scroll view in a run that hands out
-no height takes its content's height and scrolls nothing, silently.
+`flex={1}` inside a `<VStack>` — because a scroll view in a run that hands out
+no height takes its content's height and scrolls nothing, silently. Its
+content is never shorter than the viewport, so a `flex={1}` child inside it
+has room to grow when the content is short and scrolls when it is tall.
 
 ```
-<VFlex padding={16}>
-  <ScrollView grow={1}>
+<VStack padding={16}>
+  <ScrollView flex={1}>
     <VStack spacing={10}> ... </VStack>
   </ScrollView>
-</VFlex>
+</VStack>
 ```
+
+**A run that spills says so.** A child that will not shrink, a grid of fixed
+columns wider than its box, a layer placed past an edge: the layout dump
+prints `overflows by N` on the run, and `Mount.overflows()` counts them, so a
+screen's own dump can assert zero at every size. It is a number and not a
+refusal, because overflow is often right — a `min_width` keeping a control
+usable, a scroll view's content — and a refusal would fail a solve on every
+frame of a window dragged small.
 
 **Right-to-left is one pass, not a parameter.** Every algorithm lays out left
 to right, and the solver mirrors the finished frames once — about each
@@ -446,19 +458,69 @@ constructor returns and `init` runs long before anything has a container to ask
 `@inject` where a constructor cannot reach.
 
 **Reading the window.** `self.viewport()` is the content size the mount lays
-the component out in, as of its last render — so a render can decide by it,
-and in markup a breakpoint is a `$if`:
+the component out in, as of its last render — so a render can decide by it.
+Most screens never need to: what fits is the layout's to decide, and a child
+that should go when its box is narrow says so with `hide_below` and no code
+at all. `viewport()` is for the render that needs the number itself:
 
 ```
-$if self.viewport().width < 600 { <Sidebar folded /> } else { <Sidebar /> }
+<Sidebar hide_below={600} />
+$if self.viewport().width < 600 { <Label text="a phone-sized window" /> }
 ```
 
-A component whose render reads it overrides `follows_viewport()` to answer
-true, and the mount renders it again after every resize — once, on the next
-refresh, however many resize events a drag produced. One that does not is
-laid out again and not rendered, which is why the default is off: most
-screens never read their size, and a resize that re-rendered every one of
-them would pay for that on every frame of the drag.
+**Reading it is what declares it.** A render that calls `viewport()` is
+rendered again after every resize — once, on the next refresh, however many
+resize events a drag produced. One that never calls it is laid out again and
+not rendered, which is why this is tracked rather than defaulted on: most
+screens never read their size, and a resize that re-rendered every one of them
+would pay for that on every frame of the drag. `follows_viewport()` is still
+there to override when a screen wants a different answer, but nothing has to
+keep two places in step any more — and a screen that read the room and forgot
+to say so used to go stale for ever.
+
+**A size that is a share of the room.** A control property is not a layout
+number: `font_size`, `padding` and `corner_radius` leave a render as plain
+points and reach the platform before the solver runs, so there is no
+`font_size_percent` and there could not be one. What there is instead is the
+share, worked out where the room is already known:
+
+```
+<Label font_size={self.vw(10, 28, 64)} text="Petrichor" />
+```
+
+A tenth of the window's width, never below 28 points and never above 64 —
+the web's `clamp(28px, 10vw, 64px)`, in the one call that needs no second
+method on the class. `vh` is the same on the other axis. Bounds the wrong way
+round take CSS's answer and the low one wins.
+
+**And a share of a component's own box.** `viewport()` is the *window*, and the
+box a component is laid out in is usually much smaller: in
+`examples/gradients` the title's column is 620 points inside a 900-point
+window, because there is padding and a shelf of colour chips beside it. `cw`
+and `ch` are shares of that box, and `box()` is the box itself:
+
+```
+<Label font_size={self.cw(10, 28, 64)} text="Petrichor" />
+```
+
+Three things follow from it, and they are the whole contract.
+
+*It is the box from the last pass*, the way `viewport()` is the room from the
+last render — this is `onLayout` in React Native, not a measurement taken
+during the render. The mount lays out, hands every component its box, and
+renders again the ones that read it.
+
+*It belongs to a component*, because a component is the smallest thing with a
+box of its own. To size a sub-part by its own box, make it a component — which
+is what you do in React Native too.
+
+*A box that decides itself is refused.* A component whose own content settles
+its box cannot also be sized from that box: the layout would never converge.
+The mount lays out and renders up to four times for a screen whose boxes are
+still moving — a chain of components each sized by its parent settles one link
+a pass — and then refuses, naming what would not settle, rather than laying out
+for ever. `override fn on_layout(frame: geometry.Rect)` is the hook for
+anything else that has to happen when the box moves.
 
 **Dependency injection** is [barista](https://github.com/beans-lang/barista),
 and the whole of the dependency is one class in a *separate module*,
@@ -575,7 +637,7 @@ halves of a screen are never neighbours, so nobody edits the generated one by
 mistake.
 
 **The tags are controls, not HTML.** Containers are `VStack`, `HStack`,
-`VFlex`, `HFlex`, `Grid`, `Box`, `Container` and `ScrollView`; controls are
+`Grid`, `Box`, `Container` and `ScrollView`; controls are
 `Label`, `Button`, `TextField`, `SecureField`, `TextArea`, `CheckBox`,
 `RadioButton`, `Switch`, `Slider`, `Stepper`, `ProgressBar`,
 `LevelIndicator`, `ComboBox`, `Table`, `SearchField`, `Spinner`, `Link`,
@@ -696,10 +758,10 @@ and forwards it. A component whose *public* field shares a placement's name is
 refused by name, because one spelling would otherwise mean two things.
 
 ```
-<VFlex spacing={12} align="stretch">
-  <Tile grow={1} margin_x={8} title="Today" />
+<VStack spacing={12} align="stretch">
+  <Tile flex={1} margin_x={8} title="Today" />
   <Price height={44} align="end" drink={self.drink} />
-</VFlex>
+</VStack>
 ```
 
 By hand it is the value `child` and `show` answer:
@@ -819,13 +881,13 @@ must not drop the link, and reading the target back must not answer the markup
 — which is what `tests/strings.out` checks, and what caught the first version
 losing every URL to a message sent to a `nil` dictionary.
 
-**A growing child in a stack is refused, not ignored.** `StackLayout` gives
-every child the size it measures; `grow` is `FlexLayout`'s word. Asking for it
-in a stack used to lay the child out at its intrinsic size and say nothing,
-which cost three separate afternoons — a canvas 0 points wide, a table 0 points
-wide, and a search field squeezed to nothing, each laid out exactly as asked
-and each useless. It now answers `grow_in_a_stack` and names the child and the
-fix.
+**Every stack in markup flexes.** `<VStack>` and `<HStack>` share out their
+leftover by `grow` and take back overflow by `shrink`, `flex={1}` is the three
+numbers at once, and `wrap` breaks the run into lines — there is one family of
+container to choose from, as in Yoga. The old `<VFlex>`, `<HFlex>`, `<VWrap>`
+and `<HWrap>` are refused by name with the tag to write instead. A hand-built
+`StackLayout` keeps refusing `grow` as `grow_in_a_stack`: it gives every child
+the size it measures, and the silent version of that cost three afternoons.
 
 **A table asks for its cells; it does not hold them.** This is the one control
 cortado does not build out of widgets, and the reason is the only one that
@@ -972,19 +1034,38 @@ once and adjusted on one side.
 A margin is the child's own, so every control takes one; padding is a
 container's, so `padding_left` on a `<Label>` is refused the way `padding` is.
 
-**A run that wraps.** `<HWrap>` and `<VWrap>` are `WrapLayout`: children go
-along the main axis until the next would not fit, then start a new line, with
-`spacing` between neighbours and `line_spacing` between lines. Each line is a
-flexing run of its own — `grow` fills that line's leftover, `justify` places
-that line, `align` sits a child within its line — and a child wider than the
-room takes a line of its own and shrinks to fit. A shelf of tags that reflows
-as the window narrows is one tag:
+**A run that wraps.** `wrap` on a stack: children go along the main axis
+until the next would not fit, then start a new line, with `spacing` between
+neighbours and `line_spacing` between lines. Each line is a flexing run of its
+own — `grow` fills that line's leftover, `justify` places that line, `align`
+sits a child within its line — and a child wider than the room takes a line of
+its own and shrinks to fit. A shelf of tags that reflows as the window narrows
+is one attribute:
 
 ```
-<HWrap spacing={8} line_spacing={8}>
+<HStack wrap spacing={8} line_spacing={8}>
   $for tag in self.tags { <Button key={tag} text={tag} /> }
-</HWrap>
+</HStack>
 ```
+
+**Hidden by the room, not by a line of code.** `hide_below={620}` shows a
+child only while the box around it is at least 620 wide, and `hide_above` is
+the other bound. The layout decides it on every pass, against the *parent's*
+box rather than the window, so a legend that goes when its band is narrow is
+one attribute and no render runs when a drag crosses the line — the control is
+culled from the run, takes no room and no spacing, and the sheet hides it.
+`hidden` does the same at every width: a hidden control leaves the layout. A
+bound written on a screen's root is refused, since nothing contains it.
+
+**A label wraps.** Offered less width than its words need, a `<Label>` answers
+the height it needs at that width, on all four hosts; `lines={1}` cuts it to
+one line with an ellipsis and `lines={2}` caps it there. A button does not
+wrap. A stretched child is measured at the width it will get, so a shape or a
+wrapping label inside a column answers for its real box.
+
+**An element's own place.** `align` on a container is the default for its
+children; `align_self` is the element's own cross-axis place in the run around
+it, for a `<VStack>` that wants to sit in the centre of its parent.
 
 **A size bound comes one side at a time as well.** `width={n}` pins both
 bounds; `min_width`, `max_width`, `min_height` and `max_height` set one, in
@@ -992,6 +1073,48 @@ source order, so `width={150} max_width={200}` may stretch to 200 and the
 reverse order is pinned at 150. A range that ends up reversed — a minimum
 above a maximum — is refused naming both numbers, because the solver would
 otherwise fold them together silently.
+
+**A grid whose columns follow the room.** `<Grid>` could only ever be one
+column: `Track.fixed`, `Track.auto` and `Track.fraction` were in the engine
+from the start and markup could name none of them. `columns` names them, and
+`column_gap` and `row_gap` are the gaps:
+
+```
+<Grid columns="160 1fr auto" column_gap={10} row_gap={10}> ... </Grid>
+```
+
+160 points, then a share of what is left, then as wide as the widest child in
+it. The other spelling is the one that removes a breakpoint rather than
+writing one:
+
+```
+<Grid min_column={160} max_column={260} justify="center" column_gap={10}> ... </Grid>
+```
+
+As many equal columns as fit, each at least 160 wide and at most 260 — the
+web's `repeat(auto-fit, minmax(160px, 260px))`, worked out in the layout pass
+where the room is known.
+
+**`auto-fit`, and the `fit` is the point.** A column nobody fills is collapsed,
+not left empty: five tiles in a window with room for eleven columns are five
+columns, not five tiles huddled at the left with six empty tracks beside them.
+That is the whole difference between the web's `auto-fit` and its `auto-fill`,
+and it is the bug this shipped with for exactly one afternoon.
+
+A ceiling leaves room over, and `justify` says where a row sits in it — all six
+spellings, per row, so a short last row is placed by what is actually in it
+rather than by what a full row would have been. `examples/gradients` puts its
+shelf of five gradients on one of these: five tiles to a line, then three and
+two, then one, with no size written anywhere but that 160 and 260. Writing
+`columns` and `min_column` on one grid is refused as deciding the columns
+twice, and so is a `max_column` under the `min_column`.
+
+**A size named by the job it does.** `font_role="body"`, `"heading"` or
+`"caption"` is the platform's own size for that role — which follows the
+reader's text-size setting, and a number cannot. `font_role` and `font_size`
+land on the same property, so the last one written wins, the way `padding` and
+`padding_x` do. `mono` is refused: it is body's size in a monospaced family,
+and a family is not a property a control carries, so it would set nothing.
 
 **A share of the room, and a shape.** `width_percent={50}` and
 `height_percent={50}` are a share, 0 to 100, of the room the container offers
@@ -1012,24 +1135,30 @@ A canvas that follows the window is one line:
 
 ### A screen laid out by coordinate
 
-`<Box>` is `AbsoluteLayout` in markup: it puts each child at the `x` and `y`
-that child carries, in points from the box's top-left corner. It is what an
-overlay is — a title over a canvas, a chip pinned to an edge, a toast at the
-top — and there is nothing for a run to compute in any of those.
+`<Box>` is `AbsoluteLayout` in markup: layers in one box, each placed by the
+insets it carries. Per axis, a child with no opinion fills the box; `x` or
+`y` places its measured size against the near edge and `right` or `bottom`
+against the far one; two opposite insets stretch it between them; a `width`,
+a `height` or a share sits where its inset says. A margin is honoured. It is
+what an overlay is — a gradient behind a screen, a legend pinned to an edge, a
+toast at the top — and there is nothing for a run to compute in any of those.
 
 ```
-<Box width={900} height={640}>
-  <VFlex x={0} y={0} width={900} height={640} align="stretch">
-    <MeshGradient grow={1} color_1="#EAF4FC" color_2="#1E50A2" />
-  </VFlex>
-  <Label x={0} y={264} width={900} alignment={1} font_size={64}>Petrichor</Label>
+<Box>
+  <MeshGradient color_1="#EAF4FC" color_2="#1E50A2" />        <!-- fills -->
+  <VStack right={0} y={0} bottom={0} justify="center">        <!-- pinned right, full height -->
+    <Swatch name="MOON WHITE" hex="#EAF4FC" />
+  </VStack>
+  <Label bottom={12} width={200} text="a caption at the foot" />
 </Box>
 ```
 
-**`x` and `y` are refused anywhere else**, in the sentence `grow` already gets
-in a run that does not flex: a coordinate written inside a `<VStack>` would
-otherwise be a silent no-op, which is the failure this library refuses
-everywhere. The refusal names `<Box>`.
+**`x`, `y`, `right` and `bottom` are refused anywhere else**, in the sentence
+`grow` already gets in a container that does not run its children: a
+coordinate written inside a `<VStack>` would otherwise be a silent no-op, which
+is the failure this library refuses everywhere. The refusal names `<Box>`. So
+is `align` on a layer, because a layer is placed by its insets; and an inset
+beside its opposite and a size on the same axis, which decides it three times.
 
 **A component tag carries them too**, as placements. A component renders into
 a builder of its own, so its root has no parent at the moment anything is
@@ -1038,20 +1167,24 @@ the chip's root once it has rendered, and checked against the container the
 tag sits in. Before that a component had to declare `x` and `y` as parameters
 and forward them to its root — every shader canvas carried a `height` and a
 `grow` field for no other reason — and `<ShaderCanvas grow={1} />` inside a
-`<VFlex>` was refused for sitting in a run that does not flex, while sitting in
+`<VStack>` was refused for sitting in a run that does not flex, while sitting in
 one that does.
 
 `examples/gradients` is the screen: a `<MeshGradient>` behind everything and
 the other five on a shelf along the bottom, with a title, a toast and four
 colour chips over them as ordinary native controls. Six shaders on one screen,
-and not a line of shader in the file — **and not a coordinate either.** It is
-two full-bleed layers in a `<Box>`, sized with `width_percent`; the shelf is an
-`<HWrap>` that reflows, each tile sized by the tag that places it
-(`<AuroraGradient width={160} aspect_ratio={1.95} />`), and the chips beside
-the title are dropped under a `viewport()` breakpoint. `--dump` and
-`--dump-narrow` record it at two window sizes, because one golden proves a
-layout and two prove it is responsive. The frame rate under the title is
-counted, not estimated: frames the background canvas actually put on screen
+and not a line of shader in the file — **and not a coordinate or a sum
+either.** It is two full-bleed layers in a `<Box>`, sized with `width_percent`;
+the title is `self.cw(10, 28, 64)`, a tenth of its own box; the shelf is a
+`<Grid min_column={160} max_column={260} justify="center">` that goes five
+tiles to a line, then three and two, then one, centred in whatever it does not
+use; and the colour chips are a third full-bleed layer in the `<Box>`, pinned
+to the right edge, so the title stays on the centre of the window rather than
+on the centre of the room left over beside them.
+`--dump`, `--dump-narrow` and `--dump-tight` record it at three window sizes:
+two would show the layout changing and three show it changing twice, which is
+what a share with a floor and a ceiling needs. The frame rate under the title
+is counted, not estimated: frames the background canvas actually put on screen
 between two readings of the clock, divided by the seconds between them.
 
 ### A clock does not tick for a surface nobody is being shown
@@ -1111,9 +1244,18 @@ and then never fires; `tests/frames.b` went from five frames to none on the
 first attempt at this. Which link a surface gets is decided on the app's role,
 the same discriminator the visibility gate uses.
 
-GTK4 refuses `prefer` as `unsupported` — a `GdkFrameClock` is the display's
-and takes no instruction — and Win32, whose clock is a timer, turns the wanted
-rate into the timer's period.
+**Where the platform has no rate to set, the host paces itself.** Win32, whose
+clock is a timer, turns the wanted rate into the timer's period. GTK4 has no
+call at all — a `GdkFrameClock` is the display's — so it keeps the wish and
+drops the ticks in between, and so does macOS on the `CVDisplayLink` fallback.
+`prefer` therefore answers `allowed` on every host, and every host means it.
+Asking for more than the display gives is still only a request anywhere.
+
+`tests/frames.b` is where that is checked against a real display: five frames
+asked for at twenty a second must take at least a fifth of a second, which is
+three times what they take unpaced. GTK4's pacing is the one path the gate
+cannot reach — a tick callback needs a mapped widget, and nothing in this
+suite is ever on screen.
 
 ### Dressing a control
 

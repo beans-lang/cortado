@@ -225,4 +225,7 @@ void ctd_clock_forget(uint32_t slot) {
     }
     if (clock->target) [(CortadoTick *)clock->target release];
     memset(clock, 0, sizeof *clock);
+    // The wish goes with the surface. A slot is reused, and a clock started on
+    // the next one must not inherit a rate nobody asked for.
+    memset(&g_rate[slot], 0, sizeof g_rate[slot]);
 }

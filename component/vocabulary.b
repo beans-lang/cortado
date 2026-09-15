@@ -4,6 +4,7 @@ package component
 import cortado.widgets
 import cortado.events
 import cortado.host
+import cortado.platform
 import cortado.layout
 import cortado.geometry
 
@@ -22,8 +23,7 @@ import cortado.geometry
 pub class Vocabulary {
     /// The widget behind a tag, or `none` for a tag cortado does not know.
     pub static fn kind_of(tag: string) -> Option<widgets.WidgetKind> {
-        if tag == "VStack" || tag == "HStack" || tag == "VFlex" || tag == "HFlex" ||
-           tag == "VWrap" || tag == "HWrap" ||
+        if tag == "VStack" || tag == "HStack" ||
            tag == "Grid" || tag == "Box" || tag == "Container" {
             return some(widgets.WidgetKind.container)
         }
@@ -65,14 +65,14 @@ pub class Vocabulary {
     /// to; sharing one would make every `VStack` in an application take the
     /// spacing of whichever was configured last.
     pub static fn arranger_of(tag: string) -> Option<layout.Layout> {
-        if tag == "VStack" { return some(layout.StackLayout.column(0.0)) }
-        if tag == "HStack" { return some(layout.StackLayout.row(0.0)) }
-        if tag == "VFlex" { return some(layout.FlexLayout.column(0.0)) }
-        if tag == "HFlex" { return some(layout.FlexLayout.row(0.0)) }
-        if tag == "VWrap" { return some(layout.WrapLayout.column(0.0)) }
-        if tag == "HWrap" { return some(layout.WrapLayout.row(0.0)) }
+        // Every stack flexes: grow and shrink share the leftover, and `wrap`
+        // breaks it into lines. `StackLayout` stays for hand-built trees.
+        if tag == "VStack" { return some(layout.FlexLayout.column(0.0)) }
+        if tag == "HStack" { return some(layout.FlexLayout.row(0.0)) }
         if tag == "Box" { return some(new layout.AbsoluteLayout()) }
-        if tag == "Grid" { return some(layout.GridLayout.uniform(1, 0.0)) }
+        // No columns declared: `columns` or `min_column` says what they are,
+        // and a grid that is told neither is the one column it always was.
+        if tag == "Grid" { return some(new layout.GridLayout()) }
         // The containers that hold a subtree and have nothing to say about
         // where it goes. Without an arranger a node is a leaf, and a leaf
         // places none of its children — so before this line every control
@@ -93,6 +93,16 @@ pub class Vocabulary {
         return none
     }
 
+    /// The sentence for a container tag that no longer exists, or `""`.
+    /// Mirrors `bx.retired_tag`; `tools/check_vocabulary.sh` holds them together.
+    pub static fn retired(tag: string) -> string {
+        if tag == "VFlex" { return "<VFlex> is retired: every <VStack> shares out its leftover by grow and shrink now — write <VStack>" }
+        if tag == "HFlex" { return "<HFlex> is retired: every <HStack> shares out its leftover by grow and shrink now — write <HStack>" }
+        if tag == "VWrap" { return "<VWrap> is retired: wrapping is an attribute of a stack now — write <VStack wrap>" }
+        if tag == "HWrap" { return "<HWrap> is retired: wrapping is an attribute of a stack now — write <HStack wrap>" }
+        return ""
+    }
+
     /// The host property an attribute name sets, or -1.
     pub static fn property_of(name: string) -> int {
         if name == "checked" { return host.P_CHECKED }
@@ -104,10 +114,14 @@ pub class Vocabulary {
         if name == "editable" { return host.P_EDITABLE }
         if name == "alignment" { return host.P_ALIGNMENT }
         if name == "font_size" { return host.P_FONT_SIZE }
+        // A role is a size, so it lands on the same property — and two
+        // names on one property is what makes the last one written win.
+        if name == "font_role" { return host.P_FONT_SIZE }
         if name == "step" { return host.P_STEP }
         if name == "selected" { return host.P_SELECTED }
         if name == "indeterminate" { return host.P_INDETERMINATE }
         if name == "opacity" { return host.P_OPACITY }
+        if name == "lines" { return host.P_LINES }
         if name == "day" { return host.P_DATE }
         if name == "color" { return host.P_COLOR }
         if name == "open" { return host.P_EXPANDED }
@@ -135,6 +149,38 @@ pub class Vocabulary {
                                            property as i32) as int
         }
         return answer == 1
+    }
+
+    /// One column of a track list: `160` points, `1fr` a share of what is
+    /// left, `auto` the widest child in it.
+    pub static fn track_of(word: string) -> Option<layout.Track> {
+        if word == "auto" { return some(layout.Track.auto()) }
+        if word.ends_with("fr") {
+            match word.slice(0, word.len() - 2).to_float() {
+                err(problem) => { return none }
+                ok(weight) => {
+                    if weight <= 0.0 { return none }
+                    return some(layout.Track.fraction(weight))
+                }
+            }
+        }
+        match word.to_float() {
+            err(problem) => { return none }
+            ok(points) => {
+                if points < 0.0 { return none }
+                return some(layout.Track.fixed(points))
+            }
+        }
+    }
+
+    /// The system font role a word names, or `none`. `mono` is deliberately
+    /// absent: it is body's size in another family, and a family is not a
+    /// property a control carries.
+    pub static fn font_role_of(word: string) -> Option<platform.SystemFont> {
+        if word == "body" { return some(platform.SystemFont.body) }
+        if word == "heading" { return some(platform.SystemFont.heading) }
+        if word == "caption" { return some(platform.SystemFont.caption) }
+        return none
     }
 
     /// Whether this attribute's value is a colour, written `#rgb`, `#rrggbb`
@@ -166,7 +212,7 @@ pub class Vocabulary {
         // hands back. It is written in markup as `#rrggbbaa`, and `Builder`
         // is what turns the one into the other.
         if name == "checked" || name == "alignment" || name == "selected" ||
-           Vocabulary.is_colour(name) {
+           name == "lines" || Vocabulary.is_colour(name) {
             return AttributeKind.whole
         }
         if name == "open" || name == "animating" { return AttributeKind.flag }
@@ -209,7 +255,8 @@ pub class Vocabulary {
     pub static fn is_layout_name(name: string) -> bool {
         return name == "spacing" || name == "line_spacing" || name == "padding" || name == "justify" ||
                name == "align" || name == "grow" || name == "shrink" ||
-               name == "basis" || name == "margin" || name == "width" ||
+               name == "basis" || name == "flex" || name == "wrap" ||
+               name == "margin" || name == "width" ||
                name == "height" || name == "x" || name == "y" ||
                name == "padding_x" || name == "padding_y" ||
                name == "padding_top" || name == "padding_right" ||
@@ -220,7 +267,11 @@ pub class Vocabulary {
                name == "min_width" || name == "max_width" ||
                name == "min_height" || name == "max_height" ||
                name == "width_percent" || name == "height_percent" ||
-               name == "aspect_ratio"
+               name == "aspect_ratio" ||
+               name == "hide_below" || name == "hide_above" ||
+               name == "right" || name == "bottom" || name == "align_self" ||
+               name == "columns" || name == "min_column" || name == "max_column" ||
+               name == "column_gap" || name == "row_gap"
     }
 
     /// Whether a component tag may carry `name`: what the component's root asks
@@ -229,13 +280,15 @@ pub class Vocabulary {
         return name == "margin" || name == "margin_x" || name == "margin_y" ||
                name == "margin_top" || name == "margin_right" ||
                name == "margin_bottom" || name == "margin_left" ||
-               name == "grow" || name == "shrink" || name == "basis" ||
+               name == "grow" || name == "shrink" || name == "basis" || name == "flex" ||
                name == "width" || name == "height" ||
                name == "min_width" || name == "max_width" ||
                name == "min_height" || name == "max_height" ||
                name == "width_percent" || name == "height_percent" ||
                name == "aspect_ratio" ||
-               name == "x" || name == "y" || name == "align"
+               name == "hide_below" || name == "hide_above" ||
+               name == "x" || name == "y" || name == "right" || name == "bottom" ||
+               name == "align" || name == "align_self"
     }
 
     /// The edge a padding name writes: `top`, `right`, `bottom`, `left`, `x` for

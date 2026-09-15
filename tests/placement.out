@@ -2,11 +2,14 @@
   margin=6 inside, margin_left=20 on the tag: 6,6,6,20
   margin_x=7 on a tag with no margin of its own: 0,7,0,7
 -- what a run hands out is checked against the run the tag sits in --
-  grow=1 in a <VFlex>: 1
-  grow=1 in a <VStack> is refused: true
+  grow=1 in a <VStack>: 1
+  grow=1 in a <Grid> is refused: true
+  and the message says why: true
+  flex=2 on a tag is grow, shrink and basis: 2,1,0
+  flex beside shrink on a tag is refused: true
   and the message says why: true
   x=44 in a <Box>: 44
-  y=44 in an <HFlex> is refused: true
+  y=44 in an <HStack> is refused: true
   and the message says why: true
 -- width, height and align --
   width=120 pins both bounds: 120,120
@@ -33,11 +36,26 @@
   y on a <Chip> whose y is private places it: 5
 -- two placements on one tag, solved --
 == one that grows above one that is 30 tall with 5 above it, in 300 x 100 ==
-VFlex flex frame=0,0,300,100
-  HStack stack frame=0,0,300,65
+VStack flex frame=0,0,300,100
+  HStack flex frame=0,0,300,65
     Label leaf frame=0,0,100,20
-  HStack stack frame=0,70,300,30
+  HStack flex frame=0,70,300,30
     Label leaf frame=0,0,100,20
 -- a root nothing contains yet --
   the requirement is still open: true
   and it names the attribute that asked: true
+-- hidden by the box around it, from the tag --
+  hide_below=620 on a tag reaches its root: 620
+== the second is hidden in 400 ==
+HStack flex frame=0,0,400,100
+  HStack flex frame=0,0,100,20
+    Label leaf frame=0,0,100,20
+  HStack flex frame=0,0,0,0 hidden
+== and shown in 700 ==
+HStack flex frame=0,0,700,100
+  HStack flex frame=0,0,100,20
+    Label leaf frame=0,0,100,20
+  HStack flex frame=108,0,100,20
+    Label leaf frame=0,0,100,20
+  hide_above=400 hide_below=600 on a tag is refused: true
+  and the message says why: true

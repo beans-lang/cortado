@@ -35,6 +35,8 @@ fn open(role: platform.AppRole, dumping: bool, wide: f64, tall: f64) -> Result<b
 
     if dumping {
         io.print(widgets.WidgetDump.of(root)?)
+        // Zero at every size, or a run has children past its box.
+        io.println("overflowing runs: {mount.overflows()}")
         mount.close()?
         app.shutdown()
         return ok(true)
@@ -65,11 +67,12 @@ fn main() {
         report_rate()
         return
     }
-    // A second dump, at a window too narrow for the chips beside the title.
-    // The layout is the screen's own now, so the only way to check it holds at
-    // another size is to mount it at one.
+    // Three dumps, because the screen changes shape twice: 900 is five tiles
+    // and the legend beside the title; 520 hides the legend and goes to two
+    // tiles a line; 300 is one a line, the title at its floor, and a scroll.
     let narrow: bool = args.len() > 0 && args[0] == "--dump-narrow"
-    let dumping: bool = narrow || (args.len() > 0 && args[0] == "--dump")
+    let tight: bool = args.len() > 0 && args[0] == "--dump-tight"
+    let dumping: bool = narrow || tight || (args.len() > 0 && args[0] == "--dump")
     var role: platform.AppRole = platform.AppRole.gui
     if dumping { role = platform.AppRole.headless }
     var wide: f64 = 900.0
@@ -77,6 +80,19 @@ fn main() {
     if narrow {
         wide = 520.0
         tall = 760.0
+    }
+    if tight {
+        wide = 300.0
+        tall = 700.0
+    }
+    // Any size, for checking a screen at the window somebody is looking at.
+    if args.len() > 2 && args[0] == "--dump-at" {
+        role = platform.AppRole.headless
+        match open(role, true, args[1].to_float().or(900.0), args[2].to_float().or(640.0)) {
+            ok(done) => {}
+            err(problem) => { io.println("{problem.kind}: {problem.msg}") }
+        }
+        return
     }
     match open(role, dumping, wide, tall) {
         ok(done) => {}

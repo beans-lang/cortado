@@ -1,0 +1,14 @@
+== what the four roles answer ==
+  heading is at least body: true
+  caption is smaller than body: true
+  mono is body's size, and only its family differs: true
+== a role lays out as its own number ==
+  heading by role is heading by number: true
+  and a body role is not a heading one: true
+== two names on one property, so the last one wins ==
+  font_role then font_size is the number: true
+  font_size then font_role is the role: true
+== what is refused ==
+  font_role is a size, and mono is body's size in a monospaced family — a family is not a property a control carries, so this would set nothing. Write font_role="body"
+  font_role="huge" is not one of body, heading, caption
+  <Slider> has no font_role — font_role is carried by Label, Button, TextField, CheckBox, TextArea, ComboBox, RadioButton, SecureField, SearchField, Link, Segmented, DatePicker

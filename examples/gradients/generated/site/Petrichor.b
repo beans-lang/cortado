@@ -22,22 +22,6 @@ import {MeshGradient, AuroraGradient, FlowGradient,
         PrismGradient, GlowGradient, SkyGradient} from cortado.gpu
 import {view} from cortado.annotations
 
-/// Four colours blended by distance, drifting, with a screen of real controls
-/// on top of them.
-///
-/// **What is drawn here and what is placed.** Six tags are drawn — the
-/// `<MeshGradient>` behind everything and the five on the shelf below it. Not
-/// one of them carries a line of shader: they are named attributes.
-///
-/// Everything over it is an ordinary native control placed by a run. The title
-/// is an NSTextField, the chips are stacks, the toast tabs like a button.
-///
-/// **Nothing here is a coordinate.** The screen is two full-bleed layers in a
-/// `<Box>`, and every size below them is a share of the room, a shape, or what
-/// a run hands out — so the same file is the phone layout and the desk one.
-///
-/// **No Beans code runs per frame.** The gradient redraws off the frame clock;
-/// the controls over it are laid out once, because nothing about them changed.
 @view
 pub partial class Petrichor extends component.Component {
     pub dismissed: bool = false
@@ -117,26 +101,6 @@ pub partial class Petrichor extends component.Component {
         }
     }
 
-    /// This render reads `viewport()`, so a resize is a reason to run it again.
-    pub override fn follows_viewport() -> bool { return true }
-
-    /// Whether there is room beside the title for the colour chips.
-    ///
-    /// 232 points of chip, 16 of gap and a title that stops reading as a title
-    /// under about 380 — the breakpoint is that sum rather than a round number.
-    pub fn roomy() -> bool {
-        return self.viewport().width >= 660.0
-    }
-
-    /// The title, as large as the window can carry: a tenth of the width,
-    /// held between what is legible and what the design was drawn at.
-    pub fn title_size() -> f64 {
-        var size: f64 = self.viewport().width / 10.0
-        if size > 64.0 { size = 64.0 }
-        if size < 28.0 { size = 28.0 }
-        return size
-    }
-
     // Both of these end in `request_render`, and that is not a formality.
     // The mount asks rather than being told, so a handler that changes a field
     // and stops leaves the screen showing the old answer for ever.
@@ -157,6 +121,7 @@ pub partial class Petrichor extends component.Component {
 // instead of a blank subtree and a fault at run time. Unused, and an
 // unused free function is not an error.
 fn _cortado_component_Petrichor_MeshGradient(value: MeshGradient) -> Component { return value }
+fn _cortado_component_Petrichor_Title(value: Title) -> Component { return value }
 fn _cortado_component_Petrichor_Swatch(value: Swatch) -> Component { return value }
 fn _cortado_component_Petrichor_AuroraGradient(value: AuroraGradient) -> Component { return value }
 fn _cortado_component_Petrichor_FlowGradient(value: FlowGradient) -> Component { return value }
@@ -167,11 +132,7 @@ fn _cortado_component_Petrichor_SkyGradient(value: SkyGradient) -> Component { r
 partial class Petrichor {
     pub override fn render(b: Builder) {
         b.open("Box")  // Petrichor.bx:1
-        b.open("VFlex")  // Petrichor.bx:4
-        b.number("width_percent", (100) as f64)
-        b.number("height_percent", (100) as f64)
-        b.word("align", "stretch")
-        b.child<MeshGradient>("c0", fn(_cortado_c: MeshGradient) {  // Petrichor.bx:5
+        b.child<MeshGradient>("c0", fn(_cortado_c: MeshGradient) {  // Petrichor.bx:4
             _cortado_c.lobe = 2
             _cortado_c.color_1 = "#EAF4FC"
             _cortado_c.reach_1 = 18
@@ -182,17 +143,15 @@ partial class Petrichor {
             _cortado_c.color_4 = "#895B8A"
             _cortado_c.reach_4 = 11
             self.mesh = some(_cortado_c)
-        }).number("grow", (1) as f64)
-        b.close()
-        b.open("VFlex")  // Petrichor.bx:12
-        b.number("width_percent", (100) as f64)
-        b.number("height_percent", (100) as f64)
+        })
+        b.open("ScrollView")  // Petrichor.bx:12
+        b.open("VStack")  // Petrichor.bx:13
         b.number("padding", (16) as f64)
         b.word("align", "stretch")
-        if !self.dismissed {  // Petrichor.bx:13
-            b.open("HStack")  // Petrichor.bx:14
+        if !self.dismissed {  // Petrichor.bx:14
+            b.open("HStack")  // Petrichor.bx:15
             b.word("justify", "end")
-            b.open("HStack")  // Petrichor.bx:17
+            b.open("HStack")  // Petrichor.bx:19
             b.number("spacing", (10) as f64)
             b.number("padding", (8) as f64)
             b.word("align", "center")
@@ -200,18 +159,20 @@ partial class Petrichor {
             b.number("corner_radius", (18) as f64)
             b.number("border_width", (1) as f64)
             b.word("border_color", "#ffffff22")
-            b.open("Label")  // Petrichor.bx:20
+            b.open("Label")  // Petrichor.bx:22
             b.number("font_size", (12) as f64)
             b.word("text_color", "#f2eef4")
             b.text("Pick up where you left off?")
             b.close()
-            b.open("Button")  // Petrichor.bx:21
+            b.open("Button")  // Petrichor.bx:23
+            b.number("shrink", (0) as f64)
             b.text("Restore draft")
             b.number("font_size", (12) as f64)
             b.number("corner_radius", (9) as f64)
             b.on("click", fn(e: UiEvent) { self.restore() })
             b.close()
-            b.open("Button")  // Petrichor.bx:23
+            b.open("Button")  // Petrichor.bx:25
+            b.number("shrink", (0) as f64)
             b.text("✕")
             b.number("font_size", (11) as f64)
             b.number("width", (26) as f64)
@@ -221,126 +182,109 @@ partial class Petrichor {
             b.close()
             b.close()
         }
-        b.open("HFlex")  // Petrichor.bx:29
-        b.number("grow", (1) as f64)
-        b.number("spacing", (16) as f64)
-        b.word("align", "stretch")
-        b.open("VStack")  // Petrichor.bx:30
-        b.number("grow", (1) as f64)
+        b.open("Box")  // Petrichor.bx:34
+        b.number("flex", (1) as f64)
+        b.child<Title>("c1", fn(_cortado_c: Title) {  // Petrichor.bx:35
+            _cortado_c.caption = self.caption
+            _cortado_c.rate = self.rate
+        })
+        b.open("VStack")  // Petrichor.bx:36
+        b.number("right", (0) as f64)
+        b.number("y", (0) as f64)
+        b.number("bottom", (0) as f64)
         b.word("justify", "center")
+        b.number("spacing", (22) as f64)
         b.word("align", "stretch")
-        b.open("Label")  // Petrichor.bx:31
-        b.number("alignment", (1) as f64)
-        b.number("font_size", (self.title_size()) as f64)
-        b.word("text_color", "#241c22")
-        b.text("Petrichor")
+        b.number("hide_below", (620) as f64)
+        b.child<Swatch>("c2", fn(_cortado_c: Swatch) {  // Petrichor.bx:38
+            _cortado_c.name = "MOON WHITE"
+            _cortado_c.hex = "#EAF4FC"
+            _cortado_c.tint = "#EAF4FC"
+        })
+        b.child<Swatch>("c3", fn(_cortado_c: Swatch) {  // Petrichor.bx:39
+            _cortado_c.name = "LAPIS"
+            _cortado_c.hex = "#1E50A2"
+            _cortado_c.tint = "#1E50A2"
+        })
+        b.child<Swatch>("c4", fn(_cortado_c: Swatch) {  // Petrichor.bx:40
+            _cortado_c.name = "PEACH PINK"
+            _cortado_c.hex = "#F09199"
+            _cortado_c.tint = "#F09199"
+        })
+        b.child<Swatch>("c5", fn(_cortado_c: Swatch) {  // Petrichor.bx:41
+            _cortado_c.name = "ANCIENT PURPLE"
+            _cortado_c.hex = "#895B8A"
+            _cortado_c.tint = "#895B8A"
+        })
         b.close()
-        b.open("Label")  // Petrichor.bx:33
-        b.number("margin_top", (10) as f64)
-        b.number("alignment", (1) as f64)
-        b.number("font_size", (12) as f64)
-        b.word("text_color", "#463c46")
-        b.text("{self.caption}")
         b.close()
-        b.open("Label")  // Petrichor.bx:35
-        b.number("margin_top", (6) as f64)
-        b.number("alignment", (1) as f64)
-        b.number("font_size", (11) as f64)
-        b.word("text_color", "#6b6b74")
-        b.text("{self.rate}")
-        b.close()
-        b.close()
-        if self.roomy() {  // Petrichor.bx:41
-            b.open("VStack")  // Petrichor.bx:42
-            b.number("width", (232) as f64)
-            b.number("spacing", (22) as f64)
-            b.word("justify", "center")
-            b.child<Swatch>("c1", fn(_cortado_c: Swatch) {  // Petrichor.bx:43
-                _cortado_c.name = "MOON WHITE"
-                _cortado_c.hex = "#EAF4FC"
-                _cortado_c.tint = "#EAF4FC"
-            })
-            b.child<Swatch>("c2", fn(_cortado_c: Swatch) {  // Petrichor.bx:44
-                _cortado_c.name = "LAPIS"
-                _cortado_c.hex = "#1E50A2"
-                _cortado_c.tint = "#1E50A2"
-            })
-            b.child<Swatch>("c3", fn(_cortado_c: Swatch) {  // Petrichor.bx:45
-                _cortado_c.name = "PEACH PINK"
-                _cortado_c.hex = "#F09199"
-                _cortado_c.tint = "#F09199"
-            })
-            b.child<Swatch>("c4", fn(_cortado_c: Swatch) {  // Petrichor.bx:46
-                _cortado_c.name = "ANCIENT PURPLE"
-                _cortado_c.hex = "#895B8A"
-                _cortado_c.tint = "#895B8A"
-            })
-            b.close()
-        }
-        b.close()
-        b.open("HWrap")  // Petrichor.bx:53
-        b.number("spacing", (10) as f64)
-        b.number("line_spacing", (10) as f64)
+        b.open("Grid")  // Petrichor.bx:48
+        b.number("min_column", (160) as f64)
+        b.number("max_column", (260) as f64)
         b.word("justify", "center")
+        b.number("column_gap", (10) as f64)
+        b.number("row_gap", (10) as f64)
         b.number("margin_top", (12) as f64)
-        b.open("VStack")  // Petrichor.bx:54
+        b.word("align", "stretch")
+        b.open("VStack")  // Petrichor.bx:50
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<AuroraGradient>("c5", fn(_cortado_c: AuroraGradient) {  // Petrichor.bx:55
-        }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:56
+        b.child<AuroraGradient>("c6", fn(_cortado_c: AuroraGradient) {  // Petrichor.bx:51
+        }).number("aspect_ratio", (1.95) as f64)
+        b.open("Label")  // Petrichor.bx:52
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("AURORA")
         b.close()
         b.close()
-        b.open("VStack")  // Petrichor.bx:58
+        b.open("VStack")  // Petrichor.bx:54
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<FlowGradient>("c6", fn(_cortado_c: FlowGradient) {  // Petrichor.bx:59
-        }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:60
+        b.child<FlowGradient>("c7", fn(_cortado_c: FlowGradient) {  // Petrichor.bx:55
+        }).number("aspect_ratio", (1.95) as f64)
+        b.open("Label")  // Petrichor.bx:56
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("FLOW")
         b.close()
         b.close()
-        b.open("VStack")  // Petrichor.bx:62
+        b.open("VStack")  // Petrichor.bx:58
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<PrismGradient>("c7", fn(_cortado_c: PrismGradient) {  // Petrichor.bx:63
-        }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:64
+        b.child<PrismGradient>("c8", fn(_cortado_c: PrismGradient) {  // Petrichor.bx:59
+        }).number("aspect_ratio", (1.95) as f64)
+        b.open("Label")  // Petrichor.bx:60
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("PRISM")
         b.close()
         b.close()
-        b.open("VStack")  // Petrichor.bx:66
+        b.open("VStack")  // Petrichor.bx:62
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<GlowGradient>("c8", fn(_cortado_c: GlowGradient) {  // Petrichor.bx:67
-        }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:68
+        b.child<GlowGradient>("c9", fn(_cortado_c: GlowGradient) {  // Petrichor.bx:63
+        }).number("aspect_ratio", (1.95) as f64)
+        b.open("Label")  // Petrichor.bx:64
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("GLOW")
         b.close()
         b.close()
-        b.open("VStack")  // Petrichor.bx:70
+        b.open("VStack")  // Petrichor.bx:66
         b.number("spacing", (4) as f64)
         b.word("align", "stretch")
-        b.child<SkyGradient>("c9", fn(_cortado_c: SkyGradient) {  // Petrichor.bx:71
-        }).number("width", (160) as f64).number("aspect_ratio", (1.95) as f64)
-        b.open("Label")  // Petrichor.bx:72
+        b.child<SkyGradient>("c10", fn(_cortado_c: SkyGradient) {  // Petrichor.bx:67
+        }).number("aspect_ratio", (1.95) as f64)
+        b.open("Label")  // Petrichor.bx:68
         b.number("alignment", (1) as f64)
         b.number("font_size", (10) as f64)
         b.word("text_color", "#2b2430")
         b.text("SKY")
+        b.close()
         b.close()
         b.close()
         b.close()

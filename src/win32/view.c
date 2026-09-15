@@ -296,13 +296,19 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
             }
             break;
         }
-        case CTD_W_LABEL:
-            if (wrap > 0) {
+        case CTD_W_LABEL: {
+            // One line keeps the unwrapped extent; a larger cap holds the
+            // wrapped height to that many of the single line.
+            int64_t lines = g_lines[(uint32_t)(widget & 0xffffffffu)];
+            if (wrap > 0 && lines != 1) {
+                double line = height;
                 ctd_text_extent(view, wrap, &text);
                 width = (double)text.cx;
                 height = (double)text.cy;
+                if (lines > 1 && height > line * (double)lines) height = line * (double)lines;
             }
             break;
+        }
         case CTD_W_CHECK_BOX:
         case CTD_W_RADIO_BUTTON:
             // The box or the dot, plus the gap Windows leaves before the label.

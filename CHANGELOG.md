@@ -4,6 +4,127 @@
 
 First working macOS host.
 
+- **One family of container, as in Yoga.** `<VStack>` and `<HStack>` flex:
+  `grow` and `shrink` share out the leftover, `flex={n}` is grow `n`, shrink 1
+  and basis 0 in one number, and `wrap` breaks the run into lines with
+  `line_spacing` between them. `<VFlex>`, `<HFlex>`, `<VWrap>` and `<HWrap>`
+  are refused by name, in the compiler and in the `Builder`, with the tag to
+  write instead; `tools/check_vocabulary.sh` holds the two retired lists
+  together. `layout.WrapLayout` is gone — `FlexLayout.set_wrap` is what it was
+  — and `StackLayout` stays for a tree built by hand, `grow_in_a_stack` and
+  all. `flex` beside `grow`, `shrink` or `basis`, and `line_spacing` on a run
+  that does not wrap, are refused. A tag with children and nothing that lays
+  them out — a `<Container>`, a `<Label>` — is refused instead of leaving every
+  child at the corner, unmeasured.
+- **Hidden by the room.** `hide_below={620}` and `hide_above={W}` on any
+  element or component tag: the layout judges them on every pass against the
+  parent's content box, culls the child from the run — no room, no spacing —
+  and the sheet hides the control. A resize that crosses the bound lays out
+  again and renders nothing; `tests/culled.b` counts the renders. `hidden`
+  leaves the layout the same way now, so a hidden control takes no room. A
+  bound on a screen's root, and a pair with no width between them, are
+  refused. This is the attribute that removes `$if self.viewport()` from a
+  screen.
+- **`<Box>` is a stack of layers.** A child with no opinion on an axis fills
+  it; `x`/`y` place the measured size against the near edge and the new
+  `right`/`bottom` against the far one; two opposite insets stretch between
+  them; a pin or a share sits where its inset says; a shape with no size fills
+  across and takes its height from that. Margins are honoured on layers and
+  inside a group box, a disclosure, a tab view and a scroll view. `align` on a
+  layer, or on any of those holders, is refused — `align_self` is an element's
+  own cross-axis place in a run, on any tag. A negative inset, and an inset
+  beside its opposite and a size, are refused.
+- **A label wraps, on every host.** Offered less width than its words need it
+  answers the height for that width — macOS keeps its unwrapped size cached
+  and asks `cellSizeForBounds:` once per width, GTK4 wraps with the natural
+  width left unwrapped, iOS sets `numberOfLines` to 0, Win32 already did — and
+  `lines={n}` caps it (`CTD_P_LINES`, Label only; 1 is one line cut with an
+  ellipsis). `tests/reflow.b` prints the rule in booleans on all four hosts,
+  and `TableMeasure.put_text` lets the portable goldens hold it. A stretched
+  child is now measured at the width it will get, in `measure` as in
+  `arrange`, so a shape or a wrapping label in a column answers for its real
+  box — but only once that width is settled; a run still finding its own
+  width takes its children's natural one.
+- **A run that spills says so.** `LayoutNode.overflow` is how far a run's
+  children ran past its box; the dump prints `overflows by N`, and
+  `Mount.overflows()` counts the runs, so `examples/gradients` prints
+  `overflowing runs: 0` under every dump. A number, not a refusal: overflow is
+  often right and a refusal would fail a solve on every frame of a drag.
+- **The mount snaps its first solve to the display.** `Mount.follow` reads
+  the surface's backing scale when it starts following it; before this every
+  first pass snapped at 1 until a `scale_changed` arrived. `tests/scaled.b`
+  holds thirds of 100 on half points at 2x and whole points at 1x.
+- **The gradients screen has no size check left in it.** Three layers in a
+  `<Box>` — the mesh, a `<ScrollView>` that fills and scrolls only when the
+  window is short, nothing else — the legend pinned with `right={0}` and
+  hidden with `hide_below={620}`, chips with no width of their own, tiles
+  sized by `aspect_ratio` alone. The toast's `$if !self.dismissed` is back,
+  with the golden that had been rewritten to expect the toast to stay.
+
+- **A screen no longer works its own sizes out.** `examples/gradients` carried
+  three lines that a UI framework should have been carrying for it: a
+  `follows_viewport()` override, a `roomy()` breakpoint and a `title_size()`
+  that was a hand-rolled `clamp(28px, 10vw, 64px)`. All three are gone, and
+  what replaced them is below. The shelf now goes five tiles to a line, then
+  three and two, then one, centred in what it does not use, with no number
+  written anywhere but `160` and `260`; and the colour chips moved to a third
+  full-bleed layer in the `<Box>`, pinned to the right edge, because a chip
+  column beside the title pushed the title 124 points off the centre of the
+  window. `--dump-at <w> <h>` dumps the screen at any size, which is how a
+  layout gets checked at the window somebody is actually looking at.
+- **Reading the room is what declares it.** `Component.viewport()` records the
+  read while a render is running, and `follows_viewport()` answers from that
+  record instead of defaulting to false. Two places had to agree and nothing
+  checked that they did — `tests/viewport.b` had a component called `Deaf`
+  whose golden asserted the stale answer. It is still overridable, and a read
+  from an event handler is still not a dependency, or every screen with one
+  button would render again on every frame of a drag. A render that reads the
+  room only down a branch starts following on the render that first takes it.
+- **`vw` and `vh`: a size that is a share of the window.** `self.vw(10, 28, 64)`
+  is a tenth of the window's width, held between 28 and 64 points — the web's
+  `clamp(28px, 10vw, 64px)`. It exists because a control property is not a
+  layout number: `font_size`, `padding` and `corner_radius` leave a render as
+  plain points and reach the platform *before* the solver runs, so
+  `width_percent` has no counterpart for them and could not have one. Bounds
+  the wrong way round take CSS's defined answer, where the low one wins.
+- **`box`, `cw` and `ch`: a component learns the box it was laid out in.**
+  `viewport()` is the window, and every component is handed the same one — so a
+  title inside padding, beside a 232-point column of colour chips, was sizing
+  itself from a number 45% larger than the box it lands in. `Component.box()`
+  is that box, `cw` and `ch` are shares of it, and `on_layout(frame)` runs when
+  it moves. This is `onLayout` in React Native: the box from the *last* pass,
+  per component, so sizing a sub-part by its own box means making it a
+  component. **A box that decides itself is refused.** A component whose own
+  content settles its box cannot also be sized from it; the mount lays out and
+  renders up to four times for a screen still settling — a chain settles one
+  link a pass — and then refuses naming what would not settle.
+- **`<Grid>` can name its columns, and can be told to work them out.**
+  `Track.fixed`, `Track.auto` and `Track.fraction` had been in the engine from
+  the start and markup could name none of them: every `<Grid>` ever written was
+  `GridLayout.uniform(1, 0.0)`, one column, for ever. `columns="160 1fr auto"`
+  names them and `column_gap`/`row_gap` are the gaps. `min_column={160}` is the
+  web's `repeat(auto-fit, minmax(160px, 1fr))` — as many equal columns as fit,
+  resolved in the layout pass where the room is known, which is the one feature
+  that removes a breakpoint rather than making one easier to write. Writing
+  both is refused as deciding the columns twice.
+  **A column nobody fills is collapsed, not left empty**, which is the whole
+  difference between the web's `auto-fit` and its `auto-fill`: five tiles in a
+  window with room for eleven columns are five columns filling the width, not
+  five tiles huddled at the left with six empty tracks beside them.
+  `max_column` is the other half of the `minmax` — a ceiling, so five tiles in
+  a very wide window stay tiles — and `justify` places each row in the room its
+  columns leave, by what is in *that* row, so a short last row is centred on its
+  own count. A `max_column` under the `min_column` is refused naming both.
+- **`font_role`, so a size can follow the reader.** `font_role="body"`,
+  `"heading"` or `"caption"` is the platform's own size for that role, which
+  follows the user's text-size setting where a number cannot — `SystemFont` had
+  answered this since the beginning and no attribute could reach it. It lands on
+  the same property as `font_size`, so the last one written wins. `mono` is
+  **refused**, and that is the whole of the reason: it is body's size in a
+  monospaced family, no host carries a family as a property, so `font_role="mono"`
+  could only ever have been a silent no-op. `tests/fonts.b` prints the rule and
+  never a number — a role's points are the platform's and the reader's.
+
 - **Padding and margin, one edge at a time.** `padding={8}` wrote four edges
   and there was no way to write one. `padding_x`, `padding_y`, `padding_top`,
   `padding_right`, `padding_bottom`, `padding_left` and the same six for
@@ -38,8 +159,8 @@ First working macOS host.
   Zero means the screen's own maximum, which is what every clock asks for until
   it is told otherwise. `motion.FrameClock.prefer` is the Beans side. macOS and
   iOS hand it to `CADisplayLink.preferredFrameRateRange`; Win32 turns the
-  wanted rate into its timer period; GTK4 refuses it as `unsupported`, because
-  a `GdkFrameClock` is the display's and takes no instruction. Measured on a
+  wanted rate into its timer period; GTK4 and the macOS `CVDisplayLink`
+  fallback have no rate to set, so they pace their own ticks. Measured on a
   60 Hz panel: 60.0 by default, 30.0 after asking for thirty. A rate that is
   not a finite number is refused as `range` by every host: NaN is not less
   than, greater than or equal to anything, so it passes every bound a host

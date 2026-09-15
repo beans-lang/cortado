@@ -79,7 +79,8 @@ fn margin_of(tree: component.Element, index: int) -> string {
 fn padded(tag: string, names: List<string>, values: List<f64>) -> Result<component.Element> {
     var into: component.Builder = new component.Builder()
     into.open(tag)
-    into.word("align", "stretch")
+    // Only a run aligns its children; a box or a holder refuses the word.
+    if tag != "Box" && tag != "ScrollView" { into.word("align", "stretch") }
     for index: int in 0..names.len() {
         into.number(names[index], values[index])
     }
@@ -181,7 +182,7 @@ fn drive() -> Result<bool> {
     show("padding={8} padding_x={16}", base_then_sides, 300.0, 100.0)
 
     io.println("-- every container that takes padding takes an edge of it --")
-    for tag: string in ["HStack", "VFlex", "HFlex", "Grid", "Box"] {
+    for tag: string in ["HStack", "VStack", "HStack", "Grid", "Box"] {
         let one: component.Element = padded(tag, ["padding_left", "padding_top"], [11.0, 2.0])?
         io.println("  <{tag}> keeps: {padding_of(one)}")
     }
@@ -201,7 +202,8 @@ fn drive() -> Result<bool> {
 
     io.println("-- a wrapping run --")
     var wrapping: component.Builder = new component.Builder()
-    wrapping.open("HWrap")
+    wrapping.open("HStack")
+    wrapping.flag("wrap", true)
     wrapping.number("spacing", 8.0)
     wrapping.number("line_spacing", 6.0)
     for index: int in 0..3 {
@@ -212,11 +214,11 @@ fn drive() -> Result<bool> {
     wrapping.close()
     let shelf: component.Element = wrapping.finish()?
     match shelf.arranger {
-        none => { io.println("  an <HWrap> has no arranger") }
+        none => { io.println("  an <HStack wrap> has no arranger") }
         some(arranger) => {
-            match arranger as? layout.WrapLayout {
+            match arranger as? layout.FlexLayout {
                 some(lines) => { io.println("  line_spacing={6} reaches the run: {lines.line_spacing()}") }
-                none => { io.println("  an <HWrap> does not wrap") }
+                none => { io.println("  an <HStack wrap> does not wrap") }
             }
         }
     }

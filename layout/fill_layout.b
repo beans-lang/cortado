@@ -47,9 +47,12 @@ pub class FillLayout extends Layout {
         var tallest: f64 = 0.0
         for index: int in 0..node.count() {
             let child: LayoutNode = node.at(index)
-            let wanted: geometry.Size = child.measure(room, ruler)?
-            if wanted.width > widest { widest = wanted.width }
-            if wanted.height > tallest { tallest = wanted.height }
+            if !child.spec.shown_in(room.max_width) { continue }
+            let wanted: geometry.Size = child.measure(room.deflate(child.spec.margin), ruler)?
+            let wide: f64 = wanted.width + child.spec.margin.horizontal()
+            let tall: f64 = wanted.height + child.spec.margin.vertical()
+            if wide > widest { widest = wide }
+            if tall > tallest { tallest = tall }
         }
         return ok(limit.clamp(geometry.Size.of(widest + self.pad.horizontal(),
                                                tallest + self.pad.vertical())))
@@ -57,8 +60,10 @@ pub class FillLayout extends Layout {
 
     pub override fn arrange(node: LayoutNode, content: geometry.Rect,
                             ruler: Measure) -> Result<bool> {
-        for index: int in 0..node.count() {
-            node.at(index).place(content, ruler)?
+        let members: List<int> = members_of(node, content.width)
+        for slot: int in 0..members.len() {
+            let child: LayoutNode = node.at(members[slot])
+            child.place(child.spec.margin.deflate(content), ruler)?
         }
         return ok(true)
     }

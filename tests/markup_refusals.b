@@ -370,6 +370,15 @@ fn dressing() {
             probe([r#"<VStack justify={self.mode} />"#],
                   [r#"    pub mode: string = "center""#]),
             "justify takes one of a fixed set of words")
+    // The example in that refusal is the attribute's own word, or it sends
+    // somebody to write font_role="center".
+    refuses("and font_role, with its own set in the example",
+            probe([r#"<Label font_role={self.role} text="hi" />"#],
+                  [r#"    pub role: string = "body""#]),
+            r#"font_role takes one of a fixed set of words, so it needs a literal: font_role="body""#)
+    emits("a font role by name",
+          markup([r#"<Label font_role="heading" text="Petrichor" />"#]),
+          r#"b.word("font_role", "heading")"#)
 }
 
 /// A scroll view holds one content view on every platform here.
@@ -434,20 +443,26 @@ fn placements() {
           markup([r#"<VStack><Tile title="x" grow={1} /></VStack>"#]),
           r#"c.title = "x""#)
     emits("and every placement rides the one call",
-          markup([r#"<VFlex><Tile grow={1} align="center" /></VFlex>"#]),
+          markup([r#"<VStack><Tile grow={1} align="center" /></VStack>"#]),
           r#"}).number("grow", (1) as f64).word("align", "center")"#)
     emits("a placement from an expression",
           markup([r#"<Box><Tile x={self.left} /></Box>"#]),
           r#"}).number("x", (self.left) as f64)"#)
+    emits("the far edge of a box",
+          markup([r#"<Box><Tile right={0} bottom={12} /></Box>"#]),
+          r#"}).number("right", (0) as f64).number("bottom", (12) as f64)"#)
+    emits("a component's own place in its run",
+          markup([r#"<HStack><Tile align_self="center" /></HStack>"#]),
+          r#"}).word("align_self", "center")"#)
     // `padding` is the component's own: a field it may forward to its root.
     emits("padding on a component tag is its parameter",
           markup([r#"<VStack><Tile padding={8} /></VStack>"#]),
           "c.padding = 8")
     refuses("a placement with no value",
-            markup([r#"<VFlex><Tile grow /></VFlex>"#]),
+            markup([r#"<VStack><Tile grow /></VStack>"#]),
             "needs a value")
     refuses("align from an expression",
-            markup([r#"<VFlex><Tile align={self.mode} /></VFlex>"#]),
+            markup([r#"<VStack><Tile align={self.mode} /></VStack>"#]),
             "needs a literal")
 }
 
@@ -465,6 +480,13 @@ fn bounds() {
     emits("aspect_ratio on a component tag",
           markup([r#"<VStack><Tile aspect_ratio={1.5} /></VStack>"#]),
           r#"}).number("aspect_ratio", (1.5) as f64)"#)
+    // Hidden by the box around it: the layout's decision, in one attribute.
+    emits("hide_below on a control",
+          markup([r#"<VStack><Label hide_below={500} text="side" /></VStack>"#]),
+          r#"number("hide_below", (500) as f64)"#)
+    emits("hide_above on a component tag",
+          markup([r#"<VStack><Tile hide_above={900} /></VStack>"#]),
+          r#"}).number("hide_above", (900) as f64)"#)
     // The window's size is a plain method call, so a breakpoint is a `$if`.
     emits("a breakpoint on the viewport",
           markup([r#"<VStack>"#, r#"  $if self.viewport().width < 600 { <Label text="narrow" /> }"#, r#"</VStack>"#]),
@@ -476,15 +498,29 @@ fn bounds() {
 
 fn wrapping() {
     io.println("-- a run that wraps --")
-    emits("<HWrap> is a container",
-          markup([r#"<HWrap spacing={8} line_spacing={6}><Label text="a" /><Label text="b" /></HWrap>"#]),
-          r#"open("HWrap")"#)
+    emits("wrap is a stack's own flag",
+          markup([r#"<HStack wrap spacing={8} line_spacing={6}><Label text="a" /><Label text="b" /></HStack>"#]),
+          r#"flag("wrap", true)"#)
     emits("and line_spacing is one of its numbers",
-          markup([r#"<HWrap spacing={8} line_spacing={6}><Label text="a" /></HWrap>"#]),
+          markup([r#"<HStack wrap spacing={8} line_spacing={6}><Label text="a" /></HStack>"#]),
           r#"number("line_spacing", (6) as f64)"#)
-    emits("<VWrap> too",
-          markup([r#"<VWrap><Label text="a" /></VWrap>"#]),
-          r#"open("VWrap")"#)
+    emits("flex is one number for three",
+          markup([r#"<VStack><Tile flex={1} /></VStack>"#]),
+          r#"}).number("flex", (1) as f64)"#)
+    // The three families are one: the old tags are refused by name, and the
+    // sentence says what to write instead.
+    refuses("<HWrap> is retired",
+            markup([r#"<HWrap><Label text="a" /></HWrap>"#]),
+            "write <HStack wrap>")
+    refuses("<VWrap> is retired",
+            markup([r#"<VWrap><Label text="a" /></VWrap>"#]),
+            "write <VStack wrap>")
+    refuses("<VFlex> is retired",
+            markup([r#"<VFlex><Label text="a" /></VFlex>"#]),
+            "write <VStack>")
+    refuses("<HFlex> is retired",
+            markup([r#"<HFlex><Label text="a" /></HFlex>"#]),
+            "write <HStack>")
 }
 
 fn main() {

@@ -148,6 +148,8 @@ double ctd_stepper_value(HWND view, uint32_t slot);
 void   ctd_stepper_range(HWND view, uint32_t slot);
 ctd_status ctd_stepper_set(HWND view, uint32_t slot, double value);
 extern double g_progress_min[CTD_SLOTS];
+// How many lines a label may wrap onto; 0 is as many as it needs.
+extern int64_t g_lines[CTD_SLOTS];
 extern int g_running;
 extern int g_started;
 extern int32_t g_kind[CTD_SLOTS];

@@ -1,0 +1,34 @@
+== at 200 x 150 ==
+  vw(10, 28, 64) = 28
+  vh(5, 10, 20)  = 10
+  and it follows the room without being told: true
+Container CortadoView role=group "" frame=0,0,200,150 children=1
+  Container CortadoView role=group "" frame=0,0,200,150 children=2
+    Label NSTextField role=text "Petrichor" frame=0,0,200,33
+    Label NSTextField role=text "four colours" frame=0,33,200,13
+== at 500 x 300 ==
+  vw(10, 28, 64) = 50
+  vh(5, 10, 20)  = 15
+  and it follows the room without being told: true
+Container CortadoView role=group "" frame=0,0,500,300 children=1
+  Container CortadoView role=group "" frame=0,0,500,300 children=2
+    Label NSTextField role=text "Petrichor" frame=0,0,500,59
+    Label NSTextField role=text "four colours" frame=0,59,500,19
+== at 900 x 600 ==
+  vw(10, 28, 64) = 64
+  vh(5, 10, 20)  = 20
+  and it follows the room without being told: true
+Container CortadoView role=group "" frame=0,0,900,600 children=1
+  Container CortadoView role=group "" frame=0,0,900,600 children=2
+    Label NSTextField role=text "Petrichor" frame=0,0,900,76
+    Label NSTextField role=text "four colours" frame=0,76,900,24
+== the bounds the wrong way round ==
+  vw(10, 64, 28) = 64
+== dragged, and the size follows ==
+  at 200 wide: 28
+  at 900 wide: 64
+  and it rendered again: true
+Container CortadoView role=group "" frame=0,0,200,150 children=1
+  Container CortadoView role=group "" frame=0,0,900,600 children=2
+    Label NSTextField role=text "Petrichor" frame=0,0,900,76
+    Label NSTextField role=text "four colours" frame=0,76,900,24

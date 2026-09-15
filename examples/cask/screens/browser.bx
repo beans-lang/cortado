@@ -1,4 +1,4 @@
-<VFlex spacing={8} padding={10} align="stretch">
+<VStack spacing={8} padding={10} align="stretch">
 
   <!-- The navigator on the left, the editor on the right.
        A split view is one of the three controls markup cannot fully describe —
@@ -8,7 +8,7 @@
     <SplitView key={"split"} grow={1}
                on:change={fn(e: UiEvent) { self.work.divider_moved(e) }}>
 
-      <VFlex spacing={6} align="stretch">
+      <VStack spacing={6} align="stretch">
         <Label height={18} text="Database Navigator" />
         $if self.has_tree {
           <OutlineView key={"tree"} grow={1}
@@ -17,46 +17,46 @@
         $if !self.has_tree {
           <Label grow={1} text={self.no_tree()} />
         }
-      </VFlex>
+      </VStack>
 
       <!-- A flexing column rather than a plain box, because the tab view asks
            for the room its siblings do not take and `grow` is shared out by a
            run that flexes. cortado-bx says so by name rather than laying it
            out wrong. -->
-      <VFlex key={"editor"} align="stretch">
+      <VStack key={"editor"} align="stretch">
         $if self.has_tabs {
           <TabView key={"tabs"} grow={1}>
 
             <!-- Data. The table's rows are a source, set in on_mount; what the
                  markup says is that there is a table here and that it takes
                  the room the search field and the count do not. -->
-            <VFlex spacing={8} padding={10} align="stretch">
+            <VStack spacing={8} padding={10} align="stretch">
               <SearchField key={"hunt"}
                            on:change={fn(e: UiEvent) { self.work.refilter() }}
                            on:commit={fn(e: UiEvent) { self.work.refilter() }} />
               <Table key={"rows"} grow={1} />
               <Label key={"counted"} text="Open a table in the navigator" />
-            </VFlex>
+            </VStack>
 
             <!-- Columns -->
-            <VFlex spacing={8} padding={10} align="stretch">
+            <VStack spacing={8} padding={10} align="stretch">
               <Table key={"columns"} grow={1} />
-            </VFlex>
+            </VStack>
 
             <!-- DDL -->
-            <VFlex spacing={8} padding={10} align="stretch">
+            <VStack spacing={8} padding={10} align="stretch">
               <TextArea key={"ddl"} grow={1} />
-            </VFlex>
+            </VStack>
 
             <!-- SQL: a statement above, its answer below, which is the one
                  place a second split view earns its keep. -->
-            <VFlex spacing={8} padding={10} align="stretch">
+            <VStack spacing={8} padding={10} align="stretch">
               $if self.has_split {
                 <SplitView key={"editor_split"} grow={1}
                            on:change={fn(e: UiEvent) { self.work.editor_moved(e) }}>
-                  <VFlex spacing={8} padding={8} align="stretch">
+                  <VStack spacing={8} padding={8} align="stretch">
                     <TextArea key={"sql"} grow={1} />
-                    <HFlex spacing={8} height={26}>
+                    <HStack spacing={8} height={26}>
                       <Label width={48} height={20} text=":since" />
                       $if self.has_day {
                         <DatePicker key={"since"} width={150} height={24}
@@ -68,19 +68,19 @@
                               on:click={fn(e: UiEvent) { self.work.execute() }}>
                         Execute
                       </Button>
-                    </HFlex>
-                  </VFlex>
-                  <VFlex spacing={6} padding={8} align="stretch">
+                    </HStack>
+                  </VStack>
+                  <VStack spacing={6} padding={8} align="stretch">
                     <Table key={"answer"} grow={1} />
                     <Label key={"said"} text="" />
-                  </VFlex>
+                  </VStack>
                 </SplitView>
               }
-            </VFlex>
+            </VStack>
 
             <!-- Report -->
-            <VFlex spacing={8} padding={10} align="stretch">
-              <HFlex spacing={8} height={26}>
+            <VStack spacing={8} padding={10} align="stretch">
+              <HStack spacing={8} height={26}>
                 <Label width={60} height={20} text="Accent" />
                 $if self.has_ink {
                   <ColorWell key={"ink"} width={60} height={24}
@@ -91,35 +91,35 @@
                         on:click={fn(e: UiEvent) { self.work.render() }}>
                   Render
                 </Button>
-              </HFlex>
+              </HStack>
               $if self.has_web {
                 <WebView key={"page"} grow={1} />
               }
               $if !self.has_web {
                 <Label grow={1} text={self.no_web()} />
               }
-            </VFlex>
+            </VStack>
 
           </TabView>
         }
         $if !self.has_tabs {
           <Label grow={1} text={self.no_tabs()} />
         }
-      </VFlex>
+      </VStack>
     </SplitView>
   }
   $if !self.has_split {
     <Label grow={1} text={self.no_split()} />
   }
 
-  <HFlex spacing={8} height={24}>
+  <HStack spacing={8} height={24}>
     <Label key={"status"} grow={1} text="" />
     <Button width={110} height={24}
             on:click={fn(e: UiEvent) { self.work.show_facts() }}>
       Connection
     </Button>
-  </HFlex>
-</VFlex>
+  </HStack>
+</VStack>
 <beans>
 package screens
 

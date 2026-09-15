@@ -222,4 +222,7 @@ void ctd_clock_forget(uint32_t slot) {
     // out, and Windows destroys a window's timers with it; a WM_TIMER that
     // outlives the slot resolves to no surface and is dropped.
     memset(&g_clock[slot], 0, sizeof g_clock[slot]);
+    // The wish goes with the surface. A slot is reused, and a clock started on
+    // the next one must not inherit a rate nobody asked for.
+    memset(&g_rate[slot], 0, sizeof g_rate[slot]);
 }

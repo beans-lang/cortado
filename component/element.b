@@ -61,6 +61,11 @@ pub class Element {
     /// The attribute that asked, so the refusal names what the author wrote.
     pub pending_name: string = ""
 
+    /// Whether `flex` was written, and whether `grow`, `shrink` or `basis`
+    /// was: the two spell the same fields, so both on one element is refused.
+    pub flexed: bool = false
+    pub tuned: bool = false
+
     /// The control this element became, once one exists.
     ///
     /// An integer, not a reference, so an element that outlives its control

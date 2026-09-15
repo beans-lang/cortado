@@ -1,0 +1,31 @@
+<VStack justify="center" align="stretch">
+  <!-- A tenth of *this column*, not a tenth of the window. The screen beside
+       it is 232 points of chips wide, and the title never sees them. -->
+  <Label alignment={1} font_size={self.cw(10, 28, 64)}
+         text_color="#241c22" text="Petrichor" />
+  <Label margin_top={10} alignment={1} font_size={12}
+         text_color="#463c46" text={self.caption} />
+  <Label margin_top={6} alignment={1} font_size={11}
+         text_color="#6b6b74" text={self.rate} />
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import {view, param} from cortado.annotations
+
+/// The title, as large as its own column can carry.
+///
+/// It is a component rather than three tags on the screen for one reason:
+/// `cw` is a share of the box a component is laid out in, and a component is
+/// the smallest thing that has one. Written on the screen it would have been a
+/// share of the window — which is 45% wider than the column the title lands
+/// in, once the padding and the colour chips beside it are taken off.
+@view
+pub partial class Title extends component.Component {
+    @param pub caption: string = ""
+    @param pub rate: string = ""
+
+    pub fn init() { super.init() }
+}
+</beans>

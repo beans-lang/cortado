@@ -1,4 +1,4 @@
-<VFlex spacing={10} padding={16} align="stretch">
+<VStack spacing={10} padding={16} align="stretch">
   <ScrollView grow={1}>
     <VStack spacing={10} align="stretch">
       <Label font_size={18} text="Every control cortado has" />
@@ -9,18 +9,18 @@
       <Disclosure text="Words" open={self.words}
                   on:change={fn(e: UiEvent) { self.toggle_words(e) }}>
         <VStack spacing={8} padding={8} align="stretch">
-          <HFlex spacing={10}>
+          <HStack spacing={10}>
             <Label width={110} text="Name" />
             <TextField grow={1} bind:value={self.name} />
-          </HFlex>
-          <HFlex spacing={10}>
+          </HStack>
+          <HStack spacing={10}>
             <Label width={110} text="Passphrase" />
             <SecureField grow={1} />
-          </HFlex>
-          <HFlex spacing={10}>
+          </HStack>
+          <HStack spacing={10}>
             <Label width={110} text="Search" />
             <SearchField grow={1} />
-          </HFlex>
+          </HStack>
           <TextArea height={56} bind:value={self.note} />
           <Link text="Read the manual" />
         </VStack>
@@ -30,20 +30,20 @@
       <Disclosure text="Choices" open={self.choices}
                   on:change={fn(e: UiEvent) { self.toggle_choices(e) }}>
         <VStack spacing={8} padding={8} align="stretch">
-          <HFlex spacing={10}>
+          <HStack spacing={10}>
             <Label width={110} text="Drink" />
             <ComboBox grow={1} on:change={fn(e: UiEvent) { self.pick(e.index) }} />
-          </HFlex>
+          </HStack>
           <HStack spacing={10}>
             <CheckBox checked={self.rush} on:change={fn(e: UiEvent) { self.toggle_rush() }}>Rush it</CheckBox>
             <RadioButton>Eat in</RadioButton>
             <RadioButton>Take away</RadioButton>
           </HStack>
           $if self.has_switch {
-            <HFlex spacing={10}>
+            <HStack spacing={10}>
               <Label width={110} text="Keep warm" />
               <Switch checked={self.warm} on:change={fn(e: UiEvent) { self.toggle_warm(e) }} />
-            </HFlex>
+            </HStack>
           }
           $if !self.has_switch {
             <Label text="no toggle switch on this platform" />
@@ -61,16 +61,16 @@
       <Disclosure text="Numbers" open={self.numbers}
                   on:change={fn(e: UiEvent) { self.toggle_numbers(e) }}>
         <VStack spacing={8} padding={8} align="stretch">
-          <HFlex spacing={10}>
+          <HStack spacing={10}>
             <Label width={110}>Shots: $self.shots</Label>
             <Slider grow={1} min={1} max={4} value={self.shots}
                     on:change={fn(e: UiEvent) { self.set_shots(e) }} />
-          </HFlex>
-          <HFlex spacing={10}>
+          </HStack>
+          <HStack spacing={10}>
             <Label width={110} text="Exactly" />
             <Stepper min={1} max={4} step={1} value={self.shots}
                     on:change={fn(e: UiEvent) { self.set_shots(e) }} />
-          </HFlex>
+          </HStack>
           <ProgressBar height={12} min={0} max={4} value={self.shots} />
           $if self.has_level {
             <LevelIndicator height={16} min={0} max={4} value={self.shots} />
@@ -91,17 +91,17 @@
       <Disclosure text="A day and a colour" open={self.values}
                   on:change={fn(e: UiEvent) { self.toggle_values(e) }}>
         <VStack spacing={8} padding={8} align="stretch">
-          <HFlex spacing={10}>
+          <HStack spacing={10}>
             <Label width={110} text="When" />
             <DatePicker grow={1} day={self.day}
                         on:change={fn(e: UiEvent) { self.set_day(e) }} />
-          </HFlex>
+          </HStack>
           $if self.has_color {
-            <HFlex spacing={10}>
+            <HStack spacing={10}>
               <Label width={110} text="Marker" />
               <ColorWell width={60} height={24} color="#3b82f6"
                         on:change={fn(e: UiEvent) { self.set_color(e) }} />
-            </HFlex>
+            </HStack>
           }
           $if !self.has_color {
             <Label text="no colour well on this platform" />
@@ -223,7 +223,7 @@
       <Label>$self.status</Label>
     </VStack>
   </ScrollView>
-</VFlex>
+</VStack>
 <beans>
 package site
 

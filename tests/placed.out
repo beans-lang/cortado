@@ -8,7 +8,7 @@
 -- a coordinate where nothing reads one --
   x in a <VStack> is refused: true
   and the message says where it belongs: true
-  y in an <HFlex> is refused: true
+  y in an <HStack> is refused: true
   and the message says where it belongs: true
   x in a <Grid> is refused: true
   and the message says where it belongs: true
@@ -16,7 +16,22 @@
   a <Box> takes it: true
   the same subtree in a <VStack> is refused: true
   and the message says where it belongs: true
-  and a <VFlex> takes a grow from one: true
+  and a <VStack> takes a grow from one: true
 -- and a root nothing contains at all --
   the requirement is still open: true
   and it names the attribute that asked: true
+-- the far edges --
+  right=12 bottom=3 reach the spec: 12,3
+  right in a <VStack> is refused: true
+  and the message says where it belongs: true
+  x, right and width on one layer is refused: true
+  and the message says why: true
+  y, bottom and height_percent on one layer is refused: true
+  and the message says why: true
+  a negative x is refused: true
+  and the message says why: true
+  align on a layer is refused: true
+  and the message says why: true
+  align on a <Box> itself is refused: true
+  and the message says why: true
+  align_self on a child of a run is its own: true

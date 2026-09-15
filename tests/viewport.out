@@ -5,9 +5,11 @@ Container CortadoView role=group "" frame=0,0,400,300 children=1
     Label NSTextField role=text "fixed" frame=0,16,400,16
   the first render saw the room: 400x300
   and so did the child that never asked: 400
+  the read was the declaration: true
+  and the child that never read does not follow: true
 == dragged to 640 x 480 ==
   the room changed: true
-  a following screen asks to render: true
+  a screen that read it asks to render: true
   and is rendered on the next refresh: true
 Container CortadoView role=group "" frame=0,0,400,300 children=1
   Container CortadoView role=group "" frame=0,0,640,480 children=2
@@ -17,8 +19,20 @@ Container CortadoView role=group "" frame=0,0,400,300 children=1
   but was told the room anyway: 640
 == the same size again ==
   nothing changed: true
-== a screen that reads the room and does not follow it ==
-  a resize does not wake it: true
-  so its label is stale: true
+== a screen that never reads the room in a render ==
+  a handler read it: 400
+  which is not a dependency: true
+  so a resize does not wake it: true
+  it rendered once: true
+  and was told the room anyway: 640
 Container CortadoView role=group "" frame=0,0,400,300 children=1
-  Label NSTextField role=text "deaf at 400" frame=0,0,640,480
+  Label NSTextField role=text "blind" frame=0,0,640,480
+== a screen that says it follows and never reads ==
+  the override is the last word: true
+  and it rendered again: true
+== a screen that reads the room down one branch ==
+  folded, it does not follow: true
+  the render that took the branch declares it: true
+  so the next resize wakes it: true
+Container CortadoView role=group "" frame=0,0,400,300 children=1
+  Label NSTextField role=text "lazy at 900" frame=0,0,900,500

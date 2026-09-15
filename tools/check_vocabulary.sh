@@ -54,6 +54,26 @@ if ! diff -u "$root/build/.tags.markup" "$root/build/.tags.listed" >"$root/build
     fail "widget_tags() does not list what is_widget_tag() accepts:"
 fi
 
+# ---- retired tags ----
+# A container tag that no longer exists is refused by name in both places a
+# tag is judged: the compiler and the Builder. One list, read from each.
+sed -n '/pub fn retired_tag(/,/^}/p' "$markup" \
+    | grep -o 'tag == "[A-Za-z]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.retired.markup"
+sed -n '/pub static fn retired(/,/^    }/p' "$runtime" \
+    | grep -o 'tag == "[A-Za-z]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.retired.runtime"
+if [[ ! -s "$root/build/.retired.markup" ]]; then
+    fail "no retired tags were read from bx/widgets.b, so this check covered nothing:" \
+         "Look for 'pub fn retired_tag(' in bx/widgets.b."
+fi
+if ! diff -u "$root/build/.retired.runtime" "$root/build/.retired.markup" >"$root/build/.retired.diff"; then
+    cat "$root/build/.retired.diff" >&2
+    fail "a retired tag is refused in one vocabulary and not the other:"
+fi
+if comm -12 "$root/build/.retired.markup" "$root/build/.tags.markup" | grep -q .; then
+    comm -12 "$root/build/.retired.markup" "$root/build/.tags.markup" >&2
+    fail "a tag is both retired and a control:"
+fi
+
 # ---- events ----
 sed -n '/pub static fn event_of(/,/^    }/p' "$runtime" \
     | grep -o 'name == "[a-z_]*"' | sed 's/.*"\(.*\)"/\1/' | sort -u >"$root/build/.events.runtime"

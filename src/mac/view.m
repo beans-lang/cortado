@@ -370,10 +370,17 @@ ctd_status ctd_view_frame(ctd_handle widget, double *out_frame) {
 static NSSize  g_wanted[CTD_SLOTS];
 static uint8_t g_wanted_known[CTD_SLOTS];
 
+// The height a label needs at the one width it was last asked about. One entry,
+// not a table: a drag asks a new width every frame, so no cache helps it.
+static double  g_wrap_width[CTD_SLOTS];
+static double  g_wrap_height[CTD_SLOTS];
+static uint8_t g_wrap_known[CTD_SLOTS];
+
 void ctd_forget_size(ctd_handle widget) {
     uint32_t slot = (uint32_t)(widget & 0xffffffffu);
     if (slot == 0 || slot >= CTD_SLOTS) return;
     g_wanted_known[slot] = 0;
+    g_wrap_known[slot] = 0;
     // A disclosure's header height is the same kind of answer, remembered for
     // the same reason and stale in exactly the same cases — see -headerHeight
     // in pane.m. One forgetting, so there is one rule about when a remembered
@@ -389,6 +396,7 @@ void ctd_forget_size(ctd_handle widget) {
 // what every label wants, and nothing writes to any of them.
 void ctd_forget_all_sizes(void) {
     memset(g_wanted_known, 0, sizeof g_wanted_known);
+    memset(g_wrap_known, 0, sizeof g_wrap_known);
     for (uint32_t slot = 1; slot <= g_used; slot++) {
         id object = g_object[slot];
         if ([object isKindOfClass:[CortadoDisclosure class]]) {
@@ -414,6 +422,30 @@ ctd_status ctd_view_measure(ctd_handle widget, double avail_width, double avail_
         if (wanted.height == NSViewNoIntrinsicMetric) wanted.height = 0;
     }
         if (slot < CTD_SLOTS) { g_wanted[slot] = wanted; g_wanted_known[slot] = 1; }
+    }
+    // A label narrower than its words reflows, so its height is asked for
+    // that width. A cap of one line keeps the unwrapped answer; a larger cap
+    // holds the height to that many of the single line.
+    if (avail_width >= 0 && wanted.width > avail_width &&
+        ctd_slot_kind(widget) == CTD_W_LABEL) {
+        NSTextField *label = (NSTextField *)view;
+        NSInteger cap = [label maximumNumberOfLines];
+        if (cap != 1) {
+            double tall;
+            if (slot < CTD_SLOTS && g_wrap_known[slot] && g_wrap_width[slot] == avail_width) {
+                tall = g_wrap_height[slot];
+            } else {
+                NSRect bounds = NSMakeRect(0, 0, avail_width, CGFLOAT_MAX);
+                tall = [[label cell] cellSizeForBounds:bounds].height;
+                if (slot < CTD_SLOTS) {
+                    g_wrap_width[slot] = avail_width;
+                    g_wrap_height[slot] = tall;
+                    g_wrap_known[slot] = 1;
+                }
+            }
+            if (cap > 1 && tall > wanted.height * (double)cap) tall = wanted.height * (double)cap;
+            if (tall > wanted.height) wanted.height = tall;
+        }
     }
     // A negative available size means unbounded, so only a real bound clamps.
     if (avail_width  >= 0 && wanted.width  > avail_width)  wanted.width  = avail_width;

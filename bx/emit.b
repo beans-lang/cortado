@@ -426,6 +426,11 @@ pub class Emitter {
             return
         }
         if !element.component && !is_widget_tag(element.tag) {
+            let gone: string = retired_tag(element.tag)
+            if gone != "" {
+                self.report(element.span, gone)
+                return
+            }
             let near: string = nearest_of(element.tag, widget_tags())
             if near == "" {
                 self.report(element.span, "<{element.tag}> is not a control cortado has — the controls are {widget_list()}, and a capitalised name that is not one of them is taken to be a component")
@@ -623,7 +628,7 @@ pub class Emitter {
                 return
             }
             if literal == "" {
-                self.report(at, "{name} takes one of a fixed set of words, so it needs a literal: {name}=\"center\"")
+                self.report(at, "{name} takes one of a fixed set of words, so it needs a literal: {name}=\"{word_example(name)}\"")
                 return
             }
             self.write(indent, "{b}.word(\"{escape_beans_string(name)}\", \"{escape_beans_string(literal)}\")")

@@ -17,6 +17,8 @@ import cortado.geometry
 /// frame it expected, which catches a missing row immediately.
 pub class TableMeasure implements Measure {
     rows: Map<int, geometry.Size>
+    /// The keys that reflow, and the height of one of their lines.
+    lines: Map<int, f64> = {}
 
     pub fn init() {
         self.rows = {}
@@ -25,6 +27,13 @@ pub class TableMeasure implements Measure {
     /// Records that the node with this key measures `width` by `height`.
     pub fn put(key: int, width: f64, height: f64) {
         self.rows.set(key, geometry.Size.of(width, height))
+    }
+
+    /// Records text `width` wide on one line of `line_height`: offered less
+    /// width, it answers the offer and as many lines as its width needs.
+    pub fn put_text(key: int, width: f64, line_height: f64) {
+        self.rows.set(key, geometry.Size.of(width, line_height))
+        self.lines.set(key, line_height)
     }
 
     pub fn count() -> int {
@@ -43,6 +52,15 @@ pub class TableMeasure implements Measure {
                 var width: f64 = size.width
                 var height: f64 = size.height
                 if available.width >= 0.0 && width > available.width {
+                    match self.lines.get(key) {
+                        some(line) => {
+                            // Whole lines, the way words break: 500 wide in 300 is two.
+                            var count: f64 = (size.width / available.width).ceil()
+                            if available.width <= 0.0 { count = 1.0 }
+                            height = line * count
+                        }
+                        none => {}
+                    }
                     width = available.width
                 }
                 if available.height >= 0.0 && height > available.height {

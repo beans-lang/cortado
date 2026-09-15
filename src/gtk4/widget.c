@@ -85,6 +85,11 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_LABEL:
             widget = gtk_label_new("");
             gtk_label_set_xalign(GTK_LABEL(widget), 0.0f);
+            // Words reflow to the width the layout gives, while the natural
+            // width stays the unwrapped one so a run measures it as before.
+            gtk_label_set_wrap(GTK_LABEL(widget), TRUE);
+            gtk_label_set_wrap_mode(GTK_LABEL(widget), PANGO_WRAP_WORD_CHAR);
+            gtk_label_set_natural_wrap_mode(GTK_LABEL(widget), GTK_NATURAL_WRAP_NONE);
             break;
         case CTD_W_BUTTON:
             widget = gtk_button_new_with_label("");

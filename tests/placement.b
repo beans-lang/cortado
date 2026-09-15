@@ -143,12 +143,19 @@ fn drive() -> Result<bool> {
     io.println("  margin_x={7} on a tag with no margin of its own: {spec_of(sides, 0).margin.show()}")
 
     io.println("-- what a run hands out is checked against the run the tag sits in --")
-    let flexed: component.Element = placed_in("VFlex", subtree("HStack", [], [])?, "grow", 1.0)?
-    io.println("  grow={1} in a <VFlex>: {spec_of(flexed, 0).grow}")
-    refuse("grow={1} in a <VStack>", placed_in("VStack", subtree("HStack", [], [])?, "grow", 1.0), "<VFlex>")
+    let flexed: component.Element = placed_in("VStack", subtree("HStack", [], [])?, "grow", 1.0)?
+    io.println("  grow={1} in a <VStack>: {spec_of(flexed, 0).grow}")
+    refuse("grow={1} in a <Grid>", placed_in("Grid", subtree("HStack", [], [])?, "grow", 1.0), "<VStack>")
+    let shorthand: component.Element = placed_in("HStack", subtree("HStack", [], [])?, "flex", 2.0)?
+    io.println("  flex={2} on a tag is grow, shrink and basis: {spec_of(shorthand, 0).grow},{spec_of(shorthand, 0).shrink},{spec_of(shorthand, 0).basis}")
+    var doubled: component.Builder = new component.Builder()
+    doubled.open("HStack")
+    doubled.embed(subtree("HStack", [], [])?).number("flex", 1.0).number("shrink", 0.0)
+    doubled.close()
+    refuse("flex beside shrink on a tag", doubled.finish(), "flex is the three at once")
     let boxed: component.Element = placed_in("Box", subtree("HStack", [], [])?, "x", 44.0)?
-    io.println("  x={44} in a <Box>: {spec_of(boxed, 0).x}")
-    refuse("y={44} in an <HFlex>", placed_in("HFlex", subtree("HStack", [], [])?, "y", 44.0), "<Box>")
+    io.println("  x={44} in a <Box>: {spec_of(boxed, 0).left}")
+    refuse("y={44} in an <HStack>", placed_in("HStack", subtree("HStack", [], [])?, "y", 44.0), "<Box>")
 
     io.println("-- width, height and align --")
     let wide: component.Element = placed_in("VStack", subtree("HStack", [], [])?, "width", 120.0)?
@@ -172,13 +179,13 @@ fn drive() -> Result<bool> {
     // `Chip.y` is private, so `y=` can only mean the placement.
     refuse("x on a <Chip> with a public x", placed_as("Box", subtree("HStack", [], [])?, type_of(Chip), "x", 5.0), "<Chip> has a field called x")
     match placed_as("Box", subtree("HStack", [], [])?, type_of(Chip), "y", 5.0) {
-        ok(tree) => { io.println("  y on a <Chip> whose y is private places it: {spec_of(tree, 0).y}") }
+        ok(tree) => { io.println("  y on a <Chip> whose y is private places it: {spec_of(tree, 0).top}") }
         err(problem) => { io.println("  y refused: {problem.msg}") }
     }
 
     io.println("-- two placements on one tag, solved --")
     var into: component.Builder = new component.Builder()
-    into.open("VFlex")
+    into.open("VStack")
     into.word("align", "stretch")
     into.embed(subtree("HStack", [], [])?).number("grow", 1.0)
     into.embed(subtree("HStack", [], [])?).number("height", 30.0).number("margin_top", 5.0)
@@ -195,6 +202,26 @@ fn drive() -> Result<bool> {
     let single: component.Element = alone.finish()?
     io.println("  the requirement is still open: {single.pending == "flex"}")
     io.println("  and it names the attribute that asked: {single.pending_name == "grow"}")
+
+    io.println("-- hidden by the box around it, from the tag --")
+    // The chips column of a screen: shown only while the row is 620 wide.
+    var row: component.Builder = new component.Builder()
+    row.open("HStack")
+    row.number("spacing", 8.0)
+    row.embed(subtree("HStack", [], [])?)
+    row.embed(subtree("HStack", [], [])?).number("hide_below", 620.0)
+    row.close()
+    let legend: component.Element = row.finish()?
+    io.println("  hide_below={620} on a tag reaches its root: {spec_of(legend, 1).hide_below}")
+    show("the second is hidden in 400", legend, 400.0, 100.0)
+    show("and shown in 700", legend, 700.0, 100.0)
+    // The two bounds land in either order, and a pair with no width between
+    // them is refused as the tag's second number lands.
+    var never: component.Builder = new component.Builder()
+    never.open("HStack")
+    never.embed(subtree("HStack", [], [])?).number("hide_above", 400.0).number("hide_below", 600.0)
+    never.close()
+    refuse("hide_above={400} hide_below={600} on a tag", never.finish(), "hidden at every width")
     return ok(true)
 }
 

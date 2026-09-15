@@ -76,6 +76,10 @@ ctd_handle ctd_widget_new(int32_t kind) {
             [label setDrawsBackground:NO];
             [label setEditable:NO];
             [label setSelectable:NO];
+            // Words reflow to the width the layout gives; CTD_P_LINES caps it.
+            [[label cell] setWraps:YES];
+            [[label cell] setLineBreakMode:NSLineBreakByWordWrapping];
+            [label setMaximumNumberOfLines:0];
             view = label;
             break;
         }

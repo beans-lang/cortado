@@ -118,7 +118,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events attributes bridge mount viewport nested slots shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
+cases=(tree events attributes bridge mount viewport culled reflow scaled fluid fonts box nested slots shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -194,7 +194,7 @@ cases=(tree events attributes bridge mount viewport nested slots shelf menu syst
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles attributes nested slots styled custom events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock clocks anim gpu canvas shader named_gradients)
+cross_host=(roles fonts reflow attributes nested slots styled custom events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock clocks anim gpu canvas shader named_gradients)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -259,7 +259,7 @@ ios_builds_only=(anim)
 # `tests/layout.b` already holds it. What is left is the step before, which
 # really is arithmetic: that `x={10}` reaches `spec.x`, and that a coordinate
 # written where nothing reads one is refused rather than dropped.
-portable=(layout diff sweep markup_refusals placed insets placement bounds)
+portable=(layout diff sweep markup_refusals placed insets placement bounds grid)
 
 # `--case` narrows every list to the one name, and leaves the lists it is not
 # in empty — so a case that is macOS-only runs on macOS and the GTK4 loop runs
@@ -1030,6 +1030,20 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         # chips are gone, the title is smaller and the shelf has wrapped.
         "$tmp/gradients.bin" --dump-narrow >"$tmp/gradients_narrow.out" 2>&1
         diff -u "$root/tests/gradients_narrow.out" "$tmp/gradients_narrow.out"
+        pass
+        # The third size. Nothing on this screen is a breakpoint now — the
+        # title is a share of its own column and the shelf is a grid told the
+        # narrowest a tile may be — and a share needs its floor shown as well
+        # as its middle.
+        "$tmp/gradients.bin" --dump-tight >"$tmp/gradients_tight.out" 2>&1
+        diff -u "$root/tests/gradients_tight.out" "$tmp/gradients_tight.out"
+        pass
+        # A short window, because the colour chips are drawn over the title row
+        # rather than in a column of their own — and the one thing an overlay
+        # can do wrong is cover what is under it. The shelf starts below the
+        # row the chips are in, at every size, and this is where that is read.
+        "$tmp/gradients.bin" --dump-at 700 420 >"$tmp/gradients_short.out" 2>&1
+        diff -u "$root/tests/gradients_short.out" "$tmp/gradients_short.out"
         pass
         # And what the dump cannot see. The toast is in the tree whether or not
         # its buttons work, and for a while they did not: the handlers set the

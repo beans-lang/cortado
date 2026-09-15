@@ -3,6 +3,7 @@ package component
 
 import cortado.widgets
 import cortado.host
+import cortado.platform
 import cortado.events
 import cortado.layout
 import cortado.geometry
@@ -70,7 +71,12 @@ pub class Builder {
     pub fn open(tag: string) {
         match Vocabulary.kind_of(tag) {
             none => {
-                self.faults.push("<{tag}> is not a widget cortado knows")
+                let gone: string = Vocabulary.retired(tag)
+                if gone != "" {
+                    self.faults.push(gone)
+                } else {
+                    self.faults.push("<{tag}> is not a widget cortado knows")
+                }
                 // A placeholder still goes on the stack, so the `close` that
                 // follows is not reported as a second, imaginary mistake.
                 self.push(new Element(widgets.WidgetKind.container, tag))
@@ -98,6 +104,7 @@ pub class Builder {
             return
         }
         let finished: Element = self.open_stack.remove(self.open_stack.len() - 1)
+        self.check_spec(finished)
         if self.open_stack.len() == 0 {
             match self.root {
                 none => { self.root = some(finished) }
@@ -108,6 +115,62 @@ pub class Builder {
             return
         }
         self.open_stack[self.open_stack.len() - 1].add(finished)
+    }
+
+    /// Rules that need every attribute in first, checked as the element
+    /// closes so they may be written in any order.
+    fn check_spec(element: Element) {
+        let low: f64 = element.spec.hide_below
+        let high: f64 = element.spec.hide_above
+        if low >= 0.0 && high >= 0.0 && low >= high {
+            self.fault_once("<{element.tag}> is hidden at every width: hide_below={low} is not under hide_above={high}")
+        }
+        if element.flexed && element.tuned {
+            self.fault_once("<{element.tag}> writes flex beside grow, shrink or basis, and flex is the three at once — write one or the other")
+        }
+        // A gap between lines on a run that never breaks into any.
+        match self.flexing_run(element) {
+            some(run) => {
+                if !run.wraps() && run.line_spacing() > 0.0 {
+                    self.fault_once("<{element.tag}> has line_spacing and does not wrap, so it has no lines to space — write wrap on it")
+                }
+            }
+            none => {}
+        }
+        // A tag with children and nothing that places them leaves every one at
+        // the corner, unmeasured. Say so instead.
+        if element.count() > 0 {
+            match element.arranger {
+                none => { self.fault_once("<{element.tag}> holds {element.count()} children and lays nothing out — put them in a <Box> or a <VStack>") }
+                some(arranger) => {}
+            }
+        }
+        // Two insets and a size on one axis decide it three times.
+        if element.spec.left >= 0.0 && element.spec.right >= 0.0 && element.spec.sizes(layout.Direction.horizontal) {
+            self.fault_once("<{element.tag}> has x, right and a width, and its width is decided three times — drop one")
+        }
+        if element.spec.top >= 0.0 && element.spec.bottom >= 0.0 && element.spec.sizes(layout.Direction.vertical) {
+            self.fault_once("<{element.tag}> has y, bottom and a height, and its height is decided three times — drop one")
+        }
+    }
+
+    /// The flexing run this element arranges its children with, or `none`.
+    fn flexing_run(element: Element) -> Option<layout.FlexLayout> {
+        match element.arranger {
+            none => { return none }
+            some(arranger) => {
+                match arranger as? layout.FlexLayout {
+                    some(run) => { return some(run) }
+                    none => { return none }
+                }
+            }
+        }
+    }
+
+    /// A fault checked on more than one attribute lands once.
+    fn fault_once(message: string) {
+        if self.faults.len() > 0 && self.faults[self.faults.len() - 1] == message { return }
+        self.faults.push(message)
     }
 
     // ---- values ----
@@ -133,6 +196,21 @@ pub class Builder {
         match self.current() {
             none => { self.faults.push("{name} with no element open") }
             some(element) => {
+                // `hidden` leaves the layout, not just the screen: the sheet
+                // hides the control as it culls it, so no property is written.
+                if name == "hidden" {
+                    if self.refuse_unless_carried(element, name) { return }
+                    element.spec.hidden = value
+                    return
+                }
+                // `wrap` is a stack's own: it breaks the run into lines.
+                if name == "wrap" {
+                    match self.flexing_run(element) {
+                        some(run) => { run.set_wrap(value) }
+                        none => { self.faults.push("<{element.tag}> does not run its children, so it cannot wrap — write wrap on a <VStack> or <HStack>") }
+                    }
+                    return
+                }
                 let property: int = Vocabulary.property_of(name)
                 if property < 0 {
                     self.faults.push("<{element.tag}> has no attribute called '{name}'")
@@ -174,10 +252,16 @@ pub class Builder {
         match self.current() {
             none => { self.faults.push("{name} with no element open") }
             some(element) => {
-                if name == "align" {
+                if name == "align" || name == "align_self" {
                     match Vocabulary.align_of(value) {
-                        none => { self.faults.push("align=\"{value}\" is not one of start, center, end, stretch") }
-                        some(mode) => { self.set_align(element, mode) }
+                        none => { self.faults.push("{name}=\"{value}\" is not one of start, center, end, stretch") }
+                        some(mode) => {
+                            if name == "align" {
+                                self.set_align(element, mode, self.parent_of_open())
+                            } else {
+                                self.set_own_align(element, mode, self.parent_of_open(), name)
+                            }
+                        }
                     }
                     return
                 }
@@ -185,6 +269,27 @@ pub class Builder {
                     match Vocabulary.justify_of(value) {
                         none => { self.faults.push("justify=\"{value}\" is not a justification cortado knows") }
                         some(mode) => { self.set_justify(element, mode) }
+                    }
+                    return
+                }
+                if name == "columns" {
+                    self.set_columns(element, value)
+                    return
+                }
+                // A size by the job it does, which is the only way a size
+                // follows the reader's own text setting.
+                if name == "font_role" {
+                    if self.refuse_unless_carried(element, name) { return }
+                    match Vocabulary.font_role_of(value) {
+                        none => { self.faults.push(font_role_refusal(value)) }
+                        some(role) => {
+                            match role.size() {
+                                err(problem) => { self.faults.push(problem.msg) }
+                                ok(points) => {
+                                    element.set(Attribute.of_real(host.P_FONT_SIZE, points))
+                                }
+                            }
+                        }
                     }
                     return
                 }
@@ -443,6 +548,8 @@ pub class Builder {
     pub fn place_number(root: Element, kind: Option<reflect.Type>, name: string, value: f64) {
         if !self.placement_allowed(root, kind, name) { return }
         self.layout_number(root, name, value, self.current())
+        // The root closed in its own render, before the tag's word landed.
+        self.check_spec(root)
     }
 
     /// Framework use, from `Placement`: `align="..."` on a component tag. The
@@ -450,8 +557,8 @@ pub class Builder {
     pub fn place_word(root: Element, kind: Option<reflect.Type>, name: string, value: string) {
         if !self.placement_allowed(root, kind, name) { return }
         match Vocabulary.align_of(value) {
-            none => { self.faults.push("align=\"{value}\" is not one of start, center, end, stretch") }
-            some(mode) => { root.spec.align = mode }
+            none => { self.faults.push("{name}=\"{value}\" is not one of start, center, end, stretch") }
+            some(mode) => { self.set_own_align(root, mode, self.current(), name) }
         }
     }
 
@@ -614,7 +721,7 @@ pub class Builder {
     /// written once so a deferred refusal reads the same as an immediate one.
     static fn wrong_parent(tag: string, name: string, want: string) -> string {
         if want == "flex" {
-            return "{name} is shared out by a flexing run, and <{tag}> sits in one that does not flex — write <VFlex> or <HFlex> around it, or set width/height instead"
+            return "{name} is shared out by a run, and <{tag}> sits in a container that does not run its children — write <VStack> or <HStack> around it, or set width/height instead"
         }
         return "{name} is a coordinate a placing container reads, and <{tag}> sits in one that arranges its children itself — write <Box> around it, or use spacing and padding instead"
     }
@@ -638,15 +745,18 @@ pub class Builder {
             return
         }
         if name == "line_spacing" {
-            match element.arranger {
-                none => { self.faults.push("<{element.tag}> has no children to space") }
-                some(arranger) => {
-                    match arranger as? layout.WrapLayout {
-                        some(run) => { run.set_line_spacing(value) }
-                        none => { self.faults.push("<{element.tag}> does not wrap its children, so it has no line spacing — write <HWrap> or <VWrap>") }
-                    }
-                }
+            // Taken now and checked at `close`, so `wrap` may come after it.
+            match self.flexing_run(element) {
+                some(run) => { run.set_line_spacing(value) }
+                none => { self.faults.push("<{element.tag}> does not run its children, so it has no line spacing — write it on a <VStack wrap> or <HStack wrap>") }
             }
+            return
+        }
+        // A grid's own three. `spacing` is a run's, and a grid is not a run:
+        // its two axes are set apart because they are laid out apart.
+        if name == "min_column" || name == "max_column" ||
+           name == "column_gap" || name == "row_gap" {
+            self.set_grid_number(element, name, value)
             return
         }
         if name == "padding" {
@@ -680,16 +790,37 @@ pub class Builder {
             if name == "grow" { element.spec.grow = value }
             if name == "shrink" { element.spec.shrink = value }
             if name == "basis" { element.spec.basis = value }
+            element.tuned = true
+            return
+        }
+        // `flex={n}` is the web's shorthand: grow n, shrink 1, from nothing.
+        if name == "flex" {
+            if value <= 0.0 {
+                self.faults.push("<{element.tag}> asks for flex={value}, and flex is a share above 0 — leave it off for a child that keeps its size")
+                return
+            }
+            if !self.parent_allows(element, container, name, "flex") { return }
+            element.spec.grow = value
+            element.spec.shrink = 1.0
+            element.spec.basis = 0.0
+            element.flexed = true
             return
         }
         // `x` and `y` are read by a placing run and by nothing else, the
         // same shape as `grow` above: an author who writes `x={20}` inside a
         // `<VStack>` would get a control at the run's coordinate and no word
         // about why.
-        if name == "x" || name == "y" {
+        if name == "x" || name == "y" || name == "right" || name == "bottom" {
             if !self.parent_allows(element, container, name, "place") { return }
-            if name == "x" { element.spec.x = value }
-            if name == "y" { element.spec.y = value }
+            // -1 is every spec's word for no opinion, so an inset starts at 0.
+            if value < 0.0 {
+                self.faults.push("<{element.tag}> asks for {name}={value}, and an inset from a <Box>'s edge is 0 or more")
+                return
+            }
+            if name == "x" { element.spec.left = value }
+            if name == "y" { element.spec.top = value }
+            if name == "right" { element.spec.right = value }
+            if name == "bottom" { element.spec.bottom = value }
             return
         }
         if name == "width" {
@@ -724,6 +855,15 @@ pub class Builder {
                 return
             }
             element.spec.aspect_ratio = value
+            return
+        }
+        // Hidden by the box around it, judged by the layout on every pass.
+        if name == "hide_below" || name == "hide_above" {
+            if value < 0.0 {
+                self.faults.push("<{element.tag}> asks for {name}={value}, and a width is 0 or more")
+                return
+            }
+            if name == "hide_below" { element.spec.hide_below = value } else { element.spec.hide_above = value }
             return
         }
         // One bound at a time. Later attributes win, so `width={150}` after a
@@ -796,9 +936,9 @@ pub class Builder {
     // child is that child's own. One name, two meanings, told apart by whether
     // the element arranges anything — which is what an author means when they
     // write it.
-    fn set_align(element: Element, mode: geometry.Align) {
+    fn set_align(element: Element, mode: geometry.Align, container: Option<Element>) {
         match element.arranger {
-            none => { element.spec.align = mode }
+            none => {}
             some(arranger) => {
                 match arranger as? layout.StackLayout {
                     some(run) => { run.set_align(mode); return }
@@ -808,7 +948,117 @@ pub class Builder {
                     some(grid) => { grid.set_align(mode); return }
                     none => {}
                 }
-                element.spec.align = mode
+                // A box or a holder runs nothing, so `align` can only have
+                // meant the element's own place, which has its own name.
+                self.faults.push("<{element.tag}> arranges no run to align its children in — write align_self for its own place")
+                return
+            }
+        }
+        if self.set_own_align(element, mode, container, "align") { return }
+    }
+
+    /// The element's own cross-axis place in `container`, refused where the
+    /// container places by insets or fills; `true` when it landed or refused.
+    fn set_own_align(element: Element, mode: geometry.Align, container: Option<Element>, name: string) -> bool {
+        match container {
+            none => {}
+            some(around) => {
+                if Builder.places(around) {
+                    self.faults.push("{name} on <{element.tag}> inside a <{around.tag}>, and a layer is placed by its insets — write x, y, right or bottom")
+                    return true
+                }
+                match around.arranger {
+                    none => {}
+                    some(arranger) => {
+                        match arranger as? layout.FillLayout {
+                            some(holder) => {
+                                self.faults.push("{name} on <{element.tag}> inside a <{around.tag}>, which hands it the whole box")
+                                return true
+                            }
+                            none => {}
+                        }
+                        match arranger as? layout.ScrollLayout {
+                            some(holder) => {
+                                self.faults.push("{name} on <{element.tag}> inside a <{around.tag}>, which hands it the whole width")
+                                return true
+                            }
+                            none => {}
+                        }
+                    }
+                }
+            }
+        }
+        element.spec.align = mode
+        return true
+    }
+
+    /// The grid this element arranges its children with, or a refusal naming
+    /// what `name` belongs to.
+    fn grid_of(element: Element, name: string) -> Option<layout.GridLayout> {
+        match element.arranger {
+            none => { self.faults.push("<{element.tag}> has no children, so it has no {name}") }
+            some(arranger) => {
+                match arranger as? layout.GridLayout {
+                    some(grid) => { return some(grid) }
+                    none => { self.faults.push("<{element.tag}> does not arrange its children in rows and columns, so it has no {name} — write <Grid>") }
+                }
+            }
+        }
+        return none
+    }
+
+    fn set_grid_number(element: Element, name: string, value: f64) {
+        match self.grid_of(element, name) {
+            none => {}
+            some(grid) => {
+                if name == "column_gap" { grid.set_column_gap(value); return }
+                if name == "row_gap" { grid.set_row_gap(value); return }
+                if name == "max_column" {
+                    if grid.min_column() > 0.0 && value < grid.min_column() {
+                        self.faults.push("<{element.tag}> has a max_column of {value} under its min_column of {grid.min_column()}, and no column could be both")
+                        return
+                    }
+                    grid.set_max_column(value)
+                    return
+                }
+                if grid.max_column() > 0.0 && value > grid.max_column() {
+                    self.faults.push("<{element.tag}> has a min_column of {value} over its max_column of {grid.max_column()}, and no column could be both")
+                    return
+                }
+                if grid.column_count() > 0 {
+                    self.faults.push("<{element.tag}> has columns and a min_column, which decides the columns twice — keep whichever the screen means")
+                    return
+                }
+                grid.set_min_column(value)
+            }
+        }
+    }
+
+    /// `columns="160 1fr auto"`, parsed here rather than in the markup
+    /// compiler so one spelling means one thing wherever it is written.
+    fn set_columns(element: Element, list: string) {
+        match self.grid_of(element, "columns") {
+            none => {}
+            some(grid) => {
+                if grid.has_min_column() {
+                    self.faults.push("<{element.tag}> has columns and a min_column, which decides the columns twice — keep whichever the screen means")
+                    return
+                }
+                grid.clear_columns()
+                var written: int = 0
+                for word: string in list.split(" ") {
+                    if word == "" { continue }
+                    match Vocabulary.track_of(word) {
+                        none => {
+                            self.faults.push("columns=\"{list}\" has no column called '{word}' — a column is a number of points, a share like 1fr, or auto")
+                            return
+                        }
+                        some(track) => { grid.add_column(track); written = written + 1 }
+                    }
+                }
+                if written == 0 {
+                    self.faults.push("columns=\"{list}\" names no columns — write at least one, as in columns=\"160 1fr\"")
+                }
             }
         }
     }
@@ -818,12 +1068,26 @@ pub class Builder {
             none => { self.faults.push("<{element.tag}> has no children to justify") }
             some(arranger) => {
                 match arranger as? layout.StackLayout {
-                    some(run) => { run.set_justify(mode) }
+                    some(run) => { run.set_justify(mode); return }
+                    none => {}
+                }
+                // A grid justifies each row in the room its columns leave, so
+                // a short last row can sit where the full ones do.
+                match arranger as? layout.GridLayout {
+                    some(grid) => { grid.set_justify(mode); return }
                     none => { self.faults.push("<{element.tag}> does not arrange its children in a run, so it has no justification") }
                 }
             }
         }
     }
+}
+
+/// Why a word is not a font role, in the sentence that says what to write.
+fn font_role_refusal(word: string) -> string {
+    if word == "mono" {
+        return "font_role is a size, and mono is body's size in a monospaced family — a family is not a property a control carries, so this would set nothing. Write font_role=\"body\""
+    }
+    return "font_role=\"{word}\" is not one of body, heading, caption"
 }
 
 /// `insets` with one edge replaced, or both edges of one axis for `x` and `y`.

@@ -142,7 +142,7 @@ pub fn controls() -> List<string> {
 /// nothing compared the two.
 pub fn boolean_attributes() -> List<string> {
     return ["animating", "checked", "editable", "enabled", "hidden",
-            "indeterminate", "open"]
+            "indeterminate", "open", "wrap"]
 }
 
 /// Every attribute, with the kind of value it takes.
@@ -176,6 +176,8 @@ fn attribute_note(name: string) -> string {
     if name == "margin_bottom" { return "margin on the bottom edge only" }
     if name == "margin_left" { return "margin on the left edge only" }
     if name == "grow" { return "share of leftover space along the main axis" }
+    if name == "flex" { return "grow by this share, shrink to fit and start from nothing: grow, shrink and basis in one" }
+    if name == "wrap" { return "a stack that starts a new line when the next child would not fit" }
     if name == "shrink" { return "share of overflow this control gives up" }
     if name == "basis" { return "main-axis size to grow or shrink from" }
     if name == "width" { return "pins the width: min_width and max_width at once" }
@@ -183,6 +185,11 @@ fn attribute_note(name: string) -> string {
     if name == "width_percent" { return "the width as a share, 0 to 100, of the room its container offers, less its own margin" }
     if name == "height_percent" { return "the height as a share, 0 to 100, of the room its container offers, less its own margin" }
     if name == "aspect_ratio" { return "width over height, above 0, resolved from whichever axis is settled" }
+    if name == "right" { return "inset from a <Box>'s right edge; with x as well, the width stretches between them" }
+    if name == "bottom" { return "inset from a <Box>'s bottom edge; with y as well, the height stretches between them" }
+    if name == "align_self" { return "this element's own cross-axis place in its run: start, center, end, stretch" }
+    if name == "hide_below" { return "shown only while the box around it is at least this wide; hidden takes no room" }
+    if name == "hide_above" { return "shown only while the box around it is under this width; hidden takes no room" }
     if name == "min_width" { return "the least width this control takes, in points" }
     if name == "max_width" { return "the most width this control takes, in points" }
     if name == "min_height" { return "the least height this control takes, in points" }
@@ -190,10 +197,17 @@ fn attribute_note(name: string) -> string {
     if name == "align" { return "cross-axis placement: start, center, end, stretch" }
     if name == "justify" { return "main-axis distribution: start, center, end, space_between, space_around, space_evenly" }
     if name == "enabled" { return "whether the control responds" }
-    if name == "hidden" { return "whether the control is drawn" }
+    if name == "hidden" { return "whether the control is drawn; hidden takes no room in the layout" }
+    if name == "lines" { return "how many lines a label may wrap onto: 0 for as many as it needs, 1 for one cut short" }
     if name == "checked" { return "a check box's state" }
     if name == "editable" { return "whether a field accepts typing" }
+    if name == "columns" { return "a grid's columns, as points, shares like 1fr, or auto" }
+    if name == "min_column" { return "the narrowest a grid column may be, so the count follows the room" }
+    if name == "max_column" { return "the widest a share of the room may make a grid column" }
+    if name == "column_gap" { return "the gap between a grid's columns" }
+    if name == "row_gap" { return "the gap between a grid's rows" }
     if name == "font_size" { return "text size in points" }
+    if name == "font_role" { return "text size by the job it does: body, heading or caption, at the platform's own size" }
     if name == "value" { return "a slider or progress value" }
     if name == "min" { return "the low end of a range" }
     if name == "max" { return "the high end of a range" }

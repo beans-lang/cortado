@@ -62,6 +62,15 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_HIDDEN:
             gtk_widget_set_visible(GTK_WIDGET(object), value ? FALSE : TRUE);
             return CTD_OK;
+        case CTD_P_LINES: {
+            if (!ctd_kind_has_lines(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0) return CTD_ERR_RANGE;
+            // -1 is GTK's "no cap"; a cap ends the last line with an ellipsis.
+            gtk_label_set_lines(GTK_LABEL(object), value == 0 ? -1 : (int)value);
+            gtk_label_set_ellipsize(GTK_LABEL(object),
+                                    value == 0 ? PANGO_ELLIPSIZE_NONE : PANGO_ELLIPSIZE_END);
+            return CTD_OK;
+        }
         case CTD_P_AXIS:
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -254,6 +263,12 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_HIDDEN:
             value = gtk_widget_get_visible(GTK_WIDGET(object)) ? 0 : 1;
             break;
+        case CTD_P_LINES: {
+            if (!ctd_kind_has_lines(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            int lines = gtk_label_get_lines(GTK_LABEL(object));
+            value = lines < 0 ? 0 : lines;
+            break;
+        }
         case CTD_P_AXIS:
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = gtk_orientable_get_orientation(GTK_ORIENTABLE(object)) ==

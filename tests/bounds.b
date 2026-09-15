@@ -170,7 +170,7 @@ fn drive() -> Result<bool> {
     io.println("-- a bound inside a flexing row --")
     // Two that grow alike; one is capped, so the other takes what it left.
     var into: component.Builder = new component.Builder()
-    into.open("HFlex")
+    into.open("HStack")
     into.open("Label")
     into.text("capped")
     into.number("grow", 1.0)

@@ -61,6 +61,8 @@ pub class WidgetLayout implements layout.Measure {
     chrome: Map<u64, geometry.EdgeInsets> = {}
     /// What each scrolling control was last told it scrolls over.
     scrolled: Map<u64, geometry.Size> = {}
+    /// What each control was last told about being hidden; absent is shown.
+    hidden: Map<u64, bool> = {}
 
     /// How many controls the last `apply` really moved, and how many it left
     /// alone. A test's cheapest proof that a pass that changed nothing wrote
@@ -70,6 +72,8 @@ pub class WidgetLayout implements layout.Measure {
     /// How many containers this pass had to ask the platform about, rather
     /// than answering from `chrome`.
     asked: int = 0
+    /// How many nodes the last `apply` found with children past their box.
+    spilled: int = 0
 
     pub fn init() {
         self.controls = {}
@@ -99,6 +103,7 @@ pub class WidgetLayout implements layout.Measure {
         self.frames.remove(handle)
         self.chrome.remove(handle)
         self.scrolled.remove(handle)
+        self.hidden.remove(handle)
     }
 
     /// Everything, for a mount that is closing or a system change that moves
@@ -107,9 +112,16 @@ pub class WidgetLayout implements layout.Measure {
         self.frames = {}
         self.chrome = {}
         self.scrolled = {}
+        self.hidden = {}
     }
 
     /// How many widgets this sheet is tracking.
+    /// The frame this sheet last put a control at, or `none` for one it has
+    /// never placed. What a mount hands a component as its own box.
+    pub fn frame_of(handle: u64) -> Option<geometry.Rect> {
+        return self.frames.get(handle)
+    }
+
     pub fn count() -> int {
         return self.controls.len()
     }
@@ -128,6 +140,11 @@ pub class WidgetLayout implements layout.Measure {
     /// second pass over an unchanged tree is the whole point of `chrome`.
     pub fn chrome_asked() -> int {
         return self.asked
+    }
+
+    /// How many runs overflowed on the last `apply`. Zero is a screen that fits.
+    pub fn overflowing() -> int {
+        return self.spilled
     }
 
     /// A node for a control with no children.
@@ -214,6 +231,7 @@ pub class WidgetLayout implements layout.Measure {
     pub fn apply(root: layout.LayoutNode) -> Result<int> {
         self.wrote = 0
         self.kept = 0
+        self.spilled = 0
         return self.apply_at(root, 0.0, 0.0)
     }
 
@@ -232,14 +250,22 @@ pub class WidgetLayout implements layout.Measure {
     /// is a real view, and its children are positioned inside it.
     fn apply_at(node: layout.LayoutNode, dx: f64, dy: f64) -> Result<int> {
         var moved: int = 0
+        if node.overflow > 0.0 { self.spilled = self.spilled + 1 }
         var next_x: f64 = dx + node.frame().x
         var next_y: f64 = dy + node.frame().y
         match self.controls.get(node.key) {
             some(control) => {
+                let slot: u64 = control.handle().raw
+                // A culled control is hidden, not placed; what is under it
+                // sits inside a hidden view and was never laid out.
+                if node.culled {
+                    self.hide(control, slot, true)?
+                    return ok(moved)
+                }
+                self.hide(control, slot, false)?
                 let box: geometry.Rect = node.frame()
                 let want: geometry.Rect = geometry.Rect.of(box.x + dx, box.y + dy,
                                                            box.width, box.height)
-                let slot: u64 = control.handle().raw
                 if self.told(slot, want) {
                     self.kept = self.kept + 1
                 } else {
@@ -254,12 +280,29 @@ pub class WidgetLayout implements layout.Measure {
                 next_x = 0.0
                 next_y = 0.0
             }
-            none => {}
+            none => {
+                // A layout-only group that was culled placed none of its children.
+                if node.culled { return ok(moved) }
+            }
         }
         for index: int in 0..node.count() {
             moved = moved + self.apply_at(node.at(index), next_x, next_y)?
         }
         return ok(moved)
+    }
+
+    /// Tells a control whether it is hidden, once per change of answer. A
+    /// control never told is taken as shown, so a fresh one costs no write.
+    fn hide(control: Widget, slot: u64, state: bool) -> Result<bool> {
+        var was: bool = false
+        match self.hidden.get(slot) {
+            some(told) => { was = told }
+            none => {}
+        }
+        if was == state { return ok(false) }
+        control.set_hidden(state)?
+        self.hidden[slot] = state
+        return ok(true)
     }
 
     /// Tells a scrolling control how big the area behind its viewport is.

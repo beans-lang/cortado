@@ -26,10 +26,6 @@ package bx
 pub fn is_widget_tag(tag: string) -> bool {
     if tag == "VStack" { return true }
     if tag == "HStack" { return true }
-    if tag == "VFlex" { return true }
-    if tag == "HFlex" { return true }
-    if tag == "VWrap" { return true }
-    if tag == "HWrap" { return true }
     if tag == "Grid" { return true }
     if tag == "Box" { return true }
     if tag == "Container" { return true }
@@ -89,14 +85,27 @@ pub fn is_widget_tag(tag: string) -> bool {
 pub fn names_a_component(tag: string) -> bool {
     if tag.len() == 0 { return false }
     if is_widget_tag(tag) { return false }
+    // A retired container is not a component either; it is refused by name.
+    if retired_tag(tag) != "" { return false }
     let first: int = tag.byte_at(0) as int
     return first >= 65 && first <= 90
+}
+
+/// The sentence for a container tag that no longer exists, or `""`. Every
+/// stack flexes and wraps on request now, so the three families are one.
+pub fn retired_tag(tag: string) -> string {
+    if tag == "VFlex" { return "<VFlex> is retired: every <VStack> shares out its leftover by grow and shrink now — write <VStack>" }
+    if tag == "HFlex" { return "<HFlex> is retired: every <HStack> shares out its leftover by grow and shrink now — write <HStack>" }
+    if tag == "VWrap" { return "<VWrap> is retired: wrapping is an attribute of a stack now — write <VStack wrap>" }
+    if tag == "HWrap" { return "<HWrap> is retired: wrapping is an attribute of a stack now — write <HStack wrap>" }
+    return ""
 }
 
 /// An attribute that is true by being there: `<CheckBox checked />`.
 pub fn is_boolean_attribute(name: string) -> bool {
     if name == "enabled" { return true }
     if name == "hidden" { return true }
+    if name == "wrap" { return true }
     if name == "checked" { return true }
     if name == "editable" { return true }
     if name == "indeterminate" { return true }
@@ -168,9 +177,9 @@ pub fn attribute_call(name: string) -> string {
        name == "day" || name == "corner_radius" || name == "border_width" {
         return "number"
     }
-    if name == "alignment" || name == "selected" { return "number" }
+    if name == "alignment" || name == "selected" || name == "lines" { return "number" }
     if name == "spacing" || name == "line_spacing" || name == "padding" || name == "margin" ||
-       name == "grow" || name == "shrink" || name == "basis" ||
+       name == "grow" || name == "shrink" || name == "basis" || name == "flex" ||
        name == "width" || name == "height" ||
        name == "x" || name == "y" {
         return "number"
@@ -190,14 +199,39 @@ pub fn attribute_call(name: string) -> string {
        name == "min_height" || name == "max_height" {
         return "number"
     }
+    // A grid's own. `min_column` is the narrowest a column may be before the
+    // grid uses one fewer of them, which is what makes a shelf reflow.
+    if name == "min_column" || name == "max_column" ||
+       name == "column_gap" || name == "row_gap" {
+        return "number"
+    }
     // A share of the room, 0 to 100, and a width-over-height shape.
     if name == "width_percent" || name == "height_percent" || name == "aspect_ratio" {
         return "number"
     }
+    // Shown only while the box around it is at least, or under, a width.
+    if name == "hide_below" || name == "hide_above" {
+        return "number"
+    }
+    // The far edges of a <Box>; `x` and `y` are the near ones.
+    if name == "right" || name == "bottom" {
+        return "number"
+    }
+    // An element's own cross-axis place, whatever it arranges itself.
+    if name == "align_self" { return "word" }
     // A colour is a word here and a whole number by the time it reaches the
     // ABI, parsed once in `Builder.word` so `#abc` means one thing everywhere.
-    if name == "align" || name == "justify" || is_colour_attribute(name) { return "word" }
+    if name == "align" || name == "justify" || name == "font_role" ||
+       name == "columns" || is_colour_attribute(name) { return "word" }
     return ""
+}
+
+/// A word this attribute would accept, for a refusal that shows the shape
+/// rather than a word from some other attribute's set.
+pub fn word_example(name: string) -> string {
+    if name == "font_role" { return "body" }
+    if name == "columns" { return "160 1fr auto" }
+    return "center"
 }
 
 /// Whether `name` on a component tag places the component rather than setting
@@ -206,13 +240,15 @@ pub fn is_placement_attribute(name: string) -> bool {
     return name == "margin" || name == "margin_x" || name == "margin_y" ||
            name == "margin_top" || name == "margin_right" ||
            name == "margin_bottom" || name == "margin_left" ||
-           name == "grow" || name == "shrink" || name == "basis" ||
+           name == "grow" || name == "shrink" || name == "basis" || name == "flex" ||
            name == "width" || name == "height" ||
            name == "min_width" || name == "max_width" ||
            name == "min_height" || name == "max_height" ||
            name == "width_percent" || name == "height_percent" ||
            name == "aspect_ratio" ||
-           name == "x" || name == "y" || name == "align"
+           name == "hide_below" || name == "hide_above" ||
+           name == "x" || name == "y" || name == "right" || name == "bottom" ||
+           name == "align" || name == "align_self"
 }
 
 /// The attributes whose value is a colour, written `#rgb`, `#rrggbb` or
@@ -224,28 +260,30 @@ pub fn is_colour_attribute(name: string) -> bool {
 
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
 pub fn attribute_names() -> List<string> {
-    return ["align", "alignment", "animating", "aspect_ratio", "background", "basis",
-            "border_color", "border_width", "checked", "color", "corner_radius",
-            "day", "editable", "enabled",
-            "font_size", "grow", "height", "height_percent", "hidden", "indeterminate",
-            "justify", "line_spacing", "margin", "margin_bottom", "margin_left", "margin_right",
+    return ["align", "align_self", "alignment", "animating", "aspect_ratio", "background", "basis",
+            "border_color", "border_width", "bottom", "checked", "color", "column_gap", "columns",
+            "corner_radius",
+            "day", "editable", "enabled", "flex",
+            "font_role", "font_size", "grow", "height", "height_percent", "hidden",
+            "hide_above", "hide_below", "indeterminate",
+            "justify", "line_spacing", "lines", "margin", "margin_bottom", "margin_left", "margin_right",
             "margin_top", "margin_x", "margin_y", "max", "max_height",
-            "max_width", "min", "min_height", "min_width", "opacity",
+            "max_column", "max_width", "min", "min_column", "min_height", "min_width", "opacity",
             "open", "padding", "padding_bottom", "padding_left",
             "padding_right", "padding_top", "padding_x", "padding_y",
-            "selected", "shrink", "spacing", "step", "text", "text_color",
-            "value", "width", "width_percent", "x", "y"]
+            "right", "row_gap", "selected", "shrink", "spacing", "step", "text", "text_color",
+            "value", "width", "width_percent", "wrap", "x", "y"]
 }
 
 /// Every control tag, for the same reason.
 pub fn widget_tags() -> List<string> {
     return ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox",
             "Container", "DatePicker", "Disclosure",
-            "Grid", "GroupBox", "HFlex", "HStack", "HWrap", "Image", "Label",
+            "Grid", "GroupBox", "HStack", "Image", "Label",
             "LevelIndicator", "Link",
             "ProgressBar", "RadioButton", "ScrollView", "SecureField",
             "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper",
-            "Switch", "TabView", "Table", "TextArea", "TextField", "VFlex", "VStack", "VWrap",
+            "Switch", "TabView", "Table", "TextArea", "TextField", "VStack",
             "OutlineView", "WebView"]
 }
 
@@ -276,11 +314,15 @@ pub fn tag_carries(tag: string, name: string) -> bool {
     // words, and none of them is here: those words are a title or a cell
     // rather than the control's own text, and one name meaning both would be
     // worse than no name at all.
-    if name == "font_size" { return one_of(tag, ["Label", "Button", "TextField",
-                                                 "SecureField", "SearchField", "TextArea",
-                                                 "CheckBox", "RadioButton", "ComboBox",
-                                                 "Link", "Segmented", "DatePicker"]) }
+    if name == "font_size" || name == "font_role" {
+        return one_of(tag, ["Label", "Button", "TextField",
+                            "SecureField", "SearchField", "TextArea",
+                            "CheckBox", "RadioButton", "ComboBox",
+                            "Link", "Segmented", "DatePicker"])
+    }
     if name == "step" { return one_of(tag, ["Slider", "Stepper"]) }
+    // Only a label wraps; every other control draws its words on one line.
+    if name == "lines" { return tag == "Label" }
     // The four bezelled text controls draw an opaque bezel over anything set
     // behind them. Corners and borders have no such rule.
     if name == "background" { return !is_typed_into(tag) }

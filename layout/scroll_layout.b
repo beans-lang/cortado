@@ -35,7 +35,7 @@ pub class ScrollLayout extends Layout {
         // It would take its content's height and never scroll, saying nothing.
         if !limit.has_max_height() && node.spec.max_height < 0.0 &&
            node.spec.grow <= 0.0 {
-            return err("\"{node.name}\" is a scroll view with no height of its own, in a run that hands none out — it would grow to its content and scroll nothing. Give it height=\{ \}, or grow=\{ \} inside a VFlex",
+            return err("\"{node.name}\" is a scroll view with no height of its own, in a run that hands none out — it would grow to its content and scroll nothing. Give it height=\{ \}, or flex=\{ \} inside a VStack",
                        "unbounded_scroll")
         }
         return ok(limit.clamp(self.content_of(node, limit, ruler)?))
@@ -48,9 +48,11 @@ pub class ScrollLayout extends Layout {
         let wanted: geometry.Size = self.content_of(node, room, ruler)?
         var tall: f64 = content.height
         if wanted.height > tall { tall = wanted.height }
-        for index: int in 0..node.count() {
-            node.at(index).place(geometry.Rect.of(content.x, content.y,
-                                                  content.width, tall), ruler)?
+        let members: List<int> = members_of(node, content.width)
+        for slot: int in 0..members.len() {
+            let child: LayoutNode = node.at(members[slot])
+            child.place(child.spec.margin.deflate(geometry.Rect.of(content.x, content.y,
+                                                                   content.width, tall)), ruler)?
         }
         // What the platform is given to scroll over. Equal to the frame when
         // the content fits, which is a scroll view with nothing to scroll.
@@ -74,9 +76,13 @@ pub class ScrollLayout extends Layout {
         var widest: f64 = 0.0
         var tallest: f64 = 0.0
         for index: int in 0..node.count() {
-            let wanted: geometry.Size = node.at(index).measure(sky, ruler)?
-            if wanted.width > widest { widest = wanted.width }
-            if wanted.height > tallest { tallest = wanted.height }
+            let child: LayoutNode = node.at(index)
+            if !child.spec.shown_in(room.max_width) { continue }
+            let wanted: geometry.Size = child.measure(sky.deflate(child.spec.margin), ruler)?
+            let wide: f64 = wanted.width + child.spec.margin.horizontal()
+            let tall: f64 = wanted.height + child.spec.margin.vertical()
+            if wide > widest { widest = wide }
+            if tall > tallest { tallest = tall }
         }
         return ok(geometry.Size.of(widest, tallest))
     }

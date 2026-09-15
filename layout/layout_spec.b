@@ -40,9 +40,12 @@ pub struct LayoutSpec {
     /// Cross-axis placement, or `inherit` to take the run's default.
     pub align: geometry.Align = geometry.Align.inherit
 
-    /// Position inside an `AbsoluteLayout`, ignored by every other layout.
-    pub x: f64 = 0.0
-    pub y: f64 = 0.0
+    /// Insets from a `Box`'s edges, or -1 for no opinion; every other layout
+    /// ignores them. Two opposite insets stretch; none on an axis fills it.
+    pub left: f64 = -1.0
+    pub top: f64 = -1.0
+    pub right: f64 = -1.0
+    pub bottom: f64 = -1.0
 
     /// A share, 0 to 100, of the room the container offers on that axis — its
     /// content box less this child's own margin — or -1. While that room is unbounded, no opinion.
@@ -52,6 +55,25 @@ pub struct LayoutSpec {
     /// Width over height, or -1 for none. Resolved at measure from whichever
     /// axis is settled; see `shaped`.
     pub aspect_ratio: f64 = -1.0
+
+    /// Left out of the layout at every width: no frame, no room, no spacing.
+    pub hidden: bool = false
+
+    /// Shown only while the box around it is at least this wide, or -1.
+    pub hide_below: f64 = -1.0
+
+    /// Shown only while the box around it is under this width, or -1.
+    pub hide_above: f64 = -1.0
+
+    /// Whether this child takes part in a box `room` wide. A room nobody has
+    /// bounded yet (-1) shows it; the parent decides again once it is placed.
+    pub fn shown_in(room: f64) -> bool {
+        if self.hidden { return false }
+        if room < 0.0 { return true }
+        if self.hide_below >= 0.0 && room < self.hide_below { return false }
+        if self.hide_above >= 0.0 && room >= self.hide_above { return false }
+        return true
+    }
 
     pub static fn auto() -> LayoutSpec {
         return LayoutSpec {}
@@ -93,9 +115,31 @@ pub struct LayoutSpec {
                             shrink: 0.0 }
     }
 
-    /// A child placed at an explicit offset, for `AbsoluteLayout`.
+    /// A child placed at an explicit offset from a `Box`'s top left corner,
+    /// at its measured size.
     pub static fn at(x: f64, y: f64) -> LayoutSpec {
-        return LayoutSpec { x: x, y: y }
+        return LayoutSpec { left: x, top: y }
+    }
+
+    /// Whether this spec pins one size on `axis`: min and max the same number,
+    /// or a share of the room.
+    pub fn sizes(axis: Direction) -> bool {
+        if self.percent_on(axis) >= 0.0 { return true }
+        let lower: f64 = self.min_on(axis)
+        let upper: f64 = self.max_on(axis)
+        return upper >= 0.0 && lower == upper
+    }
+
+    /// The inset before this child along `axis` (left or top), or -1.
+    pub fn inset_lead(axis: Direction) -> f64 {
+        if axis.is_horizontal() { return self.left }
+        return self.top
+    }
+
+    /// The inset after this child along `axis` (right or bottom), or -1.
+    pub fn inset_trail(axis: Direction) -> f64 {
+        if axis.is_horizontal() { return self.right }
+        return self.bottom
     }
 
     /// This spec's own size bounds folded into `limit`.

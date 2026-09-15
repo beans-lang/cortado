@@ -1,6 +1,6 @@
-<HFlex width={self.across} spacing={8} padding={9}
-       align="center" background="#ffffffe8" corner_radius={15}
-       border_width={1} border_color="#00000016">
+<HStack spacing={8} padding={9}
+        align="center" background="#ffffffe8" corner_radius={15}
+        border_width={1} border_color="#00000016">
   <Label text="" width={14} height={14} background={self.tint} corner_radius={7}
          border_width={1} border_color="#00000022" />
   <Label text={self.name} font_size={11} text_color="#1b1b20" />
@@ -8,25 +8,22 @@
        width read as a column however long their names are. -->
   <Label text="" grow={1} />
   <Label text={self.hex} font_size={11} text_color="#6b6b74" />
-</HFlex>
+</HStack>
 <beans>
 package site
 
 import cortado.component
 import {view, param} from cortado.annotations
 
-/// One colour of the mesh, named and pinned where the screen wants it.
+/// One colour of the mesh, named and placed where the screen wants it.
 ///
-/// Where it sits is the screen's to say — `<Swatch x={640} y={96} />` places
-/// the chip — so it carries no coordinate of its own.
+/// It carries no width: the column it sits in stretches every chip to the
+/// widest, so four of them line up on both edges with no number anywhere.
 @view
 pub partial class Swatch extends component.Component {
     @param pub name: string = ""
     @param pub hex: string = ""
     @param pub tint: string = "#888888"
-
-    /// Pinned rather than measured, so four chips line up on both edges.
-    @param pub across: f64 = 232.0
 
     pub fn init() { super.init() }
 }

@@ -59,6 +59,8 @@
   a border colour a field decides compiled, emitting it: true
   align still needs a literal refused, saying so: true
   and so does justify refused, saying so: true
+  and font_role, with its own set in the example refused, saying so: true
+  a font role by name compiled, emitting it: true
 -- what a scroll view scrolls --
   two children in a scroll view refused, saying so: true
   one is what it takes compiled, emitting it: true
@@ -76,6 +78,8 @@
   a parameter beside it is still the component's field compiled, emitting it: true
   and every placement rides the one call compiled, emitting it: true
   a placement from an expression compiled, emitting it: true
+  the far edge of a box compiled, emitting it: true
+  a component's own place in its run compiled, emitting it: true
   padding on a component tag is its parameter compiled, emitting it: true
   a placement with no value refused, saying so: true
   align from an expression refused, saying so: true
@@ -84,9 +88,15 @@
   min_height on a component tag compiled, emitting it: true
   width_percent on a control compiled, emitting it: true
   aspect_ratio on a component tag compiled, emitting it: true
+  hide_below on a control compiled, emitting it: true
+  hide_above on a component tag compiled, emitting it: true
   a breakpoint on the viewport compiled, emitting it: true
   maxWidth refused, saying so: true
 -- a run that wraps --
-  <HWrap> is a container compiled, emitting it: true
+  wrap is a stack's own flag compiled, emitting it: true
   and line_spacing is one of its numbers compiled, emitting it: true
-  <VWrap> too compiled, emitting it: true
+  flex is one number for three compiled, emitting it: true
+  <HWrap> is retired refused, saying so: true
+  <VWrap> is retired refused, saying so: true
+  <VFlex> is retired refused, saying so: true
+  <HFlex> is retired refused, saying so: true

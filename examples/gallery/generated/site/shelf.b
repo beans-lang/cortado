@@ -185,7 +185,7 @@ fn _cortado_component_shelf_FancyButton(value: FancyButton) -> Component { retur
 
 partial class Shelf {
     pub override fn render(b: Builder) {
-        b.open("VFlex")  // shelf.bx:1
+        b.open("VStack")  // shelf.bx:1
         b.number("spacing", (10) as f64)
         b.number("padding", (16) as f64)
         b.word("align", "stretch")
@@ -211,7 +211,7 @@ partial class Shelf {
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("HFlex")  // shelf.bx:12
+        b.open("HStack")  // shelf.bx:12
         b.number("spacing", (10) as f64)
         b.open("Label")  // shelf.bx:13
         b.number("width", (110) as f64)
@@ -223,7 +223,7 @@ partial class Shelf {
         b.text("{self.name}")
         b.close()
         b.close()
-        b.open("HFlex")  // shelf.bx:16
+        b.open("HStack")  // shelf.bx:16
         b.number("spacing", (10) as f64)
         b.open("Label")  // shelf.bx:17
         b.number("width", (110) as f64)
@@ -233,7 +233,7 @@ partial class Shelf {
         b.number("grow", (1) as f64)
         b.close()
         b.close()
-        b.open("HFlex")  // shelf.bx:20
+        b.open("HStack")  // shelf.bx:20
         b.number("spacing", (10) as f64)
         b.open("Label")  // shelf.bx:21
         b.number("width", (110) as f64)
@@ -261,7 +261,7 @@ partial class Shelf {
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("HFlex")  // shelf.bx:33
+        b.open("HStack")  // shelf.bx:33
         b.number("spacing", (10) as f64)
         b.open("Label")  // shelf.bx:34
         b.number("width", (110) as f64)
@@ -287,7 +287,7 @@ partial class Shelf {
         b.close()
         b.close()
         if self.has_switch {  // shelf.bx:42
-            b.open("HFlex")  // shelf.bx:43
+            b.open("HStack")  // shelf.bx:43
             b.number("spacing", (10) as f64)
             b.open("Label")  // shelf.bx:44
             b.number("width", (110) as f64)
@@ -323,7 +323,7 @@ partial class Shelf {
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("HFlex")  // shelf.bx:64
+        b.open("HStack")  // shelf.bx:64
         b.number("spacing", (10) as f64)
         b.open("Label")  // shelf.bx:65
         b.number("width", (110) as f64)
@@ -337,7 +337,7 @@ partial class Shelf {
         b.on("change", fn(e: UiEvent) { self.set_shots(e) })
         b.close()
         b.close()
-        b.open("HFlex")  // shelf.bx:69
+        b.open("HStack")  // shelf.bx:69
         b.number("spacing", (10) as f64)
         b.open("Label")  // shelf.bx:70
         b.number("width", (110) as f64)
@@ -391,7 +391,7 @@ partial class Shelf {
         b.number("spacing", (8) as f64)
         b.number("padding", (8) as f64)
         b.word("align", "stretch")
-        b.open("HFlex")  // shelf.bx:94
+        b.open("HStack")  // shelf.bx:94
         b.number("spacing", (10) as f64)
         b.open("Label")  // shelf.bx:95
         b.number("width", (110) as f64)
@@ -404,7 +404,7 @@ partial class Shelf {
         b.close()
         b.close()
         if self.has_color {  // shelf.bx:99
-            b.open("HFlex")  // shelf.bx:100
+            b.open("HStack")  // shelf.bx:100
             b.number("spacing", (10) as f64)
             b.open("Label")  // shelf.bx:101
             b.number("width", (110) as f64)

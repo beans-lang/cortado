@@ -17,26 +17,22 @@ import {UiEvent} from cortado.events
 import cortado.component
 import {view, param} from cortado.annotations
 
-/// One colour of the mesh, named and pinned where the screen wants it.
+/// One colour of the mesh, named and placed where the screen wants it.
 ///
-/// Where it sits is the screen's to say — `<Swatch x={640} y={96} />` places
-/// the chip — so it carries no coordinate of its own.
+/// It carries no width: the column it sits in stretches every chip to the
+/// widest, so four of them line up on both edges with no number anywhere.
 @view
 pub partial class Swatch extends component.Component {
     @param pub name: string = ""
     @param pub hex: string = ""
     @param pub tint: string = "#888888"
 
-    /// Pinned rather than measured, so four chips line up on both edges.
-    @param pub across: f64 = 232.0
-
     pub fn init() { super.init() }
 }
 
 partial class Swatch {
     pub override fn render(b: Builder) {
-        b.open("HFlex")  // Swatch.bx:1
-        b.number("width", (self.across) as f64)
+        b.open("HStack")  // Swatch.bx:1
         b.number("spacing", (8) as f64)
         b.number("padding", (9) as f64)
         b.word("align", "center")

@@ -50,6 +50,14 @@ pub class LayoutNode {
     /// from "a content size of nothing".
     pub content: geometry.Size = geometry.Size.zero()
 
+    /// How far this node's children ran past its content box on the last
+    /// arrange, or 0. Written by the arranger; the dump prints it.
+    pub overflow: f64 = 0.0
+
+    /// Left out by the last arrange, by its spec or by the room: a zero frame,
+    /// and nothing under it was placed.
+    pub culled: bool = false
+
     arranger: Layout
     contents: List<LayoutNode> = []
     box: geometry.Rect = geometry.Rect.zero()
@@ -205,8 +213,17 @@ pub class LayoutNode {
     /// This is the only place a frame is written, which is why a layout
     /// subclass never touches `box` directly: "who moved this node" has one
     /// answer, and a subclass that placed nodes itself could place one twice.
+    /// Leaves this node out of the pass: no frame, and no children placed.
+    pub fn cull() {
+        self.culled = true
+        self.box = geometry.Rect.zero()
+        self.overflow = 0.0
+    }
+
     pub fn place(frame: geometry.Rect, ruler: Measure) -> Result<bool> {
         self.box = frame
+        self.overflow = 0.0
+        self.culled = false
         // The chrome comes off the size and not off the origin — see the
         // field's own note. A child of a group box that starts at zero starts
         // at the corner of the box's *content view*, which AppKit has already
@@ -219,6 +236,30 @@ pub class LayoutNode {
         let content: geometry.Rect = self.arranger.padding().deflate(room)
         return self.arranger.arrange(self, content, ruler)
     }
+}
+
+/// The children of `node` that take part in a box `room` wide, in order.
+/// The rest are culled here, so every arranger leaves them out the same way.
+fn members_of(node: LayoutNode, room: f64) -> List<int> {
+    var out: List<int> = []
+    for index: int in 0..node.count() {
+        let child: LayoutNode = node.at(index)
+        if child.spec.shown_in(room) {
+            out.push(index)
+        } else {
+            child.cull()
+        }
+    }
+    return move out
+}
+
+/// How many children of `node` take part in a box `room` wide.
+fn shown_count(node: LayoutNode, room: f64) -> int {
+    var count: int = 0
+    for index: int in 0..node.count() {
+        if node.at(index).spec.shown_in(room) { count = count + 1 }
+    }
+    return count
 }
 
 /// Zero rather than a negative size.

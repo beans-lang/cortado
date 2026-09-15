@@ -198,6 +198,12 @@ static inline int ctd_kind_has_fg_color(int32_t kind) {
     return ctd_kind_has_alignment(kind);
 }
 
+/* Whether a kind wraps its words onto more lines. A label alone: every other
+ * control draws its text on one line on all four hosts. */
+static inline int ctd_kind_has_lines(int32_t kind) {
+    return kind == CTD_W_LABEL;
+}
+
 /* Whether a kind carries an increment — CTD_P_STEP.
  *
  * A stepper and a slider. The kind carries it everywhere; iOS answers
@@ -528,6 +534,7 @@ static inline int32_t ctd_rule_carries(int32_t kind, int32_t space, int32_t key)
         case CTD_P_ICON:          return ctd_kind_has_icon(kind);
         case CTD_P_BG_COLOR:      return ctd_kind_has_background(kind);
         case CTD_P_FG_COLOR:      return ctd_kind_has_fg_color(kind);
+        case CTD_P_LINES:         return ctd_kind_has_lines(kind);
         case CTD_P_FOCUSABLE:
         case CTD_P_A11Y_ROLE:     return ctd_kind_is_drawn(kind);
         default:                  return CTD_ERR_RANGE;

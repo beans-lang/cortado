@@ -82,10 +82,25 @@ pub class StackLayout extends Layout {
         var seen: int = 0
         for index: int in 0..node.count() {
             let child: LayoutNode = node.at(index)
+            // Judged by the width this run will have; a child the room hides takes nothing.
+            if !child.spec.shown_in(inner.max_width) { continue }
             // Each child is measured with no limit along the main axis: the
             // run is asking how big everyone naturally is, and only once that
             // is known can it decide whether there is room to share out.
-            let offer: Constraint = inner.deflate(child.spec.margin).unbound(self.axis).loosen()
+            var offer: Constraint = inner.deflate(child.spec.margin).unbound(self.axis).loosen()
+            // A child that will be stretched is measured at the width it will
+            // get, as `arrange` does — but only once that width is settled. A
+            // run still finding its own width takes its children's natural one.
+            if child.spec.align.resolve(self.cross) == geometry.Align.stretch &&
+               self.cross_settled(inner) {
+                var band: f64 = cross_axis.main_of(inner.available()) - child.spec.margin_on(cross_axis)
+                if band < 0.0 { band = 0.0 }
+                if self.axis.is_horizontal() {
+                    offer = Constraint.of(0.0, -1.0, band, band)
+                } else {
+                    offer = Constraint.of(band, band, 0.0, -1.0)
+                }
+            }
             let size: geometry.Size = child.measure(offer, ruler)?
             main_total = main_total + self.axis.main_of(size) + child.spec.margin_on(self.axis)
             let reach: f64 = cross_axis.main_of(size) + child.spec.margin_on(cross_axis)
@@ -101,11 +116,21 @@ pub class StackLayout extends Layout {
         return ok(limit.clamp(padded))
     }
 
+    /// Whether `limit` pins this run's cross axis to one number.
+    fn cross_settled(limit: Constraint) -> bool {
+        if self.axis.is_horizontal() {
+            return limit.has_max_height() && limit.min_height == limit.max_height
+        }
+        return limit.has_max_width() && limit.min_width == limit.max_width
+    }
+
     // ---- pass two: place everyone ----
 
     pub override fn arrange(node: LayoutNode, content: geometry.Rect,
                             ruler: Measure) -> Result<bool> {
-        let count: int = node.count()
+        // Who is in the run: a child the room hides is culled and takes nothing.
+        let members: List<int> = members_of(node, content.width)
+        let count: int = members.len()
         if count == 0 {
             return ok(true)
         }
@@ -118,13 +143,13 @@ pub class StackLayout extends Layout {
         // space actually up for distribution, so `free` is a straight
         // subtraction rather than a running tally that is easy to get wrong.
         var reserved: f64 = self.spacing * ((count - 1) as f64)
-        for index: int in 0..count {
-            reserved = reserved + node.at(index).spec.margin_on(self.axis)
+        for slot: int in 0..count {
+            reserved = reserved + node.at(members[slot]).spec.margin_on(self.axis)
         }
 
         var run: AxisRun = new AxisRun(room_main - reserved)
-        for index: int in 0..count {
-            let child: LayoutNode = node.at(index)
+        for slot: int in 0..count {
+            let child: LayoutNode = node.at(members[slot])
             var offer: Constraint = Constraint.loose(
                 geometry.Size.of(content.width, content.height))
                 .deflate(child.spec.margin).unbound(self.axis)
@@ -173,15 +198,18 @@ pub class StackLayout extends Layout {
         }
 
         self.distribute(run)
+        // What the children still need past the room, once shrinking is done.
+        let spilled: f64 = run.total() - run.room
+        if spilled > 0.0000001 { node.overflow = spilled }
 
         let free: f64 = run.room - run.total()
         let lead: f64 = self.justify.lead(free, count)
         let gap: f64 = self.justify.gap(free, count)
 
         var cursor: f64 = self.axis.main_start(content) + lead
-        for index: int in 0..count {
-            let child: LayoutNode = node.at(index)
-            let main_size: f64 = run.main_at(index)
+        for slot: int in 0..count {
+            let child: LayoutNode = node.at(members[slot])
+            let main_size: f64 = run.main_at(slot)
             cursor = cursor + child.spec.margin_lead(self.axis)
 
             // The run of space this child's cross axis may use, after its own

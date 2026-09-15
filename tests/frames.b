@@ -97,6 +97,25 @@ fn drive() -> Result<bool> {
     let settled: motion.ClockState = clock.state()?
     io.println("frames delivered after the clock stopped: {settled.frames - at_stop.frames}")
 
+    // One-sided on purpose: a busy machine only makes frames later, so "took at
+    // least this long" cannot go red for load. Unpaced, five arrive in ~1/15s.
+    let paced: Watch = new Watch()
+    clock.prefer(20.0, 20.0, 20.0)?
+    clock.start(43, fn(frame: motion.Frame) {
+        paced.frames = paced.frames + 1
+        paced.elapsed = frame.elapsed
+        if paced.frames == wanted {
+            match clock.stop() {
+                ok(done) => { paced.stopped_from_a_frame = true }
+                err(problem) => { paced.stopped_from_a_frame = false }
+            }
+            app.stop()
+        }
+    })?
+    app.run_for(2.0)?
+    io.println("asked for 20 frames a second, and {paced.frames} arrived")
+    io.println("five of them took at least a fifth of a second: {paced.elapsed >= 0.15}")
+
     window.close()?
     app.shutdown()
     return ok(true)

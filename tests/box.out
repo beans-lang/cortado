@@ -1,0 +1,19 @@
+== at 600 x 400, with 20 points of padding ==
+  the screen's box is the window: true
+  the card's box is the window less the padding: true
+  which is not what viewport() would have said: true
+  cw(5) is a share of the box: true
+  a share under the floor is the floor: true
+  and one over the ceiling is the ceiling: true
+  and the card heard its layout: true
+  reading the box is the declaration: true
+  the one that never read it does not follow: true
+== dragged to 400 x 300 ==
+  the card's box moved, so it asks to render: true
+  and the quiet one does not: true
+  on_layout ran again: true
+  its box is the new window less the padding: true
+  and cw(5) followed it down: true
+== a box that decides itself ==
+  is refused rather than laid out for ever: true
+  and the message says what is still moving: true

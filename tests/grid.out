@@ -1,0 +1,112 @@
+-- a shelf that fits as many columns as it can --
+== five tiles never leave a column empty beside them ==
+Grid grid frame=0,0,1968,400
+  Label leaf frame=0,0,100,20
+  Label leaf frame=396,0,100,20
+  Label leaf frame=791,0,100,20
+  Label leaf frame=1187,0,100,20
+  Label leaf frame=1582,0,100,20
+== five tiles in 900 ==
+Grid grid frame=0,0,900,400
+  Label leaf frame=0,0,100,20
+  Label leaf frame=182,0,100,20
+  Label leaf frame=364,0,100,20
+  Label leaf frame=546,0,100,20
+  Label leaf frame=728,0,100,20
+== the same five in 520 ==
+Grid grid frame=0,0,520,400
+  Label leaf frame=0,0,100,20
+  Label leaf frame=177,0,100,20
+  Label leaf frame=353,0,100,20
+  Label leaf frame=0,30,100,20
+  Label leaf frame=177,30,100,20
+== and in 300 ==
+Grid grid frame=0,0,300,400
+  Label leaf frame=0,0,100,20
+  Label leaf frame=0,30,100,20
+  Label leaf frame=0,60,100,20
+  Label leaf frame=0,90,100,20
+  Label leaf frame=0,120,100,20
+-- a ceiling on a column, and the room it leaves --
+== five tiles, capped and centred, in 1368 ==
+Grid grid frame=0,0,1368,400
+  Label leaf frame=14,0,100,20
+  Label leaf frame=284,0,100,20
+  Label leaf frame=554,0,100,20
+  Label leaf frame=824,0,100,20
+  Label leaf frame=1094,0,100,20
+== the same five in 1968 ==
+Grid grid frame=0,0,1968,400
+  Label leaf frame=314,0,100,20
+  Label leaf frame=584,0,100,20
+  Label leaf frame=854,0,100,20
+  Label leaf frame=1124,0,100,20
+  Label leaf frame=1394,0,100,20
+== and the short last row is centred on its own count ==
+Grid grid frame=0,0,668,400
+  Label leaf frame=0,0,100,20
+  Label leaf frame=226,0,100,20
+  Label leaf frame=452,0,100,20
+  Label leaf frame=113,30,100,20
+  Label leaf frame=339,30,100,20
+== pushed to the end instead ==
+Grid grid frame=0,0,1968,400
+  Label leaf frame=628,0,100,20
+  Label leaf frame=898,0,100,20
+  Label leaf frame=1168,0,100,20
+  Label leaf frame=1438,0,100,20
+  Label leaf frame=1708,0,100,20
+== spread between ==
+Grid grid frame=0,0,1968,400
+  Label leaf frame=0,0,100,20
+  Label leaf frame=427,0,100,20
+  Label leaf frame=854,0,100,20
+  Label leaf frame=1281,0,100,20
+  Label leaf frame=1708,0,100,20
+-- columns written out --
+== 160 points, a share, and the widest child ==
+Grid grid frame=0,0,600,200
+  Label leaf frame=0,0,100,20
+  Label leaf frame=170,0,100,20
+  Label leaf frame=500,0,100,20
+== two shares, unequal ==
+Grid grid frame=0,0,600,200
+  Label leaf frame=0,0,100,20
+  Label leaf frame=200,0,100,20
+-- the same name twice is the last one, not both --
+== two shares, then three, is three ==
+Grid grid frame=0,0,600,200
+  Label leaf frame=0,0,100,20
+  Label leaf frame=200,0,100,20
+  Label leaf frame=400,0,100,20
+-- a ceiling is on the share, not on a number somebody wrote --
+== a fixed column keeps its width under a ceiling of 100 ==
+Grid grid frame=0,0,600,200
+  Label leaf frame=0,0,100,20
+  Label leaf frame=310,0,100,20
+== and auto keeps the widest child in it ==
+Grid grid frame=0,0,600,200
+  Label leaf frame=0,0,100,20
+  Label leaf frame=110,0,40,20
+-- a grid told nothing is the one column it always was --
+== two tiles, one column ==
+Grid grid frame=0,0,400,200
+  Label leaf frame=0,0,100,20
+  Label leaf frame=0,20,100,20
+-- what is refused --
+  columns and min_column together is refused: true
+  and the message says why: true
+  min_column and columns, written the other way round is refused: true
+  and the message says why: true
+  a column that is not a column is refused: true
+  and the message says why: true
+  a list with no columns in it is refused: true
+  and the message says why: true
+  a ceiling under the floor is refused: true
+  and the message says why: true
+  a floor over the ceiling, the other way round is refused: true
+  and the message says why: true
+  columns on a run is refused: true
+  and the message says why: true
+  a column gap on a run is refused: true
+  and the message says why: true

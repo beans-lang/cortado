@@ -28,6 +28,16 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             [(UIView *)object setHidden:value ? YES : NO];
             return CTD_OK;
+        case CTD_P_LINES: {
+            if (!ctd_kind_has_lines(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (value < 0) return CTD_ERR_RANGE;
+            UILabel *label = (UILabel *)object;
+            [label setNumberOfLines:(NSInteger)value];
+            // One line is cut short rather than wrapped into a box one line tall.
+            [label setLineBreakMode:value == 1 ? NSLineBreakByTruncatingTail
+                                               : NSLineBreakByWordWrapping];
+            return CTD_OK;
+        }
         case CTD_P_AXIS:
             // No kind this platform builds has one; the kind refusal is what
             // every other host answers for a control that is not a split view.
@@ -201,6 +211,10 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         case CTD_P_HIDDEN:
             if (![object isKindOfClass:[UIView class]]) return CTD_ERR_KIND;
             value = [(UIView *)object isHidden] ? 1 : 0;
+            break;
+        case CTD_P_LINES:
+            if (!ctd_kind_has_lines(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            value = (int64_t)[(UILabel *)object numberOfLines];
             break;
         case CTD_P_AXIS:
             return CTD_ERR_KIND;

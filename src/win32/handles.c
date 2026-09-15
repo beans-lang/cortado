@@ -15,6 +15,7 @@ int32_t   g_type[CTD_SLOTS];        // CTD_T_*
 double    g_progress_value[CTD_SLOTS];
 double    g_progress_min[CTD_SLOTS];
 double    g_progress_max[CTD_SLOTS];
+int64_t   g_lines[CTD_SLOTS];
 double    g_step_min[CTD_SLOTS];
 double    g_step_max[CTD_SLOTS];
 double    g_step_size[CTD_SLOTS];

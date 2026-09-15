@@ -1,12 +1,12 @@
 -- one edge at a time --
   the container keeps: 4,8,16,32
 == four different edges, in a 300 x 100 column ==
-VStack stack frame=0,0,300,100
+VStack flex frame=0,0,300,100
   Label leaf frame=32,4,260,20
 -- one axis at a time --
   the container keeps: 3,10,3,10
 == x and y, in a 300 x 100 column ==
-VStack stack frame=0,0,300,100
+VStack flex frame=0,0,300,100
   Label leaf frame=10,3,280,20
 -- source order decides, edge by edge --
   padding=8 then padding_x=16: 8,16,8,16
@@ -14,12 +14,12 @@ VStack stack frame=0,0,300,100
   and the two are not the same box: true
   padding_y=5 then padding_top=12: 12,0,5,0
 == padding=8 padding_x=16 ==
-VStack stack frame=0,0,300,100
+VStack flex frame=0,0,300,100
   Label leaf frame=16,8,268,20
 -- every container that takes padding takes an edge of it --
   <HStack> keeps: 2,0,0,11
-  <VFlex> keeps: 2,0,0,11
-  <HFlex> keeps: 2,0,0,11
+  <VStack> keeps: 2,0,0,11
+  <HStack> keeps: 2,0,0,11
   <Grid> keeps: 2,0,0,11
   <Box> keeps: 2,0,0,11
 -- margins --
@@ -27,7 +27,7 @@ VStack stack frame=0,0,300,100
   sits low: 3,0,3,0
   one side wider: 6,6,6,20
 == three margined labels in a 400 x 60 row ==
-HStack stack frame=0,0,400,60
+HStack flex frame=0,0,400,60
   Label leaf frame=5,0,100,20
   Label leaf frame=116,3,100,20
   Label leaf frame=240,6,100,20
@@ -36,7 +36,7 @@ HStack stack frame=0,0,400,60
 -- a wrapping run --
   line_spacing=6 reaches the run: 6
 == three tiles of 100 in 250, wrapping ==
-HWrap wrap frame=0,0,250,100
+HStack wrap frame=0,0,250,100
   Label leaf frame=0,0,100,20
   Label leaf frame=108,0,100,20
   Label leaf frame=0,26,100,20

@@ -114,6 +114,9 @@ ctd_handle ctd_widget_new(int32_t kind) {
         case CTD_W_LABEL: {
             UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
             [label setText:@""];
+            // Words reflow to the width the layout gives; CTD_P_LINES caps it.
+            [label setNumberOfLines:0];
+            [label setLineBreakMode:NSLineBreakByWordWrapping];
             view = label;
             break;
         }

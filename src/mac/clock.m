@@ -60,9 +60,25 @@ typedef struct {
     double lowest;
     double highest;
     double wanted;
+    double due;              // when the next paced frame is owed, monotonic
 } CtdRate;
 
 static CtdRate g_rate[CTD_SLOTS];
+
+// Whether a display tick at `now` is owed a frame. CVDisplayLink has no rate to
+// set, so the fallback keeps the wish here; the view link asks the OS instead.
+static int ctd_clock_owed(uint32_t slot, double now, double interval) {
+    double wanted = g_rate[slot].wanted;
+    if (!(wanted > 0.0)) return 1;              // the screen's own maximum
+    double period = 1.0 / wanted;
+    // Ticks land an interval apart, so one within half an interval of due is
+    // the nearest the display will get.
+    if (now + interval * 0.5 < g_rate[slot].due) return 0;
+    double next = g_rate[slot].due + period;
+    // Re-based, not caught up: a gap must not pay out the frames it owed.
+    g_rate[slot].due = next > now ? next : now + period;
+    return 1;
+}
 
 // The target for the view link's callback. One per surface, retained by the
 // link, so the selector has a surface to name without a global.
@@ -218,13 +234,8 @@ static int ctd_clock_start_view(ctd_handle surface) {
     return 0;
 }
 
-// The display link's callback, on the display link's own thread.
-//
-// It does as little as it is possible to do. Nothing here touches the handle
-// table or the sink: both belong to the UI thread, and the frame is handed
-// there before anything is decided about it. The epoch is read without a lock
-// and checked again on the main thread, where every start and stop happens —
-// the worst a stale read can do is queue a frame the delivery then refuses.
+// The link's callback, on the link's own thread: it touches neither the handle
+// table nor the sink, and the epoch it reads is checked again on the UI thread.
 static CVReturn ctd_clock_ticked(CVDisplayLinkRef link, const CVTimeStamp *now,
                                  const CVTimeStamp *output, CVOptionFlags flags,
                                  CVOptionFlags *out_flags, void *context) {
@@ -233,8 +244,12 @@ static CVReturn ctd_clock_ticked(CVDisplayLinkRef link, const CVTimeStamp *now,
     uint32_t epoch = g_clock[(uint32_t)(surface & 0xffffffffu)].epoch;
     double at = ctd_monotonic();
     dispatch_async(dispatch_get_main_queue(), ^{
-        // On the main thread, which is the only place AppKit may be asked.
+        // The main thread: the only place AppKit may be asked, and the only
+        // one that touches the pacing state, so it needs no lock.
         if (!ctd_clock_showing(surface)) return;
+        uint32_t slot = (uint32_t)(surface & 0xffffffffu);
+        double top = ctd_clock_top(surface);
+        if (!ctd_clock_owed(slot, at, top > 0.0 ? 1.0 / top : 0.0)) return;
         ctd_clock_deliver(surface, epoch, at);
     });
     return kCVReturnSuccess;
@@ -254,6 +269,7 @@ ctd_status ctd_clock_start(ctd_handle surface, int64_t token) {
     clock->started = ctd_monotonic();
     clock->epoch += 1;
     clock->running = 1;
+    g_rate[(uint32_t)(surface & 0xffffffffu)].due = clock->started;
 
     // The screen's own link where there is a screen, with the rate this
     // surface asked for. Everything below is the fallback.
@@ -330,9 +346,12 @@ ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
     g_rate[slot].lowest = lowest;
     g_rate[slot].highest = highest;
     g_rate[slot].wanted = wanted;
+    // From now, not from the clock's start: a rate asked for mid-run owes its
+    // next frame a period away.
+    g_rate[slot].due = ctd_monotonic();
     // A link that is already running takes it now; one that is not will read
-    // this when it starts. CVDisplayLink has no rate to set, so a surface on
-    // the fallback stores the wish and honours it if it ever gets a view link.
+    // this when it starts. On the CVDisplayLink fallback there is nothing to
+    // set, and ctd_clock_owed paces the ticks instead.
     if (clock->view_link) {
         if (@available(macOS 14.0, *)) {
             double top = ctd_clock_top(surface);

@@ -1,5 +1,5 @@
 // Which control carries which attribute, asked three ways and answered once:
-// 39 tags x 55 attributes, then every property set on a real control.
+// 39 tags x 61 attributes, then every property set on a real control.
 package main
 
 import cortado.platform
@@ -76,7 +76,7 @@ fn drive() -> Result<bool> {
         }
     }
     // The same on every platform: neither table knows what this machine builds.
-    io.println("  every pair was asked: {pairs == 2145}")
+    io.println("  every pair was asked: {pairs == 2415}")
     io.println("  and answered the same way by both: {same == pairs}")
 
     io.println("-- and the answer is the one the control gives --")
