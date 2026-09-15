@@ -277,6 +277,12 @@ ctd_status ctd_clock_step(ctd_handle surface, double seconds);
  * took the room it was given. Pass the same number three times for a constant
  * rate, which is what an animation that integrates its own time wants.
  *
+ * Answers CTD_ERR_RANGE for a rate that is not a finite number. That is not
+ * pedantry: NaN is not less than, greater than or equal to anything, so it
+ * passes every bound a host could write and arrives at arithmetic with no
+ * answer — on Win32 it reached a cast to the timer's period, which is
+ * undefined behaviour and came out as a period of zero.
+ *
  * Answers CTD_ERR_UNSUPPORTED where the platform's clock has no rate control
  * of its own — GTK4's frame clock is the display's and takes no instruction —
  * and CTD_ERR_RANGE for a negative rate or a range whose ends are crossed.

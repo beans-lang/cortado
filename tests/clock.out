@@ -17,6 +17,10 @@ a floor above the ceiling refused: out_of_range
 crossed ends and no wish refused: out_of_range
 a wish above the ceiling refused: out_of_range
 a wish below the floor refused: out_of_range
+a rate that is not a number refused: out_of_range
+a floor that is not a number refused: out_of_range
+a rate without end refused: out_of_range
+a ceiling without end refused: out_of_range
 after stop: running=false frames=3
 a step after the clock stopped refused: wrong_moment
 handlers left registered: 0

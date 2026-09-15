@@ -14,6 +14,7 @@
 #include <CoreVideo/CoreVideo.h>
 #import <QuartzCore/QuartzCore.h>
 #include <time.h>
+#include <math.h>
 
 // **Two links, and which one runs is decided per surface.**
 //
@@ -314,6 +315,12 @@ ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
     CtdClock *clock = NULL;
     ctd_status problem = ctd_clock_surface(surface, &clock);
     if (problem != CTD_OK) return problem;
+    // A rate that is not a finite number passes every comparison below —
+    // NaN is not less than, greater than or equal to anything — and then
+    // reaches arithmetic that has no answer. Refused first, and by name.
+    if (!isfinite(lowest) || !isfinite(highest) || !isfinite(wanted)) {
+        return CTD_ERR_RANGE;
+    }
     if (lowest < 0.0 || highest < 0.0 || wanted < 0.0) return CTD_ERR_RANGE;
     if (highest > 0.0 && lowest > highest) return CTD_ERR_RANGE;
     if (wanted > 0.0 && highest > 0.0 && wanted > highest) return CTD_ERR_RANGE;

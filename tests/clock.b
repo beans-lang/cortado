@@ -95,6 +95,16 @@ fn drive() -> Result<bool> {
     io.println(refusal("crossed ends and no wish", clock.prefer(120.0, 60.0, 0.0)))
     io.println(refusal("a wish above the ceiling", clock.prefer(0.0, 60.0, 120.0)))
     io.println(refusal("a wish below the floor", clock.prefer(60.0, 0.0, 30.0)))
+    // Not pedantry. NaN is not less than, greater than or equal to anything,
+    // so it passes every bound a host could write and lands on arithmetic
+    // with no answer — on Win32 that was a cast to the timer's period.
+    var nothing: f64 = 0.0
+    let nowhere: f64 = nothing / nothing
+    let endless: f64 = 1.0 / nothing
+    io.println(refusal("a rate that is not a number", clock.prefer(0.0, 0.0, nowhere)))
+    io.println(refusal("a floor that is not a number", clock.prefer(nowhere, 0.0, 0.0)))
+    io.println(refusal("a rate without end", clock.prefer(0.0, 0.0, endless)))
+    io.println(refusal("a ceiling without end", clock.prefer(0.0, endless, 60.0)))
 
     clock.stop()?
     let stopped: motion.ClockState = clock.state()?
