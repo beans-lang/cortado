@@ -8,5 +8,5 @@ kind application
 # control set is missing. Every gap it hit is written down in its README.
 require path "../.."
 require path "../../app"
-require path "../../../barista"
-require path "../../../sqlite"
+require github.com/beans-lang/barista v0.1.1
+require github.com/beans-lang/sqlite v0.1.1

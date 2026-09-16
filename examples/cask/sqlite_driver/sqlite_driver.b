@@ -1,7 +1,7 @@
 // The SQLite driver.
 package sqlite_driver
 
-import sqlite
+import github.com/beans-lang/sqlite
 import {Connection, Driver} from cask.engine
 
 /// Opens SQLite files, and an in-memory one when asked for nothing.

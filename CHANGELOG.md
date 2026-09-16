@@ -1,8 +1,55 @@
 # Changelog
 
-## Unreleased
+## [0.1.0] - 2026-09-16
 
-First working macOS host.
+The first release. A native desktop UI toolkit for Beans: real OS controls
+behind a flat C ABI, four platform hosts, and a markup compiler above them.
+
+### Getting it
+
+```beans-pot
+require github.com/beans-lang/cortado v0.1.0
+require github.com/beans-lang/barista v0.1.1
+```
+
+One row reaches both halves. `cortado_app` — the composition root under `app/`
+— is a module inside this repository, so `import
+github.com/beans-lang/cortado/app` resolves through the same row and binds as
+`cortado_app`. **Beans 0.1.44 or newer**: reaching a nested module through a
+`require` row is what that release fixed.
+
+`cortado init` writes those rows by default and spells every import by its
+path, so a scaffolded project needs no checkout anywhere near it. `--cortado
+<path>` is the other shape, for working on cortado itself: it writes `require
+path` rows against a checkout you name, and the imports to match. barista stays
+the released one in both — cortado's own manifest pins it, and a module reached
+from two roots is refused by name rather than resolved by whichever row was
+read first.
+
+### The iOS font roles
+
+**`mono` is body's size on a phone too.** It was built from
+`[UIFont systemFontSize]`, which is 14, while `body` comes from the Body text
+style, which is 17 — so the one role whose contract is "body with a different
+family" was neither. macOS had it right; iOS did not, and nothing could see it
+because the iOS run leg only runs when a simulator is booted and no workflow
+boots one.
+
+`tests/fonts.b` reads a body role against a caption one now, not against a
+heading one: Headline and Body are the same point size on a phone and differ by
+weight, which a frame cannot show, so that assertion was macOS-only.
+
+### A headless surface has no display
+
+`ctd_surface_scale` answered the main screen's backing factor even under
+`AppRole.headless`, and the first layout pass snaps frames to whatever it
+answers. A widget tree therefore came out one point narrower on a Retina Mac
+than on a 1x runner, which is the one thing `AppRole.headless` documents that
+it does not do. All four hosts answer `1.0` when there is no display.
+
+A real application still follows the display it is on, first pass included.
+
+### The macOS host
 
 - **One family of container, as in Yoga.** `<VStack>` and `<HStack>` flex:
   `grow` and `shrink` share out the leftover, `flex={n}` is grow `n`, shrink 1

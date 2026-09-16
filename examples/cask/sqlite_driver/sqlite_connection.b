@@ -1,7 +1,7 @@
 // SQLite, answering the questions every database is asked.
 package sqlite_driver
 
-import sqlite
+import github.com/beans-lang/sqlite
 import {Connection, DbObject, Grid, ObjectKind} from cask.engine
 
 /// How many rows one screenful of browsing reads before it stops.

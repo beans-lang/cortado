@@ -61,9 +61,11 @@ pub fn event_imports() -> List<string> {
 
 /// How to compile one file.
 pub class Options {
-    /// Where `Builder` and `Component` come from. `cortado.component`
-    /// everywhere but in the probes, which carry their own stub core.
+    /// Where `Builder` and `Component` come from. `cortado.component` inside
+    /// this repository; a project that pins cortado from git spells the path.
     pub cortado_module: string = "cortado.component"
+    /// Where `UiEvent` comes from, and the same two spellings.
+    pub events_module: string = "cortado.events"
     /// The package the generated file declares. Empty means: take the one the
     /// `<beans>` block declares, and failing that the containing folder's name.
     pub package_name: string = ""
@@ -618,7 +620,7 @@ pub fn compile_source(source: string, path: string, options: Options) -> Compile
     body.push("package {package_name}")
     body.push("")
     body.push("import \{{cortado_imports().join(", ")}\} from {options.cortado_module}")
-    body.push("import \{{event_imports().join(", ")}\} from cortado.events")
+    body.push("import \{{event_imports().join(", ")}\} from {options.events_module}")
     body.push("")
     body.push(blank_package_statement(block, header))
     if !emitted.components.is_empty() {

@@ -1,7 +1,7 @@
 // A database to browse when nobody named one.
 package sqlite_driver
 
-import sqlite
+import github.com/beans-lang/sqlite
 
 /// Builds a small, real schema in memory.
 ///

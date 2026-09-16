@@ -17,4 +17,4 @@ kind library
 # free of barista: an application that wants no container at all pays nothing
 # for one, and cortado's own gate needs no dependency to run.
 require path ".."
-require path "../../barista"
+require github.com/beans-lang/barista v0.1.1

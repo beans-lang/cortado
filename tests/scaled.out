@@ -1,4 +1,5 @@
-== the first solve is on the display's grid ==
+== the first solve is on the surface's grid ==
+  a headless surface has no display: true
   the mount took the surface's scale: true
   every edge is on that grid: true
   the same scale again is not a pass: true

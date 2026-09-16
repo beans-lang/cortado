@@ -30,7 +30,7 @@
 
 package cortado_app
 
-import barista
+import github.com/beans-lang/barista
 import cortado.platform
 import cortado.surface
 import cortado.widgets

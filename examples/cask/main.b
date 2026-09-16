@@ -35,7 +35,7 @@
 // markup could not point a table at its rows. See README.md.
 package main
 
-import barista
+import github.com/beans-lang/barista
 import cortado_app
 import cortado.platform
 import cortado.surface

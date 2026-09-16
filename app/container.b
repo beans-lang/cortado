@@ -1,7 +1,7 @@
 // barista, behind the interface cortado asks for.
 package cortado_app
 
-import barista
+import github.com/beans-lang/barista
 import cortado.component
 import std.reflect
 

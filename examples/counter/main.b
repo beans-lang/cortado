@@ -9,7 +9,7 @@
 // without any ancestor passing it down.
 package main
 
-import barista
+import github.com/beans-lang/barista
 import cortado_app
 import cortado.platform
 import cortado.surface

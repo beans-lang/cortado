@@ -1,9 +1,5 @@
-// A mount snaps its first solve to the display it is on.
-//
-// The first two lines are non-vacuous only on a display whose scale is not
-// 1: on a 1x runner the mount's default and the display agree by accident.
-// The arithmetic half below is the same on any machine, and is what guards
-// the snapping path itself.
+// A mount snaps its first solve to the grid its surface is on, and headless
+// has no display, so that grid is 1 whatever monitor is attached.
 package main
 
 import cortado.platform
@@ -69,10 +65,17 @@ fn drive() -> Result<bool> {
     window.set_root(root)?
     var mount: component.Mount = new component.Mount(root, app.router)
     mount.set_bounds(window.content_size()?)
+    // Nothing on this machine snaps to quarters. If `show` leaves this
+    // standing, the mount never asked the surface and the line below is
+    // true for the wrong reason.
+    mount.scale(4.0)
     mount.show(new Thirds())?
 
     let scale: f64 = window.scale()?
-    io.println("== the first solve is on the display's grid ==")
+    io.println("== the first solve is on the surface's grid ==")
+    // Headless is 1 on every machine, which is what keeps every golden in
+    // this suite from naming the monitor the run happened to be on.
+    io.println("  a headless surface has no display: {scale == 1.0}")
     io.println("  the mount took the surface's scale: {mount.scale_in_use() == scale}")
     io.println("  every edge is on that grid: {all_on_grid(root, scale)?}")
     io.println("  the same scale again is not a pass: {!mount.rescaled(scale)?}")

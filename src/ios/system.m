@@ -8,6 +8,12 @@ int32_t ctd_appearance(void) {
 }
 
 ctd_status ctd_surface_scale(ctd_handle surface, double *out) {
+    // Headless has no display, so it has no device pixel grid. Answering the
+    // main screen's scale here would put the attached monitor in a golden.
+    if (g_role == CTD_ROLE_HEADLESS) {
+        if (out) *out = 1.0;
+        return CTD_OK;
+    }
     double scale = [[UIScreen mainScreen] scale];
     if (surface) {
         id object = ctd_resolve(surface);
@@ -29,7 +35,11 @@ static UIFont *ctd_font_for(int32_t role) {
         case CTD_FONT_CAPTION:
             return [UIFont preferredFontForTextStyle:UIFontTextStyleCaption1];
         case CTD_FONT_MONO:
-            return [UIFont monospacedSystemFontOfSize:[UIFont systemFontSize]
+            // Body's own size, not systemFontSize: the mono role is body with
+            // a different family, and Dynamic Type moves body but not that.
+            return [UIFont monospacedSystemFontOfSize:
+                        [UIFont preferredFontForTextStyle:
+                                    UIFontTextStyleBody].pointSize
                                                weight:UIFontWeightRegular];
         case CTD_FONT_BODY:
             return [UIFont preferredFontForTextStyle:UIFontTextStyleBody];

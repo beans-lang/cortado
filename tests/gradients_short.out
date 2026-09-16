@@ -2,18 +2,18 @@ Container CortadoView role=group "" frame=0,0,700,420 children=1
   Container CortadoView role=group "" frame=0,0,700,420 children=2
     Canvas CortadoView role=group "" frame=0,0,700,420
     ScrollView NSScrollView role=scrollarea "" frame=0,0,700,420 children=1
-      Container CortadoView role=group "" frame=0,0,700,551 children=3
+      Container CortadoView role=group "" frame=0,0,700,552 children=3
         Container CortadoView role=group "" frame=16,16,668,40 children=1
-          Container CortadoView role=group "" frame=353,0,314,40 children=3
-            Label NSTextField role=text "Pick up where you left off?" frame=8,12,154,15
+          Container CortadoView role=group "" frame=354,0,314,40 children=3
+            Label NSTextField role=text "Pick up where you left off?" frame=8,13,154,15
             Button NSButton role=button "Restore draft" frame=172,8,98,24
             Button NSButton role=button "✕" frame=280,8,26,24
         Container CortadoView role=group "" frame=16,56,668,202 children=2
           Container CortadoView role=group "" frame=0,0,668,202 children=3
-            Label NSTextField role=text "Petrichor" frame=0,40,668,76
-            Label NSTextField role=text "four colours, blended by distance, drifting" frame=0,126,668,15
-            Label NSTextField role=text "measuring" frame=0,147,668,14
-          Container CortadoView role=group "" frame=455,0,212,202 children=4
+            Label NSTextField role=text "Petrichor" frame=0,41,668,76
+            Label NSTextField role=text "four colours, blended by distance, drifting" frame=0,127,668,15
+            Label NSTextField role=text "measuring" frame=0,148,668,14
+          Container CortadoView role=group "" frame=456,0,212,202 children=4
             Container CortadoView role=group "" frame=0,0,212,34 children=4
               Label NSTextField role=text "" frame=9,10,14,14
               Label NSTextField role=text "MOON WHITE" frame=31,10,78,14
@@ -34,7 +34,7 @@ Container CortadoView role=group "" frame=0,0,700,420 children=1
               Label NSTextField role=text "ANCIENT PURPLE" frame=31,10,98,14
               Label NSTextField role=text "" frame=137,9,4,16
               Label NSTextField role=text "#895B8A" frame=149,10,54,14
-        Container CortadoView role=group "" frame=16,270,668,265 children=5
+        Container CortadoView role=group "" frame=16,270,668,266 children=5
           Container CortadoView role=group "" frame=0,0,216,128 children=2
             Canvas CortadoView role=group "" frame=0,0,216,111
             Label NSTextField role=text "AURORA" frame=0,115,216,13
@@ -44,10 +44,10 @@ Container CortadoView role=group "" frame=0,0,700,420 children=1
           Container CortadoView role=group "" frame=452,0,216,128 children=2
             Canvas CortadoView role=group "" frame=0,0,216,111
             Label NSTextField role=text "PRISM" frame=0,115,216,13
-          Container CortadoView role=group "" frame=113,138,216,127 children=2
-            Canvas CortadoView role=group "" frame=0,0,216,110
-            Label NSTextField role=text "GLOW" frame=0,114,216,13
-          Container CortadoView role=group "" frame=339,138,216,127 children=2
-            Canvas CortadoView role=group "" frame=0,0,216,110
-            Label NSTextField role=text "SKY" frame=0,114,216,13
+          Container CortadoView role=group "" frame=113,138,216,128 children=2
+            Canvas CortadoView role=group "" frame=0,0,216,111
+            Label NSTextField role=text "GLOW" frame=0,115,216,13
+          Container CortadoView role=group "" frame=339,138,216,128 children=2
+            Canvas CortadoView role=group "" frame=0,0,216,111
+            Label NSTextField role=text "SKY" frame=0,115,216,13
 overflowing runs: 0

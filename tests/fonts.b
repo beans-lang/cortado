@@ -83,6 +83,14 @@ fn drive() -> Result<bool> {
         b.text("Petrichor")
         b.close()
     })?
+    // Against caption and not against heading: Headline and Body are the same
+    // point size on a phone and differ by weight, which a frame cannot show.
+    let caption_by_role: string = shown(app, fn(b: component.Builder) {
+        b.open("Label")
+        b.word("font_role", "caption")
+        b.text("Petrichor")
+        b.close()
+    })?
     let by_body: string = shown(app, fn(b: component.Builder) {
         b.open("Label")
         b.word("font_role", "body")
@@ -90,7 +98,7 @@ fn drive() -> Result<bool> {
         b.close()
     })?
     io.println("  heading by role is heading by number: {by_role == by_number}")
-    io.println("  and a body role is not a heading one: {by_body != by_role}")
+    io.println("  and a body role is not a caption one: {by_body != caption_by_role}")
 
     io.println("== two names on one property, so the last one wins ==")
     let role_then_number: string = shown(app, fn(b: component.Builder) {

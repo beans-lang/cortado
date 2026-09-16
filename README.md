@@ -63,13 +63,17 @@ every run).
 ## Installing
 
 cortado is compiled by `beansc`, so install [the Beans
-compiler](https://github.com/beans-lang/beans) first.
+compiler](https://github.com/beans-lang/beans) first — **0.1.44 or newer**,
+because `cortado_app` is a module inside this repository and reaching a nested
+module through a `require` row is what that release fixed.
 
 ```
 git clone https://github.com/beans-lang/cortado
-git clone https://github.com/beans-lang/barista
 cd cortado && ./tools/install.sh
 ```
+
+barista no longer needs to be cloned beside it: this repository requires the
+published release, and so does every project `cortado init` writes.
 
 That builds `cortado` and puts it beside `beansc` in `$BEANS_HOME/bin`, or
 `~/.beans/bin` when that is unset. Pass a directory to choose your own:
@@ -102,16 +106,29 @@ regenerate the markup as part of every build.
 ## Building an application
 
 ```
-cortado init myapp --cortado ../cortado && cd myapp
+cortado init myapp && cd myapp
 cortado run
 ```
 
-`--cortado` is the checkout you cloned, and it is asked for rather than guessed:
-a project's `beans.pot` names cortado and barista with `require path` rows, and
-a row pointing at a directory that is not there fails later with a message about
-a missing package rather than about the row. Leave the flag off when you are
-making a project inside this workspace — then the checkout is found by walking
-up, and `init` says so instead of writing a manifest it cannot stand behind.
+The project it writes pins the published releases:
+
+```
+require github.com/beans-lang/cortado v0.1.0
+require github.com/beans-lang/barista v0.1.1
+```
+
+One row reaches both halves — `cortado_app`, the composition root `main.b`
+imports, is a module inside this repository, so `import
+github.com/beans-lang/cortado/app` resolves through that same row and binds as
+`cortado_app`.
+
+`--cortado <path>` is the other answer, and it is for working on cortado
+itself: it writes `require path` rows against a checkout you name, so a project
+builds against uncommitted changes. barista stays the released one either way —
+cortado's own manifest pins it, and a module reached two ways is refused by
+name. The path is asked for rather than guessed: a row pointing at a directory
+that is not there fails later with a message about a missing package rather
+than about the row.
 
 `init` writes a project that builds and renders on the first run: a screen, a
 component the screen reuses, an injected service, the two manifests, and the

@@ -11,6 +11,12 @@ int32_t ctd_appearance(void) {
 }
 
 ctd_status ctd_surface_scale(ctd_handle surface, double *out) {
+    // Headless has no display, so it has no device pixel grid. Answering the
+    // main screen's scale here would put the attached monitor in a golden.
+    if (g_role == CTD_ROLE_HEADLESS) {
+        if (out) *out = 1.0;
+        return CTD_OK;
+    }
     double scale = 1.0;
     if (surface) {
         gpointer object = ctd_resolve(surface);

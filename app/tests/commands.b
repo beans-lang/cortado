@@ -11,7 +11,7 @@
 // a command nothing can name, and a method the platform has no arguments for.
 package main
 
-import barista
+import github.com/beans-lang/barista
 import cortado_app
 import cortado.platform
 import cortado.surface

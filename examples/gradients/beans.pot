@@ -4,4 +4,4 @@ kind application
 # An animated mesh gradient under a screen of controls.
 require path "../.."
 require path "../../app"
-require path "../../../barista"
+require github.com/beans-lang/barista v0.1.1

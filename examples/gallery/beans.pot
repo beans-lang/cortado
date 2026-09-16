@@ -4,4 +4,4 @@ kind application
 # Every control cortado has, in one window, written in markup.
 require path "../.."
 require path "../../app"
-require path "../../../barista"
+require github.com/beans-lang/barista v0.1.1

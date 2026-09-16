@@ -101,6 +101,26 @@ host_os="$(uname -s)"
 have_host=0
 [[ "$host_os" == "Darwin" ]] && have_host=1
 
+# barista is a git dependency now, not a checkout beside this one, so what
+# decides whether `cortado_app` can be built is whether that dependency
+# resolves — from the network, or from the package cache when there is none.
+# Asking the compiler is the only honest question; looking for ../barista
+# reads green on a machine that has the directory and no release.
+have_barista=0
+probe="$tmp/barista-probe"
+mkdir -p "$probe"
+grep -E '^require github\.com/beans-lang/barista ' "$root/app/beans.pot" \
+    >"$probe/beans.pot.req"
+{
+    printf 'module barista_probe\nkind application\n'
+    cat "$probe/beans.pot.req"
+} >"$probe/beans.pot"
+printf 'package main\n\nimport github.com/beans-lang/barista\n\nfn main() { let _: barista.ServiceCollection = new barista.ServiceCollection() }\n' \
+    >"$probe/main.b"
+if "$BEANSC" check "$probe/main.b" >"$probe/out" 2>&1; then
+    have_barista=1
+fi
+
 # ---------------------------------------------------------------- skip ledger
 #
 # A gate that quietly skips a leg when its input is missing reads green forever
@@ -622,12 +642,12 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
     # well as cortado. It is built only when barista is checked out beside us —
     # cortado's own core does not depend on it, and a gate that hard-required a
     # sibling repository would be red for anyone who cloned one repo.
-    if [[ -f "$root/../barista/beans.pot" ]]; then
+    if [[ $have_barista -eq 1 ]]; then
         "$BEANSC" build "$root/examples/counter/main.b" -o "$tmp/counter.bin" >/dev/null
         pass
         echo "ok native: ${#cases[@]} cases, and every example links"
     else
-        skip counter_example "barista is not checked out at ../barista, so the dependency-injection example cannot be built"
+        skip counter_example "the barista release did not resolve, so the dependency-injection example cannot be built"
         echo "ok native: ${#cases[@]} cases, and every example but the barista one links"
     fi
 
@@ -751,7 +771,7 @@ done
 pass
 # The editor vocabulary is printed from cortado's own tables, so an editor
 # cannot describe a language cortado does not have. Committed, and diffed here.
-(cd "$root" && "$tmp/cortado-bx" vocabulary) >"$tmp/vocabulary.json" 2>&1
+(cd "$root" && "$tmp/cortado-bx" vocabulary) >"$tmp/vocabulary.json"
 if ! diff -u "$root/bx/vocabulary.json" "$tmp/vocabulary.json"; then
     echo "FAIL markup: bx/vocabulary.json is stale — regenerate it with" >&2
     echo "    build/cortado-bx vocabulary > bx/vocabulary.json" >&2
@@ -771,7 +791,7 @@ echo "ok markup: cortado-bx builds, every generated file matches its source, and
 # It lives in `app/tests/` because `cortado_app` is a sibling module: a package
 # under `cortado/` may not import its own module root, so the composition root
 # cannot live there, and neither can its test.
-if [[ -f "$root/../barista/beans.pot" && $have_host -eq 1 ]]; then
+if [[ $have_barista -eq 1 && $have_host -eq 1 ]]; then
     "$BEANSC" run "$root/app/tests/commands.b" >"$tmp/commands.out" 2>&1
     diff -u "$root/app/tests/commands.out" "$tmp/commands.out"
     pass
@@ -784,7 +804,7 @@ if [[ -f "$root/../barista/beans.pot" && $have_host -eq 1 ]]; then
     echo "ok commands: @command builds the menu, and choosing one runs its method"
 else
     if [[ $have_host -eq 1 ]]; then
-        skip commands "barista is not checked out beside this one at ../barista, so cortado_app cannot be built"
+        skip commands "the barista release did not resolve, so cortado_app cannot be built"
     else
         skip commands "this platform has no cortado host, so a menu cannot be built"
     fi
@@ -813,7 +833,7 @@ if ! diff -u "$tmp/spell-a.b" "$tmp/spell-b.b"; then
 fi
 pass
 
-if [[ -f "$root/../barista/beans.pot" && $have_host -eq 1 ]]; then
+if [[ $have_barista -eq 1 && $have_host -eq 1 ]]; then
     demo="$tmp/cli-demo"
     mkdir -p "$demo"
     (cd "$demo" && "$tmp/cortado" init acme --cortado "$root") >"$tmp/init.out" 2>&1 || {
@@ -876,8 +896,13 @@ PATCH
     # in the object files and a `N_OSO` entry per object in the binary, and a
     # release build has none at all. A profile that passed the same flags
     # twice would print the same number here.
-    (cd "$demo/acme" && "$tmp/cortado" build) >/dev/null 2>&1
-    (cd "$demo/acme" && "$tmp/cortado" build -c Release) >/dev/null 2>&1
+    for shape in "" "-c Release"; do
+        (cd "$demo/acme" && "$tmp/cortado" build $shape) >"$tmp/cli-build.out" 2>&1 || {
+            echo "FAIL cli: 'cortado build $shape' refused the scaffolded project" >&2
+            cat "$tmp/cli-build.out" >&2
+            exit 1
+        }
+    done
     for shape in debug release; do
         if [[ ! -x "$demo/acme/build/$shape/Acme" ]]; then
             echo "FAIL cli: build/$shape/Acme was not produced" >&2
@@ -912,7 +937,11 @@ PATCH
         exit 1
     fi
     # And a build puts it back, because a build regenerates first.
-    (cd "$demo/acme" && "$tmp/cortado" build) >/dev/null 2>&1
+    (cd "$demo/acme" && "$tmp/cortado" build) >"$tmp/cli-build.out" 2>&1 || {
+        echo "FAIL cli: 'cortado build' refused a project with a stale file" >&2
+        cat "$tmp/cli-build.out" >&2
+        exit 1
+    }
     (cd "$demo/acme" && "$tmp/cortado" check --drift) >/dev/null 2>&1 || {
         echo "FAIL cli: a build did not regenerate a stale file" >&2
         exit 1
@@ -966,11 +995,75 @@ PATCH
     echo "ok cli: a scaffolded project builds, renders, and cannot go stale"
 else
     if [[ $have_host -eq 1 ]]; then
-        skip cli_project "barista is not checked out beside this one at ../barista, so a scaffolded project cannot be built"
+        skip cli_project "the barista release did not resolve, so a scaffolded project cannot be built"
     else
         skip cli_project "this platform has no cortado host, so a scaffolded application cannot be linked"
     fi
 fi
+
+# ------------------------------------------------------- the default project
+#
+# Everything above scaffolds with `--cortado <path>`, which writes `require
+# path` rows against this checkout — the shape for working on cortado itself.
+# A person who installs cortado has no checkout, and gets the other shape: git
+# rows pinned at the release, and every import spelled by its path. That is a
+# different manifest and four different import lines, and nothing above it
+# would notice if they went wrong.
+#
+# The assertion is on the text and not on a build, deliberately: the pinned tag
+# is this release's, and this gate has to pass before the tag exists.
+plain="$tmp/cli-plain"
+mkdir -p "$plain"
+(cd "$plain" && "$tmp/cortado" init acme) >"$tmp/plain-init.out" 2>&1 || {
+    echo "FAIL cli_default: init refused with no --cortado" >&2
+    cat "$tmp/plain-init.out" >&2
+    exit 1
+}
+pinned=$(sed -n 's/^ *pub fn cortado_release() -> string { return "\(.*\)" }$/\1/p' \
+    "$root/cli/scaffold.b")
+declared=$(sed -n 's/^ *return "\(.*\)"$/\1/p' "$root/cortado.b")
+if [[ -z "$pinned" || -z "$declared" || "$pinned" != "v$declared" ]]; then
+    echo "FAIL cli_default: init pins cortado '$pinned' and cortado.version() is '$declared'" >&2
+    exit 1
+fi
+for row in "require github.com/beans-lang/cortado $pinned" \
+           "require github.com/beans-lang/barista "; do
+    if ! grep -q "^$row" "$plain/acme/beans.pot"; then
+        echo "FAIL cli_default: the default manifest has no '$row' row" >&2
+        cat "$plain/acme/beans.pot" >&2
+        exit 1
+    fi
+done
+if grep -q '^require path' "$plain/acme/beans.pot"; then
+    echo "FAIL cli_default: the default manifest still names a local directory" >&2
+    cat "$plain/acme/beans.pot" >&2
+    exit 1
+fi
+# Every file the scaffold writes, and every file it generates, has to agree
+# with those rows. A bare `import cortado.component` resolves to nothing in a
+# project that has no local cortado, and a manifest is not evidence that the
+# source beside it was spelled to match.
+for spelled in "main.b:import github.com/beans-lang/cortado/app" \
+               "services/menu.b:import github.com/beans-lang/barista" \
+               "screens/home.bx:import github.com/beans-lang/cortado/component" \
+               "components/badge.bx:import github.com/beans-lang/cortado/component" \
+               "generated/screens/home.b:from github.com/beans-lang/cortado/component" \
+               "generated/screens/home.b:from github.com/beans-lang/cortado/events"; do
+    file="${spelled%%:*}"
+    line="${spelled#*:}"
+    if ! grep -qF "$line" "$plain/acme/$file"; then
+        echo "FAIL cli_default: $file has no '$line'" >&2
+        sed -n '1,20p' "$plain/acme/$file" >&2
+        exit 1
+    fi
+done
+if grep -rqE '^import cortado[._]|from cortado\.' "$plain/acme"; then
+    echo "FAIL cli_default: a scaffolded file still spells cortado as a local module" >&2
+    grep -rnE '^import cortado[._]|from cortado\.' "$plain/acme" >&2
+    exit 1
+fi
+pass
+echo "ok cli_default: init with no checkout pins the release and spells every import by its path"
 
 # `tools/install.sh` is how a person gets `cortado` at all, and it is the one
 # script in here that nothing else runs — which is exactly how it shipped
@@ -1007,7 +1100,7 @@ pass
 echo "ok install: tools/install.sh installs a cortado that runs outside the tree"
 
 if [[ $native -eq 1 && $have_host -eq 1 ]]; then
-    if [[ -f "$root/../barista/beans.pot" ]]; then
+    if [[ $have_barista -eq 1 ]]; then
         "$BEANSC" build "$root/examples/markup/main.b" -o "$tmp/markup.bin" >/dev/null
         "$tmp/markup.bin" --dump >"$tmp/markup.out" 2>&1
         diff -u "$root/tests/markup.out" "$tmp/markup.out"
@@ -1141,7 +1234,7 @@ if [[ $native -eq 1 && $have_host -eq 1 ]]; then
         pass
         echo "ok bundled: the gated four answer for real from inside a signed .app"
     else
-        skip markup_mount "barista is not checked out at ../barista, so the markup example cannot be built"
+        skip markup_mount "the barista release did not resolve, so the markup example cannot be built"
     fi
 elif [[ $native -eq 1 ]]; then
     echo "-- native leg not run: no host for $host_os"

@@ -4,7 +4,7 @@
   mono is body's size, and only its family differs: true
 == a role lays out as its own number ==
   heading by role is heading by number: true
-  and a body role is not a heading one: true
+  and a body role is not a caption one: true
 == two names on one property, so the last one wins ==
   font_role then font_size is the number: true
   font_size then font_role is the role: true

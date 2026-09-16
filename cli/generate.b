@@ -30,8 +30,9 @@ import cortado.bx
 pub class GenerateOptions {
     /// The root the mirror is written under, relative to the module root.
     pub out_root: string = "generated"
-    /// The module `Builder` and `Component` come from.
-    pub builder_module: string = "cortado.component"
+    /// The module `Builder` and `Component` come from. Empty means: read it
+    /// off the project's own `beans.pot`, which is how both spellings work.
+    pub builder_module: string = ""
     /// The package the generated file declares. Empty: the folder decides.
     pub package_name: string = ""
     /// `-o`: one named output, and therefore one input.
@@ -131,9 +132,40 @@ pub fn expand(given: List<string>, into: List<string>) -> Result<bool> {
     return ok(true)
 }
 
+/// How this project spells cortado, read from its `beans.pot`.
+///
+/// A `require github.com/...` row means its packages are reached by the git
+/// path; a `require path` row, or no row at all, means the bare module name.
+pub fn cortado_prefix(root: string) -> string {
+    if root == "" { return "cortado" }
+    match fs.read(path.join(root, "beans.pot")) {
+        ok(text) => {
+            for line: string in text.lines() {
+                let words: List<string> = manifest_words(line)
+                if words.len() != 3 { continue }
+                if words[0] != "require" { continue }
+                if words[1].ends_with("/cortado") { return words[1] }
+            }
+        }
+        err(_) => {}
+    }
+    return "cortado"
+}
+
+/// `leaf` under that spelling: `cortado.component`, or the git path with `/`.
+pub fn cortado_package(prefix: string, leaf: string) -> string {
+    if prefix.contains("/") { return "{prefix}/{leaf}" }
+    return "{prefix}.{leaf}"
+}
+
 fn bx_options(options: GenerateOptions, source: string) -> bx.Options {
     var chosen: bx.Options = new bx.Options()
-    chosen.cortado_module = options.builder_module
+    let prefix: string = cortado_prefix(module_root_of(source))
+    chosen.cortado_module = cortado_package(prefix, "component")
+    chosen.events_module = cortado_package(prefix, "events")
+    if options.builder_module != "" {
+        chosen.cortado_module = options.builder_module
+    }
     chosen.package_name = options.package_name
     chosen.source_label = source_label_for(source)
     return chosen

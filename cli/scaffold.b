@@ -32,14 +32,12 @@ import std.fs
 import std.path
 import std.io
 
-/// Where cortado and barista are, as `require path` rows would write them.
+/// Where a cortado checkout is, as a `require path` row would write it.
 pub class Neighbours {
     pub cortado: string = ""
-    pub barista: string = ""
 
-    pub fn init(cortado: string, barista: string) {
+    pub fn init(cortado: string) {
         self.cortado = cortado
-        self.barista = barista
     }
 }
 
@@ -75,43 +73,24 @@ fn find_beside(from: string, wanted: string) -> Option<string> {
     return none
 }
 
-/// The two modules a scaffolded project depends on, found or refused.
-///
-/// **Refused rather than guessed.** A `require` row naming a directory that is
-/// not there fails at the first build with a message about a manifest, which
-/// is a worse place to learn it than here. Git rows are the other answer and
-/// they are not written yet: cortado has no published tag to pin, and a row
-/// pinning `HEAD` of an unpublished repository is a row that resolves
-/// differently every week. When there is a release, `--git <ref>` is the flag
-/// that writes it, and it belongs in the same change as the release.
+/// The cortado checkout a scaffolded project builds against.
+/// Only `--cortado <path>` reaches this; the default pins the releases.
 pub fn find_neighbours(project_dir: string, given: string) -> Result<Neighbours> {
     if given != "" {
         if !fs.exists(path.join(given, "beans.pot")) {
             return err("--cortado {given} has no beans.pot in it", "no_cortado")
         }
-        let sibling: string = path.join(given, "../barista")
-        return ok(new Neighbours(given, sibling))
+        return ok(new Neighbours(given))
     }
     let parent: string = path.parent(project_dir)
-    var found_cortado: string = ""
     match find_beside(parent, "cortado") {
-        some(where) => { found_cortado = where }
+        some(where) => { return ok(new Neighbours(where)) }
         none => {
             return err(
                 "cannot find a cortado checkout above {project_dir} — pass --cortado <path>",
                 "no_cortado")
         }
     }
-    var found_barista: string = ""
-    match find_beside(parent, "barista") {
-        some(where) => { found_barista = where }
-        none => {
-            return err(
-                "cannot find a barista checkout above {project_dir} — pass --cortado <path> and put barista beside it",
-                "no_barista")
-        }
-    }
-    return ok(new Neighbours(found_cortado, found_barista))
 }
 
 fn write_file(root: string, relative: string, text: string) -> Result<bool> {
@@ -154,27 +133,55 @@ fn titled(name: string) -> string {
 
 /// The file bodies.
 ///
-/// They are raw literals: nothing in a raw literal is an escape and nothing in
-/// it opens an interpolation, so each template below is byte for byte the file
-/// it writes — braces, quotes, `@` and all. The three placeholders are
-/// substituted afterwards. Writing these as ordinary interpolated strings
-/// would mean escaping every `{` in generated Beans code, which is most of
-/// them, and the template would stop looking like its output.
+/// They are raw literals: nothing in one is an escape and nothing opens an
+/// interpolation, so each template is byte for byte the file it writes.
+/// `filled` and `spelled` substitute the `__PLACEHOLDER__` words afterwards.
 fn filled(template: string, name: string, shown: string) -> string {
     return template.replace("__NAME__", name).replace("__SHOWN__", shown)
+}
+
+/// The import paths a scaffolded project writes, for the spelling it pins.
+/// The binding is the module name either way, so only these lines differ.
+fn spelled(template: string, git: bool) -> string {
+    var app: string = "cortado_app"
+    var component: string = "cortado.component"
+    var annotations: string = "cortado.annotations"
+    // barista is always the release: cortado's own manifest pins it, and one
+    // module reached two ways is a refusal.
+    let barista: string = "github.com/beans-lang/barista"
+    if git {
+        app = "github.com/beans-lang/cortado/app"
+        component = "github.com/beans-lang/cortado/component"
+        annotations = "github.com/beans-lang/cortado/annotations"
+    }
+    return template.replace("__CORTADO_APP__", app)
+                   .replace("__CORTADO_COMPONENT__", component)
+                   .replace("__CORTADO_ANNOTATIONS__", annotations)
+                   .replace("__BARISTA__", barista)
 }
 
 fn template_beans_pot() -> string {
     return r##"module __NAME__
 kind application
 
-# cortado is the framework; cortado_app is the composition root that wires
-# barista onto it; barista is here because a scan finds this project's own
-# `@barista.service` classes and the row is what puts the container in reach.
-require path "__CORTADO__"
-require path "__CORTADO__/app"
-require path "__BARISTA__"
+# cortado is the framework and carries `cortado_app`, the composition root that
+# wires barista onto it; barista is named here too because the scan that finds
+# this project's own `@barista.service` classes needs it in reach.
+__REQUIRES__
 "##
+}
+
+/// The released cortado and barista this CLI scaffolds against. `test.sh`
+/// holds `cortado_release` against `cortado.version()`, so a stale pin is red.
+pub fn cortado_release() -> string { return "v0.1.0" }
+pub fn barista_release() -> string { return "v0.1.1" }
+
+fn git_requires() -> string {
+    return "require github.com/beans-lang/cortado {cortado_release()}\nrequire github.com/beans-lang/barista {barista_release()}"
+}
+
+fn path_requires(near: Neighbours) -> string {
+    return "require path \"{near.cortado}\"\nrequire path \"{near.cortado}/app\"\nrequire github.com/beans-lang/barista {barista_release()}"
 }
 
 fn template_cortado_pot() -> string {
@@ -217,7 +224,7 @@ fn template_main() -> string {
 // back down in the right order — are `cortado_app.run_main`.
 package main
 
-import cortado_app
+import __CORTADO_APP__
 import {Home} from __NAME__.generated.screens
 
 // A `@barista.service` in a package nothing imports is not in the executable,
@@ -253,7 +260,7 @@ fn template_service() -> string {
 // for, in a framework that needed one.
 package services
 
-import barista
+import __BARISTA__
 import {Drink} from __NAME__.models
 
 @barista.service(lifetime: barista.ServiceLifetime.singleton)
@@ -281,8 +288,8 @@ fn template_badge() -> string {
 <beans>
 package components
 
-import cortado.component
-import {view, param} from cortado.annotations
+import __CORTADO_COMPONENT__
+import {view, param} from __CORTADO_ANNOTATIONS__
 
 // A part a screen reuses. It generates into `generated/components/`, which is
 // the package `components`, so the screen that uses it needs one import line
@@ -316,8 +323,8 @@ fn template_home() -> string {
 <beans>
 package screens
 
-import cortado.component
-import {view, inject, window} from cortado.annotations
+import __CORTADO_COMPONENT__
+import {view, inject, window} from __CORTADO_ANNOTATIONS__
 import {Badge} from __NAME__.generated.components
 import {Menu} from __NAME__.services
 import {Drink} from __NAME__.models
@@ -361,27 +368,33 @@ pub fn scaffold(directory: string, name: string, cortado_path: string) -> Result
     if fs.exists(path.join(directory, "beans.pot")) {
         return err("{directory}/beans.pot already exists", "init")
     }
-    let near: Neighbours = find_neighbours(directory, cortado_path)?
+    // A project pins the published releases. `--cortado <path>` is the other
+    // answer, for working on cortado itself against an uncommitted checkout.
+    let git: bool = cortado_path == ""
+    var requires: string = git_requires()
+    if !git {
+        requires = path_requires(find_neighbours(directory, cortado_path)?)
+    }
     let shown: string = titled(name)
 
     io.eprintln("creating {directory}")
     let manifest: string =
         filled(template_beans_pot(), name, shown)
-            .replace("__CORTADO__", near.cortado)
-            .replace("__BARISTA__", near.barista)
+            .replace("__REQUIRES__", requires)
     write_file(directory, "beans.pot", manifest)?
     write_file(directory, "cortado.pot",
                filled(template_cortado_pot(), name, shown))?
     write_file(directory, ".gitignore", "build/\n")?
-    write_file(directory, "main.b", filled(template_main(), name, shown))?
+    write_file(directory, "main.b",
+               spelled(filled(template_main(), name, shown), git))?
     write_file(directory, "models/drink.b",
                filled(template_model(), name, shown))?
     write_file(directory, "services/menu.b",
-               filled(template_service(), name, shown))?
+               spelled(filled(template_service(), name, shown), git))?
     write_file(directory, "components/badge.bx",
-               filled(template_badge(), name, shown))?
+               spelled(filled(template_badge(), name, shown), git))?
     write_file(directory, "screens/home.bx",
-               filled(template_home(), name, shown))?
+               spelled(filled(template_home(), name, shown), git))?
 
     var options: GenerateOptions = new GenerateOptions()
     let made: int = generate([path.join(directory, "screens"),
