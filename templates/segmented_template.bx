@@ -1,9 +1,9 @@
-<HStack background="#d6d8df" corner_radius={self.radius} padding={2} align="stretch" spacing={2}>
+<HStack background={self.track_off} corner_radius={self.radius_medium} padding={2} align="stretch" spacing={2}>
   $for index in 0..self.choices.len() {
     <Label key={"segment-{index}"} text={self.choices[index]}
-           text_color={if self.selected == index { "#ffffffff" } else { self.ink }}
-           background={if self.selected == index { self.accent } else { "#d6d8df" }}
-           corner_radius={4} font_size={self.font_size} grow={1} />
+           text_color={self.ink}
+           background={if self.selected == index { self.card } else { "#00000000" }}
+           corner_radius={self.radius_small} font_size={self.font_size} grow={1} alignment={1} />
   }
 </HStack>
 <beans>

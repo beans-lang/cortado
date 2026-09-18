@@ -1,4 +1,4 @@
-<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+<VStack padding={20} spacing={12} align="stretch">
   <Label text="Shared controls" font_size={23} />
   <Label text="Every control below uses a .bx visual." text_color="#555b6b" />
   <CheckBox key={"check"} text="Include milk" checked={self.checked == 1}

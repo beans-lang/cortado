@@ -101,7 +101,7 @@ pub class SwitchRender extends ToggleRender {
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty) }
     pub override fn role() -> string { return "switch" }
     pub override fn set_text(text: string) -> Result<bool> { self.demand_alive()?; return err("switch does not carry text", "unsupported") }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(52.0, 28.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(61.0, 28.0)) }
 }
 
 pub abstract class RangeRender extends RenderObject {
@@ -161,7 +161,7 @@ pub abstract class RangeRender extends RenderObject {
         if key == host.P_STEP { return if self.allows_step() { ok(self.increment) } else { err("this range control has no step", "unsupported") } }
         return super.real(key)
     }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(140.0, 24.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(140.0, 34.0)) }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> { super.paint_self(canvas)?; return self.paint_template(canvas) }
     fn change_as_user(value: f64) -> Option<events.UiEvent> {
         if self.high_value <= self.low_value || !(value > -10000000.0 && value < 10000000.0) { return none }
@@ -225,7 +225,7 @@ pub class StepperRender extends RangeRender {
         self.change_as_user(value)
         return ok(before != self.current_value)
     }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(86.0, 30.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(94.0, 32.0)) }
     pub override fn handle_event(event: events.UiEvent) -> Option<events.UiEvent> {
         if !self.enabled || self.hidden || !self.alive { return none }
         if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT {
@@ -251,7 +251,7 @@ pub class ProgressBarRender extends RangeRender {
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty) }
     pub override fn role() -> string { return "progressbar" }
     pub fn indeterminate() -> bool { return self.indeterminate_value }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(140.0, 12.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(140.0, 4.0)) }
     pub override fn set_integer(key: int, value: int) -> Result<bool> {
         if key != host.P_INDETERMINATE { return super.set_integer(key, value) }
         self.demand_alive()?

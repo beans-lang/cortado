@@ -23,13 +23,13 @@ pub partial class SplitViewTemplate extends component.SplitControlTemplate {
 partial class SplitViewTemplate {
     pub override fn render(b: Builder) {
         b.open("Box")  // split_view_template.bx:1
-        b.word("background", self.fill)
+        b.word("background", self.card)
         if self.stacked {  // split_view_template.bx:2
             b.open("Box")  // split_view_template.bx:3
             b.number("y", (self.divider_half) as f64)
             b.number("height", (6) as f64)
             b.number("width_percent", (100.0) as f64)
-            b.word("background", "#bfc3ce")
+            b.word("background", self.hairline)
             b.close()
         }
         if !self.stacked {  // split_view_template.bx:5
@@ -37,7 +37,7 @@ partial class SplitViewTemplate {
             b.number("x", (self.divider_half) as f64)
             b.number("width", (6) as f64)
             b.number("height_percent", (100.0) as f64)
-            b.word("background", "#bfc3ce")
+            b.word("background", self.hairline)
             b.close()
         }
         b.close()

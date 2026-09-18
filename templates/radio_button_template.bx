@@ -1,7 +1,7 @@
 <HStack spacing={8} align="center">
-  <HStack background="#ffffffff" border_color={self.track} border_width={2}
-          corner_radius={10} width={20} height={20} align="center" justify="center">
-    $if self.checked { <Box width={10} height={10} background={self.accent} corner_radius={5} /> }
+  <HStack background="#00000000" border_color={self.track} border_width={2}
+          corner_radius={self.capsule} width={20} height={20} align="center" justify="center">
+    $if self.checked { <Box width={10} height={10} background={self.accent} corner_radius={self.capsule} /> }
   </HStack>
   <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
 </HStack>

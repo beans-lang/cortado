@@ -1,12 +1,12 @@
-<VStack background={self.fill} border_color="#bfc3ce" border_width={1}
-        corner_radius={self.radius} align="stretch">
+<VStack background={self.card} border_color={self.hairline} border_width={1}
+        corner_radius={self.radius_medium} align="stretch">
   $if !self.borderless {
-    <HStack height={28} background="#e4e6ed" align="stretch" spacing={2}>
+    <HStack height={32} background={self.track_off} align="stretch" spacing={2} padding={2}>
       $for index in 0..self.labels.len() {
         <Label key={"tab-{index}"} text={self.labels[index]}
-               text_color={if self.selected == index { "#ffffffff" } else { self.ink }}
-               background={if self.selected == index { self.accent } else { "#e4e6ed" }}
-               corner_radius={4} font_size={self.font_size} grow={1} />
+               text_color={self.ink}
+               background={if self.selected == index { self.background } else { "#00000000" }}
+               corner_radius={self.radius_small} font_size={self.font_size} grow={1} alignment={1} />
       }
     </HStack>
   }

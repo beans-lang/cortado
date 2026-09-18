@@ -1,0 +1,4 @@
+module cortado_showcase
+kind application
+require path "../.."
+require path "../../skia"

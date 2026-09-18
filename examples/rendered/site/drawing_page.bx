@@ -1,4 +1,4 @@
-<VStack padding={24} spacing={14} align="stretch" background="#f7f7f9">
+<VStack padding={24} spacing={14} align="stretch">
   <HStack spacing={12} align="center">
     <Label text="Drawing in .bx" font_size={24} />
     <Button text="Animate" on:click={fn(e: UiEvent) { self.toggle() }} />

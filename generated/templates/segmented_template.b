@@ -23,8 +23,8 @@ pub partial class SegmentedTemplate extends component.ChoiceControlTemplate {
 partial class SegmentedTemplate {
     pub override fn render(b: Builder) {
         b.open("HStack")  // segmented_template.bx:1
-        b.word("background", "#d6d8df")
-        b.number("corner_radius", (self.radius) as f64)
+        b.word("background", self.track_off)
+        b.number("corner_radius", (self.radius_medium) as f64)
         b.number("padding", (2) as f64)
         b.word("align", "stretch")
         b.number("spacing", (2) as f64)
@@ -33,11 +33,12 @@ partial class SegmentedTemplate {
             b.open("Label")  // segmented_template.bx:3
             b.key("{"segment-{index}"}")
             b.text("{self.choices[index]}")
-            b.word("text_color", if self.selected == index { "#ffffffff" } else { self.ink })
-            b.word("background", if self.selected == index { self.accent } else { "#d6d8df" })
-            b.number("corner_radius", (4) as f64)
+            b.word("text_color", self.ink)
+            b.word("background", if self.selected == index { self.card } else { "#00000000" })
+            b.number("corner_radius", (self.radius_small) as f64)
             b.number("font_size", (self.font_size) as f64)
             b.number("grow", (1) as f64)
+            b.number("alignment", (1) as f64)
             b.close()
             _cortado_row_0 += 1
         }

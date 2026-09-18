@@ -1,4 +1,4 @@
-<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+<VStack padding={20} spacing={12} align="stretch">
   <Label text="Accessibility" font_size={23} />
   <Label text="Use a screen reader to inspect labels, states, focus, and actions." />
   <Button key={"action"} text="Place order" on:click={fn(e: UiEvent) { self.place_order() }} />

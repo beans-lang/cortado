@@ -24,19 +24,19 @@ partial class ComboBoxTemplate {
     pub override fn render(b: Builder) {
         b.open("HStack")  // combo_box_template.bx:1
         b.word("background", self.fill)
-        b.word("border_color", if self.focused { self.accent } else { "#aeb2bf" })
-        b.number("border_width", (1) as f64)
-        b.number("corner_radius", (self.radius) as f64)
+        b.word("border_color", if self.focused { self.accent } else { "#00000000" })
+        b.number("border_width", (if self.focused { 2.0 } else { 0.0 }) as f64)
+        b.number("corner_radius", (self.radius_medium) as f64)
         b.number("padding", (6) as f64)
         b.word("align", "center")
         b.number("spacing", (8) as f64)
-        b.open("Label")  // combo_box_template.bx:3
+        b.open("Label")  // combo_box_template.bx:4
         b.text("{self.selected_text}")
         b.word("text_color", self.ink)
         b.number("font_size", (self.font_size) as f64)
         b.number("grow", (1) as f64)
         b.close()
-        b.open("Label")  // combo_box_template.bx:4
+        b.open("Label")  // combo_box_template.bx:5
         b.text("⌄")
         b.word("text_color", self.accent)
         b.number("font_size", (self.font_size) as f64)

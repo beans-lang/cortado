@@ -1,4 +1,4 @@
-<Box background="#bec2cd" />
+<Box background={self.separator} />
 <beans>
 package templates
 import cortado.component

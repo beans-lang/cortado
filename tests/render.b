@@ -21,7 +21,7 @@ fn verify() -> Result<bool> {
     require(dirty.needs_paint(), "layout did not request paint")
     let theme: render.Theme = new render.Theme()
     match theme.set_font_size(-1.0) { ok(_) => { panic("invalid font accepted") } err(_) => {} }
-    require(theme.font_size() == 14.0 && theme.version() == 0, "failed mutation changed theme")
+    require(theme.font_size() == 17.0 && theme.version() == 0, "failed mutation changed theme")
     let commands: paint.DisplayList = new paint.DisplayList()
     match commands.restore() { ok(_) => { panic("unbalanced restore accepted") } err(_) => {} }
     commands.save()?

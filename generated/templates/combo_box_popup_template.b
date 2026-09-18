@@ -60,10 +60,10 @@ pub partial class ComboBoxPopupTemplate extends component.ChoiceControlTemplate 
 partial class ComboBoxPopupTemplate {
     pub override fn render(b: Builder) {
         b.open("ScrollView")  // combo_box_popup_template.bx:1
-        b.word("background", self.fill)
-        b.word("border_color", "#aeb2bf")
+        b.word("background", self.card)
+        b.word("border_color", self.hairline)
         b.number("border_width", (1) as f64)
-        b.number("corner_radius", (self.radius) as f64)
+        b.number("corner_radius", (self.radius_large) as f64)
         b.open("VStack")  // combo_box_popup_template.bx:2
         b.number("spacing", (0) as f64)
         b.word("align", "stretch")

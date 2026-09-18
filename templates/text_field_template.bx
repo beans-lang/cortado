@@ -1,6 +1,6 @@
-<VStack background={self.fill} corner_radius={self.radius}
+<VStack background={self.card} corner_radius={self.radius_medium}
         border_width={if self.focused { 2.0 } else { 1.0 }}
-        border_color={if self.focused { self.accent } else { "#9699a6" }} />
+        border_color={if self.focused { self.accent } else { self.hairline }} />
 <beans>
 package templates
 

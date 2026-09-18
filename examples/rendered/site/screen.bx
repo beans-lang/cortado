@@ -1,4 +1,4 @@
-<VStack padding={24} spacing={14} align="stretch" background="#f7f7f9">
+<VStack padding={24} spacing={14} align="stretch">
   <Label text="Cortado, drawn by Beans" font_size={26} />
   <Label text="This entire screen is .bx markup." text_color="#555b6b" />
   <TextField key={"name"} bind:value={self.name} />
@@ -7,9 +7,9 @@
   <ScrollView height={160}>
     <VStack spacing={10} align="stretch">
       $for row in 0..20 {
-        <HStack key={"row-{row}"} padding={10} spacing={12} background="#e8eaf0" corner_radius={8}>
+        <HStack key={"row-{row}"} padding={10} spacing={12} background="#ffffffff" corner_radius={8}>
           <Label text={"Coffee {row}"} grow={1} />
-          <Label text="Ready" text_color="#365eea" />
+          <Label text="Ready" text_color="#0088ffff" />
         </HStack>
       }
     </VStack>

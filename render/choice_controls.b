@@ -76,7 +76,7 @@ pub abstract class ChoiceRender extends RenderObject {
             let paragraph: paint.Paragraph = self.renderer.paragraph(item, self.font_size(), -1.0, self.text_color())?
             if paragraph.size().width + 34.0 > width { width = paragraph.size().width + 34.0 }
         }
-        return ok(geometry.Size.of(width, 30.0))
+        return ok(geometry.Size.of(width, 31.0))
     }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> { super.paint_self(canvas)?; return self.paint_template(canvas) }
     fn select_as_user(index: int) -> Option<events.UiEvent> {
@@ -174,7 +174,7 @@ pub class SegmentedRender extends ChoiceRender {
             let paragraph: paint.Paragraph = self.renderer.paragraph(item, self.font_size(), -1.0, self.text_color())?
             width += paragraph.size().width + 28.0
         }
-        return ok(geometry.Size.of(if width > 48.0 { width } else { 48.0 }, 30.0))
+        return ok(geometry.Size.of(if width > 48.0 { width } else { 48.0 }, 34.0))
     }
     pub override fn handle_event(event: events.UiEvent) -> Option<events.UiEvent> {
         if !self.enabled || self.hidden || !self.alive { return none }

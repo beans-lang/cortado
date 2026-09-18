@@ -25,8 +25,8 @@ pub partial class ButtonTemplate extends component.ControlTemplate {
 partial class ButtonTemplate {
     pub override fn render(b: Builder) {
         b.open("VStack")  // button_template.bx:1
-        b.word("background", if self.pressed { self.accent } else if self.hovered { "#dbe5ff" } else { self.fill })
-        b.number("corner_radius", (self.radius) as f64)
+        b.word("background", self.fill)
+        b.number("corner_radius", (self.capsule) as f64)
         b.number("padding", (8) as f64)
         b.number("border_width", (if self.focused { 2.0 } else { 0.0 }) as f64)
         b.word("border_color", self.accent)

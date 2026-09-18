@@ -1,4 +1,4 @@
-<ScrollView background={self.fill} border_color="#aeb2bf" border_width={1} corner_radius={self.radius}>
+<ScrollView background={self.card} border_color={self.hairline} border_width={1} corner_radius={self.radius_large}>
   <VStack spacing={0} align="stretch">
     $for index in 0..self.choices.len() {
       <Button key={"option-{index}"}

@@ -22,6 +22,8 @@
 #include "modules/skunicode/include/SkUnicode_icu.h"
 #ifdef __APPLE__
 #include "include/ports/SkFontMgr_mac_ct.h"
+#include "include/ports/SkTypeface_mac.h"
+#include <CoreText/CoreText.h>
 #elif defined(_WIN32)
 #include "include/ports/SkTypeface_win.h"
 #else
@@ -138,6 +140,25 @@ bool select_backend(Engine *e, int32_t requested) {
     e->gpu = std::move(next);
     e->backend = e->gpu ? actual : 0;
     return true;
+}
+/* The platform's own UI typeface. Apple resolves it per point size so the
+ * optical variant matches what a native control draws; the rest name families. */
+void ui_font(TextStyle &style, double size) {
+#ifdef __APPLE__
+    CTFontRef face = CTFontCreateUIFontForLanguage(kCTFontUIFontSystem, size, nullptr);
+    if (face) {
+        style.setTypeface(SkMakeTypefaceFromCTFont(face));
+        CFRelease(face);
+        return;
+    }
+    style.setFontFamilies({SkString("Helvetica Neue"), SkString("sans-serif")});
+#elif defined(_WIN32)
+    style.setFontFamilies({SkString("Segoe UI Variable Text"), SkString("Segoe UI"),
+                           SkString("sans-serif")});
+#else
+    style.setFontFamilies({SkString("Inter"), SkString("Cantarell"), SkString("Noto Sans"),
+                           SkString("DejaVu Sans"), SkString("sans-serif")});
+#endif
 }
 }
 
@@ -383,7 +404,7 @@ uint64_t ctd_skia_paragraph_new(void *raw, const char *s, int32_t n, double size
     ParagraphStyle style;
     TextStyle font;
     font.setFontSize(size); font.setColor(color(rgba));
-    font.setFontFamilies({SkString("Arial"), SkString("sans-serif")});
+    ui_font(font, size);
     style.setTextStyle(font);
     auto builder = ParagraphBuilder::make(style, e->fonts, e->unicode);
     if (!builder) return 0;

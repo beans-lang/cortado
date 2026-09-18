@@ -1,9 +1,9 @@
-<Box background={self.fill}>
+<Box background={self.card}>
   $if self.stacked {
-    <Box y={self.divider_half} height={6} width_percent={100.0} background="#bfc3ce" />
+    <Box y={self.divider_half} height={6} width_percent={100.0} background={self.hairline} />
   }
   $if !self.stacked {
-    <Box x={self.divider_half} width={6} height_percent={100.0} background="#bfc3ce" />
+    <Box x={self.divider_half} width={6} height_percent={100.0} background={self.hairline} />
   }
 </Box>
 <beans>

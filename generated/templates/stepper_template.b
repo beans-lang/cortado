@@ -24,22 +24,24 @@ partial class StepperTemplate {
     pub override fn render(b: Builder) {
         b.open("HStack")  // stepper_template.bx:1
         b.word("background", self.fill)
-        b.number("corner_radius", (6) as f64)
+        b.number("corner_radius", (self.radius_medium) as f64)
         b.word("align", "center")
         b.word("justify", "space_between")
         b.open("Label")  // stepper_template.bx:2
         b.text("−")
-        b.word("text_color", self.ink)
+        b.word("text_color", self.accent)
         b.number("font_size", (self.font_size) as f64)
         b.close()
         b.open("Label")  // stepper_template.bx:3
         b.text("{self.number}")
         b.word("text_color", self.ink)
         b.number("font_size", (self.font_size) as f64)
+        b.number("alignment", (1) as f64)
+        b.number("grow", (1) as f64)
         b.close()
         b.open("Label")  // stepper_template.bx:4
         b.text("+")
-        b.word("text_color", self.ink)
+        b.word("text_color", self.accent)
         b.number("font_size", (self.font_size) as f64)
         b.close()
         b.close()

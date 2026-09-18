@@ -23,25 +23,26 @@ pub partial class SliderTemplate extends component.RangeControlTemplate {
 partial class SliderTemplate {
     pub override fn render(b: Builder) {
         b.open("HStack")  // slider_template.bx:1
-        b.word("background", "#d6d8df")
-        b.number("corner_radius", (8) as f64)
         b.word("align", "center")
         b.open("Box")  // slider_template.bx:2
         b.number("width", (self.thumb_leading) as f64)
-        b.number("height", (8) as f64)
+        b.number("height", (4) as f64)
         b.word("background", self.accent)
-        b.number("corner_radius", (4) as f64)
+        b.number("corner_radius", (self.capsule) as f64)
         b.close()
         b.open("Box")  // slider_template.bx:3
-        b.number("width", (14) as f64)
-        b.number("height", (14) as f64)
-        b.word("background", "#ffffffff")
-        b.word("border_color", self.accent)
-        b.number("border_width", (2) as f64)
-        b.number("corner_radius", (7) as f64)
+        b.number("width", (28) as f64)
+        b.number("height", (28) as f64)
+        b.word("background", self.knob)
+        b.number("corner_radius", (self.capsule) as f64)
+        b.number("border_width", (1) as f64)
+        b.word("border_color", self.separator)
         b.close()
         b.open("Box")  // slider_template.bx:5
         b.number("grow", (1) as f64)
+        b.number("height", (4) as f64)
+        b.word("background", self.track_off)
+        b.number("corner_radius", (self.capsule) as f64)
         b.close()
         b.close()
     }

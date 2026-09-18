@@ -1,4 +1,4 @@
-<VStack padding={24} spacing={12} align="stretch" background="#f7f7f9">
+<VStack padding={24} spacing={12} align="stretch">
     <Label text="Editing and input methods" font_size={24} />
     <Label text="Type, select, paste, and try your keyboard's input method." />
     <Label text="Name" />

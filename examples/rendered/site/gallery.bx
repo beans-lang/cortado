@@ -1,5 +1,5 @@
-<VStack spacing={0} align="stretch" background="#f7f7f9">
-  <VStack padding={20} spacing={10} align="stretch" background="#e8eaf0">
+<VStack spacing={0} align="stretch">
+  <VStack padding={20} spacing={10} align="stretch" background="#ffffffff">
     <Label text="Cortado rendered gallery" font_size={26} />
     <Label text="Beans behavior. Markup visuals. One shared renderer." text_color="#555b6b" />
     <HStack spacing={8} wrap>

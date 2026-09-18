@@ -31,7 +31,6 @@ partial class Screen {
         b.number("padding", (24) as f64)
         b.number("spacing", (14) as f64)
         b.word("align", "stretch")
-        b.word("background", "#f7f7f9")
         b.open("Label")  // screen.bx:2
         b.text("Cortado, drawn by Beans")
         b.number("font_size", (26) as f64)
@@ -65,7 +64,7 @@ partial class Screen {
             b.key("{"row-{row}"}")
             b.number("padding", (10) as f64)
             b.number("spacing", (12) as f64)
-            b.word("background", "#e8eaf0")
+            b.word("background", "#ffffffff")
             b.number("corner_radius", (8) as f64)
             b.open("Label")  // screen.bx:11
             b.text("Coffee {row}")
@@ -73,7 +72,7 @@ partial class Screen {
             b.close()
             b.open("Label")  // screen.bx:12
             b.text("Ready")
-            b.word("text_color", "#365eea")
+            b.word("text_color", "#0088ffff")
             b.close()
             b.close()
             _cortado_row_0 += 1

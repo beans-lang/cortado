@@ -1,4 +1,4 @@
-<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+<VStack padding={20} spacing={12} align="stretch">
   <Label text="Graphics backend" font_size={24} />
   <Label text="Drawn by Skia; Canvas shows the GPU frame after readback." text_color="#555b6b" />
   <Label text={"Active: {self.active}"} />

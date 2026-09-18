@@ -29,6 +29,8 @@ pub abstract class RenderObject {
     border_color: int = 0
     border_width: f64 = 0.0
     radius: f64 = 0.0
+    /// 0 leading, 1 center, 2 trailing — the same three the hosts take.
+    alignment: int = 0
     font: f64 = 0.0
     a11y_name: string = ""
     a11y_role: string = ""
@@ -165,6 +167,10 @@ pub abstract class RenderObject {
         else if key == host.P_BG_COLOR { self.background = value }
         else if key == host.P_FG_COLOR { self.foreground = value }
         else if key == host.P_BORDER_COLOR { self.border_color = value }
+        else if key == host.P_ALIGNMENT {
+            if value < 0 || value > 2 { return err("text alignment is leading, center or trailing", "out_of_range") }
+            self.alignment = value
+        }
         else { return err("integer property is not supported by this shared control", "unsupported") }
         self.dirty.paint()
         if key == host.P_ENABLED || key == host.P_HIDDEN || key == host.P_FOCUSABLE { self.dirty.semantics() }
@@ -178,6 +184,7 @@ pub abstract class RenderObject {
         if key == host.P_BG_COLOR { return ok(self.background) }
         if key == host.P_FG_COLOR { return ok(self.text_color()) }
         if key == host.P_BORDER_COLOR { return ok(self.border_color) }
+        if key == host.P_ALIGNMENT { return ok(self.alignment) }
         return err("integer property is not supported by this shared control", "unsupported")
     }
     pub fn set_real(key: int, value: f64) -> Result<bool> {

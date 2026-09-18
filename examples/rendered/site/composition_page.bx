@@ -1,7 +1,7 @@
-<VStack padding={24} spacing={18} align="stretch" background="#f7f7f9">
+<VStack padding={24} spacing={18} align="stretch">
   <Label text="Build a control with markup" font_size={24} />
   <Label text="This rating control adds no renderer or platform code." />
-  <VStack padding={18} spacing={12} align="stretch" background="#e8eaf0" corner_radius={12}>
+  <VStack padding={18} spacing={12} align="stretch" background="#ffffffff" corner_radius={12}>
     <RatingControl value={self.rating} on_change={fn(value: int) { self.rate(value) }} />
     <Label text={if self.rating == 0 { "Choose a rating with a pointer or the keyboard." } else { "You chose {self.rating} of 5." }} />
   </VStack>

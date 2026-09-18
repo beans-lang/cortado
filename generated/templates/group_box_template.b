@@ -23,16 +23,14 @@ pub partial class GroupBoxTemplate extends component.ControlTemplate {
 partial class GroupBoxTemplate {
     pub override fn render(b: Builder) {
         b.open("VStack")  // group_box_template.bx:1
-        b.word("background", self.fill)
-        b.word("border_color", "#bfc3ce")
-        b.number("border_width", (1) as f64)
-        b.number("corner_radius", (self.radius) as f64)
-        b.number("padding", (8) as f64)
+        b.word("background", self.card)
+        b.number("corner_radius", (self.radius_medium) as f64)
+        b.number("padding", (12) as f64)
         b.word("align", "stretch")
-        b.open("Label")  // group_box_template.bx:3
+        b.open("Label")  // group_box_template.bx:2
         b.text("{self.title}")
-        b.word("text_color", self.ink)
-        b.number("font_size", (self.font_size) as f64)
+        b.word("text_color", self.muted)
+        b.number("font_size", (self.footnote) as f64)
         b.close()
         b.close()
     }

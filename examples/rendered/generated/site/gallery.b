@@ -57,12 +57,11 @@ partial class Gallery {
         b.open("VStack")  // gallery.bx:1
         b.number("spacing", (0) as f64)
         b.word("align", "stretch")
-        b.word("background", "#f7f7f9")
         b.open("VStack")  // gallery.bx:2
         b.number("padding", (20) as f64)
         b.number("spacing", (10) as f64)
         b.word("align", "stretch")
-        b.word("background", "#e8eaf0")
+        b.word("background", "#ffffffff")
         b.open("Label")  // gallery.bx:3
         b.text("Cortado rendered gallery")
         b.number("font_size", (26) as f64)

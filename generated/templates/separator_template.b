@@ -23,7 +23,7 @@ pub partial class SeparatorTemplate extends component.ControlTemplate {
 partial class SeparatorTemplate {
     pub override fn render(b: Builder) {
         b.open("Box")  // separator_template.bx:1
-        b.word("background", "#bec2cd")
+        b.word("background", self.separator)
         b.close()
     }
 }

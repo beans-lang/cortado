@@ -39,7 +39,6 @@ partial class AccessibilityPage {
         b.number("padding", (20) as f64)
         b.number("spacing", (12) as f64)
         b.word("align", "stretch")
-        b.word("background", "#f7f7f9")
         b.open("Label")  // accessibility_page.bx:2
         b.text("Accessibility")
         b.number("font_size", (23) as f64)

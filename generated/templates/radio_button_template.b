@@ -26,10 +26,10 @@ partial class RadioButtonTemplate {
         b.number("spacing", (8) as f64)
         b.word("align", "center")
         b.open("HStack")  // radio_button_template.bx:2
-        b.word("background", "#ffffffff")
+        b.word("background", "#00000000")
         b.word("border_color", self.track)
         b.number("border_width", (2) as f64)
-        b.number("corner_radius", (10) as f64)
+        b.number("corner_radius", (self.capsule) as f64)
         b.number("width", (20) as f64)
         b.number("height", (20) as f64)
         b.word("align", "center")
@@ -39,7 +39,7 @@ partial class RadioButtonTemplate {
             b.number("width", (10) as f64)
             b.number("height", (10) as f64)
             b.word("background", self.accent)
-            b.number("corner_radius", (5) as f64)
+            b.number("corner_radius", (self.capsule) as f64)
             b.close()
         }
         b.close()

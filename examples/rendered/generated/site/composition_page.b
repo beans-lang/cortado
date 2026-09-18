@@ -43,7 +43,6 @@ partial class CompositionPage {
         b.number("padding", (24) as f64)
         b.number("spacing", (18) as f64)
         b.word("align", "stretch")
-        b.word("background", "#f7f7f9")
         b.open("Label")  // composition_page.bx:2
         b.text("Build a control with markup")
         b.number("font_size", (24) as f64)
@@ -55,7 +54,7 @@ partial class CompositionPage {
         b.number("padding", (18) as f64)
         b.number("spacing", (12) as f64)
         b.word("align", "stretch")
-        b.word("background", "#e8eaf0")
+        b.word("background", "#ffffffff")
         b.number("corner_radius", (12) as f64)
         b.child<RatingControl>("c0", fn(_cortado_c: RatingControl) {  // composition_page.bx:5
             _cortado_c.value = self.rating

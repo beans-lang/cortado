@@ -1,4 +1,4 @@
-<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+<VStack padding={20} spacing={12} align="stretch">
   <Label text="Choices and collections" font_size={23} />
   <Label text="The item lists are typed Beans values in .bx." text_color="#555b6b" />
   <Label text="Drink" />

@@ -187,6 +187,32 @@ fn attribute_line(attribute: component.Attribute) -> string {
         whole => { return "{attribute.property}:whole={attribute.whole}" }
         real => { return "{attribute.property}:real={attribute.number}" }
         flag => { return "{attribute.property}:flag={attribute.is_on()}" }
+        // The collection kinds are named so a ninth kind fails this match
+        // rather than slipping through a catch-all arm.
+        items => {
+            match attribute.items_value {
+                some(values) => { return "{attribute.property}:items=[{values.show()}]" }
+                none => { return "{attribute.property}:items=[]" }
+            }
+        }
+        numbers => {
+            match attribute.numbers_value {
+                some(values) => { return "{attribute.property}:numbers=[{values.show()}]" }
+                none => { return "{attribute.property}:numbers=[]" }
+            }
+        }
+        table_source => {
+            match attribute.source_value {
+                some(rows) => { return "{attribute.property}:table_source={rows.row_count()}" }
+                none => { return "{attribute.property}:table_source=none" }
+            }
+        }
+        table_edit_policy => {
+            match attribute.edit_policy_value {
+                some(rule) => { return "{attribute.property}:table_edit_policy=set" }
+                none => { return "{attribute.property}:table_edit_policy=none" }
+            }
+        }
     }
 }
 

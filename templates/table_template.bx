@@ -1,11 +1,11 @@
-<Box width={self.total_width} background={self.fill} border_color="#bfc3ce" border_width={1}>
+<Box width={self.total_width} background={self.card} border_color={self.hairline} border_width={1}>
   $if self.total_rows == 0 {
-    <Label x={12} y={self.header_height + 12.0} text="No rows" text_color="#676d79" />
+    <Label x={12} y={self.header_height + 12.0} text="No rows" text_color={self.muted} />
   }
   $for row in self.rows {
     <HStack key={"row-{row.index}"} y={row.top} height={self.row_height} width={self.total_width}
             spacing={0} align="center"
-            background={if row.selected { "#dce7ff" } else if row.index % 2 == 0 { "#ffffff" } else { "#f4f6fa" }}>
+            background={if row.selected { self.accent } else if row.index % 2 == 0 { self.card } else { self.grouped }}>
       $for column in 0..row.cells.len() {
         $if row.index == self.editing_row && column == self.editing_column {
           <TextField key={"editor-{row.index}-{column}"} text={row.cells[column]}
@@ -14,17 +14,18 @@
                      on:key_down={fn(e: UiEvent) { self.editor_key(e) }} />
         } else {
           <Label key={"cell-{row.index}-{column}"} text={row.cells[column]}
-                 width={self.widths[column]} font_size={self.font_size} text_color={self.ink}
-                 background={if row.selected && column == self.selected_column { "#b8d0ff" } else { "#00000000" }} />
+                 width={self.widths[column]} font_size={self.font_size}
+                 text_color={if row.selected { self.on_accent } else { self.ink }}
+                 background="#00000000" />
         }
       }
     </HStack>
   }
   <HStack y={0} height={self.header_height} width={self.total_width} spacing={0}
-          align="center" background="#dce0ea">
+          align="center" background={self.grouped}>
     $for column in 0..self.titles.len() {
       <Label key={"header-{column}"} text={self.titles[column]} width={self.widths[column]}
-             font_size={self.font_size} text_color={self.ink} />
+             font_size={self.footnote} text_color={self.muted} />
     }
   </HStack>
 </Box>

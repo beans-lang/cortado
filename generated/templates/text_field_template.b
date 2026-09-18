@@ -25,10 +25,10 @@ pub partial class TextFieldTemplate extends component.ControlTemplate {
 partial class TextFieldTemplate {
     pub override fn render(b: Builder) {
         b.open("VStack")  // text_field_template.bx:1
-        b.word("background", self.fill)
-        b.number("corner_radius", (self.radius) as f64)
+        b.word("background", self.card)
+        b.number("corner_radius", (self.radius_medium) as f64)
         b.number("border_width", (if self.focused { 2.0 } else { 1.0 }) as f64)
-        b.word("border_color", if self.focused { self.accent } else { "#9699a6" })
+        b.word("border_color", if self.focused { self.accent } else { self.hairline })
         b.close()
     }
 }

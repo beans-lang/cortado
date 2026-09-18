@@ -1,6 +1,5 @@
-<VStack background={self.fill} border_color="#bfc3ce" border_width={1}
-        corner_radius={self.radius} padding={8} align="stretch">
-  <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+<VStack background={self.card} corner_radius={self.radius_medium} padding={12} align="stretch">
+  <Label text={self.title} text_color={self.muted} font_size={self.footnote} />
 </VStack>
 <beans>
 package templates

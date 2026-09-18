@@ -42,15 +42,15 @@ partial class TableTemplate {
     pub override fn render(b: Builder) {
         b.open("Box")  // table_template.bx:1
         b.number("width", (self.total_width) as f64)
-        b.word("background", self.fill)
-        b.word("border_color", "#bfc3ce")
+        b.word("background", self.card)
+        b.word("border_color", self.hairline)
         b.number("border_width", (1) as f64)
         if self.total_rows == 0 {  // table_template.bx:2
             b.open("Label")  // table_template.bx:3
             b.number("x", (12) as f64)
             b.number("y", (self.header_height + 12.0) as f64)
             b.text("No rows")
-            b.word("text_color", "#676d79")
+            b.word("text_color", self.muted)
             b.close()
         }
         var _cortado_row_0: int = 0
@@ -62,7 +62,7 @@ partial class TableTemplate {
             b.number("width", (self.total_width) as f64)
             b.number("spacing", (0) as f64)
             b.word("align", "center")
-            b.word("background", if row.selected { "#dce7ff" } else if row.index % 2 == 0 { "#ffffff" } else { "#f4f6fa" })
+            b.word("background", if row.selected { self.accent } else if row.index % 2 == 0 { self.card } else { self.grouped })
             var _cortado_row_1: int = 0
             for column in 0..row.cells.len() {  // table_template.bx:9
                 if row.index == self.editing_row && column == self.editing_column {  // table_template.bx:10
@@ -80,8 +80,8 @@ partial class TableTemplate {
                     b.text("{row.cells[column]}")
                     b.number("width", (self.widths[column]) as f64)
                     b.number("font_size", (self.font_size) as f64)
-                    b.word("text_color", self.ink)
-                    b.word("background", if row.selected && column == self.selected_column { "#b8d0ff" } else { "#00000000" })
+                    b.word("text_color", if row.selected { self.on_accent } else { self.ink })
+                    b.word("background", "#00000000")
                     b.close()
                 }
                 _cortado_row_1 += 1
@@ -89,21 +89,21 @@ partial class TableTemplate {
             b.close()
             _cortado_row_0 += 1
         }
-        b.open("HStack")  // table_template.bx:23
+        b.open("HStack")  // table_template.bx:24
         b.number("y", (0) as f64)
         b.number("height", (self.header_height) as f64)
         b.number("width", (self.total_width) as f64)
         b.number("spacing", (0) as f64)
         b.word("align", "center")
-        b.word("background", "#dce0ea")
+        b.word("background", self.grouped)
         var _cortado_row_2: int = 0
-        for column in 0..self.titles.len() {  // table_template.bx:25
-            b.open("Label")  // table_template.bx:26
+        for column in 0..self.titles.len() {  // table_template.bx:26
+            b.open("Label")  // table_template.bx:27
             b.key("{"header-{column}"}")
             b.text("{self.titles[column]}")
             b.number("width", (self.widths[column]) as f64)
-            b.number("font_size", (self.font_size) as f64)
-            b.word("text_color", self.ink)
+            b.number("font_size", (self.footnote) as f64)
+            b.word("text_color", self.muted)
             b.close()
             _cortado_row_2 += 1
         }

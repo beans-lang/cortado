@@ -23,8 +23,8 @@ pub partial class DisclosureTemplate extends component.DisclosureControlTemplate
 partial class DisclosureTemplate {
     pub override fn render(b: Builder) {
         b.open("VStack")  // disclosure_template.bx:1
-        b.word("background", self.fill)
-        b.number("corner_radius", (self.radius) as f64)
+        b.word("background", self.card)
+        b.number("corner_radius", (self.radius_medium) as f64)
         b.word("align", "stretch")
         b.open("HStack")  // disclosure_template.bx:2
         b.number("spacing", (7) as f64)

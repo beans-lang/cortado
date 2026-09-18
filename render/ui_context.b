@@ -171,7 +171,7 @@ pub class UiContext {
         let commands: paint.DisplayList = new paint.DisplayList()
         root.record(commands)?
         match self.popup_value.root() { some(popup) => { popup.record(commands)? } none => {} }
-        let canvas: paint.Canvas = self.renderer_value.begin(size, scale, self.theme_value.background())?
+        let canvas: paint.Canvas = self.renderer_value.begin(size, scale, self.theme_value.grouped_background())?
         match commands.replay(canvas) {
             err(problem) => { self.renderer_value.end(); return err(problem.msg, problem.kind) }
             ok(_) => {}

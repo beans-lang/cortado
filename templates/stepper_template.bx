@@ -1,7 +1,7 @@
-<HStack background={self.fill} corner_radius={6} align="center" justify="space_between">
-  <Label text="−" text_color={self.ink} font_size={self.font_size} />
-  <Label text={self.number} text_color={self.ink} font_size={self.font_size} />
-  <Label text="+" text_color={self.ink} font_size={self.font_size} />
+<HStack background={self.fill} corner_radius={self.radius_medium} align="center" justify="space_between">
+  <Label text="−" text_color={self.accent} font_size={self.font_size} />
+  <Label text={self.number} text_color={self.ink} font_size={self.font_size} alignment={1} grow={1} />
+  <Label text="+" text_color={self.accent} font_size={self.font_size} />
 </HStack>
 <beans>
 package templates

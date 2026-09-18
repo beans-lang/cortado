@@ -24,8 +24,8 @@ partial class SwitchTemplate {
     pub override fn render(b: Builder) {
         b.open("HStack")  // switch_template.bx:1
         b.word("background", self.track)
-        b.number("corner_radius", (14) as f64)
-        b.number("padding", (3) as f64)
+        b.number("corner_radius", (self.capsule) as f64)
+        b.number("padding", (2) as f64)
         b.word("align", "center")
         if self.checked {  // switch_template.bx:2
             b.open("Box")
@@ -33,10 +33,10 @@ partial class SwitchTemplate {
             b.close()
         }
         b.open("Box")  // switch_template.bx:3
-        b.number("width", (22) as f64)
-        b.number("height", (22) as f64)
-        b.word("background", "#ffffffff")
-        b.number("corner_radius", (11) as f64)
+        b.number("width", (24) as f64)
+        b.number("height", (24) as f64)
+        b.word("background", self.knob)
+        b.number("corner_radius", (self.capsule) as f64)
         b.close()
         if !self.checked {  // switch_template.bx:4
             b.open("Box")

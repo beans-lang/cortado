@@ -56,7 +56,8 @@ def main():
         run([compiler, "bindgen", "skia/bridge.h", "-o", generated, "--package", "cortado_skia", "--pub"], env=env)
         same((ROOT / "skia/ffi.b").read_text(), generated.read_text(), "skia/ffi.b")
         for base, output in [(ROOT / "templates", ROOT / "generated/templates"),
-                             (ROOT / "examples/rendered/site", ROOT / "examples/rendered/generated/site")]:
+                             (ROOT / "examples/rendered/site", ROOT / "examples/rendered/generated/site"),
+                             (ROOT / "examples/showcase/site", ROOT / "examples/showcase/generated/site")]:
             expected_names = {source.with_suffix(".b").name for source in base.glob("*.bx")}
             actual_names = {generated.name for generated in output.glob("*.b")}
             if expected_names != actual_names:
@@ -88,6 +89,10 @@ def main():
         executable = scratch / "window"
         run([compiler, "build", "examples/rendered/main.b", "-o", executable], env=env)
         run([executable, "--window-smoke"], env=env)
+        # The showcase is the demo people run first; a demo nothing builds rots.
+        showcase = scratch / "showcase"
+        run([compiler, "build", "examples/showcase/main.b", "-o", showcase], env=env)
+        run([showcase, "--smoke"], env=env)
         if platform.system() == "Darwin":
             rows = [shlex.split(line, comments=True) for line in (ROOT / "beans.pot").read_text().splitlines()]
             sources = [row[2] for row in rows if row[:2] == ["csrc", "macos"]]
@@ -104,7 +109,7 @@ def main():
                 run([sanitized_service], env=env)
     if args.skip_interpreter:
         print("SKIP interpreter: explicitly requested")
-    print("ok shared renderer: markup drift, Skia pixels, editing, ownership, .bx scene, desktop surface")
+    print("ok shared renderer: markup drift, Skia pixels, editing, ownership, .bx scene, desktop surface, showcase")
 
 
 if __name__ == "__main__":

@@ -50,13 +50,14 @@ fn verify() -> Result<bool> {
     require(button.render_object()?.hovered(), "pointer did not hover the default button")
     let default_root: render.RenderObject = button.render_object()?.visual().expect("default button visual")
     let hover_color: int = default_root.child_at(0).expect("default button layout").integer(host.P_BG_COLOR)?
-    require(hover_color == 0xdbe5ffff,
+    let theme: render.Theme = scene.context().theme()
+    require(hover_color == theme.surface_hovered() && hover_color != theme.surface(),
             "default .bx button did not show hover color")
     require(scene.context().invalidation().semantics_version() == before_hover_semantics,
             "hover changed button semantics")
     scene.pointer(events.EventKind.pointer_move, geometry.Point.at(-1.0, -1.0))?
     require(!button.render_object()?.hovered(), "default button stayed hovered after leave")
-    require(default_root.child_at(0).expect("default button layout").integer(host.P_BG_COLOR)? != 0xdbe5ffff,
+    require(default_root.child_at(0).expect("default button layout").integer(host.P_BG_COLOR)? == theme.surface(),
             "default button kept its hover color after leave")
     require(scene.context().invalidation().semantics_version() == before_hover_semantics,
             "leaving button changed semantics")

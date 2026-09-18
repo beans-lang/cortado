@@ -23,27 +23,29 @@ pub partial class TabViewTemplate extends component.TabControlTemplate {
 partial class TabViewTemplate {
     pub override fn render(b: Builder) {
         b.open("VStack")  // tab_view_template.bx:1
-        b.word("background", self.fill)
-        b.word("border_color", "#bfc3ce")
+        b.word("background", self.card)
+        b.word("border_color", self.hairline)
         b.number("border_width", (1) as f64)
-        b.number("corner_radius", (self.radius) as f64)
+        b.number("corner_radius", (self.radius_medium) as f64)
         b.word("align", "stretch")
         if !self.borderless {  // tab_view_template.bx:3
             b.open("HStack")  // tab_view_template.bx:4
-            b.number("height", (28) as f64)
-            b.word("background", "#e4e6ed")
+            b.number("height", (32) as f64)
+            b.word("background", self.track_off)
             b.word("align", "stretch")
             b.number("spacing", (2) as f64)
+            b.number("padding", (2) as f64)
             var _cortado_row_0: int = 0
             for index in 0..self.labels.len() {  // tab_view_template.bx:5
                 b.open("Label")  // tab_view_template.bx:6
                 b.key("{"tab-{index}"}")
                 b.text("{self.labels[index]}")
-                b.word("text_color", if self.selected == index { "#ffffffff" } else { self.ink })
-                b.word("background", if self.selected == index { self.accent } else { "#e4e6ed" })
-                b.number("corner_radius", (4) as f64)
+                b.word("text_color", self.ink)
+                b.word("background", if self.selected == index { self.background } else { "#00000000" })
+                b.number("corner_radius", (self.radius_small) as f64)
                 b.number("font_size", (self.font_size) as f64)
                 b.number("grow", (1) as f64)
+                b.number("alignment", (1) as f64)
                 b.close()
                 _cortado_row_0 += 1
             }

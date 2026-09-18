@@ -30,7 +30,6 @@ partial class DrawingPage {
         b.number("padding", (24) as f64)
         b.number("spacing", (14) as f64)
         b.word("align", "stretch")
-        b.word("background", "#f7f7f9")
         b.open("HStack")  // drawing_page.bx:2
         b.number("spacing", (12) as f64)
         b.word("align", "center")

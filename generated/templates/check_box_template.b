@@ -27,9 +27,9 @@ partial class CheckBoxTemplate {
         b.word("align", "center")
         b.open("Label")  // check_box_template.bx:2
         b.text("{self.mark}")
-        b.word("text_color", "#ffffffff")
+        b.word("text_color", self.on_accent)
         b.word("background", self.track)
-        b.number("corner_radius", (4) as f64)
+        b.number("corner_radius", (self.radius_small) as f64)
         b.number("width", (20) as f64)
         b.number("height", (20) as f64)
         b.close()
