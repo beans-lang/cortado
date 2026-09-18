@@ -5,7 +5,8 @@ import cortado.events
 import cortado.motion
 
 /// Owns the shared window's native frame subscription. It starts only while
-/// Beans has active animations, and never uses the legacy global ClockDesk.
+/// Beans has active animations or pending frame work. It does not use the
+/// legacy global ClockDesk.
 pub class FrameDriver {
     surface: host.Handle
     router: events.EventRouter

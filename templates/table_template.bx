@@ -7,13 +7,15 @@
             spacing={0} align="center"
             background={if row.selected { "#dce7ff" } else if row.index % 2 == 0 { "#ffffff" } else { "#f4f6fa" }}>
       $for column in 0..row.cells.len() {
-        $if row.editable[column] {
-          <TextField key={"editor-{row.index}-{column}-{self.revision}"} text={row.cells[column]}
+        $if row.index == self.editing_row && column == self.editing_column {
+          <TextField key={"editor-{row.index}-{column}"} text={row.cells[column]}
                      width={self.widths[column]} height={self.row_height}
-                     on:commit={fn(e: UiEvent) { self.commit(row.index, column, e.text) }} />
+                     on:commit={fn(e: UiEvent) { self.commit(row.index, column, e.text) }}
+                     on:key_down={fn(e: UiEvent) { self.editor_key(e) }} />
         } else {
           <Label key={"cell-{row.index}-{column}"} text={row.cells[column]}
-                 width={self.widths[column]} font_size={self.font_size} text_color={self.ink} />
+                 width={self.widths[column]} font_size={self.font_size} text_color={self.ink}
+                 background={if row.selected && column == self.selected_column { "#b8d0ff" } else { "#00000000" }} />
         }
       }
     </HStack>
@@ -30,6 +32,7 @@
 package templates
 import cortado.component
 import cortado.render
+import cortado.events
 import {view} from cortado.annotations
 
 @view
@@ -40,6 +43,13 @@ pub partial class TableTemplate extends component.TableControlTemplate {
     pub fn commit(row: int, column: int, text: string) {
         match self.actions {
             some(actions) => { actions.commit_cell(row, column, text).expect("commit a table cell") }
+            none => { panic("table template has no actions") }
+        }
+    }
+    pub fn editor_key(event: events.UiEvent) {
+        if event.key() != events.Key.escape { return }
+        match self.actions {
+            some(actions) => { actions.cancel_cell().expect("cancel a table cell") }
             none => { panic("table template has no actions") }
         }
     }

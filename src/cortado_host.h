@@ -72,7 +72,7 @@ typedef struct ctd_event {
     uint32_t modifiers;         /* CTD_MOD_* bits                             */
     uint64_t target;            /* the handle it happened to, 0 for app-wide  */
     int64_t  index;             /* row, tab, selected index, key code         */
-    int64_t  token;             /* echoes ctd_post / a dialog's request token */
+    int64_t  token;             /* post/dialog token; pointer down/up click count */
     double   x, y;              /* pointer position, in the target's space    */
     double   width, height;     /* new size, for resize events                */
     /* The control's text at the moment the event was raised, for the events

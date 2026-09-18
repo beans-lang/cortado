@@ -15,6 +15,7 @@ import {UiEvent} from cortado.events
 //               
 import cortado.component
 import cortado.render
+import cortado.events
 import {view} from cortado.annotations
 
 @view
@@ -25,6 +26,13 @@ pub partial class TableTemplate extends component.TableControlTemplate {
     pub fn commit(row: int, column: int, text: string) {
         match self.actions {
             some(actions) => { actions.commit_cell(row, column, text).expect("commit a table cell") }
+            none => { panic("table template has no actions") }
+        }
+    }
+    pub fn editor_key(event: events.UiEvent) {
+        if event.key() != events.Key.escape { return }
+        match self.actions {
+            some(actions) => { actions.cancel_cell().expect("cancel a table cell") }
             none => { panic("table template has no actions") }
         }
     }
@@ -57,21 +65,23 @@ partial class TableTemplate {
             b.word("background", if row.selected { "#dce7ff" } else if row.index % 2 == 0 { "#ffffff" } else { "#f4f6fa" })
             var _cortado_row_1: int = 0
             for column in 0..row.cells.len() {  // table_template.bx:9
-                if row.editable[column] {  // table_template.bx:10
+                if row.index == self.editing_row && column == self.editing_column {  // table_template.bx:10
                     b.open("TextField")  // table_template.bx:11
-                    b.key("{"editor-{row.index}-{column}-{self.revision}"}")
+                    b.key("{"editor-{row.index}-{column}"}")
                     b.text("{row.cells[column]}")
                     b.number("width", (self.widths[column]) as f64)
                     b.number("height", (self.row_height) as f64)
                     b.on("commit", fn(e: UiEvent) { self.commit(row.index, column, e.text) })
+                    b.on("key_down", fn(e: UiEvent) { self.editor_key(e) })
                     b.close()
-                } else {  // table_template.bx:14
-                    b.open("Label")  // table_template.bx:15
+                } else {  // table_template.bx:15
+                    b.open("Label")  // table_template.bx:16
                     b.key("{"cell-{row.index}-{column}"}")
                     b.text("{row.cells[column]}")
                     b.number("width", (self.widths[column]) as f64)
                     b.number("font_size", (self.font_size) as f64)
                     b.word("text_color", self.ink)
+                    b.word("background", if row.selected && column == self.selected_column { "#b8d0ff" } else { "#00000000" })
                     b.close()
                 }
                 _cortado_row_1 += 1
@@ -79,7 +89,7 @@ partial class TableTemplate {
             b.close()
             _cortado_row_0 += 1
         }
-        b.open("HStack")  // table_template.bx:21
+        b.open("HStack")  // table_template.bx:23
         b.number("y", (0) as f64)
         b.number("height", (self.header_height) as f64)
         b.number("width", (self.total_width) as f64)
@@ -87,8 +97,8 @@ partial class TableTemplate {
         b.word("align", "center")
         b.word("background", "#dce0ea")
         var _cortado_row_2: int = 0
-        for column in 0..self.titles.len() {  // table_template.bx:23
-            b.open("Label")  // table_template.bx:24
+        for column in 0..self.titles.len() {  // table_template.bx:25
+            b.open("Label")  // table_template.bx:26
             b.key("{"header-{column}"}")
             b.text("{self.titles[column]}")
             b.number("width", (self.widths[column]) as f64)

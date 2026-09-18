@@ -184,6 +184,11 @@ pub class SkiaRenderer implements paint.Renderer {
             unsafe { return ctd_skia_pixels(owner.raw, size, out, capacity) }
         })
     }
+    /// Present an independent readback. Reusing a persistent pixel buffer was
+    /// slower in the native presentation benchmark; keep the measured path.
+    pub fn present_to(canvas: widgets.Canvas) -> Result<bool> {
+        return canvas.present(self.snapshot()?)
+    }
     pub fn write_png(path: string) -> Result<bool> {
         let bytes: Bytes = Bytes.from(path)
         unsafe { return self.engine.checked(ctd_skia_png(self.engine.raw, host.HostText.pointer(bytes), bytes.len() as i32)) }

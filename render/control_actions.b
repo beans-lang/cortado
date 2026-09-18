@@ -16,6 +16,7 @@ pub class ControlActions {
     pub fn commit_cell(row: int, column: int, text: string) -> Result<bool> {
         return self.input.commit_cell(self.owner, row, column, text)
     }
+    pub fn cancel_cell() -> Result<bool> { return self.input.cancel_cell(self.owner) }
     pub fn dismiss() {
         match self.registry.get(self.owner) { some(object) => { object.dismiss_popup() } none => {} }
         if self.popups.owner() == self.owner { self.popups.dismiss() }

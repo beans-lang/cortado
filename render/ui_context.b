@@ -131,7 +131,7 @@ pub class UiContext {
         self.popup_value.validate()
         return self.input_value.dispatch(event)
     }
-    pub fn pointer(root: RenderObject, kind: events.EventKind, position: geometry.Point, button: int) -> Result<bool> {
+    pub fn pointer(root: RenderObject, kind: events.EventKind, position: geometry.Point, button: int, clicks: int = 1) -> Result<bool> {
         match self.popup_value.root() {
             some(popup) => {
                 if kind == events.EventKind.pointer_down && popup.hit_test(position) == none {
@@ -139,11 +139,11 @@ pub class UiContext {
                     self.input_value.clear_hover()
                     return ok(true)
                 }
-                return self.input_value.pointer(popup, kind, position, button)
+                return self.input_value.pointer(popup, kind, position, button, clicks)
             }
             none => {}
         }
-        return self.input_value.pointer(root, kind, position, button)
+        return self.input_value.pointer(root, kind, position, button, clicks)
     }
     pub fn key(root: RenderObject, kind: events.EventKind, key: events.Key, text: string, modifiers: int) -> Result<bool> {
         match self.popup_value.root() {

@@ -181,7 +181,7 @@ static void ctd_typed_by(WPARAM vk, char *out, size_t cap) {
 // ---------------------------------------------------------------- the raising
 
 static void ctd_raise_pointer(uint32_t kind, HWND window, LPARAM where,
-                              int32_t button) {
+                              int32_t button, int32_t clicks) {
     if (!g_sink || !ctd_listening(kind)) return;
     ctd_handle target = ctd_handle_for_window(window);
     if (!target) return;
@@ -190,6 +190,7 @@ static void ctd_raise_pointer(uint32_t kind, HWND window, LPARAM where,
     out.kind = kind;
     out.target = target;
     out.index = button;
+    out.token = clicks;
     out.modifiers = ctd_modifiers_now();
     // Already in the control's own space: Win32's mouse messages carry client
     // coordinates, which is the same space ctd_view_set_frame uses.
@@ -224,23 +225,38 @@ static LRESULT CALLBACK ctd_input_proc(HWND window, UINT message,
                                        UINT_PTR id, DWORD_PTR data) {
     (void)id; (void)data;
     switch (message) {
-        case WM_LBUTTONDOWN: ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_LEFT);   break;
-        case WM_RBUTTONDOWN: ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_RIGHT);  break;
-        case WM_MBUTTONDOWN: ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_MIDDLE); break;
-        case WM_LBUTTONUP:   ctd_raise_pointer(CTD_EV_POINTER_UP,   window, lparam, CTD_BTN_LEFT);   break;
-        case WM_RBUTTONUP:   ctd_raise_pointer(CTD_EV_POINTER_UP,   window, lparam, CTD_BTN_RIGHT);  break;
-        case WM_MBUTTONUP:   ctd_raise_pointer(CTD_EV_POINTER_UP,   window, lparam, CTD_BTN_MIDDLE); break;
+        case WM_LBUTTONDOWN: SetPropW(window, L"CortadoClickLeft", (HANDLE)1);
+            ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_LEFT, 1); break;
+        case WM_RBUTTONDOWN: SetPropW(window, L"CortadoClickRight", (HANDLE)1);
+            ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_RIGHT, 1); break;
+        case WM_MBUTTONDOWN: SetPropW(window, L"CortadoClickMiddle", (HANDLE)1);
+            ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_MIDDLE, 1); break;
+        case WM_LBUTTONDBLCLK: SetPropW(window, L"CortadoClickLeft", (HANDLE)2);
+            ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_LEFT, 2); break;
+        case WM_RBUTTONDBLCLK: SetPropW(window, L"CortadoClickRight", (HANDLE)2);
+            ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_RIGHT, 2); break;
+        case WM_MBUTTONDBLCLK: SetPropW(window, L"CortadoClickMiddle", (HANDLE)2);
+            ctd_raise_pointer(CTD_EV_POINTER_DOWN, window, lparam, CTD_BTN_MIDDLE, 2); break;
+        case WM_LBUTTONUP: ctd_raise_pointer(CTD_EV_POINTER_UP, window, lparam, CTD_BTN_LEFT,
+            (int32_t)(intptr_t)GetPropW(window, L"CortadoClickLeft"));
+            RemovePropW(window, L"CortadoClickLeft"); break;
+        case WM_RBUTTONUP: ctd_raise_pointer(CTD_EV_POINTER_UP, window, lparam, CTD_BTN_RIGHT,
+            (int32_t)(intptr_t)GetPropW(window, L"CortadoClickRight"));
+            RemovePropW(window, L"CortadoClickRight"); break;
+        case WM_MBUTTONUP: ctd_raise_pointer(CTD_EV_POINTER_UP, window, lparam, CTD_BTN_MIDDLE,
+            (int32_t)(intptr_t)GetPropW(window, L"CortadoClickMiddle"));
+            RemovePropW(window, L"CortadoClickMiddle"); break;
         case WM_MOUSEMOVE: {
             ctd_handle target = ctd_handle_for_window(window);
             if (target && ctd_slot_kind(target) == CTD_W_CANVAS && ctd_listening(CTD_EV_POINTER_MOVE)) {
                 TRACKMOUSEEVENT tracking = { sizeof tracking, TME_LEAVE, window, 0 };
                 TrackMouseEvent(&tracking);
             }
-            ctd_raise_pointer(CTD_EV_POINTER_MOVE, window, lparam, CTD_BTN_LEFT);
+            ctd_raise_pointer(CTD_EV_POINTER_MOVE, window, lparam, CTD_BTN_LEFT, 0);
             break;
         }
         case WM_MOUSELEAVE:
-            ctd_raise_pointer(CTD_EV_POINTER_MOVE, window, MAKELPARAM(0xffff, 0xffff), CTD_BTN_LEFT);
+            ctd_raise_pointer(CTD_EV_POINTER_MOVE, window, MAKELPARAM(0xffff, 0xffff), CTD_BTN_LEFT, 0);
             break;
         case WM_MOUSEWHEEL:
         case WM_MOUSEHWHEEL:
@@ -295,6 +311,9 @@ static LRESULT CALLBACK ctd_input_proc(HWND window, UINT message,
         case CTD_WM_AX_ACTION:
             return ctd_canvas_ax_action(window, wparam, lparam);
         case WM_NCDESTROY:
+            RemovePropW(window, L"CortadoClickLeft");
+            RemovePropW(window, L"CortadoClickRight");
+            RemovePropW(window, L"CortadoClickMiddle");
             ctd_canvas_ax_release(window);
             ctd_canvas_im_release(window);
             RemovePropW(window, CTD_HANDLE_PROP);

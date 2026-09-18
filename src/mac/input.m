@@ -176,6 +176,7 @@ static void ctd_raise_pointer(uint32_t kind, NSEvent *event, NSView *view,
     out.kind = kind;
     out.target = target;
     out.index = button;
+    out.token = kind == CTD_EV_POINTER_MOVE ? 0 : (int64_t)MAX(1, [event clickCount]);
     out.modifiers = ctd_modifiers_of([event modifierFlags]);
     out.x = local.x;
     out.y = local.y;

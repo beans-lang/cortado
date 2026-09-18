@@ -87,6 +87,17 @@ pub class InputManager {
             }
         }
     }
+    pub fn cancel_cell(handle: u64) -> Result<bool> {
+        match self.registry_value.get(handle) {
+            none => { return err("cell edit targets a stale render object", "stale") }
+            some(object) => {
+                if !self.focus_value.interactive(object) { return ok(false) }
+                if !object.on_cell_cancel()? { return ok(false) }
+                if object.is_focusable() { self.focus_value.focus(handle)? }
+                return ok(true)
+            }
+        }
+    }
     pub fn key(root: RenderObject, kind: events.EventKind, key: events.Key, text: string, modifiers: int) -> Result<bool> {
         if !root.belongs_to(self.invalidation_value) { return err("input root belongs to another context", "bad_owner") }
         self.focus_value.validate()
@@ -111,7 +122,7 @@ pub class InputManager {
             }
         }
     }
-    pub fn pointer(root: RenderObject, kind: events.EventKind, position: geometry.Point, button: int) -> Result<bool> {
+    pub fn pointer(root: RenderObject, kind: events.EventKind, position: geometry.Point, button: int, clicks: int = 1) -> Result<bool> {
         if !root.belongs_to(self.invalidation_value) { return err("input root belongs to another context", "bad_owner") }
         self.hover_value.update(root, position)
         var target: Option<RenderObject> = self.registry_value.get(self.captured_handle)
@@ -139,7 +150,7 @@ pub class InputManager {
                         none => {}
                     }
                 }
-                event.position = local; event.index = button
+                event.position = local; event.index = button; event.token = clicks
                 if kind == events.EventKind.pointer_up { self.captured_handle = 0 }
                 return self.dispatch(event)
             }

@@ -20,6 +20,7 @@ pub class UiEvent {
     pub index: int = 0
     /// Echoes the word passed to `Application.post`, for `post` events. For a
     /// table cell's `text_commit`, this is the column.
+    /// For pointer down/up, this is the native click count (use `click_count`).
     pub token: int = 0
     pub position: geometry.Point = geometry.Point.zero()
     pub size: geometry.Size = geometry.Size.zero()
@@ -78,6 +79,10 @@ pub class UiEvent {
     /// finger has no buttons.
     pub fn button() -> PointerButton {
         return PointerButton.of(self.index)
+    }
+    pub fn click_count() -> int {
+        if self.kind != EventKind.pointer_down && self.kind != EventKind.pointer_up { return 0 }
+        return if self.token > 0 { self.token } else { 1 }
     }
 
     /// The line the event goldens carry. Only the fields a given kind actually

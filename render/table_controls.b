@@ -18,7 +18,12 @@ pub class TableRender extends ScrollRender {
     widths: List<f64> = []
     rows_value: int = 0
     selected_value: int = -1
+    selected_column_value: int = -1
     revision: int = 0
+    data_revision: int = 0
+    editing_row_value: int = -1
+    editing_column_value: int = -1
+    focus_editor: bool = false
     tracking: bool = false
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) {
         super.init(renderer, theme, dirty)
@@ -40,7 +45,13 @@ pub class TableRender extends ScrollRender {
     pub fn row_count() -> int { return self.rows_value }
     pub fn column_count() -> int { return self.titles.len() }
     pub fn selected() -> int { return self.selected_value }
+    pub fn selected_column() -> int { return self.selected_column_value }
     pub fn version() -> int { return self.revision }
+    pub fn data_version() -> int { return self.data_revision }
+    pub fn editing_row() -> int { return self.editing_row_value }
+    pub fn editing_column() -> int { return self.editing_column_value }
+    pub override fn visual_focus_requested() -> bool { return self.focus_editor }
+    pub override fn acknowledge_visual_focus() { self.focus_editor = false }
     pub fn has_source() -> bool { return self.source != none }
     pub fn has_edit_policy() -> bool { return self.edit_policy != none }
     pub fn scroll_offset() -> f64 { return -self.child_offset().y }
@@ -68,10 +79,13 @@ pub class TableRender extends ScrollRender {
     pub fn set_columns(count: int) -> Result<bool> {
         self.demand_alive()?
         if count < 0 || count > 64 { return err("invalid table column count", "out_of_range") }
+        self.clear_editor()
         self.titles = []
         self.widths = []
         for index: int in 0..count { self.titles.push(""); self.widths.push(120.0) }
+        if self.selected_column_value >= count { self.selected_column_value = -1 }
         self.revision += 1
+        self.data_revision += 1
         self.update_content()?
         self.dirty.layout(); self.dirty.semantics()
         return ok(true)
@@ -158,7 +172,9 @@ pub class TableRender extends ScrollRender {
     fn apply_rows(count: int) -> Result<bool> {
         self.rows_value = count
         if self.selected_value >= count { self.selected_value = -1 }
+        if self.editing_row_value >= count { self.clear_editor() }
         self.revision += 1
+        self.data_revision += 1
         self.update_content()?
         self.dirty.paint(); self.dirty.semantics()
         return ok(true)
@@ -179,13 +195,16 @@ pub class TableRender extends ScrollRender {
         self.demand_alive()?
         self.edit_policy = some(policy)
         self.revision += 1
+        self.data_revision += 1
         self.dirty.paint(); self.dirty.semantics()
         return ok(true)
     }
     pub fn clear_editable() -> Result<bool> {
         self.demand_alive()?
         self.edit_policy = none
+        self.clear_editor()
         self.revision += 1
+        self.data_revision += 1
         self.dirty.paint(); self.dirty.semantics()
         return ok(true)
     }
@@ -198,28 +217,97 @@ pub class TableRender extends ScrollRender {
     }
     pub override fn on_cell_commit(row: int, column: int, text: string) -> Result<bool> {
         if !self.editable(row, column)? {
-            // Rebuild an editor whose policy changed during an edit.
+            self.clear_editor()
             self.revision += 1
             self.dirty.paint(); self.dirty.semantics()
             return ok(false)
         }
-        // The source owns the value. The event handler may save `text`; a
-        // refresh reads the source again and reverts an unsaved proposal.
+        self.clear_editor()
+        // The source owns the value. The event handler may save `text`;
+        // rereading it after the event reverts an unsaved proposal.
+        self.revision += 1
+        self.data_revision += 1
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    pub override fn on_cell_cancel() -> Result<bool> { return self.cancel_edit() }
+    pub fn cancel_edit() -> Result<bool> {
+        self.demand_alive()?
+        if self.editing_row_value < 0 { return ok(false) }
+        self.clear_editor()
         self.revision += 1
         self.dirty.paint(); self.dirty.semantics()
         return ok(true)
     }
+    fn clear_editor() {
+        self.editing_row_value = -1
+        self.editing_column_value = -1
+        self.focus_editor = false
+    }
+    pub fn begin_edit(row: int, column: int) -> Result<bool> {
+        self.demand_alive()?
+        if !self.editable(row, column)? { return ok(false) }
+        if self.editing_row_value == row && self.editing_column_value == column { return ok(false) }
+        self.editing_row_value = row
+        self.editing_column_value = column
+        self.selected_column_value = column
+        self.focus_editor = true
+        self.revision += 1
+        self.ensure_visible(row)?
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    fn cancel_editor_if_outside() {
+        if self.editing_row_value < 0 { return }
+        let top: f64 = self.editing_row_value as f64 * self.row_height()
+        let bottom: f64 = top + self.row_height()
+        let view_top: f64 = self.scroll_offset()
+        let view_bottom: f64 = view_top + self.bounds.height - self.header_height()
+        var left: f64 = 0.0
+        for column: int in 0..self.editing_column_value { left += self.widths[column] }
+        let right: f64 = left + self.widths[self.editing_column_value]
+        let view_left: f64 = self.scroll_x()
+        let view_right: f64 = view_left + self.bounds.width
+        if bottom <= view_top || top >= view_bottom || right <= view_left || left >= view_right {
+            self.cancel_edit()
+        }
+    }
+    pub override fn scroll_by(dx: f64, dy: f64) -> Result<bool> {
+        let changed: bool = super.scroll_by(dx, dy)?
+        if changed { self.cancel_editor_if_outside() }
+        return ok(changed)
+    }
     pub override fn on_dispose() {
         self.source = none
         self.edit_policy = none
+        self.clear_editor()
     }
     pub fn select(row: int) -> Result<bool> {
         self.demand_alive()?
         if row < -1 || row >= self.rows_value { return err("table selection is outside the rows", "out_of_range") }
+        if self.editing_row_value >= 0 && self.editing_row_value != row { self.cancel_edit()? }
         if self.selected_value == row { return self.ensure_visible(row) }
         self.selected_value = row
         self.revision += 1
         self.ensure_visible(row)?
+        self.cancel_editor_if_outside()
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    pub fn select_column(column: int) -> Result<bool> {
+        self.demand_alive()?
+        if column < 0 || column >= self.titles.len() { return err("table column is outside the list", "out_of_range") }
+        if self.selected_column_value == column { return ok(false) }
+        self.selected_column_value = column
+        var left: f64 = 0.0
+        for index: int in 0..column { left += self.widths[index] }
+        let right: f64 = left + self.widths[column]
+        var next_x: f64 = self.scroll_x()
+        if left < next_x { next_x = left }
+        else if right > next_x + self.bounds.width { next_x = right - self.bounds.width }
+        self.scroll_to(geometry.Point.at(next_x, self.scroll_offset()))?
+        self.cancel_editor_if_outside()
+        self.revision += 1
         self.dirty.paint(); self.dirty.semantics()
         return ok(true)
     }
@@ -248,7 +336,10 @@ pub class TableRender extends ScrollRender {
         return ok(true)
     }
     fn select_as_user(row: int) -> Option<events.UiEvent> {
-        if row == self.selected_value { return none }
+        if row == self.selected_value {
+            if self.editing_row_value >= 0 && self.editing_row_value != row { self.cancel_edit() }
+            return none
+        }
         match self.select(row) {
             ok(changed) => {
                 if !changed { return none }
@@ -258,6 +349,15 @@ pub class TableRender extends ScrollRender {
             }
             err(_) => { return none }
         }
+    }
+    fn column_at(x: f64) -> int {
+        var left: f64 = -self.scroll_x()
+        for column: int in 0..self.widths.len() {
+            let right: f64 = left + self.widths[column]
+            if x >= left && x < right { return column }
+            left = right
+        }
+        return -1
     }
     pub override fn handle_event(event: events.UiEvent) -> Option<events.UiEvent> {
         if !self.enabled || self.hidden || !self.alive { return none }
@@ -269,12 +369,48 @@ pub class TableRender extends ScrollRender {
                geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height).contains(event.position) &&
                event.position.y >= self.header_height() {
                 let row: int = ((event.position.y + self.scroll_offset() - self.header_height()) / self.row_height()) as int
-                return self.select_as_user(row)
+                let column: int = self.column_at(event.position.x)
+                if column >= 0 { self.select_column(column) }
+                let selection: Option<events.UiEvent> = self.select_as_user(row)
+                if event.click_count() >= 2 {
+                    if column >= 0 { self.begin_edit(row, column) }
+                }
+                return selection
             }
         }
         if event.kind == events.EventKind.key_down && self.rows_value > 0 {
             if event.key() == events.Key.down { return self.select_as_user(if self.selected_value + 1 < self.rows_value { self.selected_value + 1 } else { self.selected_value }) }
             if event.key() == events.Key.up { return self.select_as_user(if self.selected_value > 0 { self.selected_value - 1 } else { 0 }) }
+            if event.key() == events.Key.right && self.titles.len() > 0 {
+                let column: int = if self.selected_column_value < 0 { 0 }
+                                    else if self.selected_column_value + 1 < self.titles.len() { self.selected_column_value + 1 }
+                                    else { self.selected_column_value }
+                self.select_column(column)
+                return none
+            }
+            if event.key() == events.Key.left && self.titles.len() > 0 {
+                let column: int = if self.selected_column_value < 0 { self.titles.len() - 1 }
+                                    else if self.selected_column_value > 0 { self.selected_column_value - 1 }
+                                    else { 0 }
+                self.select_column(column)
+                return none
+            }
+            if event.key() == events.Key.ret {
+                let row: int = if self.selected_value >= 0 { self.selected_value } else { 0 }
+                if self.selected_column_value >= 0 {
+                    match self.editable(row, self.selected_column_value) {
+                        ok(yes) => { if yes { self.begin_edit(row, self.selected_column_value); return self.select_as_user(row) } }
+                        err(_) => {}
+                    }
+                } else {
+                    for column: int in 0..self.titles.len() {
+                        match self.editable(row, column) {
+                            ok(yes) => { if yes { self.begin_edit(row, column); return self.select_as_user(row) } }
+                            err(_) => {}
+                        }
+                    }
+                }
+            }
         }
         return none
     }

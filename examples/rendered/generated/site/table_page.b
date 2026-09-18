@@ -75,7 +75,7 @@ partial class TablePage {
         b.word("text_color", "#555b6b")
         b.close()
         b.open("Label")  // table_page.bx:4
-        b.text("Edit a Cup cell and press Return. Order cells are read-only.")
+        b.text("Double-click a Cup cell, or select a row, choose a column with Left/Right, and press Return. Escape cancels.")
         b.word("text_color", "#555b6b")
         b.close()
         b.open("Table")  // table_page.bx:5

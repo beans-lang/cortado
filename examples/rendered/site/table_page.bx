@@ -1,7 +1,7 @@
 <VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
   <Label text="Virtual table" font_size={23} />
   <Label text="10,000 rows. Scroll to see cells load only when visible." text_color="#555b6b" />
-  <Label text="Edit a Cup cell and press Return. Order cells are read-only." text_color="#555b6b" />
+  <Label text="Double-click a Cup cell, or select a row, choose a column with Left/Right, and press Return. Escape cancels." text_color="#555b6b" />
   <Table key={"orders"} columns={self.titles} column_widths={self.widths}
          source={self.rows} editable_when={self.edit_policy} height={340}
          on:select={fn(e: UiEvent) { self.choose_row(e.index) }}

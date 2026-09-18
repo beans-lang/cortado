@@ -84,22 +84,59 @@ pub class Snapshot {
     /// another package fills one without being given one.
     pub static fn read(attempt: string,
                        probe: fn(RawPtr<f64>, RawPtr<i8>, i32) -> i32) -> Result<Snapshot> {
+        let shot: Snapshot = new Snapshot(0, 0, 0)
+        shot.recapture(attempt, probe)?
+        return ok(shot)
+    }
+
+    /// Capture into this snapshot, reusing its pixel buffer when the byte
+    /// count is unchanged. A failed write to a reused buffer invalidates its
+    /// dimensions, so callers cannot read a partly written frame as complete.
+    pub fn recapture(attempt: string,
+                     probe: fn(RawPtr<f64>, RawPtr<i8>, i32) -> i32) -> Result<bool> {
         let scratch: host.HostScratch = host.HostScratch.instance
         let needed: int = probe(scratch.reals, RawPtr.null(), 0) as int
         host.check(needed, "measure {attempt}")?
-        let width: int = scratch.real(0) as int
-        let height: int = scratch.real(1) as int
-        var shot: Snapshot = new Snapshot(width, height, needed)
-        if needed == 0 {
-            return ok(shot)
+        let raw_width: f64 = scratch.real(0)
+        let raw_height: f64 = scratch.real(1)
+        if !(raw_width >= 0.0 && raw_width <= 16384.0 &&
+             raw_height >= 0.0 && raw_height <= 16384.0) {
+            return err("could not {attempt}: invalid image dimensions", "renderer_error")
         }
-        let wrote: int = probe(scratch.reals, shot.buffer(), needed as i32) as int
+        let width: int = raw_width as int
+        let height: int = raw_height as int
+        if raw_width != width as f64 || raw_height != height as f64 ||
+           needed != width * height * 4 {
+            return err("could not {attempt}: pixel count does not match dimensions", "renderer_error")
+        }
+        if needed == 0 {
+            self.width = width; self.height = height
+            self.pixels = Bytes.filled(0, 0)
+            return ok(true)
+        }
+        if self.pixels.len() == needed {
+            self.width = 0; self.height = 0
+            let wrote: int = probe(scratch.reals, self.buffer(), needed as i32) as int
+            host.check(wrote, attempt)?
+            if wrote != needed || scratch.real(0) != raw_width || scratch.real(1) != raw_height {
+                return err("could not {attempt}: it changed size while it was being read",
+                           "host_raced")
+            }
+            self.width = width; self.height = height
+            return ok(true)
+        }
+        var fresh: Bytes = Bytes.filled(needed, 0)
+        var buffer: RawPtr<i8> = RawPtr.null()
+        unsafe { buffer = RawPtr.from_address(fresh.as_ptr().address()) }
+        let wrote: int = probe(scratch.reals, buffer, needed as i32) as int
         host.check(wrote, attempt)?
-        if wrote != needed {
+        if wrote != needed || scratch.real(0) != raw_width || scratch.real(1) != raw_height {
             return err("could not {attempt}: it changed size while it was being read",
                        "host_raced")
         }
-        return ok(shot)
+        self.pixels = move fresh
+        self.width = width; self.height = height
+        return ok(true)
     }
 
     /// The pixel at `x`, `y`, with the top-left at 0, 0.

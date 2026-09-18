@@ -50,7 +50,29 @@ class TemplateInstance {
             self.view.decorate_popup(self.root.render_object()?)?
             self.context.popups().show(self.owner, self.root.render_object()?)?
         }
+        if !self.popup && self.owner.visual_focus_requested() {
+            match self.first_focusable(self.root.render_object()?) {
+                some(part) => {
+                    self.context.focus(part.handle())?
+                    self.owner.acknowledge_visual_focus()
+                }
+                none => {}
+            }
+        }
         return ok(true)
+    }
+    fn first_focusable(root: render.RenderObject) -> Option<render.RenderObject> {
+        if !self.context.interactive(root) { return none }
+        if root.is_focusable() { return some(root) }
+        for index: int in 0..root.child_count() {
+            match root.child_at(index) {
+                some(child) => {
+                    match self.first_focusable(child) { some(found) => { return some(found) } none => {} }
+                }
+                none => {}
+            }
+        }
+        return none
     }
     fn close() {
         if self.closed { return }

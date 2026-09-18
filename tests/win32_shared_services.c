@@ -29,6 +29,17 @@ int main(void) {
     SendMessageW(hwnd, WM_MOUSELEAVE, 0, 0);
     assert(last.kind == CTD_EV_POINTER_MOVE && last.target == canvas &&
            last.x == -1.0 && last.y == -1.0);
+    assert(ctd_listen(CTD_EV_POINTER_DOWN, 1) == CTD_OK);
+    assert(ctd_listen(CTD_EV_POINTER_UP, 1) == CTD_OK);
+    assert((GetClassLongPtrW(hwnd, GCL_STYLE) & CS_DBLCLKS) != 0);
+    SendMessageW(hwnd, WM_LBUTTONDBLCLK, MK_LBUTTON, MAKELPARAM(10, 11));
+    assert(last.kind == CTD_EV_POINTER_DOWN && last.token == 2);
+    SendMessageW(hwnd, WM_LBUTTONUP, 0, MAKELPARAM(10, 11));
+    assert(last.kind == CTD_EV_POINTER_UP && last.token == 2);
+    SendMessageW(hwnd, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(10, 11));
+    assert(last.kind == CTD_EV_POINTER_DOWN && last.token == 1);
+    SendMessageW(hwnd, WM_LBUTTONUP, 0, MAKELPARAM(10, 11));
+    assert(last.kind == CTD_EV_POINTER_UP && last.token == 1);
     assert(ctd_canvas_text_state(canvas, 1, "ab", 2, 1, 1, 2, 3, 1, 12) == CTD_OK);
     SendMessageW(hwnd, WM_CHAR, L'x', 0);
     assert(last.kind == CTD_EV_TEXT_INPUT && last.index == -1 && last.token == -1);

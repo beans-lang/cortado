@@ -1,0 +1,5 @@
+module table_benchmark
+kind application
+require path "../../../.."
+require path "../../../../skia"
+require path "../.."

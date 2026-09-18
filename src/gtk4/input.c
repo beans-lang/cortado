@@ -168,7 +168,7 @@ static GdkModifierType ctd_state_of(uint32_t bits) {
 
 static void ctd_raise_pointer(uint32_t kind, GtkWidget *widget,
                               double x, double y, int32_t button,
-                              uint32_t modifiers) {
+                              uint32_t modifiers, int32_t clicks) {
     if (!g_sink || !ctd_listening(kind)) return;
     ctd_handle target = ctd_handle_for_widget(widget);
     if (!target) return;
@@ -177,6 +177,7 @@ static void ctd_raise_pointer(uint32_t kind, GtkWidget *widget,
     out.kind = kind;
     out.target = target;
     out.index = button;
+    out.token = clicks;
     out.modifiers = modifiers;
     out.x = x;
     out.y = y;
@@ -226,20 +227,18 @@ static int32_t ctd_button_of(GtkGestureClick *gesture) {
 
 static void ctd_on_pressed(GtkGestureClick *gesture, int presses,
                            double x, double y, gpointer data) {
-    (void)presses;
     ctd_raise_pointer(CTD_EV_POINTER_DOWN, GTK_WIDGET(data), x, y,
                       ctd_button_of(gesture),
                       ctd_modifiers_of(gtk_event_controller_get_current_event_state(
-                          GTK_EVENT_CONTROLLER(gesture))));
+                          GTK_EVENT_CONTROLLER(gesture))), MAX(1, presses));
 }
 
 static void ctd_on_released(GtkGestureClick *gesture, int presses,
                             double x, double y, gpointer data) {
-    (void)presses;
     ctd_raise_pointer(CTD_EV_POINTER_UP, GTK_WIDGET(data), x, y,
                       ctd_button_of(gesture),
                       ctd_modifiers_of(gtk_event_controller_get_current_event_state(
-                          GTK_EVENT_CONTROLLER(gesture))));
+                          GTK_EVENT_CONTROLLER(gesture))), MAX(1, presses));
 }
 
 static void ctd_on_motion(GtkEventControllerMotion *motion,
@@ -248,12 +247,12 @@ static void ctd_on_motion(GtkEventControllerMotion *motion,
     if (point) { point[0] = x; point[1] = y; }
     ctd_raise_pointer(CTD_EV_POINTER_MOVE, GTK_WIDGET(data), x, y, CTD_BTN_LEFT,
                       ctd_modifiers_of(gtk_event_controller_get_current_event_state(
-                          GTK_EVENT_CONTROLLER(motion))));
+                          GTK_EVENT_CONTROLLER(motion))), 0);
 }
 
 static void ctd_on_motion_leave(GtkEventControllerMotion *motion, gpointer data) {
     (void)motion;
-    ctd_raise_pointer(CTD_EV_POINTER_MOVE, GTK_WIDGET(data), -1.0, -1.0, CTD_BTN_LEFT, 0);
+    ctd_raise_pointer(CTD_EV_POINTER_MOVE, GTK_WIDGET(data), -1.0, -1.0, CTD_BTN_LEFT, 0, 0);
 }
 
 static gboolean ctd_on_scroll(GtkEventControllerScroll *controller,

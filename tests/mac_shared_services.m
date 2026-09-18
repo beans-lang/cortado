@@ -20,8 +20,12 @@ int main(void) {
         ctd_listen(CTD_EV_COMPOSITION_UPDATE, 1);
         ctd_listen(CTD_EV_SEMANTICS_ACTION, 1);
         ctd_listen(CTD_EV_POINTER_MOVE, 1);
+        ctd_listen(CTD_EV_POINTER_DOWN, 1);
+        ctd_listen(CTD_EV_POINTER_UP, 1);
         ctd_handle canvas_id = ctd_widget_new(CTD_W_CANVAS);
         assert(canvas_id);
+        ctd_handle surface_id = ctd_surface_new(300, 120);
+        assert(surface_id && ctd_surface_set_root(surface_id, canvas_id) == CTD_OK);
         CortadoSharedCanvas *canvas = (CortadoSharedCanvas *)ctd_resolve(canvas_id);
         assert([canvas isKindOfClass:[CortadoSharedCanvas class]]);
         [canvas updateTrackingAreas];
@@ -33,6 +37,17 @@ int main(void) {
         [canvas mouseExited:exit_event];
         assert(last.kind == CTD_EV_POINTER_MOVE && last.target == canvas_id &&
                last.x == -1.0 && last.y == -1.0);
+        NSWindow *window = (NSWindow *)ctd_resolve(surface_id);
+        NSEvent *double_down = [NSEvent mouseEventWithType:NSEventTypeLeftMouseDown
+            location:NSMakePoint(10, 10) modifierFlags:0 timestamp:1
+            windowNumber:[window windowNumber] context:nil eventNumber:2 clickCount:2 pressure:1.0];
+        [NSApp sendEvent:double_down];
+        assert(last.kind == CTD_EV_POINTER_DOWN && last.target == canvas_id && last.token == 2);
+        NSEvent *double_up = [NSEvent mouseEventWithType:NSEventTypeLeftMouseUp
+            location:NSMakePoint(10, 10) modifierFlags:0 timestamp:1
+            windowNumber:[window windowNumber] context:nil eventNumber:3 clickCount:2 pressure:0.0];
+        [NSApp sendEvent:double_up];
+        assert(last.kind == CTD_EV_POINTER_UP && last.target == canvas_id && last.token == 2);
         assert(ctd_canvas_text_state(canvas_id, 1, "aé", 3, 1, 3, 10, 20, 1, 16) == CTD_OK);
         assert(NSEqualRanges([canvas selectedRange], NSMakeRange(1, 1)));
         [canvas insertText:@"Ω" replacementRange:NSMakeRange(1, 1)];
@@ -89,6 +104,7 @@ int main(void) {
         assert(!retained.ctdSecureInput);
         assert(ctd_widget_release(label) == CTD_OK);
         assert(ctd_widget_release(canvas_id) == CTD_OK);
+        assert(ctd_surface_close(surface_id) == CTD_OK);
         assert(!retained.ctdSecureInput);
         [retained release];
         assert(ctd_canvas_text_state(canvas_id, 1, "", 0, 0, 0, 0, 0, 1, 1) == CTD_ERR_STALE);

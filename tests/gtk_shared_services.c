@@ -23,6 +23,14 @@ int main(void) {
     g_signal_emit_by_name(motion, "leave");
     assert(last.kind == CTD_EV_POINTER_MOVE && last.target == canvas &&
            last.x == -1.0 && last.y == -1.0);
+    assert(ctd_listen(CTD_EV_POINTER_DOWN, 1) == CTD_OK);
+    assert(ctd_listen(CTD_EV_POINTER_UP, 1) == CTD_OK);
+    GtkGesture *click = g_object_get_data(G_OBJECT(widget), "ctd-click");
+    assert(click);
+    g_signal_emit_by_name(click, "pressed", 2, 10.0, 11.0);
+    assert(last.kind == CTD_EV_POINTER_DOWN && last.token == 2);
+    g_signal_emit_by_name(click, "released", 2, 10.0, 11.0);
+    assert(last.kind == CTD_EV_POINTER_UP && last.token == 2);
     received = 0;
     assert(ctd_listen(CTD_EV_TEXT_INPUT, 1) == CTD_OK);
     assert(ctd_canvas_text_state(canvas, 1, "ab", 2, 1, 1, 2, 3, 1, 12) == CTD_OK);

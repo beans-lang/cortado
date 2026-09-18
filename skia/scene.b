@@ -87,7 +87,8 @@ pub class Scene {
         self.context_value.invalidation().paint()
         return self.refresh()
     }
-    pub fn refresh() -> Result<bool> {
+    /// Settle retained geometry before input hit testing, without painting.
+    pub fn prepare_input() -> Result<bool> {
         if self.closed { return err("scene is closed", "stale") }
         self.mount.refresh_if_needed()?
         if self.theme_version != self.context_value.theme().version() ||
@@ -97,6 +98,11 @@ pub class Scene {
         }
         self.context_value.validate_input()
         self.templates.refresh(self.root_value)?
+        self.layout_version = self.context_value.invalidation().layout_version()
+        return ok(true)
+    }
+    pub fn refresh() -> Result<bool> {
+        self.prepare_input()?
         if self.renderer_revision != self.renderer_value.revision() { self.context_value.invalidation().paint() }
         let before: Backend = self.renderer_value.backend()
         var painted: bool = false
@@ -131,8 +137,24 @@ pub class Scene {
             }
         }
     }
-    pub fn pointer(kind: events.EventKind, point: geometry.Point, button: int = 1) -> Result<bool> {
-        self.context_value.pointer(self.root_value.render_object()?, kind, point, button)?
+    /// Present a frame, recovering once if GPU readback falls back to software.
+    pub fn present_to(canvas: widgets.Canvas) -> Result<bool> {
+        if self.closed { return err("scene is closed", "stale") }
+        let before: Backend = self.renderer_value.backend()
+        match self.renderer_value.present_to(canvas) {
+            ok(done) => { return ok(done) }
+            err(problem) => {
+                if before == Backend.software || self.renderer_value.backend() != Backend.software {
+                    return err(problem.msg, problem.kind)
+                }
+                self.context_value.invalidation().paint()
+                self.refresh()?
+                return self.renderer_value.present_to(canvas)
+            }
+        }
+    }
+    pub fn pointer(kind: events.EventKind, point: geometry.Point, button: int = 1, clicks: int = 1) -> Result<bool> {
+        self.context_value.pointer(self.root_value.render_object()?, kind, point, button, clicks)?
         return self.refresh()
     }
     pub fn key(kind: events.EventKind, key: events.Key, text: string = "", modifiers: int = 0) -> Result<bool> {
@@ -140,8 +162,13 @@ pub class Scene {
         return self.refresh()
     }
     pub fn scroll(point: geometry.Point, dx: f64, dy: f64) -> Result<bool> {
-        self.context_value.scroll(self.root_value.render_object()?, point, dx, dy)?
+        self.apply_scroll(point, dx, dy)?
         return self.refresh()
+    }
+    /// Apply queued wheel input without drawing; the host draws at its next frame.
+    pub fn apply_scroll(point: geometry.Point, dx: f64, dy: f64) -> Result<bool> {
+        if self.closed { return err("scene is closed", "stale") }
+        return self.context_value.scroll(self.root_value.render_object()?, point, dx, dy)
     }
     pub fn text_input(kind: events.EventKind, text: string, index: int = -1, token: int = -1) -> Result<bool> {
         match self.focused_object() {

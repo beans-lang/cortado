@@ -14,10 +14,10 @@ class SharedTableRows implements render.TableData {
 /// A table.
 ///
 /// `NSTableView`, a `GtkColumnView`, a virtual `SysListView32`, a
-/// `UITableView` — and the one control cortado does not build out of widgets.
-/// It holds no rows: it is given a `TableRows` and asks it for the cells it is
-/// about to draw, which is what every native toolkit has done for thirty years
-/// and the only way a hundred thousand rows costs what thirty rows cost.
+/// `UITableView` on the native backend. The shared backend uses `.bx` labels
+/// for visible cells and one text field while editing. It receives a `TableRows`
+/// source and asks only for visible rows plus overscan. Cached values stay valid
+/// until the source is reloaded.
 ///
 /// ```beans
 /// var table: widgets.Table = widgets.Table.of(["Drink", "Price"])?
@@ -139,9 +139,10 @@ pub class Table extends Widget {
     /// Allow editing only for cells whose policy returns true.
     /// The policy must answer immediately. A committed edit raises
     /// `text_commit` on this table: `index` is the row, `token` the column,
-    /// and `text` the proposed value. Save it in your source and call
-    /// `reload()`; if the source does not change, the cell reverts.
-    /// Tables are read-only until this is called.
+    /// and `text` the proposed value. Save it in your source; call
+    /// `reload()` if the row count changes. An unsaved cell reverts.
+    /// Tables are read-only until this is called. The shared table opens one
+    /// editor on double-click or Return and closes it on Escape.
     pub fn set_editable_when(policy: fn(int, int) -> bool) -> Result<bool> {
         if self.is_rendered() {
             let table: render.TableRender = (self.render_object()? as? render.TableRender).expect("shared table")
@@ -169,7 +170,7 @@ pub class Table extends Widget {
         return ok(true)
     }
 
-    /// Simulate a user committing one cell, through the native data source.
+    /// Simulate a user committing one cell through the table action path.
     /// Useful in tests that run without a visible window.
     pub fn edit_as_user(row: int, column: int, text: string) -> Result<bool> {
         if self.is_rendered() {

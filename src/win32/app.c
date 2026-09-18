@@ -457,6 +457,8 @@ ctd_status ctd_init(uint32_t want_abi) {
     WNDCLASSEXW view;
     memset(&view, 0, sizeof view);
     view.cbSize = sizeof view;
+    // Canvas double-clicks must arrive as WM_*BUTTONDBLCLK for Table editing.
+    view.style = CS_DBLCLKS;
     view.lpfnWndProc = ctd_view_proc;
     view.hInstance = GetModuleHandleW(NULL);
     view.hCursor = LoadCursorW(NULL, IDC_ARROW);

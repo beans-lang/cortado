@@ -61,6 +61,12 @@ pub abstract class RenderObject {
     pub fn animating() -> bool { return false }
     pub fn advance(seconds: f64) -> Result<bool> { return ok(false) }
     pub fn interactive_visual() -> bool { return false }
+    pub fn visual_focus_requested() -> bool { return false }
+    pub fn acknowledge_visual_focus() {}
+    pub fn on_cell_cancel() -> Result<bool> {
+        self.demand_alive()?
+        return err("this control does not accept a cell edit", "unsupported")
+    }
     pub fn visual_offset() -> geometry.Point { return geometry.Point.zero() }
     pub fn template_size() -> geometry.Size { return self.bounds.size() }
     pub fn visual() -> Option<RenderObject> { return self.template_visual }
