@@ -23,16 +23,18 @@ pub partial class LevelIndicatorTemplate extends component.RangeControlTemplate 
 partial class LevelIndicatorTemplate {
     pub override fn render(b: Builder) {
         b.open("HStack")  // level_indicator_template.bx:1
-        b.word("background", self.track_off)
-        b.number("corner_radius", (self.capsule) as f64)
-        b.word("align", "stretch")
+        b.word("align", "center")
         b.open("Box")  // level_indicator_template.bx:2
         b.number("width_percent", (self.percent) as f64)
+        b.number("height", (5) as f64)
         b.word("background", self.accent)
-        b.number("corner_radius", (self.capsule) as f64)
+        b.number("corner_radius", (self.radius_small) as f64)
         b.close()
         b.open("Box")  // level_indicator_template.bx:3
         b.number("grow", (1) as f64)
+        b.number("height", (5) as f64)
+        b.word("background", self.track_off)
+        b.number("corner_radius", (self.radius_small) as f64)
         b.close()
         b.close()
     }

@@ -63,17 +63,12 @@ pub class ButtonRender extends RenderObject {
     }
     pub override fn role() -> string { return "button" }
     pub override fn needs_template() -> bool { return true }
-    /// An untinted button carries the accent on its label, as .bordered does.
-    pub override fn text_color() -> int {
-        if self.foreground >= 0 { return self.foreground }
-        return self.theme.accent()
-    }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
         self.demand_alive()?
         let paragraph: paint.Paragraph = self.renderer.paragraph(self.words, self.font_size(), -1.0, self.text_color())?
         let height: f64 = self.theme.control_height()
-        let grown: f64 = paragraph.size().height + 16.0
-        return ok(geometry.Size.of(paragraph.size().width + 40.0, if grown > height { grown } else { height }))
+        let grown: f64 = paragraph.size().height + 6.0
+        return ok(geometry.Size.of(paragraph.size().width + 20.0, if grown > height { grown } else { height }))
     }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> {
         super.paint_self(canvas)?

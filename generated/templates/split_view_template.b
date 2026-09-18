@@ -27,17 +27,17 @@ partial class SplitViewTemplate {
         if self.stacked {  // split_view_template.bx:2
             b.open("Box")  // split_view_template.bx:3
             b.number("y", (self.divider_half) as f64)
-            b.number("height", (6) as f64)
+            b.number("height", (1) as f64)
             b.number("width_percent", (100.0) as f64)
-            b.word("background", self.hairline)
+            b.word("background", self.separator)
             b.close()
         }
         if !self.stacked {  // split_view_template.bx:5
             b.open("Box")  // split_view_template.bx:6
             b.number("x", (self.divider_half) as f64)
-            b.number("width", (6) as f64)
+            b.number("width", (1) as f64)
             b.number("height_percent", (100.0) as f64)
-            b.word("background", self.hairline)
+            b.word("background", self.separator)
             b.close()
         }
         b.close()

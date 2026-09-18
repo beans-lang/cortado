@@ -143,20 +143,32 @@ fn verify() -> Result<bool> {
     scene.pointer(events.EventKind.pointer_up, finish)?
     require(split.divider()? == 230.0 && page.divider == 230.0 && first.frame()?.width == 230.0, "split drag did not update layout and binding")
     let table_frame: geometry.Rect = scene.global_frame(table.render_object()?)?
-    let table_row: geometry.Point = geometry.Point.at(table_frame.x + 60.0, table_frame.y + 30.0 + 28.0 * 2.5)
+    // The middle of row 2, asked of the theme rather than pinned to the
+    // metrics it happened to have when this case was written.
+    let metrics: render.Theme = scene.context().theme()
+    let table_row: geometry.Point = geometry.Point.at(table_frame.x + 60.0,
+        table_frame.y + metrics.control_height() + metrics.row_height() * 2.5)
     scene.pointer(events.EventKind.pointer_down, table_row)?
     scene.pointer(events.EventKind.pointer_up, table_row)?
     require(table.selected()? == 2 && page.selected_row == 2, "table pointer did not select row")
     let calls_before_scroll: int = page.table_rows.calls
-    scene.scroll(geometry.Point.at(table_frame.x + 60.0, table_frame.y + 70.0), 0.0, 280.0)?
+    // Ten rows down, whatever a row is worth, so the two labels below keep
+    // meaning "the one that left" and "the one that arrived".
+    let ten_rows: f64 = metrics.row_height() * 10.0
+    scene.scroll(geometry.Point.at(table_frame.x + 60.0, table_frame.y + 70.0), 0.0, ten_rows)?
     let table_render: render.TableRender = (table.render_object()? as? render.TableRender).expect("table render")
-    require(table_render.scroll_offset() >= 280.0 && page.table_rows.calls > calls_before_scroll &&
+    require(table_render.scroll_offset() >= ten_rows && page.table_rows.calls > calls_before_scroll &&
             page.table_rows.calls - calls_before_scroll < 100, "table scroll did not query only its new visible rows")
     require(!has_label(scene, "Order 0") && has_label(scene, "Order 10"), "table presenter kept offscreen rows")
-    scene.scroll(geometry.Point.at(table_frame.x + 60.0, table_frame.y + 70.0), 0.0, 13.0)?
-    require(table_render.scroll_offset() == 293.0 && has_label(scene, "Order 10"),
+    // Part of a row further on: row 10 is now cut in half, not gone.
+    let nudge: f64 = metrics.row_height() * 0.7
+    scene.scroll(geometry.Point.at(table_frame.x + 60.0, table_frame.y + 70.0), 0.0, nudge)?
+    require(table_render.scroll_offset() == ten_rows + nudge && has_label(scene, "Order 10"),
             "fractional table scroll lost the partly visible row")
-    let partly_visible: geometry.Point = geometry.Point.at(table_frame.x + 60.0, table_frame.y + 35.0)
+    // The middle of the sliver of row 10 still under the header.
+    let sliver: f64 = (metrics.row_height() - nudge) / 2.0
+    let partly_visible: geometry.Point = geometry.Point.at(table_frame.x + 60.0,
+        table_frame.y + metrics.control_height() + sliver)
     scene.pointer(events.EventKind.pointer_down, partly_visible)?
     scene.pointer(events.EventKind.pointer_up, partly_visible)?
     require(table.selected()? == 10 && page.selected_row == 10, "partly visible table row did not select")
@@ -167,14 +179,20 @@ fn verify() -> Result<bool> {
             "keyboard table selection did not scroll the chosen row into view")
     table.select(9999)?
     scene.refresh()?
-    require(table_render.scroll_offset() > 279000.0 && has_label(scene, "Order 9999"),
+    // Within one row of the bottom, whatever a row costs.
+    let content: f64 = page.table_rows.total as f64 * metrics.row_height()
+    let body: f64 = table_frame.height - metrics.control_height()
+    require(table_render.scroll_offset() >= content - body - metrics.row_height() &&
+            has_label(scene, "Order 9999"),
             "programmatic table selection did not reveal the final row")
     match table.set_widths([9000000.0, 9000000.0]) {
         ok(_) => { panic("table accepted content width beyond renderer limit") }
         err(_) => {}
     }
     require(table_render.width(0)? == 210.0, "rejected table widths changed state")
-    page.table_rows.total = 500000
+    // A row count whose content height clears the renderer's 10,000,000 limit,
+    // computed from the row height rather than pinned to one that used to.
+    page.table_rows.total = (10000000.0 / metrics.row_height()) as int + 1000
     match table.reload() { ok(_) => { panic("table accepted content height beyond renderer limit") } err(_) => {} }
     require(table_render.row_count() == 10000, "rejected table reload changed row count")
     page.table_rows.total = 10000
@@ -187,8 +205,12 @@ fn verify() -> Result<bool> {
             partial_cell.bounds().x + partial_cell.bounds().width > table_frame.x,
             "horizontal scroll dropped partly visible first column")
     match table.native_cell(2, 0) { ok(_) => { panic("shared table pretended to have a native cell") } err(_) => {} }
+    // Long enough to overflow the popup's cap at any row height this theme
+    // could pick, not just the one it had when this case was written.
     combo.set_items(["Item 0", "Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6",
-                     "Item 7", "Item 8", "Item 9", "Item 10", "Item 11"])?
+                     "Item 7", "Item 8", "Item 9", "Item 10", "Item 11", "Item 12", "Item 13",
+                     "Item 14", "Item 15", "Item 16", "Item 17", "Item 18", "Item 19", "Item 20",
+                     "Item 21", "Item 22", "Item 23"])?
     combo.select(0)?
     scene.refresh()?
     click(scene, combo, 0.5)?

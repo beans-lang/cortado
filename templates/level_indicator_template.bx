@@ -1,6 +1,6 @@
-<HStack background={self.track_off} corner_radius={self.capsule} align="stretch">
-  <Box width_percent={self.percent} background={self.accent} corner_radius={self.capsule} />
-  <Box grow={1} />
+<HStack align="center">
+  <Box width_percent={self.percent} height={5} background={self.accent} corner_radius={self.radius_small} />
+  <Box grow={1} height={5} background={self.track_off} corner_radius={self.radius_small} />
 </HStack>
 <beans>
 package templates

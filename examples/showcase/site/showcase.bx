@@ -1,125 +1,139 @@
 <VStack spacing={0} align="stretch">
-  <VStack padding={20} spacing={12} align="stretch" background={self.card}>
-    <Label text="Cortado" font_size={34} text_color={self.ink} />
-    <Label text="Every control here is drawn by Skia with the iOS 26 design tokens."
-           font_size={15} text_color={self.muted} />
-    <HStack spacing={12} align="center" wrap>
-      <Label text="Appearance" font_size={13} text_color={self.muted} />
-      <Segmented key={"appearance"} selected={self.mode} items={self.modes} width={180}
-                 on:change={fn(e: UiEvent) { self.set_mode(e.index) }} />
-      <Box width={16} />
-      <Label text="Accent" font_size={13} text_color={self.muted} />
-      $for index in 0..self.accent_names.len() {
-        <Button key={"accent-{index}"} text={self.accent_names[index]}
-                on:click={fn(e: UiEvent) { self.set_accent(index) }} />
-      }
-    </HStack>
-  </VStack>
+  <HStack padding_x={10} padding_y={6} spacing={10} align="center" background={self.chrome} wrap>
+    <Label text="Cortado" font_size={15} text_color={self.ink} />
+    <Label text="macOS tokens, small control size" font_size={self.footnote} text_color={self.muted} />
+    <Box grow={1} />
+    <Label text="Appearance" font_size={self.footnote} text_color={self.muted} />
+    <Segmented key={"appearance"} selected={self.mode} items={self.modes} width={120}
+               on:change={fn(e: UiEvent) { self.set_mode(e.index) }} />
+    <Label text="Accent" font_size={self.footnote} text_color={self.muted} />
+    $for index in 0..self.accent_names.len() {
+      <Button key={"accent-{index}"} text={self.accent_names[index]}
+              on:click={fn(e: UiEvent) { self.set_accent(index) }} />
+    }
+  </HStack>
   <Separator height={1} />
 
   <ScrollView grow={1}>
-    <VStack padding={20} spacing={18} align="stretch">
+    <VStack padding={10} spacing={10} align="stretch">
+      <HStack spacing={10} align="start">
 
-      <Label text="BUTTONS" font_size={13} text_color={self.muted} />
-      <VStack padding={14} spacing={12} align="stretch" background={self.card} corner_radius={10}>
-        <HStack spacing={10} align="center" wrap>
-          <Button key={"order"} text="Order a coffee" on:click={fn(e: UiEvent) { self.order() }} />
-          <Button key={"undo"} text="Undo" on:click={fn(e: UiEvent) { self.undo() }} />
-          <Button key={"clear"} text="Clear" on:click={fn(e: UiEvent) { self.clear() }} />
-        </HStack>
-        <Label text={"{self.orders} ordered · tab through them, then press space"}
-               font_size={13} text_color={self.muted} />
-      </VStack>
+        <VStack grow={1} spacing={4} align="stretch">
+          <Label text="ACTIONS" font_size={self.caption} text_color={self.muted} />
+          <HStack spacing={5} align="center" wrap>
+            <Button key={"order"} text="Order" on:click={fn(e: UiEvent) { self.order() }} />
+            <Button key={"undo"} text="Undo" on:click={fn(e: UiEvent) { self.undo() }} />
+            <Button key={"clear"} text="Clear" on:click={fn(e: UiEvent) { self.clear() }} />
+            <Label text={"{self.orders} placed"} font_size={self.footnote} text_color={self.muted} />
+          </HStack>
 
-      <Label text="TOGGLES" font_size={13} text_color={self.muted} />
-      <VStack padding={14} spacing={12} align="stretch" background={self.card} corner_radius={10}>
-        <CheckBox key={"milk"} text="Include milk" checked={self.milk}
-                  on:change={fn(e: UiEvent) { self.set_milk(e.index) }} />
-        <HStack spacing={18} align="center">
-          <RadioButton key={"small"} text="Small" checked={self.size == 0}
-                       on:change={fn(e: UiEvent) { self.set_size(0, e.index) }} />
-          <RadioButton key={"medium"} text="Medium" checked={self.size == 1}
-                       on:change={fn(e: UiEvent) { self.set_size(1, e.index) }} />
-          <RadioButton key={"large"} text="Large" checked={self.size == 2}
-                       on:change={fn(e: UiEvent) { self.set_size(2, e.index) }} />
-        </HStack>
-        <HStack spacing={12} align="center">
-          <Label text="Notify me when it is ready" text_color={self.ink} grow={1} />
-          <Switch key={"notify"} checked={self.notify}
-                  on:change={fn(e: UiEvent) { self.set_notify(e.index) }} />
-        </HStack>
-      </VStack>
+          <Box height={4} />
+          <Label text="TOGGLES" font_size={self.caption} text_color={self.muted} />
+          <CheckBox key={"milk"} text="Include milk" checked={self.milk}
+                    on:change={fn(e: UiEvent) { self.set_milk(e.index) }} />
+          <HStack spacing={12} align="center" wrap>
+            <RadioButton key={"small"} text="Small" checked={self.size == 0}
+                         on:change={fn(e: UiEvent) { self.set_size(0, e.index) }} />
+            <RadioButton key={"medium"} text="Medium" checked={self.size == 1}
+                         on:change={fn(e: UiEvent) { self.set_size(1, e.index) }} />
+            <RadioButton key={"large"} text="Large" checked={self.size == 2}
+                         on:change={fn(e: UiEvent) { self.set_size(2, e.index) }} />
+          </HStack>
+          <HStack spacing={6} align="center">
+            <Label text="Notify when ready" text_color={self.ink} font_size={self.font_size} grow={1} />
+            <Switch key={"notify"} checked={self.notify}
+                    on:change={fn(e: UiEvent) { self.set_notify(e.index) }} />
+          </HStack>
 
-      <Label text="VALUES" font_size={13} text_color={self.muted} />
-      <VStack padding={14} spacing={12} align="stretch" background={self.card} corner_radius={10}>
-        <Label text={"Strength {self.strength}"} text_color={self.ink} />
-        <Slider key={"strength"} min={0.0} max={100.0} value={self.strength} step={5.0}
-                on:change={fn(e: UiEvent) { self.set_strength(e.index) }} />
-        <HStack spacing={12} align="center">
-          <Label text={"Shots {self.shots}"} text_color={self.ink} grow={1} />
-          <Stepper key={"shots"} min={0.0} max={6.0} value={self.shots} step={1.0}
-                   on:change={fn(e: UiEvent) { self.set_shots(e.index) }} />
-        </HStack>
-        <Label text={"Brewing {self.strength}%"} font_size={13} text_color={self.muted} />
-        <ProgressBar key={"brewing"} min={0.0} max={100.0} value={self.strength} />
-        <Label text="Bean level" font_size={13} text_color={self.muted} />
-        <LevelIndicator key={"beans"} min={0.0} max={100.0} value={self.strength} />
-      </VStack>
-
-      <Label text="TEXT" font_size={13} text_color={self.muted} />
-      <VStack padding={14} spacing={12} align="stretch" background={self.card} corner_radius={10}>
-        <TextField key={"name"} bind:value={self.name} width_percent={100.0} />
-        <SearchField key={"search"} bind:value={self.query} width_percent={100.0} />
-        <SecureField key={"secret"} bind:value={self.secret} width_percent={100.0} />
-        <TextArea key={"note"} bind:value={self.note} width_percent={100.0} height={70} />
-        <Label text={"Hello {self.name} — searching \"{self.query}\""}
-               font_size={13} text_color={self.muted} />
-      </VStack>
-
-      <Label text="CHOICES" font_size={13} text_color={self.muted} />
-      <VStack padding={14} spacing={12} align="stretch" background={self.card} corner_radius={10}>
-        <ComboBox key={"drink"} selected={self.drink} items={self.drinks} width={220}
-                  on:change={fn(e: UiEvent) { self.set_drink(e.index) }} />
-        <Segmented key={"roast"} selected={self.roast} items={self.roasts}
-                   on:change={fn(e: UiEvent) { self.set_roast(e.index) }} />
-        <TabView key={"tabs"} selected={self.tab} labels={self.tabs} height={120}
-                 on:change={fn(e: UiEvent) { self.set_tab(e.index) }}>
-          <VStack key={"recipe"} padding={12} align="stretch">
-            <Label text={"{self.roasts[self.roast]} · {self.drinks[self.drink]}"} text_color={self.ink} />
-            <Label text={"{self.shots} shots, strength {self.strength}"}
-                   font_size={13} text_color={self.muted} />
-          </VStack>
-          <VStack key={"notes"} padding={12} align="stretch">
-            <Label text={if self.note == "" { "No notes yet." } else { self.note }} text_color={self.ink} />
-          </VStack>
-        </TabView>
-      </VStack>
-
-      <Label text="CONTAINERS" font_size={13} text_color={self.muted} />
-      <GroupBox text="Order options" height={90}>
-        <Label text={"Milk {self.milk}, size {self.sizes[self.size]}, notify {self.notify}"}
-               text_color={self.ink} />
-      </GroupBox>
-      <Disclosure key={"details"} text="Order details" open={self.details} height={96}
-                  on:change={fn(e: UiEvent) { self.set_details(e.index) }}>
-        <Button key={"roasted"} text="Roasted today" on:click={fn(e: UiEvent) { self.order() }} />
-      </Disclosure>
-      <SplitView key={"split"} stacked={false} divider={self.divider} height={120}
-                 on:change={fn(e: UiEvent) { self.set_divider(e.index) }}>
-        <VStack key={"left"} padding={12} align="stretch" background={self.card}>
-          <Label text="Drag the divider" text_color={self.ink} />
+          <Box height={4} />
+          <Label text="VALUES" font_size={self.caption} text_color={self.muted} />
+          <HStack spacing={6} align="center">
+            <Label text={"Strength {self.strength}"} text_color={self.ink} font_size={self.font_size} width={90} />
+            <Slider key={"strength"} min={0.0} max={100.0} value={self.strength} step={5.0} grow={1}
+                    on:change={fn(e: UiEvent) { self.set_strength(e.index) }} />
+          </HStack>
+          <HStack spacing={6} align="center">
+            <Label text={"Shots {self.shots}"} text_color={self.ink} font_size={self.font_size} width={90} />
+            <Stepper key={"shots"} min={0.0} max={6.0} value={self.shots} step={1.0}
+                     on:change={fn(e: UiEvent) { self.set_shots(e.index) }} />
+            <Box grow={1} />
+          </HStack>
+          <HStack spacing={6} align="center">
+            <Label text="Brewing" text_color={self.muted} font_size={self.footnote} width={90} />
+            <ProgressBar key={"brewing"} min={0.0} max={100.0} value={self.strength} grow={1} />
+          </HStack>
+          <HStack spacing={6} align="center">
+            <Label text="Bean level" text_color={self.muted} font_size={self.footnote} width={90} />
+            <LevelIndicator key={"beans"} min={0.0} max={100.0} value={self.strength} grow={1} />
+          </HStack>
         </VStack>
-        <VStack key={"right"} padding={12} align="stretch" background={self.card}>
-          <Label text={"{self.divider} across"} text_color={self.muted} />
-        </VStack>
-      </SplitView>
 
-      <Label text="TABLE" font_size={13} text_color={self.muted} />
+        <VStack grow={1} spacing={4} align="stretch">
+          <Label text="TEXT" font_size={self.caption} text_color={self.muted} />
+          <HStack spacing={6} align="center">
+            <Label text="Name" text_color={self.muted} font_size={self.footnote} width={60} />
+            <TextField key={"name"} bind:value={self.name} grow={1} />
+          </HStack>
+          <HStack spacing={6} align="center">
+            <Label text="Search" text_color={self.muted} font_size={self.footnote} width={60} />
+            <SearchField key={"search"} bind:value={self.query} grow={1} />
+          </HStack>
+          <HStack spacing={6} align="center">
+            <Label text="Secret" text_color={self.muted} font_size={self.footnote} width={60} />
+            <SecureField key={"secret"} bind:value={self.secret} grow={1} />
+          </HStack>
+          <TextArea key={"note"} bind:value={self.note} width_percent={100.0} height={44} />
+
+          <Box height={4} />
+          <Label text="CHOICES" font_size={self.caption} text_color={self.muted} />
+          <HStack spacing={6} align="center">
+            <Label text="Drink" text_color={self.muted} font_size={self.footnote} width={60} />
+            <ComboBox key={"drink"} selected={self.drink} items={self.drinks} grow={1}
+                      on:change={fn(e: UiEvent) { self.set_drink(e.index) }} />
+          </HStack>
+          <Segmented key={"roast"} selected={self.roast} items={self.roasts}
+                     on:change={fn(e: UiEvent) { self.set_roast(e.index) }} />
+          <TabView key={"tabs"} selected={self.tab} labels={self.tabs} height={86}
+                   on:change={fn(e: UiEvent) { self.set_tab(e.index) }}>
+            <VStack key={"recipe"} padding={6} spacing={2} align="stretch">
+              <Label text={"{self.roasts[self.roast]} · {self.drinks[self.drink]}"}
+                     text_color={self.ink} font_size={self.font_size} />
+              <Label text={"{self.shots} shots, strength {self.strength}"}
+                     font_size={self.footnote} text_color={self.muted} />
+              <Label text={"Milk {self.milk} · {self.sizes[self.size]} · notify {self.notify}"}
+                     font_size={self.footnote} text_color={self.muted} />
+            </VStack>
+            <VStack key={"notes"} padding={6} align="stretch">
+              <Label text={if self.note == "" { "No notes yet." } else { self.note }}
+                     text_color={self.ink} font_size={self.font_size} />
+            </VStack>
+          </TabView>
+
+          <Box height={4} />
+          <Label text="CONTAINERS" font_size={self.caption} text_color={self.muted} />
+          <Disclosure key={"details"} text="Order details" open={self.details} height={56}
+                      on:change={fn(e: UiEvent) { self.set_details(e.index) }}>
+            <Button key={"roasted"} text="Roasted today" on:click={fn(e: UiEvent) { self.order() }} />
+          </Disclosure>
+          <SplitView key={"split"} stacked={false} divider={self.divider} height={62}
+                     on:change={fn(e: UiEvent) { self.set_divider(e.index) }}>
+            <VStack key={"left"} padding={6} align="stretch" background={self.card}>
+              <Label text="Drag me" text_color={self.ink} font_size={self.font_size} />
+            </VStack>
+            <VStack key={"right"} padding={6} align="stretch" background={self.card}>
+              <Label text={"{self.divider} across"} text_color={self.muted} font_size={self.footnote} />
+            </VStack>
+          </SplitView>
+        </VStack>
+      </HStack>
+
+      <Label text="TABLE — 500 rows, only the visible ones are read"
+             font_size={self.caption} text_color={self.muted} />
       <Table key={"orders"} columns={self.columns} column_widths={self.widths}
-             source={self.rows} height={180}
+             source={self.rows} height={200}
              on:select={fn(e: UiEvent) { self.select_row(e.index) }} />
       <Label text={if self.row < 0 { "No row selected" } else { "Row {self.row} selected" }}
-             font_size={13} text_color={self.muted} />
+             font_size={self.footnote} text_color={self.muted} />
     </VStack>
   </ScrollView>
 </VStack>
@@ -146,9 +160,13 @@ pub class OrderRows implements widgets.TableRows {
 @view
 pub partial class Showcase extends component.Component {
     pub theme: Option<render.Theme> = none
-    pub ink: string = "#000000ff"
-    pub muted: string = "#3c3c4399"
+    pub ink: string = "#000000d8"
+    pub muted: string = "#0000007f"
     pub card: string = "#ffffffff"
+    pub chrome: string = "#f4f4f4ff"
+    pub font_size: f64 = 11.0
+    pub footnote: f64 = 10.0
+    pub caption: f64 = 9.0
 
     pub modes: List<string> = ["Light", "Dark"]
     pub mode: int = 0
@@ -193,6 +211,10 @@ pub partial class Showcase extends component.Component {
                 self.ink = render.Theme.hex(theme.foreground())
                 self.muted = render.Theme.hex(theme.secondary_label())
                 self.card = render.Theme.hex(theme.card())
+                self.chrome = render.Theme.hex(theme.sunken())
+                self.font_size = theme.font_size()
+                self.footnote = theme.footnote()
+                self.caption = theme.caption1()
             }
             none => {}
         }

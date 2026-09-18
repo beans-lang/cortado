@@ -1,6 +1,6 @@
 <HStack background={self.track} corner_radius={self.capsule} padding={2} align="center">
   $if self.checked { <Box grow={1} /> }
-  <Box width={24} height={24} background={self.knob} corner_radius={self.capsule} />
+  <Box width={16} height={16} background={self.knob} corner_radius={self.capsule} />
   $if !self.checked { <Box grow={1} /> }
 </HStack>
 <beans>

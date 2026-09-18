@@ -1,7 +1,7 @@
-<VStack background={self.fill} corner_radius={self.capsule} padding={8}
-        border_width={if self.focused { 2.0 } else { 0.0 }} border_color={self.accent}
+<VStack background={self.fill} corner_radius={self.radius} padding={3}
+        border_width={1} border_color={if self.focused { self.accent } else { self.separator }}
         align="center" justify="center">
-  <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+  <Label text={self.title} text_color={self.ink} font_size={self.font_size} alignment={1} />
 </VStack>
 <beans>
 package templates

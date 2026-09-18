@@ -82,7 +82,7 @@ fn verify() -> Result<bool> {
     require(scene.refresh()?, "theme change did not repaint")
     require(scene.context().theme().accent() == 0x87582fff, "markup theme action did not set accent")
     let other: cortado_skia.Scene = new cortado_skia.Scene(geometry.Size.of(100.0, 100.0), 2)
-    require(other.context().theme().accent() == 0x0088ffff, "theme change escaped its window")
+    require(other.context().theme().accent() == 0x007affff, "theme change escaped its window")
     other.close()
     match scene.semantics_action(original.handle().raw, 1) {
         ok(_) => { panic("stale accessibility action was accepted") } err(_) => {}

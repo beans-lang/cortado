@@ -23,27 +23,27 @@ pub partial class RadioButtonTemplate extends component.ToggleControlTemplate {
 partial class RadioButtonTemplate {
     pub override fn render(b: Builder) {
         b.open("HStack")  // radio_button_template.bx:1
-        b.number("spacing", (8) as f64)
+        b.number("spacing", (5) as f64)
         b.word("align", "center")
         b.open("HStack")  // radio_button_template.bx:2
-        b.word("background", "#00000000")
-        b.word("border_color", self.track)
-        b.number("border_width", (2) as f64)
+        b.word("background", if self.checked { self.accent } else { self.background })
+        b.word("border_color", if self.checked { self.accent } else { self.track })
+        b.number("border_width", (1) as f64)
         b.number("corner_radius", (self.capsule) as f64)
-        b.number("width", (20) as f64)
-        b.number("height", (20) as f64)
+        b.number("width", (14) as f64)
+        b.number("height", (14) as f64)
         b.word("align", "center")
         b.word("justify", "center")
-        if self.checked {  // radio_button_template.bx:4
+        if self.checked {  // radio_button_template.bx:5
             b.open("Box")
-            b.number("width", (10) as f64)
-            b.number("height", (10) as f64)
-            b.word("background", self.accent)
+            b.number("width", (5) as f64)
+            b.number("height", (5) as f64)
+            b.word("background", self.knob)
             b.number("corner_radius", (self.capsule) as f64)
             b.close()
         }
         b.close()
-        b.open("Label")  // radio_button_template.bx:6
+        b.open("Label")  // radio_button_template.bx:7
         b.text("{self.title}")
         b.word("text_color", self.ink)
         b.number("font_size", (self.font_size) as f64)

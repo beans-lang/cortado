@@ -27,7 +27,8 @@ fn verify() -> Result<bool> {
     require(!scene.refresh()?, "same-backend selection repainted twice")
     let selected: widgets.Snapshot = scene.snapshot()?
     require(selected.width == 720 && selected.height == 260, "backend snapshot dimensions changed")
-    require(selected.pixel(25, 25)?.red < 255, "backend snapshot was blank")
+    // Asking the whole frame, not one pixel that used to sit on a tint.
+    require(!selected.is_uniform()?, "backend snapshot was blank")
     scene.renderer().recover_software()?
     require(scene.refresh()?, "idle software recovery did not repaint")
     require(!scene.refresh()?, "software recovery repainted twice")

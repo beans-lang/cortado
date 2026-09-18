@@ -1,11 +1,11 @@
-<Box width={self.total_width} background={self.card} border_color={self.hairline} border_width={1}>
+<Box width={self.total_width} background={self.card} border_color={self.separator} border_width={1}>
   $if self.total_rows == 0 {
-    <Label x={12} y={self.header_height + 12.0} text="No rows" text_color={self.muted} />
+    <Label x={6} y={self.header_height + 6.0} text="No rows" text_color={self.muted} font_size={self.font_size} />
   }
   $for row in self.rows {
     <HStack key={"row-{row.index}"} y={row.top} height={self.row_height} width={self.total_width}
-            spacing={0} align="center"
-            background={if row.selected { self.accent } else if row.index % 2 == 0 { self.card } else { self.grouped }}>
+            spacing={0} align="center" padding_x={6}
+            background={if row.selected { self.selection } else if row.index % 2 == 1 { self.stripe } else { "#00000000" }}>
       $for column in 0..row.cells.len() {
         $if row.index == self.editing_row && column == self.editing_column {
           <TextField key={"editor-{row.index}-{column}"} text={row.cells[column]}
@@ -22,7 +22,7 @@
     </HStack>
   }
   <HStack y={0} height={self.header_height} width={self.total_width} spacing={0}
-          align="center" background={self.grouped}>
+          align="center" padding_x={6} background={self.grouped}>
     $for column in 0..self.titles.len() {
       <Label key={"header-{column}"} text={self.titles[column]} width={self.widths[column]}
              font_size={self.footnote} text_color={self.muted} />

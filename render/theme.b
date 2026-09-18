@@ -1,15 +1,16 @@
 package render
 
 /// Per-window design resources. No process-wide mutable theme.
-/// Colours and metrics are the iOS 26 system values, read off UIKit rather
-/// than copied from a description; tools/read_apple_tokens.swift regenerates them.
+/// The macOS system colours and the *small* control size — 20pt rows, 11pt
+/// text — so a window fits a lot. tools/read_apple_tokens.swift prints these
+/// straight from AppKit; nothing here was eyeballed.
 pub class Theme {
     dark_mode: bool = false
     background_value: int = -1
     foreground_value: int = -1
     accent_value: int = -1
     surface_value: int = -1
-    font_value: f64 = 17.0
+    font_value: f64 = 11.0
     revision: int = 0
     pub fn init() {}
 
@@ -23,93 +24,96 @@ pub class Theme {
     }
 
     // ----------------------------------------------------------- backgrounds
+    /// The window itself. macOS keeps content flat and lets hairlines do the
+    /// structural work, which is also what makes a dense window readable.
     pub fn background() -> int {
         if self.background_value >= 0 { return self.background_value }
-        return self.pick(0xffffffff, 0x000000ff)
+        return self.pick(0xffffffff, 0x1e1e1eff)
     }
-    pub fn secondary_background() -> int { return self.pick(0xf2f2f7ff, 0x1c1c1eff) }
-    pub fn tertiary_background() -> int { return self.pick(0xffffffff, 0x2c2c2eff) }
-    pub fn grouped_background() -> int { return self.pick(0xf2f2f7ff, 0x000000ff) }
-    /// The resting fill of a control bezel. Opaque so a template can nest it.
+    pub fn card() -> int { return self.pick(0xffffffff, 0x1e1e1eff) }
+    /// Behind a sidebar or a grouped panel: one step off the window.
+    pub fn sunken() -> int { return self.pick(0xf4f4f4ff, 0x282828ff) }
+    /// A push button or popup bezel, sampled off a real small NSButton.
     pub fn surface() -> int {
         if self.surface_value >= 0 { return self.surface_value }
-        return self.pick(0xe9e9ebff, 0x2c2c2eff)
+        return self.pick(0xefefefff, 0x363636ff)
     }
-    pub fn surface_pressed() -> int { return self.pick(0xd1d1d6ff, 0x3a3a3cff) }
-    pub fn surface_hovered() -> int { return self.pick(0xf2f2f7ff, 0x3a3a3cff) }
+    pub fn surface_pressed() -> int { return self.pick(0xdedeedff, 0x4a4a4aff) }
+    pub fn surface_hovered() -> int { return self.pick(0xe5e5e5ff, 0x3e3e3eff) }
+    /// Where text is typed. Always the text background, never the bezel.
+    pub fn field() -> int { return self.pick(0xffffffff, 0x1e1e1eff) }
 
     // ---------------------------------------------------------------- labels
     pub fn foreground() -> int {
         if self.foreground_value >= 0 { return self.foreground_value }
-        return self.pick(0x000000ff, 0xffffffff)
+        return self.pick(0x000000d8, 0xffffffd8)
     }
-    pub fn secondary_label() -> int { return self.pick(0x3c3c4399, 0xebebf599) }
-    pub fn tertiary_label() -> int { return self.pick(0x3c3c434c, 0xebebf54c) }
-    pub fn quaternary_label() -> int { return self.pick(0x3c3c432d, 0xebebf528) }
-    pub fn placeholder() -> int { return self.tertiary_label() }
+    pub fn secondary_label() -> int { return self.pick(0x0000007f, 0xffffff8c) }
+    pub fn tertiary_label() -> int { return self.pick(0x00000042, 0xffffff3f) }
+    pub fn quaternary_label() -> int { return self.pick(0x00000019, 0xffffff19) }
+    pub fn placeholder() -> int { return self.pick(0x0000007f, 0xffffff8c) }
+    pub fn disabled_label() -> int { return self.pick(0x0000003f, 0xffffff3f) }
     /// Text and glyphs drawn on top of accent().
     pub fn on_accent() -> int { return 0xffffffff }
 
     // ---------------------------------------------------------------- accent
     pub fn accent() -> int {
         if self.accent_value >= 0 { return self.accent_value }
-        return self.pick(0x0088ffff, 0x0091ffff)
+        return self.pick(0x007affff, 0x007affff)
     }
     pub fn destructive() -> int { return self.pick(0xff383cff, 0xff4245ff) }
     pub fn success() -> int { return self.pick(0x34c759ff, 0x30d158ff) }
     pub fn warning() -> int { return self.pick(0xff8d28ff, 0xff9230ff) }
+    pub fn link() -> int { return self.pick(0x0068daff, 0x419cffff) }
 
-    // ------------------------------------------------------ separators, fills
-    pub fn separator() -> int { return self.pick(0x3c3c431f, 0x54545880) }
-    pub fn opaque_separator() -> int { return self.pick(0xc6c6c8ff, 0x38383aff) }
-    pub fn fill() -> int { return self.pick(0x78788033, 0x7878805c) }
-    pub fn secondary_fill() -> int { return self.pick(0x78788029, 0x78788052) }
-    pub fn tertiary_fill() -> int { return self.pick(0x7676801f, 0x7676803d) }
-    pub fn quaternary_fill() -> int { return self.pick(0x74748014, 0x7676802e) }
-    /// The unfilled half of a switch, slider or progress track. Opaque.
-    pub fn track() -> int { return self.pick(0xe9e9eaff, 0x39393dff) }
-    /// A switch or slider knob stays white in both appearances, as UIKit's does.
+    // ------------------------------------------------- lines and selection
+    pub fn separator() -> int { return self.pick(0x00000019, 0xffffff19) }
+    pub fn grid() -> int { return self.pick(0xe6e6e6ff, 0x1a1a1aff) }
+    pub fn selection() -> int { return self.pick(0x0064e1ff, 0x0059d1ff) }
+    /// A selected row in a list that does not have focus.
+    pub fn quiet_selection() -> int { return self.pick(0xdcdcdcff, 0x464646ff) }
+    pub fn text_selection() -> int { return self.pick(0xb3d7ffff, 0x3f638bff) }
+    /// The unfilled half of a switch, slider or progress track.
+    pub fn track() -> int { return self.pick(0xd8d8d8ff, 0x4a4a4aff) }
+    /// A switch or slider knob stays white in both appearances, as AppKit's does.
     pub fn knob() -> int { return 0xffffffff }
-    /// A card raised off grouped_background(): secondarySystemGroupedBackground.
-    pub fn card() -> int { return self.pick(0xffffffff, 0x1c1c1eff) }
-
-    // ------------------------------------------------------------------ grays
-    pub fn gray() -> int { return self.pick(0x8e8e93ff, 0x8e8e93ff) }
-    pub fn gray2() -> int { return self.pick(0xaeaeb2ff, 0x636366ff) }
-    pub fn gray3() -> int { return self.pick(0xc7c7ccff, 0x48484aff) }
-    pub fn gray4() -> int { return self.pick(0xd1d1d6ff, 0x3a3a3cff) }
-    pub fn gray5() -> int { return self.pick(0xe5e5eaff, 0x2c2c2eff) }
-    pub fn gray6() -> int { return self.pick(0xf2f2f7ff, 0x1c1c1eff) }
+    /// Every other row of a table, so long rows stay trackable.
+    pub fn stripe() -> int { return self.pick(0xf5f5f5ff, 0x232323ff) }
 
     // ------------------------------------------------------------ typography
+    /// The default control font is smallSystemFontSize: 11pt, 13pt line.
     pub fn font_size() -> f64 { return self.font_value }
-    pub fn large_title() -> f64 { return 34.0 }
-    pub fn title1() -> f64 { return 28.0 }
-    pub fn title2() -> f64 { return 22.0 }
-    pub fn title3() -> f64 { return 20.0 }
-    pub fn headline() -> f64 { return 17.0 }
-    pub fn body() -> f64 { return 17.0 }
-    pub fn callout() -> f64 { return 16.0 }
-    pub fn subheadline() -> f64 { return 15.0 }
-    pub fn footnote() -> f64 { return 13.0 }
-    pub fn caption1() -> f64 { return 12.0 }
-    pub fn caption2() -> f64 { return 11.0 }
+    pub fn large_title() -> f64 { return 22.0 }
+    pub fn title1() -> f64 { return 17.0 }
+    pub fn title2() -> f64 { return 15.0 }
+    pub fn title3() -> f64 { return 13.0 }
+    pub fn headline() -> f64 { return 11.0 }
+    pub fn body() -> f64 { return 11.0 }
+    pub fn callout() -> f64 { return 11.0 }
+    pub fn subheadline() -> f64 { return 10.0 }
+    pub fn footnote() -> f64 { return 10.0 }
+    pub fn caption1() -> f64 { return 9.0 }
+    pub fn caption2() -> f64 { return 9.0 }
 
     // ---------------------------------------------------------------- metrics
-    /// iOS 26 draws buttons and switches as capsules. SkRRect scales a corner
-    /// down to half the box, so an oversized radius is a capsule at any height.
+    /// SkRRect scales a corner down to half the box, so an oversized radius is
+    /// a capsule at any height. Only a switch knob and a slider thumb use it.
     pub fn capsule() -> f64 { return 1000.0 }
-    pub fn radius_small() -> f64 { return 6.0 }
-    pub fn radius_medium() -> f64 { return 10.0 }
-    pub fn radius_large() -> f64 { return 14.0 }
-    pub fn control_height() -> f64 { return 34.0 }
-    pub fn switch_width() -> f64 { return 61.0 }
-    pub fn switch_height() -> f64 { return 28.0 }
-    pub fn toggle_size() -> f64 { return 22.0 }
+    pub fn radius_small() -> f64 { return 3.0 }
+    /// Measured off a 20pt small NSButton: 5pt.
+    pub fn radius_medium() -> f64 { return 5.0 }
+    pub fn radius_large() -> f64 { return 6.0 }
+    pub fn control_height() -> f64 { return 20.0 }
+    pub fn row_height() -> f64 { return 18.0 }
+    /// AppKit ships one NSSwitch size, 54x24. Scaled to the 20pt row so it
+    /// does not tower over everything beside it.
+    pub fn switch_width() -> f64 { return 45.0 }
+    pub fn switch_height() -> f64 { return 20.0 }
+    pub fn toggle_size() -> f64 { return 14.0 }
     pub fn track_thickness() -> f64 { return 4.0 }
-    pub fn thumb_size() -> f64 { return 28.0 }
-    pub fn spacing() -> f64 { return 8.0 }
-    pub fn margin() -> f64 { return 16.0 }
+    pub fn thumb_size() -> f64 { return 14.0 }
+    pub fn spacing() -> f64 { return 6.0 }
+    pub fn margin() -> f64 { return 10.0 }
     pub fn hairline() -> f64 { return 1.0 }
 
     /// The colour as .bx markup spells it, so a view can paint itself with

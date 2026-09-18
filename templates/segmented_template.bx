@@ -1,4 +1,4 @@
-<HStack background={self.track_off} corner_radius={self.radius_medium} padding={2} align="stretch" spacing={2}>
+<HStack background={self.track_off} corner_radius={self.radius_medium} padding={1} align="stretch" spacing={1}>
   $for index in 0..self.choices.len() {
     <Label key={"segment-{index}"} text={self.choices[index]}
            text_color={self.ink}

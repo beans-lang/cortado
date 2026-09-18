@@ -25,17 +25,19 @@ partial class DisclosureTemplate {
         b.open("VStack")  // disclosure_template.bx:1
         b.word("background", self.card)
         b.number("corner_radius", (self.radius_medium) as f64)
+        b.number("border_width", (1) as f64)
+        b.word("border_color", self.separator)
         b.word("align", "stretch")
-        b.open("HStack")  // disclosure_template.bx:2
-        b.number("spacing", (7) as f64)
-        b.number("padding", (7) as f64)
+        b.open("HStack")  // disclosure_template.bx:3
+        b.number("spacing", (4) as f64)
+        b.number("padding", (4) as f64)
         b.word("align", "center")
-        b.open("Label")  // disclosure_template.bx:3
-        b.text("{self.glyph}")
-        b.word("text_color", self.accent)
-        b.number("font_size", (self.font_size) as f64)
-        b.close()
         b.open("Label")  // disclosure_template.bx:4
+        b.text("{self.glyph}")
+        b.word("text_color", self.muted)
+        b.number("font_size", (self.caption) as f64)
+        b.close()
+        b.open("Label")  // disclosure_template.bx:5
         b.text("{self.title}")
         b.word("text_color", self.ink)
         b.number("font_size", (self.font_size) as f64)

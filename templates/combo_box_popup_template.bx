@@ -1,9 +1,9 @@
-<ScrollView background={self.card} border_color={self.hairline} border_width={1} corner_radius={self.radius_large}>
+<ScrollView background={self.card} border_color={self.separator} border_width={1} corner_radius={self.radius_medium}>
   <VStack spacing={0} align="stretch">
     $for index in 0..self.choices.len() {
       <Button key={"option-{index}"}
               text={if index == self.highlighted { "▸ {self.choices[index]}" } else if index == self.selected { "✓ {self.choices[index]}" } else { "  {self.choices[index]}" }}
-              height={32} on:click={fn(e: UiEvent) { self.choose(index) }} />
+              height={20} on:click={fn(e: UiEvent) { self.choose(index) }} />
     }
   </VStack>
 </ScrollView>

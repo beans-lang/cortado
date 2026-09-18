@@ -33,8 +33,8 @@ partial class SwitchTemplate {
             b.close()
         }
         b.open("Box")  // switch_template.bx:3
-        b.number("width", (24) as f64)
-        b.number("height", (24) as f64)
+        b.number("width", (16) as f64)
+        b.number("height", (16) as f64)
         b.word("background", self.knob)
         b.number("corner_radius", (self.capsule) as f64)
         b.close()

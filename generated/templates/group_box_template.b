@@ -25,9 +25,11 @@ partial class GroupBoxTemplate {
         b.open("VStack")  // group_box_template.bx:1
         b.word("background", self.card)
         b.number("corner_radius", (self.radius_medium) as f64)
-        b.number("padding", (12) as f64)
+        b.number("padding", (6) as f64)
+        b.number("border_width", (1) as f64)
+        b.word("border_color", self.separator)
         b.word("align", "stretch")
-        b.open("Label")  // group_box_template.bx:2
+        b.open("Label")  // group_box_template.bx:3
         b.text("{self.title}")
         b.word("text_color", self.muted)
         b.number("font_size", (self.footnote) as f64)

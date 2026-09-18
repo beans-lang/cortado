@@ -1,4 +1,5 @@
-<VStack background={self.card} corner_radius={self.radius_medium} padding={12} align="stretch">
+<VStack background={self.card} corner_radius={self.radius_medium} padding={6}
+        border_width={1} border_color={self.separator} align="stretch">
   <Label text={self.title} text_color={self.muted} font_size={self.footnote} />
 </VStack>
 <beans>

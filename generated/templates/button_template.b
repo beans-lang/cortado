@@ -26,16 +26,17 @@ partial class ButtonTemplate {
     pub override fn render(b: Builder) {
         b.open("VStack")  // button_template.bx:1
         b.word("background", self.fill)
-        b.number("corner_radius", (self.capsule) as f64)
-        b.number("padding", (8) as f64)
-        b.number("border_width", (if self.focused { 2.0 } else { 0.0 }) as f64)
-        b.word("border_color", self.accent)
+        b.number("corner_radius", (self.radius) as f64)
+        b.number("padding", (3) as f64)
+        b.number("border_width", (1) as f64)
+        b.word("border_color", if self.focused { self.accent } else { self.separator })
         b.word("align", "center")
         b.word("justify", "center")
         b.open("Label")  // button_template.bx:4
         b.text("{self.title}")
         b.word("text_color", self.ink)
         b.number("font_size", (self.font_size) as f64)
+        b.number("alignment", (1) as f64)
         b.close()
         b.close()
     }

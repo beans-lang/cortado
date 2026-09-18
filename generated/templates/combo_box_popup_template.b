@@ -61,9 +61,9 @@ partial class ComboBoxPopupTemplate {
     pub override fn render(b: Builder) {
         b.open("ScrollView")  // combo_box_popup_template.bx:1
         b.word("background", self.card)
-        b.word("border_color", self.hairline)
+        b.word("border_color", self.separator)
         b.number("border_width", (1) as f64)
-        b.number("corner_radius", (self.radius_large) as f64)
+        b.number("corner_radius", (self.radius_medium) as f64)
         b.open("VStack")  // combo_box_popup_template.bx:2
         b.number("spacing", (0) as f64)
         b.word("align", "stretch")
@@ -72,7 +72,7 @@ partial class ComboBoxPopupTemplate {
             b.open("Button")  // combo_box_popup_template.bx:4
             b.key("{"option-{index}"}")
             b.text("{if index == self.highlighted { "▸ {self.choices[index]}" } else if index == self.selected { "✓ {self.choices[index]}" } else { "  {self.choices[index]}" }}")
-            b.number("height", (32) as f64)
+            b.number("height", (20) as f64)
             b.on("click", fn(e: UiEvent) { self.choose(index) })
             b.close()
             _cortado_row_0 += 1

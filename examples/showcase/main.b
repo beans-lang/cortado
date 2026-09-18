@@ -12,7 +12,7 @@ fn window(headless: bool) -> Result<bool> {
     let app: surface.Application = new surface.Application(
         if headless { platform.AppRole.headless } else { platform.AppRole.gui })
     let view: Showcase = new Showcase()
-    let opened: cortado_skia.Window = cortado_skia.Window.open(app, geometry.Size.of(760.0, 820.0),
+    let opened: cortado_skia.Window = cortado_skia.Window.open(app, geometry.Size.of(980.0, 640.0),
         "Cortado showcase", view)?
     view.use_theme(opened.scene().context().theme())
     opened.refresh()?
@@ -34,7 +34,7 @@ fn window(headless: bool) -> Result<bool> {
 fn shots() -> Result<bool> {
     for dark: bool in [false, true] {
         let view: Showcase = new Showcase()
-        let scene: cortado_skia.Scene = new cortado_skia.Scene(geometry.Size.of(760.0, 1500.0))
+        let scene: cortado_skia.Scene = new cortado_skia.Scene(geometry.Size.of(980.0, 640.0))
         scene.show(view)?
         view.use_theme(scene.context().theme())
         view.set_mode(if dark { 1 } else { 0 })

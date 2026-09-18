@@ -25,9 +25,9 @@ partial class SegmentedTemplate {
         b.open("HStack")  // segmented_template.bx:1
         b.word("background", self.track_off)
         b.number("corner_radius", (self.radius_medium) as f64)
-        b.number("padding", (2) as f64)
+        b.number("padding", (1) as f64)
         b.word("align", "stretch")
-        b.number("spacing", (2) as f64)
+        b.number("spacing", (1) as f64)
         var _cortado_row_0: int = 0
         for index in 0..self.choices.len() {  // segmented_template.bx:2
             b.open("Label")  // segmented_template.bx:3

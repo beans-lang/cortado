@@ -43,14 +43,15 @@ partial class TableTemplate {
         b.open("Box")  // table_template.bx:1
         b.number("width", (self.total_width) as f64)
         b.word("background", self.card)
-        b.word("border_color", self.hairline)
+        b.word("border_color", self.separator)
         b.number("border_width", (1) as f64)
         if self.total_rows == 0 {  // table_template.bx:2
             b.open("Label")  // table_template.bx:3
-            b.number("x", (12) as f64)
-            b.number("y", (self.header_height + 12.0) as f64)
+            b.number("x", (6) as f64)
+            b.number("y", (self.header_height + 6.0) as f64)
             b.text("No rows")
             b.word("text_color", self.muted)
+            b.number("font_size", (self.font_size) as f64)
             b.close()
         }
         var _cortado_row_0: int = 0
@@ -62,7 +63,8 @@ partial class TableTemplate {
             b.number("width", (self.total_width) as f64)
             b.number("spacing", (0) as f64)
             b.word("align", "center")
-            b.word("background", if row.selected { self.accent } else if row.index % 2 == 0 { self.card } else { self.grouped })
+            b.number("padding_x", (6) as f64)
+            b.word("background", if row.selected { self.selection } else if row.index % 2 == 1 { self.stripe } else { "#00000000" })
             var _cortado_row_1: int = 0
             for column in 0..row.cells.len() {  // table_template.bx:9
                 if row.index == self.editing_row && column == self.editing_column {  // table_template.bx:10
@@ -95,6 +97,7 @@ partial class TableTemplate {
         b.number("width", (self.total_width) as f64)
         b.number("spacing", (0) as f64)
         b.word("align", "center")
+        b.number("padding_x", (6) as f64)
         b.word("background", self.grouped)
         var _cortado_row_2: int = 0
         for column in 0..self.titles.len() {  // table_template.bx:26

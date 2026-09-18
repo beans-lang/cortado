@@ -45,7 +45,12 @@ fn verify() -> Result<bool> {
     require(label(scene, "Order 0") && label(scene, "Cup 0") && editor(scene, "Cup 0") == none,
             "idle table created editors or omitted visible labels")
     let table_frame: geometry.Rect = scene.global_frame(table.render_object()?)?
-    let wheel: geometry.Point = geometry.Point.at(table_frame.x + 30.0, table_frame.y + 80.0)
+    // Row geometry comes from the theme, so tightening the metrics moves
+    // these click points with it instead of aiming at the wrong row.
+    let metrics: render.Theme = scene.context().theme()
+    let head: f64 = metrics.control_height()
+    let row: f64 = metrics.row_height()
+    let wheel: geometry.Point = geometry.Point.at(table_frame.x + 30.0, table_frame.y + head + row * 2.5)
     let calls_before_wheel: int = page.rows.calls
     scene.scroll(wheel, 0.0, 4.0)?
     require(page.rows.calls == calls_before_wheel, "fractional wheel reread unchanged visible cells")
@@ -96,11 +101,11 @@ fn verify() -> Result<bool> {
     scene.key(events.EventKind.key_down, events.Key.escape)?
     require(editor(scene, "Cup 1") == none && label(scene, "Cup 1") && page.rows.cell(1, 1) == "Cup 1",
             "Escape did not cancel the draft")
-    let header: geometry.Point = geometry.Point.at(table_frame.x + 230.0, table_frame.y + 12.0)
+    let header: geometry.Point = geometry.Point.at(table_frame.x + 230.0, table_frame.y + head / 2.0)
     scene.pointer(events.EventKind.pointer_down, header, 1, 2)?
     scene.pointer(events.EventKind.pointer_up, header, 1, 2)?
     require(editor(scene, "Cup 0水☕") == none, "double-click on header opened a cell editor")
-    let read_only: geometry.Point = geometry.Point.at(table_frame.x + 80.0, table_frame.y + 44.0)
+    let read_only: geometry.Point = geometry.Point.at(table_frame.x + 80.0, table_frame.y + head + row * 0.5)
     scene.pointer(events.EventKind.pointer_down, read_only, 1, 2)?
     scene.pointer(events.EventKind.pointer_up, read_only, 1, 2)?
     require(editor(scene, "Order 0") == none, "double-click on read-only column opened an editor")
@@ -108,7 +113,7 @@ fn verify() -> Result<bool> {
     scene.refresh()?
     scene.scroll(wheel, 350.0, 0.0)?
     require(visual.scroll_x() == 350.0, "wide table did not scroll horizontally")
-    let shifted_cup: geometry.Point = geometry.Point.at(table_frame.x + 230.0, table_frame.y + 44.0)
+    let shifted_cup: geometry.Point = geometry.Point.at(table_frame.x + 230.0, table_frame.y + head + row * 0.5)
     scene.pointer(events.EventKind.pointer_down, shifted_cup, 1, 2)?
     scene.pointer(events.EventKind.pointer_up, shifted_cup, 1, 2)?
     require(editor(scene, "Cup 0水☕") != none, "double-click ignored horizontal table offset")
@@ -121,7 +126,7 @@ fn verify() -> Result<bool> {
     scene.pointer(events.EventKind.pointer_up, shifted_cup, 1, 2)?
     require(editor(scene, "Cup 0水☕") != none, "second double-click did not reopen the editor")
     scene.text_input(events.EventKind.text_input, "unsaved")?
-    let next_row: geometry.Point = geometry.Point.at(table_frame.x + 230.0, table_frame.y + 72.0)
+    let next_row: geometry.Point = geometry.Point.at(table_frame.x + 230.0, table_frame.y + head + row * 1.5)
     scene.pointer(events.EventKind.pointer_down, next_row)?
     scene.pointer(events.EventKind.pointer_up, next_row)?
     require(table.selected()? == 1 && editor(scene, "Cup 0水☕") == none &&
@@ -145,7 +150,9 @@ fn verify() -> Result<bool> {
     scene.key(events.EventKind.key_down, events.Key.escape)?
     table.select(9999)?
     scene.refresh()?
-    require(visual.scroll_offset() > 279000.0 && label(scene, "Order 9999") && editor(scene, "Cup 0") == none,
+    // Within one row of the bottom, whatever a row costs.
+    let bottom: f64 = 10000.0 * row - (table_frame.height - head) - row
+    require(visual.scroll_offset() >= bottom && label(scene, "Order 9999") && editor(scene, "Cup 0") == none,
             "last row did not present labels after virtual scrolling")
     require(visual.has_source() && visual.has_edit_policy(), "table lost source or rule before teardown")
     let actions: render.ControlActions = scene.context().actions(table.handle().raw)

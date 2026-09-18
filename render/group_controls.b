@@ -15,7 +15,7 @@ pub class GroupBoxRender extends BoxRender {
     pub override fn child_offset() -> geometry.Point { return geometry.Point.at(8.0, 28.0) }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
         let paragraph: paint.Paragraph = self.renderer.paragraph(self.words, self.font_size(), -1.0, self.text_color())?
-        return ok(geometry.Size.of(paragraph.size().width + 20.0, 36.0))
+        return ok(geometry.Size.of(paragraph.size().width + 14.0, 24.0))
     }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> { super.paint_self(canvas)?; return self.paint_template(canvas) }
 }
@@ -57,7 +57,7 @@ pub class DisclosureRender extends BoxRender {
     }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
         let paragraph: paint.Paragraph = self.renderer.paragraph(self.words, self.font_size(), -1.0, self.text_color())?
-        return ok(geometry.Size.of(paragraph.size().width + 32.0, 36.0))
+        return ok(geometry.Size.of(paragraph.size().width + 22.0, 24.0))
     }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> { super.paint_self(canvas)?; return self.paint_template(canvas) }
     fn toggle() -> Option<events.UiEvent> {

@@ -1,6 +1,7 @@
-<HStack spacing={8} align="center">
+<HStack spacing={5} align="center">
   <Label text={self.mark} text_color={self.on_accent} background={self.track}
-         corner_radius={self.radius_small} width={20} height={20} />
+         corner_radius={self.radius_small} width={14} height={14}
+         font_size={self.caption} alignment={1} />
   <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
 </HStack>
 <beans>

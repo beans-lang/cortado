@@ -10,33 +10,35 @@ pub abstract class ControlTemplate extends Component {
     pub focused: bool = false
     pub hovered: bool = false
     pub pressed: bool = false
-    pub fill: string = "#e9e9ebff"
-    pub ink: string = "#000000ff"
-    pub accent: string = "#0088ffff"
-    pub radius: f64 = 1000.0
-    pub font_size: f64 = 17.0
+    pub fill: string = "#efefefff"
+    pub ink: string = "#000000d8"
+    pub accent: string = "#007affff"
+    pub radius: f64 = 5.0
+    pub font_size: f64 = 11.0
 
     // Theme tokens a template draws with. Refreshed whenever the theme moves.
     pub on_accent: string = "#ffffffff"
-    pub muted: string = "#3c3c4399"
-    pub faint: string = "#3c3c434c"
-    pub surface: string = "#e9e9ebff"
-    pub separator: string = "#3c3c431f"
-    pub hairline: string = "#c6c6c8ff"
-    pub track_off: string = "#e9e9eaff"
+    pub muted: string = "#0000007f"
+    pub faint: string = "#00000042"
+    pub surface: string = "#efefefff"
+    pub separator: string = "#00000019"
+    pub hairline: string = "#e6e6e6ff"
+    pub track_off: string = "#d8d8d8ff"
     pub background: string = "#ffffffff"
-    pub grouped: string = "#f2f2f7ff"
+    pub grouped: string = "#f4f4f4ff"
     pub card: string = "#ffffffff"
     pub knob: string = "#ffffffff"
-    pub radius_small: f64 = 6.0
-    pub radius_medium: f64 = 10.0
-    pub radius_large: f64 = 14.0
+    pub selection: string = "#0064e1ff"
+    pub stripe: string = "#f5f5f5ff"
+    pub radius_small: f64 = 3.0
+    pub radius_medium: f64 = 5.0
+    pub radius_large: f64 = 6.0
     pub capsule: f64 = 1000.0
-    pub control_height: f64 = 34.0
-    pub headline: f64 = 17.0
-    pub subheadline: f64 = 15.0
-    pub footnote: f64 = 13.0
-    pub caption: f64 = 12.0
+    pub control_height: f64 = 20.0
+    pub headline: f64 = 11.0
+    pub subheadline: f64 = 10.0
+    pub footnote: f64 = 10.0
+    pub caption: f64 = 9.0
     theme_revision: int = -1
 
     pub fn init() { super.init() }
@@ -71,12 +73,14 @@ pub abstract class ControlTemplate extends Component {
         self.faint = ControlTemplate.color(theme.tertiary_label())
         self.surface = ControlTemplate.color(theme.surface())
         self.separator = ControlTemplate.color(theme.separator())
-        self.hairline = ControlTemplate.color(theme.opaque_separator())
+        self.hairline = ControlTemplate.color(theme.grid())
         self.track_off = ControlTemplate.color(theme.track())
         self.background = ControlTemplate.color(theme.background())
-        self.grouped = ControlTemplate.color(theme.grouped_background())
+        self.grouped = ControlTemplate.color(theme.sunken())
         self.card = ControlTemplate.color(theme.card())
         self.knob = ControlTemplate.color(theme.knob())
+        self.selection = ControlTemplate.color(theme.selection())
+        self.stripe = ControlTemplate.color(theme.stripe())
         self.radius_small = theme.radius_small()
         self.radius_medium = theme.radius_medium()
         self.radius_large = theme.radius_large()
@@ -86,7 +90,7 @@ pub abstract class ControlTemplate extends Component {
         self.subheadline = theme.subheadline()
         self.footnote = theme.footnote()
         self.caption = theme.caption1()
-        self.radius = theme.capsule()
+        self.radius = theme.radius_medium()
     }
 
     static fn color(value: int) -> string { return render.Theme.hex(value) }
