@@ -12,6 +12,10 @@ pub enum AttributeKind {
     whole
     real
     flag
+    items
+    numbers
+    table_source
+    table_edit_policy
 
     pub fn name() -> string {
         match self {
@@ -19,6 +23,10 @@ pub enum AttributeKind {
             whole => { return "whole" }
             real => { return "real" }
             flag => { return "flag" }
+            items => { return "items" }
+            numbers => { return "numbers" }
+            table_source => { return "table_source" }
+            table_edit_policy => { return "table_edit_policy" }
         }
     }
 }

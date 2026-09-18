@@ -167,7 +167,16 @@ pub class WidgetLayout implements layout.Measure {
     /// answers only `stale_handle` or `wrong_widget`, and both name a bug.
     pub fn group(name: string, control: Widget,
                  arranger: layout.Layout) -> Result<layout.LayoutNode> {
-        var node: layout.LayoutNode = layout.LayoutNode.group(name, arranger)
+        var chosen: layout.Layout = arranger
+        match control as? SplitView {
+            some(split) => {
+                let split_layout: layout.SplitLayout = split.split_layout()?
+                split_layout.set_padding(arranger.padding())
+                chosen = split_layout
+            }
+            none => {}
+        }
+        var node: layout.LayoutNode = layout.LayoutNode.group(name, chosen)
         node.key = self.register(control)
         // What the platform keeps for itself: a group box's border and title
         // band, a disclosure's header. Asked here, once per tree, rather than
@@ -191,6 +200,13 @@ pub class WidgetLayout implements layout.Measure {
                 node.chrome = inset
                 self.chrome[slot] = inset
             }
+        }
+        // Shared panes live directly under their render object. SplitLayout
+        // already subtracts the six-point divider, so shared chrome must not
+        // remove it a second time.
+        match control as? SplitView {
+            some(split) => { if split.is_rendered() { node.chrome = geometry.EdgeInsets.zero() } }
+            none => {}
         }
         return ok(node)
     }

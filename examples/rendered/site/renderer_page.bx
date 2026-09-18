@@ -1,0 +1,54 @@
+<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+  <Label text="Graphics backend" font_size={24} />
+  <Label text="Drawn by Skia; Canvas shows the GPU frame after readback." text_color="#555b6b" />
+  <Label text={"Active: {self.active}"} />
+  <Label text={"{self.status}"} text_color="#555b6b" />
+  <HStack spacing={8}>
+    <Button text="Automatic" on:click={fn(e: UiEvent) { self.choose(cortado_skia.Backend.automatic) }} />
+    <Button text="Metal" on:click={fn(e: UiEvent) { self.choose(cortado_skia.Backend.metal) }} />
+    <Button text="Vulkan" on:click={fn(e: UiEvent) { self.choose(cortado_skia.Backend.vulkan) }} />
+    <Button text="OpenGL" on:click={fn(e: UiEvent) { self.choose(cortado_skia.Backend.opengl) }} />
+    <Button text="Software" on:click={fn(e: UiEvent) { self.choose(cortado_skia.Backend.software) }} />
+  </HStack>
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import cortado_skia
+import {view, param} from cortado.annotations
+
+@view
+pub partial class RendererPage extends component.Component {
+    @param pub renderer: Option<cortado_skia.SkiaRenderer> = none
+    pub active: string = "software"
+    pub status: string = "Choose a backend to draw the next frame."
+    pub fn init() { super.init() }
+    pub fn attach(renderer: cortado_skia.SkiaRenderer) {
+        self.renderer = some(renderer)
+        self.active = renderer.backend().name()
+        self.request_render()
+    }
+    pub override fn on_params_set() {
+        match self.renderer {
+            some(renderer) => { self.active = renderer.backend().name() }
+            none => { self.active = "software" }
+        }
+    }
+    pub fn choose(preferred: cortado_skia.Backend) {
+        match self.renderer {
+            none => { self.status = "No renderer is attached." }
+            some(renderer) => {
+                match renderer.select_backend(preferred) {
+                    ok(_) => {
+                        self.active = renderer.backend().name()
+                        self.status = "Drawing with {self.active}."
+                    }
+                    err(_) => { self.status = "This backend is unavailable here." }
+                }
+            }
+        }
+        self.request_render()
+    }
+}
+</beans>

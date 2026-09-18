@@ -1,0 +1,14 @@
+<HStack background={self.fill} corner_radius={6} align="center" justify="space_between">
+  <Label text="−" text_color={self.ink} font_size={self.font_size} />
+  <Label text={self.number} text_color={self.ink} font_size={self.font_size} />
+  <Label text="+" text_color={self.ink} font_size={self.font_size} />
+</HStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class StepperTemplate extends component.RangeControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

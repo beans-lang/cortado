@@ -209,6 +209,8 @@ static void ctd_raise_key(uint32_t kind, HWND window, WPARAM vk) {
     out.kind = kind;
     out.target = target;
     out.index = ctd_key_of_vk(vk);
+    if (kind == CTD_EV_KEY_DOWN && ctd_canvas_text_active(window) &&
+        (out.index == CTD_KEY_CHARACTER || out.index == CTD_KEY_SPACE)) return;
     out.modifiers = ctd_modifiers_now();
     out.text = typed;
     out.text_len = (int32_t)strlen(typed);
@@ -228,11 +230,51 @@ static LRESULT CALLBACK ctd_input_proc(HWND window, UINT message,
         case WM_LBUTTONUP:   ctd_raise_pointer(CTD_EV_POINTER_UP,   window, lparam, CTD_BTN_LEFT);   break;
         case WM_RBUTTONUP:   ctd_raise_pointer(CTD_EV_POINTER_UP,   window, lparam, CTD_BTN_RIGHT);  break;
         case WM_MBUTTONUP:   ctd_raise_pointer(CTD_EV_POINTER_UP,   window, lparam, CTD_BTN_MIDDLE); break;
-        case WM_MOUSEMOVE:   ctd_raise_pointer(CTD_EV_POINTER_MOVE, window, lparam, CTD_BTN_LEFT);   break;
+        case WM_MOUSEMOVE: {
+            ctd_handle target = ctd_handle_for_window(window);
+            if (target && ctd_slot_kind(target) == CTD_W_CANVAS && ctd_listening(CTD_EV_POINTER_MOVE)) {
+                TRACKMOUSEEVENT tracking = { sizeof tracking, TME_LEAVE, window, 0 };
+                TrackMouseEvent(&tracking);
+            }
+            ctd_raise_pointer(CTD_EV_POINTER_MOVE, window, lparam, CTD_BTN_LEFT);
+            break;
+        }
+        case WM_MOUSELEAVE:
+            ctd_raise_pointer(CTD_EV_POINTER_MOVE, window, MAKELPARAM(0xffff, 0xffff), CTD_BTN_LEFT);
+            break;
+        case WM_MOUSEWHEEL:
+        case WM_MOUSEHWHEEL:
+            if (g_sink && ctd_listening(CTD_EV_POINTER_SCROLL)) {
+                ctd_handle target = ctd_handle_for_window(window);
+                if (target) {
+                    POINT point = { GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
+                    ScreenToClient(window, &point);
+                    ctd_event event; memset(&event, 0, sizeof event);
+                    event.kind = CTD_EV_POINTER_SCROLL;
+                    event.target = target;
+                    event.x = point.x; event.y = point.y;
+                    double delta = (double)GET_WHEEL_DELTA_WPARAM(wparam) * 48.0 / WHEEL_DELTA;
+                    if (message == WM_MOUSEWHEEL) event.height = -delta;
+                    else event.width = delta;
+                    g_sink(g_sink_context, &event);
+                }
+            }
+            break;
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:  ctd_raise_key(CTD_EV_KEY_DOWN, window, wparam); break;
         case WM_KEYUP:
         case WM_SYSKEYUP:    ctd_raise_key(CTD_EV_KEY_UP,   window, wparam); break;
+        case WM_CHAR:
+        case WM_UNICHAR:
+            if (message == WM_UNICHAR && wparam == UNICODE_NOCHAR) return TRUE;
+            ctd_canvas_im_message(window, message, wparam, lparam);
+            if (ctd_canvas_text_active(window)) return 0;
+            break;
+        case WM_IME_COMPOSITION:
+        case WM_IME_ENDCOMPOSITION:
+            ctd_canvas_im_message(window, message, wparam, lparam);
+            if (ctd_canvas_text_active(window)) return 0;
+            break;
         case WM_SETFOCUS:
             if (ctd_listening(CTD_EV_FOCUS)) {
                 ctd_handle took = ctd_handle_for_window(window);
@@ -245,7 +287,16 @@ static LRESULT CALLBACK ctd_input_proc(HWND window, UINT message,
                 if (left) ctd_emit(CTD_EV_BLUR, left, 0, 0);
             }
             break;
+        case WM_GETOBJECT: {
+            LRESULT result = ctd_canvas_ax_getobject(window, wparam, lparam);
+            if (result) return result;
+            break;
+        }
+        case CTD_WM_AX_ACTION:
+            return ctd_canvas_ax_action(window, wparam, lparam);
         case WM_NCDESTROY:
+            ctd_canvas_ax_release(window);
+            ctd_canvas_im_release(window);
             RemovePropW(window, CTD_HANDLE_PROP);
             break;
         default: break;

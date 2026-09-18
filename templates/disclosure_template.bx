@@ -1,0 +1,15 @@
+<VStack background={self.fill} corner_radius={self.radius} align="stretch">
+  <HStack spacing={7} padding={7} align="center">
+    <Label text={self.glyph} text_color={self.accent} font_size={self.font_size} />
+    <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+  </HStack>
+</VStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class DisclosureTemplate extends component.DisclosureControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

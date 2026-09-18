@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 32
+pub const ABI_VERSION: int = 34
 
 // ---- statuses ----
 
@@ -60,7 +60,12 @@ pub const EV_BLE_FOUND: int = 35
 pub const EV_BLE_LINK: int = 36
 pub const EV_CAPTURE_DEVICES: int = 37
 pub const EV_SCREEN_FRAME: int = 38
-pub const EV_COUNT: int = 39
+pub const EV_POINTER_SCROLL: int = 39
+pub const EV_TEXT_INPUT: int = 40
+pub const EV_COMPOSITION_UPDATE: int = 41
+pub const EV_COMPOSITION_CANCEL: int = 42
+pub const EV_SEMANTICS_ACTION: int = 43
+pub const EV_COUNT: int = 44
 
 // ---- modifier bits ----
 

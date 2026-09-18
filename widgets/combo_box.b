@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A control that shows one of several choices and lets the user pick another.
 ///
@@ -15,8 +16,8 @@ import cortado.host
 /// The selection is an **index**, not the text. Two items may legitimately
 /// read the same, and a selection by text could not tell them apart.
 pub class ComboBox extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.combo_box)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.combo_box, context)
     }
 
     pub static fn of(items: List<string>) -> Result<ComboBox> {
@@ -28,6 +29,10 @@ pub class ComboBox extends Widget {
     /// Replaces every item. The selection afterwards is the first item, or
     /// none when the list is empty.
     pub fn set_items(items: List<string>) -> Result<bool> {
+        if self.is_rendered() {
+            let choice: render.ComboBoxRender = (self.render_object()? as? render.ComboBoxRender).expect("shared combo box")
+            return choice.replace_items(items)
+        }
         unsafe {
             host.check(host.ctd_items_clear(self.slot.raw) as int,
                        "empty a combo box")?
@@ -39,6 +44,10 @@ pub class ComboBox extends Widget {
     }
 
     pub fn add_item(text: string) -> Result<bool> {
+        if self.is_rendered() {
+            let choice: render.ComboBoxRender = (self.render_object()? as? render.ComboBoxRender).expect("shared combo box")
+            return choice.add_item(text)
+        }
         let buffer: Bytes = host.HostText.encode(text, "add an item to a combo box")?
         unsafe {
             return host.check(
@@ -49,6 +58,10 @@ pub class ComboBox extends Widget {
     }
 
     pub fn count() -> Result<int> {
+        if self.is_rendered() {
+            let choice: render.ComboBoxRender = (self.render_object()? as? render.ComboBoxRender).expect("shared combo box")
+            return ok(choice.count())
+        }
         let scratch: host.HostScratch = host.HostScratch.instance
         var total: i32 = 0
         unsafe {
@@ -61,6 +74,10 @@ pub class ComboBox extends Widget {
     }
 
     pub fn item_at(index: int) -> Result<string> {
+        if self.is_rendered() {
+            let choice: render.ComboBoxRender = (self.render_object()? as? render.ComboBoxRender).expect("shared combo box")
+            return choice.item_at(index)
+        }
         let raw: u64 = self.slot.raw
         let at: i32 = index as i32
         return host.HostText.read(
@@ -72,6 +89,7 @@ pub class ComboBox extends Widget {
 
     /// Which item is chosen, or -1 for none.
     pub fn selected() -> Result<int> {
+        if self.is_rendered() { return self.read_property(host.P_SELECTED) }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_get_int(self.slot.raw, host.P_SELECTED as i32,
@@ -87,6 +105,10 @@ pub class ComboBox extends Widget {
 
     /// The text of the chosen item, or "" when nothing is chosen.
     pub override fn display_text() -> Result<string> {
+        if self.is_rendered() {
+            let choice: render.ComboBoxRender = (self.render_object()? as? render.ComboBoxRender).expect("shared combo box")
+            return ok(choice.selected_text())
+        }
         return self.text_raw()
     }
 }

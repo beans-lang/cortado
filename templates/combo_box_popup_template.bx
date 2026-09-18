@@ -1,0 +1,55 @@
+<ScrollView background={self.fill} border_color="#aeb2bf" border_width={1} corner_radius={self.radius}>
+  <VStack spacing={0} align="stretch">
+    $for index in 0..self.choices.len() {
+      <Button key={"option-{index}"}
+              text={if index == self.highlighted { "▸ {self.choices[index]}" } else if index == self.selected { "✓ {self.choices[index]}" } else { "  {self.choices[index]}" }}
+              height={32} on:click={fn(e: UiEvent) { self.choose(index) }} />
+    }
+  </VStack>
+</ScrollView>
+<beans>
+package templates
+import cortado.component
+import cortado.render
+import {view} from cortado.annotations
+
+@view
+pub partial class ComboBoxPopupTemplate extends component.ChoiceControlTemplate {
+    actions: Option<render.ControlActions> = none
+    pub fn init() { super.init() }
+    pub override fn bind_actions(actions: render.ControlActions) { self.actions = some(actions) }
+    pub fn choose(index: int) {
+        match self.actions {
+            some(actions) => {
+                actions.choose(index, index as f64).expect("choose a combo box option")
+                actions.dismiss()
+            }
+            none => { panic("combo box popup has no actions") }
+        }
+    }
+    pub override fn decorate_popup(root: render.RenderObject) -> Result<bool> {
+        let found: int = self.decorate_rows(root, 0)?
+        if found != self.choices.len() { return err("combo popup rows do not match choices", "tree_drift") }
+        return ok(true)
+    }
+    fn decorate_rows(node: render.RenderObject, start: int) -> Result<int> {
+        var index: int = start
+        match node as? render.ButtonRender {
+            some(button) => {
+                if index >= self.choices.len() { return err("combo popup has an extra option", "tree_drift") }
+                button.set_semantics("option", self.choices[index],
+                    if index == self.selected { "selected" } else if index == self.highlighted { "highlighted" } else { "" })?
+                index += 1
+            }
+            none => {}
+        }
+        for child_index: int in 0..node.child_count() {
+            match node.child_at(child_index) {
+                some(child) => { index = self.decorate_rows(child, index)? }
+                none => {}
+            }
+        }
+        return ok(index)
+    }
+}
+</beans>

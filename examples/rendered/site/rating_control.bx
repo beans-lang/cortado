@@ -1,0 +1,25 @@
+<VStack spacing={8} align="stretch">
+  <Label text={"Rating: {self.value} of 5"} font_size={18} />
+  <HStack spacing={8} wrap>
+    $for score in 1..6 {
+      <Button key={"rating-{score}"} text={if score <= self.value { "★ {score}" } else { "☆ {score}" }}
+              on:click={fn(e: UiEvent) { self.choose(score) }} />
+    }
+  </HStack>
+</VStack>
+<beans>
+package site
+import cortado.component
+import {view, param} from cortado.annotations
+@view
+pub partial class RatingControl extends component.Component {
+    @param pub value: int = 0
+    pub on_change: fn(int) = fn(_value: int) {}
+    pub fn init() { super.init() }
+    pub fn choose(value: int) {
+        if value < 1 || value > 5 { return }
+        let action: fn(int) = self.on_change
+        action(value)
+    }
+}
+</beans>

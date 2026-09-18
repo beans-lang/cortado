@@ -1,0 +1,285 @@
+package render
+
+import cortado.geometry
+import cortado.paint
+import cortado.events
+import cortado.host
+
+/// The shared table asks only for rows it is about to show.
+pub interface TableData {
+    fn row_count() -> int
+    fn cell(row: int, column: int) -> string
+}
+
+pub class TableRender extends ScrollRender {
+    source: Option<TableData> = none
+    edit_policy: Option<fn(int, int) -> bool> = none
+    titles: List<string> = []
+    widths: List<f64> = []
+    rows_value: int = 0
+    selected_value: int = -1
+    revision: int = 0
+    tracking: bool = false
+    pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) {
+        super.init(renderer, theme, dirty)
+        self.focusable = true
+    }
+    pub override fn role() -> string { return "table" }
+    pub override fn needs_template() -> bool { return true }
+    pub override fn interactive_visual() -> bool { return true }
+    pub override fn visual_offset() -> geometry.Point { return geometry.Point.at(-self.scroll_x(), 0.0) }
+    pub override fn template_size() -> geometry.Size {
+        var width: f64 = self.bounds.width
+        var columns: f64 = 0.0
+        for value: f64 in self.widths { columns += value }
+        if columns > width { width = columns }
+        return geometry.Size.of(width, self.bounds.height)
+    }
+    pub fn row_height() -> f64 { return 28.0 }
+    pub fn header_height() -> f64 { return 30.0 }
+    pub fn row_count() -> int { return self.rows_value }
+    pub fn column_count() -> int { return self.titles.len() }
+    pub fn selected() -> int { return self.selected_value }
+    pub fn version() -> int { return self.revision }
+    pub fn has_source() -> bool { return self.source != none }
+    pub fn has_edit_policy() -> bool { return self.edit_policy != none }
+    pub fn scroll_offset() -> f64 { return -self.child_offset().y }
+    pub fn scroll_x() -> f64 { return -self.child_offset().x }
+    pub fn title(column: int) -> Result<string> {
+        self.demand_alive()?
+        if column < 0 || column >= self.titles.len() { return err("table column is outside the list", "out_of_range") }
+        return ok(self.titles[column])
+    }
+    pub fn width(column: int) -> Result<f64> {
+        self.demand_alive()?
+        if column < 0 || column >= self.widths.len() { return err("table column is outside the list", "out_of_range") }
+        return ok(self.widths[column])
+    }
+    pub fn titles_copy() -> List<string> {
+        var copy: List<string> = []
+        for value: string in self.titles { copy.push(value) }
+        return move copy
+    }
+    pub fn widths_copy() -> List<f64> {
+        var copy: List<f64> = []
+        for value: f64 in self.widths { copy.push(value) }
+        return move copy
+    }
+    pub fn set_columns(count: int) -> Result<bool> {
+        self.demand_alive()?
+        if count < 0 || count > 64 { return err("invalid table column count", "out_of_range") }
+        self.titles = []
+        self.widths = []
+        for index: int in 0..count { self.titles.push(""); self.widths.push(120.0) }
+        self.revision += 1
+        self.update_content()?
+        self.dirty.layout(); self.dirty.semantics()
+        return ok(true)
+    }
+    pub fn set_titles(values: List<string>) -> Result<bool> {
+        self.set_columns(values.len())?
+        for index: int in 0..values.len() { self.titles[index] = values[index] }
+        self.revision += 1
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    pub fn set_title(column: int, title: string) -> Result<bool> {
+        self.demand_alive()?
+        if column < 0 || column >= self.titles.len() { return err("table column is outside the list", "out_of_range") }
+        if self.titles[column] == title { return ok(false) }
+        self.titles[column] = title
+        self.revision += 1
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    pub fn set_width(column: int, points: f64) -> Result<bool> {
+        self.demand_alive()?
+        if column < 0 || column >= self.widths.len() { return err("table column is outside the list", "out_of_range") }
+        if !(points > 0.0 && points < 10000000.0) { return err("invalid table column width", "out_of_range") }
+        if self.widths[column] == points { return ok(false) }
+        var total: f64 = points
+        for index: int in 0..self.widths.len() { if index != column { total += self.widths[index] } }
+        if !(total < 10000000.0) { return err("table columns exceed content width", "out_of_range") }
+        self.widths[column] = points
+        self.revision += 1
+        self.update_content()?
+        self.dirty.layout()
+        return ok(true)
+    }
+    pub fn set_widths(values: List<f64>) -> Result<bool> {
+        self.demand_alive()?
+        if values.len() != self.widths.len() { return err("table widths must match columns", "out_of_range") }
+        var total: f64 = 0.0
+        for value: f64 in values {
+            if !(value > 0.0 && value < 10000000.0) { return err("invalid table column width", "out_of_range") }
+            total += value
+        }
+        if !(total < 10000000.0) { return err("table columns exceed content width", "out_of_range") }
+        var copy: List<f64> = []
+        for value: f64 in values { copy.push(value) }
+        self.widths = move copy
+        self.revision += 1
+        self.update_content()?
+        self.dirty.layout()
+        return ok(true)
+    }
+    pub fn reset_widths() -> Result<bool> {
+        self.demand_alive()?
+        for index: int in 0..self.widths.len() { self.widths[index] = 120.0 }
+        self.revision += 1
+        self.update_content()?
+        self.dirty.layout()
+        return ok(true)
+    }
+    pub fn set_source(data: TableData) -> Result<bool> {
+        self.demand_alive()?
+        let count: int = data.row_count()
+        self.validate_rows(count)?
+        self.source = some(data)
+        return self.apply_rows(count)
+    }
+    pub fn clear_source() -> Result<bool> {
+        self.demand_alive()?
+        self.source = none
+        return self.reload()
+    }
+    pub fn reload() -> Result<bool> {
+        self.demand_alive()?
+        let count: int = match self.source { some(data) => data.row_count() none => 0 }
+        self.validate_rows(count)?
+        return self.apply_rows(count)
+    }
+    fn validate_rows(count: int) -> Result<bool> {
+        if count < 0 || !(self.header_height() + count as f64 * self.row_height() < 10000000.0) {
+            return err("table rows exceed content height", "out_of_range")
+        }
+        return ok(true)
+    }
+    fn apply_rows(count: int) -> Result<bool> {
+        self.rows_value = count
+        if self.selected_value >= count { self.selected_value = -1 }
+        self.revision += 1
+        self.update_content()?
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    fn update_content() -> Result<bool> {
+        var width: f64 = 0.0
+        for value: f64 in self.widths { width += value }
+        return self.set_content_size(geometry.Size.of(width, self.header_height() + self.rows_value as f64 * self.row_height()))
+    }
+    pub fn cell(row: int, column: int) -> Result<string> {
+        self.demand_alive()?
+        if row < 0 || row >= self.rows_value || column < 0 || column >= self.titles.len() {
+            return err("table cell is outside the source", "out_of_range")
+        }
+        return match self.source { some(data) => ok(data.cell(row, column)) none => err("table has no source", "empty_source") }
+    }
+    pub fn set_editable_when(policy: fn(int, int) -> bool) -> Result<bool> {
+        self.demand_alive()?
+        self.edit_policy = some(policy)
+        self.revision += 1
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    pub fn clear_editable() -> Result<bool> {
+        self.demand_alive()?
+        self.edit_policy = none
+        self.revision += 1
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    pub fn editable(row: int, column: int) -> Result<bool> {
+        self.demand_alive()?
+        if row < 0 || row >= self.rows_value || column < 0 || column >= self.titles.len() {
+            return err("table cell is outside the source", "out_of_range")
+        }
+        return match self.edit_policy { some(policy) => ok(policy(row, column)) none => ok(false) }
+    }
+    pub override fn on_cell_commit(row: int, column: int, text: string) -> Result<bool> {
+        if !self.editable(row, column)? {
+            // Rebuild an editor whose policy changed during an edit.
+            self.revision += 1
+            self.dirty.paint(); self.dirty.semantics()
+            return ok(false)
+        }
+        // The source owns the value. The event handler may save `text`; a
+        // refresh reads the source again and reverts an unsaved proposal.
+        self.revision += 1
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    pub override fn on_dispose() {
+        self.source = none
+        self.edit_policy = none
+    }
+    pub fn select(row: int) -> Result<bool> {
+        self.demand_alive()?
+        if row < -1 || row >= self.rows_value { return err("table selection is outside the rows", "out_of_range") }
+        if self.selected_value == row { return self.ensure_visible(row) }
+        self.selected_value = row
+        self.revision += 1
+        self.ensure_visible(row)?
+        self.dirty.paint(); self.dirty.semantics()
+        return ok(true)
+    }
+    fn ensure_visible(row: int) -> Result<bool> {
+        if row < 0 || self.bounds.height <= self.header_height() { return ok(false) }
+        let body: f64 = self.bounds.height - self.header_height()
+        let top: f64 = row as f64 * self.row_height()
+        let bottom: f64 = top + self.row_height()
+        var next: f64 = self.scroll_offset()
+        if top < next { next = top }
+        else if bottom > next + body { next = bottom - body }
+        return self.scroll_to(geometry.Point.at(self.scroll_x(), next))
+    }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
+        var width: f64 = 0.0
+        for value: f64 in self.widths { width += value }
+        if width < 120.0 { width = 120.0 }
+        return ok(geometry.Size.of(width, 180.0))
+    }
+    pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> {
+        super.paint_self(canvas)?
+        canvas.save()?
+        canvas.clip(geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height), 0.0)?
+        self.paint_template(canvas)?
+        canvas.restore()?
+        return ok(true)
+    }
+    fn select_as_user(row: int) -> Option<events.UiEvent> {
+        if row == self.selected_value { return none }
+        match self.select(row) {
+            ok(changed) => {
+                if !changed { return none }
+                let event: events.UiEvent = events.UiEvent.of(events.EventKind.selection, host.Handle.of(self.identity))
+                event.index = row
+                return some(event)
+            }
+            err(_) => { return none }
+        }
+    }
+    pub override fn handle_event(event: events.UiEvent) -> Option<events.UiEvent> {
+        if !self.enabled || self.hidden || !self.alive { return none }
+        if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT { self.tracking = true; return none }
+        if event.kind == events.EventKind.pointer_up {
+            let was_tracking: bool = self.tracking
+            self.tracking = false
+            if was_tracking && event.index == host.BTN_LEFT &&
+               geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height).contains(event.position) &&
+               event.position.y >= self.header_height() {
+                let row: int = ((event.position.y + self.scroll_offset() - self.header_height()) / self.row_height()) as int
+                return self.select_as_user(row)
+            }
+        }
+        if event.kind == events.EventKind.key_down && self.rows_value > 0 {
+            if event.key() == events.Key.down { return self.select_as_user(if self.selected_value + 1 < self.rows_value { self.selected_value + 1 } else { self.selected_value }) }
+            if event.key() == events.Key.up { return self.select_as_user(if self.selected_value > 0 { self.selected_value - 1 } else { 0 }) }
+        }
+        return none
+    }
+    pub override fn focus_changed(focused: bool) {
+        super.focus_changed(focused)
+        if !focused { self.tracking = false }
+    }
+}

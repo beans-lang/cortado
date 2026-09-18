@@ -37,6 +37,7 @@ static int32_t g_synth_button;
 #define CTD_CLICK_KEY  "ctd-click"
 #define CTD_MOTION_KEY "ctd-motion"
 #define CTD_KEYS_KEY   "ctd-keys"
+#define CTD_SCROLL_POINT_KEY "ctd-scroll-point"
 
 int ctd_listening(uint32_t kind) {
     if (kind >= (uint32_t)CTD_EV_COUNT) return 0;
@@ -243,15 +244,47 @@ static void ctd_on_released(GtkGestureClick *gesture, int presses,
 
 static void ctd_on_motion(GtkEventControllerMotion *motion,
                           double x, double y, gpointer data) {
+    double *point = g_object_get_data(G_OBJECT(data), CTD_SCROLL_POINT_KEY);
+    if (point) { point[0] = x; point[1] = y; }
     ctd_raise_pointer(CTD_EV_POINTER_MOVE, GTK_WIDGET(data), x, y, CTD_BTN_LEFT,
                       ctd_modifiers_of(gtk_event_controller_get_current_event_state(
                           GTK_EVENT_CONTROLLER(motion))));
+}
+
+static void ctd_on_motion_leave(GtkEventControllerMotion *motion, gpointer data) {
+    (void)motion;
+    ctd_raise_pointer(CTD_EV_POINTER_MOVE, GTK_WIDGET(data), -1.0, -1.0, CTD_BTN_LEFT, 0);
+}
+
+static gboolean ctd_on_scroll(GtkEventControllerScroll *controller,
+                              double dx, double dy, gpointer data) {
+    (void)controller;
+    if (!g_sink || !ctd_listening(CTD_EV_POINTER_SCROLL)) return FALSE;
+    ctd_handle target = ctd_handle_for_widget(GTK_WIDGET(data));
+    if (!target) return FALSE;
+    double *point = g_object_get_data(G_OBJECT(data), CTD_SCROLL_POINT_KEY);
+    ctd_event event;
+    memset(&event, 0, sizeof event);
+    event.kind = CTD_EV_POINTER_SCROLL;
+    event.target = target;
+    event.x = point ? point[0] : 0.0;
+    event.y = point ? point[1] : 0.0;
+    event.width = dx * 32.0;
+    event.height = dy * 32.0;
+    g_sink(g_sink_context, &event);
+    return FALSE;
 }
 
 static gboolean ctd_on_key_pressed(GtkEventControllerKey *keys, guint keyval,
                                    guint code, GdkModifierType state,
                                    gpointer data) {
     (void)code;
+    if (ctd_canvas_im_filter(GTK_WIDGET(data), gtk_event_controller_get_current_event(GTK_EVENT_CONTROLLER(keys))))
+        return TRUE;
+    if (ctd_canvas_text_active(GTK_WIDGET(data)) &&
+        !(state & (GDK_CONTROL_MASK | GDK_META_MASK)) &&
+        (ctd_key_of_keyval(keyval) == CTD_KEY_CHARACTER ||
+         ctd_key_of_keyval(keyval) == CTD_KEY_SPACE)) return FALSE;
     // The character the key types, which is what a text field wants and what
     // an arrow key does not have. gdk_keyval_to_unicode answers 0 for a key
     // that types nothing, and that is the empty string here.
@@ -281,6 +314,7 @@ static void ctd_on_key_released(GtkEventControllerKey *keys, guint keyval,
 
 static void ctd_on_focus_in(GtkEventControllerFocus *focus, gpointer data) {
     (void)focus;
+    ctd_canvas_im_focus(GTK_WIDGET(data), TRUE);
     if (!ctd_listening(CTD_EV_FOCUS)) return;
     ctd_handle target = ctd_handle_for_widget(GTK_WIDGET(data));
     if (target) ctd_emit(CTD_EV_FOCUS, target, 0, 0);
@@ -288,6 +322,7 @@ static void ctd_on_focus_in(GtkEventControllerFocus *focus, gpointer data) {
 
 static void ctd_on_focus_out(GtkEventControllerFocus *focus, gpointer data) {
     (void)focus;
+    ctd_canvas_im_focus(GTK_WIDGET(data), FALSE);
     if (!ctd_listening(CTD_EV_BLUR)) return;
     ctd_handle target = ctd_handle_for_widget(GTK_WIDGET(data));
     if (target) ctd_emit(CTD_EV_BLUR, target, 0, 0);
@@ -315,8 +350,13 @@ void ctd_input_attach(gpointer object, ctd_handle handle) {
 
     GtkEventController *motion = gtk_event_controller_motion_new();
     g_signal_connect(motion, "motion", G_CALLBACK(ctd_on_motion), widget);
+    g_signal_connect(motion, "leave", G_CALLBACK(ctd_on_motion_leave), widget);
     gtk_widget_add_controller(widget, motion);
     g_object_set_data(G_OBJECT(widget), CTD_MOTION_KEY, motion);
+    g_object_set_data_full(G_OBJECT(widget), CTD_SCROLL_POINT_KEY, g_new0(double, 2), g_free);
+    GtkEventController *scroll = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES);
+    g_signal_connect(scroll, "scroll", G_CALLBACK(ctd_on_scroll), widget);
+    gtk_widget_add_controller(widget, scroll);
 
     GtkEventController *keys = gtk_event_controller_key_new();
     g_signal_connect(keys, "key-pressed", G_CALLBACK(ctd_on_key_pressed), widget);

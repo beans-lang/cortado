@@ -62,6 +62,8 @@
 
 package bx
 
+import cortado.visual
+
 // -------------------------------------------------------------- the counters
 
 /// The sequence-number stack: one counter per scope that restarts at 0.
@@ -421,6 +423,14 @@ pub class Emitter {
     /// misspelled attribute is reported at its own position with a suggestion
     /// rather than at the element's.
     fn check_element(element: ElementNode) {
+        if visual.is_tag(element.tag) && element.children.len() > 0 {
+            self.report(element.span, "<{element.tag}> is a drawing leaf and cannot hold children")
+        }
+        if element.tag == "Path" {
+            var has_data: bool = false
+            for attr: Attr in element.attrs { if attr.name() == "d" { has_data = true } }
+            if !has_data { self.report(element.span, "<Path> needs d= with SVG path data") }
+        }
         if !tag_name_is_safe(element.tag) {
             self.report(element.span, "<{element.tag}> is not a name — a tag is a letter followed by letters, digits and underscores")
             return
@@ -524,7 +534,11 @@ pub class Emitter {
         }
         match attr as? LiteralAttr {
             some(literal) => {
-                self.emit_typed(literal.attr_name, quoted(literal.value),
+                if element.tag == "Path" && literal.attr_name == "d" {
+                    let problem: string = visual.path_problem(literal.value)
+                    if problem != "" { self.report(literal.span, problem) }
+                }
+                self.emit_typed(element.tag, literal.attr_name, quoted(literal.value),
                                 literal.value, literal.span, indent)
                 return bound
             }
@@ -545,7 +559,7 @@ pub class Emitter {
         match attr as? ExprAttr {
             some(expr) => {
                 self.check_code(expr.code, expr.span, "an attribute expression")
-                self.emit_typed(expr.attr_name, expr.code, "", expr.span, indent)
+                self.emit_typed(element.tag, expr.attr_name, expr.code, "", expr.span, indent)
                 return bound
             }
             none => {}
@@ -605,11 +619,44 @@ pub class Emitter {
     ///
     /// `align` and `justify` need the literal: the set of words is closed, so a
     /// misspelling is refused here rather than reaching the Builder at run time.
-    fn emit_typed(name: string, code: string, literal: string, at: Span, indent: int) {
+    fn emit_typed(tag: string, name: string, code: string, literal: string, at: Span, indent: int) {
         let b: string = self.builder_name()
         let call: string = attribute_call(name)
+        if tag == "Table" && name == "columns" {
+            if literal != "" { self.report(at, "Table columns takes a List<string> expression"); return }
+            self.write(indent, "{b}.columns({code})")
+            return
+        }
+        if tag == "Table" && name == "source" {
+            if literal != "" { self.report(at, "Table source takes a TableRows expression"); return }
+            self.write(indent, "{b}.table_source({code})")
+            return
+        }
+        if tag == "Table" && name == "editable_when" {
+            if literal != "" { self.report(at, "Table editable_when takes a TableEditRule expression"); return }
+            self.write(indent, "{b}.editable_when({code})")
+            return
+        }
+        if call == "column_widths" {
+            if literal != "" { self.report(at, "{name} takes a typed expression"); return }
+            self.write(indent, "{b}.column_widths({code})")
+            return
+        }
+        if call == "items" || call == "labels" {
+            if literal != "" {
+                self.report(at, "{name} takes a List<string> expression, such as {name}=\{self.choices\}")
+                return
+            }
+            if call == "items" { self.write(indent, "{b}.items({code})") }
+            else { self.write(indent, "{b}.labels({code})") }
+            return
+        }
         if call == "text" {
             self.write(indent, "{b}.text({interpolated(code)})")
+            return
+        }
+        if call == "a11y_label" {
+            self.write(indent, "{b}.a11y_label({interpolated(code)})")
             return
         }
         if call == "flag" {
@@ -629,6 +676,10 @@ pub class Emitter {
             }
             if literal == "" {
                 self.report(at, "{name} takes one of a fixed set of words, so it needs a literal: {name}=\"{word_example(name)}\"")
+                return
+            }
+            if name == "transition_easing" && visual.easing_code(literal) < 0 {
+                self.report(at, "transition_easing must be linear or ease_in_out")
                 return
             }
             self.write(indent, "{b}.word(\"{escape_beans_string(name)}\", \"{escape_beans_string(literal)}\")")

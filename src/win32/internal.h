@@ -37,6 +37,7 @@
 #endif
 
 #include <windows.h>
+#include <imm.h>
 #include <windowsx.h>
 #include <commctrl.h>
 #include <commdlg.h>
@@ -53,6 +54,7 @@ enum { CTD_SLOTS = 8192 };
 #define CTD_INNER L"cortado-inner"
 #define CTD_TAG   L"cortado"
 #define CTD_WM_DIALOG (WM_APP + 2)
+#define CTD_WM_AX_ACTION (WM_APP + 37)
 // What a slot holds. A handle names a widget, a surface or a menu, and the
 // three are not interchangeable: asking a menu for its frame has to be
 // CTD_ERR_KIND and not a cast.
@@ -210,6 +212,13 @@ void ctd_input_attach(void *object, int32_t type, ctd_handle handle);
 // The handle for the nearest ancestor of a window that cortado built, starting
 // with the window itself. 0 for anything cortado did not build.
 ctd_handle ctd_handle_for_window(HWND window);
+int ctd_canvas_text_active(HWND window);
+void ctd_canvas_im_message(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
+void ctd_canvas_im_release(HWND window);
+LRESULT ctd_canvas_ax_getobject(HWND window, WPARAM wparam, LPARAM lparam);
+LRESULT ctd_canvas_ax_action(HWND window, WPARAM action, LPARAM node_id);
+void ctd_canvas_ax_release(HWND window);
+void *ctd_canvas_ax_provider(HWND window); /* borrowed by UIA; caller releases COM ref */
 // Whether anything asked for this kind. The header calls ctd_listen advice
 // rather than permission; this is what the advice becomes on the hot path.
 int ctd_listening(uint32_t kind);

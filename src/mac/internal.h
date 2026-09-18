@@ -45,6 +45,19 @@ enum { CTD_SLOTS = 8192 };
 @property (nonatomic) int32_t ctdRole;
 @end
 
+// A shared-rendered canvas remains an NSView. This class only talks to the
+// system input method; Beans owns its text and editing policy.
+@interface CortadoSharedCanvas : CortadoView <NSTextInputClient>
+@property (nonatomic) BOOL ctdTextActive;
+@property (nonatomic) BOOL ctdSecureInput;
+@property (nonatomic, retain) NSString *ctdEditorText;
+@property (nonatomic) NSRange ctdEditorSelection;
+@property (nonatomic) NSRect ctdCaretRect;
+@property (nonatomic, retain) NSMutableArray *ctdSemantics;
+- (void)ctdDiscardMarked;
+@end
+void ctd_clipboard_use_pasteboard(NSPasteboard *board); // isolated native tests
+
 // The native editor inside a text area's scroll view. Keeping its code-mode
 // state here ties it to the view's lifetime, even when handle slots are reused.
 @interface CortadoTextView : NSTextView {

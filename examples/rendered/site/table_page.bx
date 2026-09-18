@@ -1,0 +1,58 @@
+<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+  <Label text="Virtual table" font_size={23} />
+  <Label text="10,000 rows. Scroll to see cells load only when visible." text_color="#555b6b" />
+  <Label text="Edit a Cup cell and press Return. Order cells are read-only." text_color="#555b6b" />
+  <Table key={"orders"} columns={self.titles} column_widths={self.widths}
+         source={self.rows} editable_when={self.edit_policy} height={340}
+         on:select={fn(e: UiEvent) { self.choose_row(e.index) }}
+         on:commit={fn(e: UiEvent) { self.commit_cell(e.index, e.token, e.text) }} />
+  <Label text={"Selected row {self.selected_row}. Last edit: {self.last_edit}"} text_color="#555b6b" />
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import cortado.widgets
+import {view} from cortado.annotations
+
+pub class EditableTableRows implements widgets.TableRows {
+    pub calls: int = 0
+    pub total: int = 10000
+    values: Map<int, string> = {}
+    pub fn init() {}
+    pub fn row_count() -> int { return self.total }
+    pub fn cell(row: int, column: int) -> string {
+        self.calls += 1
+        if column == 0 { return "Order {row}" }
+        return match self.values.get(row) {
+            some(value) => value
+            none => "Cup {row % 3}"
+        }
+    }
+    pub fn save(row: int, column: int, text: string) {
+        if column == 1 { self.values[row] = text }
+    }
+}
+
+@view
+pub partial class TablePage extends component.Component {
+    pub rows: EditableTableRows
+    pub titles: List<string> = ["Order", "Cup"]
+    pub widths: List<f64> = [210.0, 190.0]
+    pub selected_row: int = -1
+    pub last_edit: string = "none"
+    pub save_edits: bool = true
+    pub edit_policy: component.TableEditRule
+    pub fn init() {
+        self.rows = new EditableTableRows()
+        self.edit_policy = new component.TableEditRule(fn(row: int, column: int) -> bool { return column == 1 })
+        super.init()
+    }
+    pub fn choose_row(index: int) { self.selected_row = index; self.request_render() }
+    pub fn commit_cell(row: int, column: int, text: string) {
+        if self.save_edits { self.rows.save(row, column, text) }
+        self.last_edit = "row {row}, column {column}: {text}"
+        self.request_render()
+    }
+}
+</beans>

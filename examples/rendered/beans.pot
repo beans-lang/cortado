@@ -1,0 +1,4 @@
+module rendered_demo
+kind application
+require path "../.."
+require path "../../skia"

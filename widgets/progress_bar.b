@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A bar showing progress through a known amount of work, or — when the
 /// amount is not known — that work is happening at all.
@@ -11,8 +12,8 @@ import cortado.host
 /// content length, and swapping one control for another at that moment would
 /// make the bar jump.
 pub class ProgressBar extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.progress_bar)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.progress_bar, context)
     }
 
     pub static fn of(low: f64, high: f64) -> Result<ProgressBar> {

@@ -1,0 +1,16 @@
+<VStack background={if self.pressed { self.accent } else if self.hovered { "#dbe5ff" } else { self.fill }} corner_radius={self.radius} padding={8}
+        border_width={if self.focused { 2.0 } else { 0.0 }} border_color={self.accent}
+        align="center" justify="center">
+  <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+</VStack>
+<beans>
+package templates
+
+import cortado.component
+import {view} from cortado.annotations
+
+@view
+pub partial class ButtonTemplate extends component.ControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

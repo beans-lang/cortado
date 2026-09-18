@@ -1,0 +1,65 @@
+<VStack spacing={0} align="stretch" background="#f7f7f9">
+  <VStack padding={20} spacing={10} align="stretch" background="#e8eaf0">
+    <Label text="Cortado rendered gallery" font_size={26} />
+    <Label text="Beans behavior. Markup visuals. One shared renderer." text_color="#555b6b" />
+    <HStack spacing={8} wrap>
+      <Button text="Getting started" on:click={fn(e: UiEvent) { self.select(0) }} />
+      <Button text="Controls" on:click={fn(e: UiEvent) { self.select(1) }} />
+      <Button text="Graphics" on:click={fn(e: UiEvent) { self.select(2) }} />
+      <Button text="Editing" on:click={fn(e: UiEvent) { self.select(3) }} />
+      <Button text="Collections" on:click={fn(e: UiEvent) { self.select(4) }} />
+      <Button text="Composition" on:click={fn(e: UiEvent) { self.select(5) }} />
+      <Button text="Drawing" on:click={fn(e: UiEvent) { self.select(6) }} />
+      <Button text="Accessibility" on:click={fn(e: UiEvent) { self.select(7) }} />
+      <Button text="Tables" on:click={fn(e: UiEvent) { self.select(8) }} />
+    </HStack>
+  </VStack>
+  <ScrollView grow={1}>
+    $if self.page == 0 {
+      <Screen />
+    } else if self.page == 1 {
+      <ControlsPage />
+    } else if self.page == 2 {
+      <RendererPage renderer={self.renderer} />
+    } else if self.page == 3 {
+      <EditingPage />
+    } else if self.page == 4 {
+      <CollectionsPage />
+    } else if self.page == 5 {
+      <CompositionPage theme={self.theme} />
+    } else if self.page == 6 {
+      <DrawingPage />
+    } else if self.page == 7 {
+      <AccessibilityPage />
+    } else {
+      <TablePage />
+    }
+  </ScrollView>
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import cortado_skia
+import cortado.render
+import {view} from cortado.annotations
+
+@view
+pub partial class Gallery extends component.Component {
+    pub page: int = 0
+    pub renderer: Option<cortado_skia.SkiaRenderer> = none
+    pub theme: Option<render.Theme> = none
+    pub fn init() { super.init() }
+    pub static fn page_count() -> int { return 9 }
+    pub fn select(page: int) {
+        if page < 0 || page >= Gallery.page_count() || page == self.page { return }
+        self.page = page
+        self.request_render()
+    }
+    pub fn attach(renderer: cortado_skia.SkiaRenderer) {
+        self.renderer = some(renderer)
+        self.request_render()
+    }
+    pub fn use_theme(theme: render.Theme) { self.theme = some(theme); self.request_render() }
+}
+</beans>

@@ -1,0 +1,17 @@
+<HStack background="#d6d8df" corner_radius={self.radius} padding={2} align="stretch" spacing={2}>
+  $for index in 0..self.choices.len() {
+    <Label key={"segment-{index}"} text={self.choices[index]}
+           text_color={if self.selected == index { "#ffffffff" } else { self.ink }}
+           background={if self.selected == index { self.accent } else { "#d6d8df" }}
+           corner_radius={4} font_size={self.font_size} grow={1} />
+  }
+</HStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class SegmentedTemplate extends component.ChoiceControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

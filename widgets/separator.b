@@ -1,5 +1,6 @@
 // A line between things.
 package widgets
+import cortado.render
 
 /// A rule that divides one group of controls from another.
 ///
@@ -9,7 +10,7 @@ package widgets
 /// on the machine it was tuned on and subtly wrong everywhere else, and would
 /// not follow the system appearance when it changed.
 pub class Separator extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.separator)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.separator, context)
     }
 }

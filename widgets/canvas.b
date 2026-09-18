@@ -21,4 +21,7 @@ pub class Canvas extends Widget {
     pub fn init() {
         super.init(WidgetKind.canvas)
     }
+
+    /// Software presentation for renderers using the shared paint interface.
+    pub fn present(frame: Snapshot) -> Result<bool> { return frame.present(self.handle()) }
 }

@@ -182,6 +182,23 @@ static void ctd_raise_pointer(uint32_t kind, NSEvent *event, NSView *view,
     g_sink(g_sink_context, &out);
 }
 
+static void ctd_raise_scroll(NSEvent *event, NSView *view, ctd_handle target) {
+    if (!g_sink) return;
+    NSPoint local = [view convertPoint:[event locationInWindow] fromView:nil];
+    ctd_event out;
+    memset(&out, 0, sizeof out);
+    out.kind = CTD_EV_POINTER_SCROLL;
+    out.target = target;
+    out.modifiers = ctd_modifiers_of([event modifierFlags]);
+    out.x = local.x;
+    out.y = local.y;
+    // AppKit reports scroll-up as positive; content displacement is opposite.
+    double multiplier = [event hasPreciseScrollingDeltas] ? 1.0 : 32.0;
+    out.width = -[event scrollingDeltaX] * multiplier;
+    out.height = -[event scrollingDeltaY] * multiplier;
+    g_sink(g_sink_context, &out);
+}
+
 // What a key typed, with the control characters taken out.
 //
 // AppKit answers "\x1b" to -characters for Escape, "\r" for Return and "\t"
@@ -263,6 +280,13 @@ static void ctd_saw(NSEvent *event) {
     if (!window) return;
 
     switch ([event type]) {
+        case NSEventTypeScrollWheel: {
+            if (!ctd_listening(CTD_EV_POINTER_SCROLL)) return;
+            NSView *hit = [[window contentView] hitTest:[event locationInWindow]];
+            ctd_handle target = ctd_handle_for_view(hit);
+            if (target) ctd_raise_scroll(event, hit, target);
+            return;
+        }
         case NSEventTypeLeftMouseDown:
         case NSEventTypeRightMouseDown:
         case NSEventTypeOtherMouseDown:
@@ -298,6 +322,10 @@ static void ctd_saw(NSEvent *event) {
             ctd_handle target =
                 ctd_handle_for_view(ctd_responder_view([window firstResponder]));
             if (!target) return;
+            if (kind == CTD_EV_KEY_DOWN &&
+                [ctd_responder_view([window firstResponder]) isKindOfClass:[CortadoSharedCanvas class]] &&
+                [(CortadoSharedCanvas *)ctd_responder_view([window firstResponder]) ctdTextActive] &&
+                !(ctd_modifiers_of([event modifierFlags]) & (CTD_MOD_COMMAND | CTD_MOD_CONTROL))) return;
             ctd_raise_key(kind, target, ctd_key_of_code([event keyCode]),
                           [event characters],
                           ctd_modifiers_of([event modifierFlags]));
@@ -315,7 +343,7 @@ void ctd_input_start(void) {
                         NSEventMaskMouseMoved     |
                         NSEventMaskLeftMouseDragged | NSEventMaskRightMouseDragged |
                         NSEventMaskOtherMouseDragged |
-                        NSEventMaskKeyDown | NSEventMaskKeyUp);
+                        NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskScrollWheel);
     g_monitor = [[NSEvent addLocalMonitorForEventsMatchingMask:mask
         handler:^NSEvent *(NSEvent *event) {
             ctd_saw(event);

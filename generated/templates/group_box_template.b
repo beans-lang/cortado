@@ -1,0 +1,39 @@
+// Generated from templates/group_box_template.bx by cortado. Do not edit.
+//
+// The <beans> block below is group_box_template.bx's, copied through byte for byte; its
+// own package line is blanked so every line after it keeps its number. The
+// render method under it is the markup, as Builder calls.
+// Change group_box_template.bx and regenerate:
+//
+//     cortado generate templates/group_box_template.bx
+package templates
+
+import {Builder, Component} from cortado.component
+import {UiEvent} from cortado.events
+
+
+//               
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class GroupBoxTemplate extends component.ControlTemplate {
+    pub fn init() { super.init() }
+}
+
+partial class GroupBoxTemplate {
+    pub override fn render(b: Builder) {
+        b.open("VStack")  // group_box_template.bx:1
+        b.word("background", self.fill)
+        b.word("border_color", "#bfc3ce")
+        b.number("border_width", (1) as f64)
+        b.number("corner_radius", (self.radius) as f64)
+        b.number("padding", (8) as f64)
+        b.word("align", "stretch")
+        b.open("Label")  // group_box_template.bx:3
+        b.text("{self.title}")
+        b.word("text_color", self.ink)
+        b.number("font_size", (self.font_size) as f64)
+        b.close()
+        b.close()
+    }
+}

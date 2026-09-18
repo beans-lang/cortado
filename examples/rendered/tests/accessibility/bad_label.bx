@@ -1,0 +1,10 @@
+<TextField a11y_label />
+<beans>
+package site
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class BadLabel extends component.Component {
+    pub fn init() { super.init() }
+}
+</beans>

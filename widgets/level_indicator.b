@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A gauge: a battery, a signal, a rating, a disk.
 ///
@@ -16,8 +17,8 @@ import cortado.host
 /// It takes no input. There is no `set_enabled` on one, and the value only
 /// ever comes from the program.
 pub class LevelIndicator extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.level_indicator)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.level_indicator, context)
     }
 
     pub static fn of(low: f64, high: f64, level: f64) -> Result<LevelIndicator> {

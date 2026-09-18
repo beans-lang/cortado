@@ -1,0 +1,14 @@
+<HStack background={self.track} corner_radius={14} padding={3} align="center">
+  $if self.checked { <Box grow={1} /> }
+  <Box width={22} height={22} background="#ffffffff" corner_radius={11} />
+  $if !self.checked { <Box grow={1} /> }
+</HStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class SwitchTemplate extends component.ToggleControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

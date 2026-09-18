@@ -1,7 +1,7 @@
 {
   "$generated": "Written by `cortado-bx vocabulary`, out of cortado's own tables. Do not edit by hand.",
-  "$source": "cortado bx/vocabulary.b, bx/events.b, bx/widgets.b, bx/parse.b",
-  "$language": "cortado markup — a whole-file document, not Beans with tags in it: outside <beans> every < opens a tag. Tags name native controls, never HTML elements",
+  "$source": "cortado bx/vocabulary.b, bx/events.b, bx/widgets.b, visual/vocabulary.b, bx/parse.b",
+  "$language": "cortado markup — a whole-file document, not Beans with tags in it: outside <beans> every < opens a tag. Tags name controls or shared drawing nodes, never HTML elements",
   "blocks": [
     {"name": "$if", "detail": "$if <expr> { ... }", "note": "A branch, emitted as a Beans if. A branch that is not taken contributes no element, so the siblings after it shift — give them key={ } if that matters."},
     {"name": "else", "detail": "$if <expr> { ... } else if <expr> { ... } else { ... }", "note": "Written without a $, because it continues the $if that opened the block."},
@@ -42,8 +42,9 @@
     {"name": "key", "detail": "key={<expr>}", "note": "The identity of this element among its siblings, across renders. A keyed element keeps its control when the list around it is reordered or filtered; without one, siblings match by position. It also names the control for Stage.control(key) and Stage.widget(key) in on_mount."},
     {"name": "ref", "detail": "ref={<place>}", "note": "On a component tag only: the instance the tag built, assigned to a place of type Option<T> once the tag is fully configured. A control has no instance to hand back — name it with key= instead."}
   ],
-  "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Disclosure", "Grid", "GroupBox", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper", "Switch", "TabView", "Table", "TextArea", "TextField", "VStack", "OutlineView", "WebView"],
+  "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Disclosure", "Grid", "GroupBox", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper", "Switch", "TabView", "Table", "TextArea", "TextField", "VStack", "OutlineView", "WebView", "Ellipse", "Path", "Rectangle", "ResourceImage"],
   "attributes": [
+    {"name": "a11y_label", "detail": "text", "note": "the name a screen reader speaks for this control"},
     {"name": "borderless", "detail": "flag", "note": "macOS tab pages without a strip or border; use an external selector"},
     {"name": "compact", "detail": "flag", "note": "macOS dense data grid or plain outline sidebar"},
     {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
@@ -59,10 +60,13 @@
     {"name": "checked", "detail": "flag", "note": "a check box's state"},
     {"name": "color", "detail": "word", "note": "a colour well's colour, written #rgb, #rrggbb or #rrggbbaa"},
     {"name": "column_gap", "detail": "number", "note": "the gap between a grid's columns"},
-    {"name": "columns", "detail": "word", "note": "a grid's columns, as points, shares like 1fr, or auto"},
+    {"name": "columns", "detail": "word", "note": "Grid track words or a Table List<string> of column titles"},
+    {"name": "column_widths", "detail": "column_widths", "note": "a List<f64> of Table column widths, in title order"},
     {"name": "corner_radius", "detail": "number", "note": "how far the corners are rounded, in points"},
     {"name": "day", "detail": "number", "note": "the day a date picker shows, in seconds since 1970-01-01 UTC"},
+    {"name": "divider", "detail": "number", "note": "SplitView divider position in points"},
     {"name": "editable", "detail": "flag", "note": "whether a field accepts typing"},
+    {"name": "editable_when", "detail": "editable_when", "note": "a stable TableEditRule for editable Table cells"},
     {"name": "enabled", "detail": "flag", "note": "whether the control responds"},
     {"name": "flex", "detail": "number", "note": "grow by this share, shrink to fit and start from nothing: grow, shrink and basis in one"},
     {"name": "font_role", "detail": "word", "note": "text size by the job it does: body, heading or caption, at the platform's own size"},
@@ -74,7 +78,9 @@
     {"name": "hide_above", "detail": "number", "note": "shown only while the box around it is under this width; hidden takes no room"},
     {"name": "hide_below", "detail": "number", "note": "shown only while the box around it is at least this wide; hidden takes no room"},
     {"name": "indeterminate", "detail": "flag", "note": "a progress bar with no known total"},
+    {"name": "items", "detail": "items", "note": "a List<string> of choices for ComboBox or Segmented"},
     {"name": "justify", "detail": "word", "note": "main-axis distribution: start, center, end, space_between, space_around, space_evenly"},
+    {"name": "labels", "detail": "labels", "note": "a List<string> of TabView page labels, in child order"},
     {"name": "line_spacing", "detail": "number", "note": "the gap between one line of a wrapping run and the next"},
     {"name": "lines", "detail": "number", "note": "how many lines a label may wrap onto: 0 for as many as it needs, 1 for one cut short"},
     {"name": "margin", "detail": "number", "note": "space kept outside this control, on all four edges"},
@@ -105,7 +111,9 @@
     {"name": "row_gap", "detail": "number", "note": "the gap between a grid's rows"},
     {"name": "selected", "detail": "number", "note": "which item of a list is chosen, as an index; -1 for none"},
     {"name": "shrink", "detail": "number", "note": "share of overflow this control gives up"},
+    {"name": "source", "detail": "by tag", "note": "a TableRows source for Table or a local image path for ResourceImage"},
     {"name": "spacing", "detail": "number", "note": "the gap between a container's children"},
+    {"name": "stacked", "detail": "flag", "note": "whether SplitView places its children top to bottom"},
     {"name": "step", "detail": "number", "note": "the increment a slider's thumb lands on; 0 for continuous"},
     {"name": "text", "detail": "text", "note": "the text this control shows"},
     {"name": "text_color", "detail": "word", "note": "the colour of the control's own text, written #rgb, #rrggbb or #rrggbbaa; carried by a label and the four controls you type into"},
@@ -114,7 +122,27 @@
     {"name": "width_percent", "detail": "number", "note": "the width as a share, 0 to 100, of the room its container offers, less its own margin"},
     {"name": "wrap", "detail": "flag", "note": "a stack that starts a new line when the next child would not fit"},
     {"name": "x", "detail": "number", "note": "how far from the left of a <Box> this control is placed, in points"},
-    {"name": "y", "detail": "number", "note": "how far from the top of a <Box> this control is placed, in points"}
+    {"name": "y", "detail": "number", "note": "how far from the top of a <Box> this control is placed, in points"},
+    {"name": "clip_radius", "detail": "number", "note": "rounded clip radius for the drawing bounds"},
+    {"name": "d", "detail": "text", "note": "SVG path data for Path"},
+    {"name": "fill", "detail": "word", "note": "fill colour for a drawing shape"},
+    {"name": "gradient_end", "detail": "word", "note": "bottom colour of a vertical linear fill gradient"},
+    {"name": "gradient_start", "detail": "word", "note": "top colour of a vertical linear fill gradient"},
+    {"name": "rotation", "detail": "number", "note": "shape rotation in degrees"},
+    {"name": "scale_x", "detail": "number", "note": "positive shape scale"},
+    {"name": "scale_y", "detail": "number", "note": "positive shape scale"},
+    {"name": "shadow_blur", "detail": "number", "note": "shadow blur radius in points"},
+    {"name": "shadow_color", "detail": "word", "note": "colour of a shape's drop shadow"},
+    {"name": "shadow_dx", "detail": "number", "note": "shadow offset in points"},
+    {"name": "shadow_dy", "detail": "number", "note": "shadow offset in points"},
+    {"name": "stroke", "detail": "word", "note": "outline colour for a drawing shape"},
+    {"name": "stroke_width", "detail": "number", "note": "outline width for a drawing shape"},
+    {"name": "transition_easing", "detail": "word", "note": "linear or ease_in_out timing for later visual changes"},
+    {"name": "transition_seconds", "detail": "number", "note": "seconds to animate later visual property changes; initial mount is immediate"}
   ],
-  "booleanAttributes": ["animating", "borderless", "compact", "checked", "editable", "enabled", "hidden", "indeterminate", "open", "wrap"]
+  "attributeOverrides": [
+    {"tag": "Table", "name": "source", "detail": "TableRows"},
+    {"tag": "ResourceImage", "name": "source", "detail": "text"}
+  ],
+  "booleanAttributes": ["animating", "borderless", "compact", "checked", "editable", "enabled", "hidden", "indeterminate", "open", "stacked", "wrap"]
 }

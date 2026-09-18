@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A round button that is on when its neighbours are off.
 ///
@@ -11,8 +12,8 @@ import cortado.host
 /// a `RadioGroup` type that pretended otherwise would have to fight all three.
 /// Put each group in its own `Container`, which is what a layout wants anyway.
 pub class RadioButton extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.radio_button)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.radio_button, context)
     }
 
     pub static fn of(title: string) -> Result<RadioButton> {

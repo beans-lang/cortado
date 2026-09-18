@@ -1,0 +1,20 @@
+<Box>
+  <Rectangle fill={if self.pressed { "#282119" } else if self.hovered { "#98643c" } else { "#654632" }}
+             clip_radius={14} transition_seconds={0.18} transition_easing="ease_in_out" />
+  <HStack padding={8} spacing={12} align="center" justify="center"
+          border_width={if self.focused { 2.0 } else { 0.0 }} border_color="#d5a665">
+    <Label text="+" font_size={18} text_color="#d5a665" />
+    <Label text={self.title} font_size={self.font_size} text_color="#ffffff" />
+  </HStack>
+</Box>
+<beans>
+package site
+
+import cortado.component
+import {view} from cortado.annotations
+
+@view
+pub partial class CoffeeButton extends component.ControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

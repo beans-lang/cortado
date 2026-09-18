@@ -1,0 +1,77 @@
+<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+  <Label text="Shared controls" font_size={23} />
+  <Label text="Every control below uses a .bx visual." text_color="#555b6b" />
+  <CheckBox key={"check"} text="Include milk" checked={self.checked == 1}
+            on:change={fn(e: UiEvent) { self.check(e.index) }} />
+  <HStack spacing={12} align="center">
+    <RadioButton key={"small"} text="Small" checked={self.small == 1}
+                 on:change={fn(e: UiEvent) { self.choose_small(e.index) }} />
+    <RadioButton key={"large"} text="Large" checked={self.large == 1}
+                 on:change={fn(e: UiEvent) { self.choose_large(e.index) }} />
+  </HStack>
+  <HStack spacing={12} align="center">
+    <Label text="Notifications" grow={1} />
+    <Switch key={"switch"} checked={self.on == 1}
+            on:change={fn(e: UiEvent) { self.flip(e.index) }} />
+  </HStack>
+  <Label text={"Intensity {self.intensity}"} />
+  <Slider key={"slider"} min={0.0} max={100.0} value={self.intensity} step={5.0}
+          on:change={fn(e: UiEvent) { self.slide(e.index, e.position.x) }} />
+  <HStack spacing={12} align="center">
+    <Label text="Shots" grow={1} />
+    <Stepper key={"stepper"} min={0.0} max={10.0} value={self.shots} step={1.0}
+             on:change={fn(e: UiEvent) { self.step(e.index) }} />
+  </HStack>
+  <Label text={"Progress {self.progress}%"} />
+  <ProgressBar key={"progress"} min={0.0} max={100.0} value={self.progress} />
+  <Label text="Level" />
+  <LevelIndicator key={"level"} min={0.0} max={100.0} value={self.intensity} />
+  <Separator height={1} />
+  <GroupBox text="Order options" height={72}>
+    <Label text="Beans, milk, and cup size" />
+  </GroupBox>
+  <Disclosure key={"details"} text="Order details" open={self.details_open == 1} height={72}
+              on:change={fn(e: UiEvent) { self.set_details(e.index) }}>
+    <Button key={"detail_action"} text="Roasted today"
+            on:click={fn(e: UiEvent) { self.note_detail() }} />
+  </Disclosure>
+  <Label text={"Milk {self.checked}, size {self.size}, notifications {self.on}, shots {self.shots}"}
+         text_color="#555b6b" />
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import {view} from cortado.annotations
+
+@view
+pub partial class ControlsPage extends component.Component {
+    pub checked: int = 0
+    pub small: int = 1
+    pub large: int = 0
+    pub on: int = 1
+    pub intensity: f64 = 40.0
+    pub last_slider_event_value: f64 = -1.0
+    pub shots: f64 = 2.0
+    pub progress: f64 = 35.0
+    pub size: string = "Small"
+    pub details_open: int = 0
+    pub detail_clicks: int = 0
+    pub fn init() { super.init() }
+    pub fn check(value: int) { self.checked = value; self.request_render() }
+    pub fn choose_small(value: int) {
+        if value == 1 { self.small = 1; self.large = 0; self.size = "Small"; self.request_render() }
+    }
+    pub fn choose_large(value: int) {
+        if value == 1 { self.small = 0; self.large = 1; self.size = "Large"; self.request_render() }
+    }
+    pub fn flip(value: int) { self.on = value; self.request_render() }
+    pub fn slide(value: int, event_value: f64) {
+        self.intensity = value as f64; self.last_slider_event_value = event_value
+        self.request_render()
+    }
+    pub fn step(value: int) { self.shots = value as f64; self.request_render() }
+    pub fn set_details(value: int) { self.details_open = value; self.request_render() }
+    pub fn note_detail() { self.detail_clicks += 1; self.request_render() }
+}
+</beans>

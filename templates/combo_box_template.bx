@@ -1,0 +1,14 @@
+<HStack background={self.fill} border_color={if self.focused { self.accent } else { "#aeb2bf" }}
+        border_width={1} corner_radius={self.radius} padding={6} align="center" spacing={8}>
+  <Label text={self.selected_text} text_color={self.ink} font_size={self.font_size} grow={1} />
+  <Label text="⌄" text_color={self.accent} font_size={self.font_size} />
+</HStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class ComboBoxTemplate extends component.ChoiceControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

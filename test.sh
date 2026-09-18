@@ -138,7 +138,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events attributes bridge mount viewport culled reflow scaled fluid fonts box nested slots shelf menu system roles text code_mode pixels applied leaks enabled checked controls numbers strings table table_edit outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
+cases=(raster tree events attributes bridge mount viewport culled reflow scaled fluid fonts box nested slots shelf menu system roles text code_mode pixels applied leaks enabled checked controls numbers strings table table_edit outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -214,7 +214,7 @@ cases=(tree events attributes bridge mount viewport culled reflow scaled fluid f
 # side alone, and it is the one that matters: a platform that cannot draw with
 # shaders says so, and never quietly does nothing. `tests/pixels.b` shows the
 # alternative, where the refusing hosts go unchecked.
-cross_host=(roles fonts reflow attributes nested slots styled custom events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock clocks anim gpu canvas shader named_gradients)
+cross_host=(raster roles fonts reflow attributes nested slots styled custom events text applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web permission icons opacity clock clocks anim gpu canvas shader named_gradients)
 
 # Cases that run on macOS and iOS and nowhere else.
 #
@@ -247,7 +247,8 @@ apple_only=(triangle shapes)
 # run. The case is still built for the phone, which is what catches a Beans
 # half that does not compile there, and a real application — which shows its
 # window — animates exactly as macOS does.
-ios_builds_only=(anim)
+# The optional shared desktop raster presenter is explicitly unsupported on iOS.
+ios_builds_only=(anim raster)
 
 # Cases that need nothing but the language. These are the layout engine, the
 # reconciler and the markup compiler, all pure Beans with no foreign call in
@@ -279,7 +280,7 @@ ios_builds_only=(anim)
 # `tests/layout.b` already holds it. What is left is the step before, which
 # really is arithmetic: that `x={10}` reaches `spec.x`, and that a coordinate
 # written where nothing reads one is refused rather than dropped.
-portable=(layout diff sweep markup_refusals placed insets placement bounds grid)
+portable=(render layout diff sweep markup_refusals placed insets placement bounds grid)
 
 # `--case` narrows every list to the one name, and leaves the lists it is not
 # in empty — so a case that is macOS-only runs on macOS and the GTK4 loop runs
@@ -552,12 +553,11 @@ fi
 # the native scroll view directly against the same host sources Beans links.
 if [[ "$host_os" == "Darwin" && $have_host -eq 1 ]]; then
     for native_case in mac_table_scroll mac_browser; do
-        if ! clang -w -fno-objc-arc \
-            -framework AppKit -framework Foundation -framework CoreVideo \
-            -framework QuartzCore -framework Metal -framework WebKit \
-            -framework AVFoundation -framework CoreBluetooth \
-            -framework CoreLocation -framework ScreenCaptureKit \
-            -framework Network -framework IOKit \
+        native_frameworks=()
+        while IFS= read -r framework; do
+            native_frameworks+=(-framework "$framework")
+        done < <(sed -n 's/^link macos framework "\(.*\)"$/\1/p' "$root/beans.pot")
+        if ! clang -w -fno-objc-arc "${native_frameworks[@]}" \
             "$root"/src/mac/*.m "$root/tests/${native_case}.m" \
             -o "$tmp/${native_case}" >"$tmp/${native_case}.build" 2>&1; then
             cat "$tmp/${native_case}.build" >&2

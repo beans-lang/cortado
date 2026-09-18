@@ -1,0 +1,5 @@
+module rendered_tests
+kind application
+require path ".."
+require path "../../.."
+require path "../../../skia"

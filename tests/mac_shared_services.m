@@ -1,0 +1,99 @@
+#import "../src/mac/internal.h"
+#include <assert.h>
+#include <stdio.h>
+
+static ctd_event last;
+static char text_copy[128];
+static void receive(void *context, const ctd_event *event) {
+    (void)context;
+    last = *event;
+    int count = event->text_len < 127 ? event->text_len : 127;
+    if (event->text && count) memcpy(text_copy, event->text, (size_t)count);
+    text_copy[count] = 0;
+}
+
+int main(void) {
+    @autoreleasepool {
+        assert(ctd_init(CTD_ABI_VERSION) == CTD_OK);
+        assert(ctd_set_event_sink(receive, NULL) == CTD_OK);
+        ctd_listen(CTD_EV_TEXT_INPUT, 1);
+        ctd_listen(CTD_EV_COMPOSITION_UPDATE, 1);
+        ctd_listen(CTD_EV_SEMANTICS_ACTION, 1);
+        ctd_listen(CTD_EV_POINTER_MOVE, 1);
+        ctd_handle canvas_id = ctd_widget_new(CTD_W_CANVAS);
+        assert(canvas_id);
+        CortadoSharedCanvas *canvas = (CortadoSharedCanvas *)ctd_resolve(canvas_id);
+        assert([canvas isKindOfClass:[CortadoSharedCanvas class]]);
+        [canvas updateTrackingAreas];
+        assert([[canvas trackingAreas] count] > 0);
+        NSEvent *exit_event = [NSEvent enterExitEventWithType:NSEventTypeMouseExited
+            location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0
+            context:nil eventNumber:1 trackingNumber:1 userData:NULL];
+        assert(exit_event);
+        [canvas mouseExited:exit_event];
+        assert(last.kind == CTD_EV_POINTER_MOVE && last.target == canvas_id &&
+               last.x == -1.0 && last.y == -1.0);
+        assert(ctd_canvas_text_state(canvas_id, 1, "aé", 3, 1, 3, 10, 20, 1, 16) == CTD_OK);
+        assert(NSEqualRanges([canvas selectedRange], NSMakeRange(1, 1)));
+        [canvas insertText:@"Ω" replacementRange:NSMakeRange(1, 1)];
+        assert(last.kind == CTD_EV_TEXT_INPUT && last.index == 1 && last.token == 3);
+        assert(strcmp(text_copy, "Ω") == 0);
+        [canvas insertText:@"x" replacementRange:NSMakeRange(NSNotFound, 0)];
+        assert(last.kind == CTD_EV_TEXT_INPUT && last.index == -1 && last.token == -1);
+        [canvas setMarkedText:@"かな" selectedRange:NSMakeRange(2, 0)
+             replacementRange:NSMakeRange(NSNotFound, 0)];
+        assert(last.kind == CTD_EV_COMPOSITION_UPDATE && last.index == 6 && last.token == 6);
+        assert([canvas hasMarkedText]);
+        [canvas unmarkText];
+        assert(last.kind == CTD_EV_TEXT_INPUT && ![canvas hasMarkedText]);
+
+        NSPasteboard *isolated = [NSPasteboard pasteboardWithUniqueName];
+        ctd_clipboard_use_pasteboard(isolated);
+        assert(ctd_clipboard_write("café", 5) == CTD_OK);
+        char buffer[32] = {0};
+        assert(ctd_clipboard_read(NULL, 0) == 5);
+        assert(ctd_clipboard_read(buffer, sizeof buffer) == 5);
+        assert(memcmp(buffer, "café", 5) == 0);
+        ctd_clipboard_use_pasteboard(nil);
+        [isolated releaseGlobally];
+
+        assert(ctd_canvas_semantics_clear(canvas_id) == CTD_OK);
+        assert(ctd_canvas_semantics_add(canvas_id, 17, "button", 6, "Order", 5,
+                                        "", 0, 4, 5, 80, 24, 1, 0) == CTD_OK);
+        assert(ctd_canvas_semantics_end(canvas_id) == CTD_OK);
+        assert([[canvas accessibilityChildren] count] == 1);
+        id node = [[[canvas accessibilityChildren] objectAtIndex:0] retain];
+        assert([[node accessibilityRole] isEqualToString:NSAccessibilityButtonRole]);
+        assert([[node accessibilityLabel] isEqualToString:@"Order"]);
+        assert([node accessibilityPerformPress]);
+        assert(last.kind == CTD_EV_SEMANTICS_ACTION && last.index == 1 && last.token == 17);
+        assert(ctd_canvas_semantics_add(canvas_id, 18, "option", 6, "Tea", 3,
+                                        "selected", 8, 4, 35, 80, 24, 1, 0) == CTD_OK);
+        assert(ctd_canvas_semantics_end(canvas_id) == CTD_OK);
+        id option = [[canvas accessibilityChildren] objectAtIndex:1];
+        assert([[option accessibilityRole] isEqualToString:NSAccessibilityRowRole]);
+        assert([(NSAccessibilityElement *)option isAccessibilitySelected]);
+        assert([option accessibilityPerformPress]);
+        assert(last.kind == CTD_EV_SEMANTICS_ACTION && last.token == 18);
+        assert(ctd_canvas_semantics_clear(canvas_id) == CTD_OK);
+        assert(![node accessibilityPerformPress]);
+        [node release];
+        ctd_handle label = ctd_widget_new(CTD_W_LABEL);
+        assert(ctd_canvas_text_state(label, 1, "", 0, 0, 0, 0, 0, 1, 1) == CTD_ERR_KIND);
+        assert(ctd_canvas_semantics_clear(label) == CTD_ERR_KIND);
+        assert(ctd_canvas_text_state(canvas_id, 1, "x", 1, 2, 2, 0, 0, 1, 1) == CTD_ERR_RANGE);
+        CortadoSharedCanvas *retained = [canvas retain];
+        assert(ctd_canvas_text_state(canvas_id, 2, "", 0, 0, 0, 0, 0, 1, 1) == CTD_OK);
+        assert(retained.ctdSecureInput);
+        assert(ctd_canvas_text_state(canvas_id, 0, "", 0, 0, 0, 0, 0, 1, 1) == CTD_OK);
+        assert(!retained.ctdSecureInput);
+        assert(ctd_widget_release(label) == CTD_OK);
+        assert(ctd_widget_release(canvas_id) == CTD_OK);
+        assert(!retained.ctdSecureInput);
+        [retained release];
+        assert(ctd_canvas_text_state(canvas_id, 1, "", 0, 0, 0, 0, 0, 1, 1) == CTD_ERR_STALE);
+        ctd_shutdown();
+        puts("native shared IME, clipboard, and accessibility: true");
+    }
+    return 0;
+}

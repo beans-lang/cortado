@@ -1,0 +1,21 @@
+<VStack padding={12} spacing={4} align="stretch">
+  <ScrollView height={56}>
+    <VStack align="stretch">
+      <ComboBox key={"clipped-owner"} items={self.items} selected={self.selected}
+                height={30} on:change={fn(e: UiEvent) { self.choose(e.index) }} />
+    </VStack>
+  </ScrollView>
+</VStack>
+<beans>
+package site
+import cortado.component
+import {view} from cortado.annotations
+
+@view
+pub partial class PopupClipProbe extends component.Component {
+    pub items: List<string> = ["Tea", "Coffee", "Water"]
+    pub selected: int = 0
+    pub fn init() { super.init() }
+    pub fn choose(index: int) { self.selected = index; self.request_render() }
+}
+</beans>

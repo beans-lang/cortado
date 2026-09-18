@@ -1,0 +1,10 @@
+module cortado_skia
+kind library
+require path ".."
+
+# Load the pinned engine through a small C bridge. This works for both native
+# builds and the Beans interpreter, which cannot dlopen Skia static archives.
+csrc macos "loader.c"
+csrc linux "loader.c"
+csrc windows "loader.c"
+link linux library "dl"

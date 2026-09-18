@@ -79,6 +79,11 @@ pub enum EventKind {
     /// A picture of the screen is ready, or was not. `token` echoes the
     /// request's and `index` is the byte length waiting — 0 where it failed.
     screen_frame
+    pointer_scroll
+    text_input
+    composition_update
+    composition_cancel
+    semantics_action
     unknown
 
     pub fn name() -> string {
@@ -121,6 +126,11 @@ pub enum EventKind {
             ble_link => "ble_link",
             capture_devices => "capture_devices",
             screen_frame => "screen_frame",
+            pointer_scroll => "pointer_scroll",
+            text_input => "text_input",
+            composition_update => "composition_update",
+            composition_cancel => "composition_cancel",
+            semantics_action => "semantics_action",
             unknown => "unknown",
         }
     }
@@ -167,6 +177,11 @@ pub enum EventKind {
             ble_link => host.EV_BLE_LINK,
             capture_devices => host.EV_CAPTURE_DEVICES,
             screen_frame => host.EV_SCREEN_FRAME,
+            pointer_scroll => host.EV_POINTER_SCROLL,
+            text_input => host.EV_TEXT_INPUT,
+            composition_update => host.EV_COMPOSITION_UPDATE,
+            composition_cancel => host.EV_COMPOSITION_CANCEL,
+            semantics_action => host.EV_SEMANTICS_ACTION,
             unknown => 0,
         }
     }
@@ -213,6 +228,11 @@ pub enum EventKind {
         if code == host.EV_BLE_LINK { return EventKind.ble_link }
         if code == host.EV_CAPTURE_DEVICES { return EventKind.capture_devices }
         if code == host.EV_SCREEN_FRAME { return EventKind.screen_frame }
+        if code == host.EV_POINTER_SCROLL { return EventKind.pointer_scroll }
+        if code == host.EV_TEXT_INPUT { return EventKind.text_input }
+        if code == host.EV_COMPOSITION_UPDATE { return EventKind.composition_update }
+        if code == host.EV_COMPOSITION_CANCEL { return EventKind.composition_cancel }
+        if code == host.EV_SEMANTICS_ACTION { return EventKind.semantics_action }
         return EventKind.unknown
     }
 }

@@ -71,7 +71,18 @@ pub class EventRouter {
     /// Whether a settle has been put off and a wake-up posted for it.
     settle_due: bool = false
 
-    pub fn init() {}
+    notify_host: bool = true
+
+    pub fn init(notify_host: bool = true) { self.notify_host = notify_host }
+
+    /// Drop a window-owned router's callbacks before releasing its controls.
+    pub fn clear() {
+        for raw: u64 in self.handlers.keys() { self.forget(host.Handle.of(raw)) }
+        for raw: u64 in self.watchers.keys() { self.forget(host.Handle.of(raw)) }
+        self.pending.clear()
+        self.settled = none
+        self.settle_due = false
+    }
 
     /// Registers `handler` for one kind of event on one widget, replacing any
     /// handler already registered for that pair.
@@ -195,6 +206,7 @@ pub class EventRouter {
     /// keeps delivering, and this map drops what nobody wants. There is
     /// nothing a program could usefully do about either answer.
     fn tell_host(code: int, on: bool) {
+        if !self.notify_host { return }
         var flag: int = 0
         if on { flag = 1 }
         unsafe {
@@ -325,6 +337,9 @@ pub class EventRouter {
             some(handler) => {}
         }
         let now: int = time.monotonic_nanos()
+        // A window-local router has no host wake-up source. Its caller owns
+        // frame scheduling, so settle inline after the current event batch.
+        if !self.notify_host { self.run_settle(now); return }
         if now - self.last_settle >= self.settle_window {
             self.run_settle(now)
             return

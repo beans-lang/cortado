@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A stepper.
 ///
@@ -22,8 +23,8 @@ import cortado.host
 /// reason it works everywhere else, rather than being silently truncated to
 /// zero.
 pub class Stepper extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.stepper)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.stepper, context)
     }
 
     /// A stepper over `low`..`high`, stepping by `step`, starting at `start`.

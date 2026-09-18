@@ -1,14 +1,16 @@
 // Text the user reads but cannot edit.
 package widgets
 
+import cortado.render
+
 /// A run of static text.
 ///
 /// Not an editable field with editing turned off: a label is not focusable,
 /// takes no keyboard input, and reports itself to assistive technology as
 /// text rather than as a form control.
 pub class Label extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.label)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.label, context)
     }
 
     pub static fn of(text: string) -> Result<Label> {

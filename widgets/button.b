@@ -1,6 +1,8 @@
 // Something the user presses.
 package widgets
 
+import cortado.render
+
 import cortado.host
 
 /// A push button.
@@ -10,8 +12,8 @@ import cortado.host
 /// so a button holds no closure and cannot form a reference cycle with the
 /// code that reacts to it.
 pub class Button extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.button)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.button, context)
     }
 
     pub static fn of(title: string) -> Result<Button> {

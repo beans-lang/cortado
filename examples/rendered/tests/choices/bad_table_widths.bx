@@ -1,0 +1,7 @@
+<Table column_widths="200 100" />
+<beans>
+package choices
+import cortado.component
+import {view} from cortado.annotations
+@view pub partial class BadTableWidths extends component.Component { pub fn init() { super.init() } }
+</beans>

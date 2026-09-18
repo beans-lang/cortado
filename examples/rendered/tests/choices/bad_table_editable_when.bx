@@ -1,0 +1,7 @@
+<Table editable_when="yes" />
+<beans>
+package choices
+import cortado.component
+import {view} from cortado.annotations
+@view pub partial class BadTableEditableWhen extends component.Component { pub fn init() { super.init() } }
+</beans>

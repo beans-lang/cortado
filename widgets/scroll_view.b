@@ -1,6 +1,8 @@
 // A window onto something bigger.
 package widgets
 
+import cortado.render
+
 /// A control that shows part of a larger subtree and scrolls the rest into
 /// view.
 ///
@@ -24,7 +26,7 @@ package widgets
 /// in markup was refused as a control that holds none. Two implementations of
 /// one idea is how one of them gets left behind.
 pub class ScrollView extends ChildHolder {
-    pub fn init() {
-        super.init(WidgetKind.scroll_view)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.scroll_view, context)
     }
 }

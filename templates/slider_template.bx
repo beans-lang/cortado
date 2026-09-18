@@ -1,0 +1,15 @@
+<HStack background="#d6d8df" corner_radius={8} align="center">
+  <Box width={self.thumb_leading} height={8} background={self.accent} corner_radius={4} />
+  <Box width={14} height={14} background="#ffffffff" border_color={self.accent}
+       border_width={2} corner_radius={7} />
+  <Box grow={1} />
+</HStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class SliderTemplate extends component.RangeControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

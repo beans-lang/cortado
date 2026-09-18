@@ -2,13 +2,17 @@
 
 Native desktop applications, written in Beans.
 
-A cortado `Button` is a real `NSButton` on macOS, a real `BUTTON` window class
+With the default backend, a cortado `Button` is a real `NSButton` on macOS, a real `BUTTON` window class
 on Windows, a real `GtkButton` on Linux. Nothing is drawn to imitate a control.
 That one decision is where everything else follows from: the application
 inherits the platform's own text input, input methods, dictation,
 spell-checking, accessibility tree, keyboard conventions, selection behaviour
 and dark mode, instead of reimplementing them and getting them subtly wrong in
 every language but English.
+
+An experimental shared Skia backend is under development. Its controls and `.bx`
+templates run in Beans. See [the rendering migration](RENDERING.md) for build
+commands, tests, and the remaining work.
 
 ```beans
 package main

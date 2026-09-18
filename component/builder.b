@@ -8,6 +8,7 @@ import cortado.events
 import cortado.layout
 import cortado.geometry
 import std.reflect
+import cortado.visual
 
 /// Collects a render into a tree of `Element`s.
 ///
@@ -179,13 +180,92 @@ pub class Builder {
     pub fn text(value: string) {
         match self.current() {
             none => { self.faults.push("text with no element open") }
-            some(element) => { element.set(Attribute.of_text(value)) }
+            some(element) => {
+                if visual.is_tag(element.tag) && element.tag != "Path" && element.tag != "ResourceImage" {
+                    self.faults.push("<{element.tag}> does not take source text")
+                } else { element.set(Attribute.of_text(value)) }
+            }
+        }
+    }
+
+    /// Names the current control for accessibility without changing its visible text.
+    pub fn a11y_label(value: string) {
+        match self.current() {
+            none => { self.faults.push("a11y_label with no element open") }
+            some(element) => { element.set(Attribute.of_a11y_label(value)) }
+        }
+    }
+
+    /// A typed choice list for ComboBox and Segmented controls.
+    pub fn items(values: List<string>) {
+        match self.current() {
+            none => { self.faults.push("items with no element open") }
+            some(element) => {
+                if element.tag != "ComboBox" && element.tag != "Segmented" {
+                    self.faults.push("<{element.tag}> has no items")
+                    return
+                }
+                element.set(Attribute.of_items(values))
+            }
+        }
+    }
+    pub fn labels(values: List<string>) {
+        match self.current() {
+            none => { self.faults.push("labels with no element open") }
+            some(element) => {
+                if element.tag != "TabView" { self.faults.push("<{element.tag}> has no labels"); return }
+                element.set(Attribute.of_labels(values))
+            }
+        }
+    }
+    pub fn columns(values: List<string>) {
+        match self.current() {
+            none => { self.faults.push("columns with no element open") }
+            some(element) => {
+                if element.tag != "Table" { self.faults.push("<{element.tag}> has no typed columns"); return }
+                element.set(Attribute.of_columns(values))
+            }
+        }
+    }
+    pub fn column_widths(values: List<f64>) {
+        match self.current() {
+            none => { self.faults.push("column_widths with no element open") }
+            some(element) => {
+                if element.tag != "Table" { self.faults.push("<{element.tag}> has no column widths"); return }
+                element.set(Attribute.of_column_widths(values))
+            }
+        }
+    }
+    pub fn table_source(value: widgets.TableRows) {
+        match self.current() {
+            none => { self.faults.push("source with no element open") }
+            some(element) => {
+                if element.tag != "Table" { self.faults.push("<{element.tag}> has no table source"); return }
+                element.set(Attribute.of_table_source(value))
+            }
+        }
+    }
+    pub fn editable_when(value: TableEditRule) {
+        match self.current() {
+            none => { self.faults.push("editable_when with no element open") }
+            some(element) => {
+                if element.tag != "Table" { self.faults.push("<{element.tag}> has no table edit policy"); return }
+                element.set(Attribute.of_table_edit_policy(value))
+            }
         }
     }
 
     /// Refuses a property this control has not got, and says which do.
     /// `true` when refused. One spelling for three call sites.
     fn refuse_unless_carried(element: Element, name: string) -> bool {
+        match visual.kind_of(element.tag) {
+            some(kind) => {
+                if visual.carries(kind, name) { return false }
+                self.faults.push("<{element.tag}> has no {name}")
+                return true
+            }
+            none => {}
+        }
         if Vocabulary.carries(element.kind, name) { return false }
         self.faults.push("<{element.tag}> has no {name} — {Vocabulary.who_carries(name)}")
         return true
@@ -291,6 +371,13 @@ pub class Builder {
                             }
                         }
                     }
+                    return
+                }
+                if name == "transition_easing" {
+                    if self.refuse_unless_carried(element, name) { return }
+                    let code: int = visual.easing_code(value)
+                    if code < 0 { self.faults.push("transition_easing must be linear or ease_in_out") }
+                    else { element.set(Attribute.of_whole(visual.TRANSITION_EASING, code)) }
                     return
                 }
                 // Parsed here rather than in the markup compiler, so `#abc`

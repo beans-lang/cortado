@@ -42,6 +42,17 @@ pub extern "C" fn ctd_clock_step(surface: u64, seconds: f64) -> i32
 pub extern "C" fn ctd_clock_prefer(surface: u64, lowest: f64, highest: f64, wanted: f64) -> i32
 pub extern "C" fn ctd_widget_supports(kind: i32) -> i32
 pub extern "C" fn ctd_widget_new(kind: i32) -> u64
+pub extern "C" fn ctd_canvas_set_pixels(canvas: u64, width: i32, height: i32, rgba: RawPtr<i8>, length: i32) -> i32
+pub extern "C" fn ctd_canvas_text_state(canvas: u64, active: i32, utf8: RawPtr<i8>, length: i32,
+    anchor: i32, caret: i32, x: f64, y: f64, width: f64, height: f64) -> i32
+pub extern "C" fn ctd_clipboard_write(utf8: RawPtr<i8>, length: i32) -> i32
+pub extern "C" fn ctd_clipboard_read(out: RawPtr<i8>, cap: i32) -> i32
+pub extern "C" fn ctd_canvas_semantics_clear(canvas: u64) -> i32
+pub extern "C" fn ctd_canvas_semantics_add(canvas: u64, id: u64,
+    role: RawPtr<i8>, role_len: i32, label: RawPtr<i8>, label_len: i32,
+    value: RawPtr<i8>, value_len: i32, x: f64, y: f64,
+    width: f64, height: f64, enabled: i32, focused: i32) -> i32
+pub extern "C" fn ctd_canvas_semantics_end(canvas: u64) -> i32
 pub extern "C" fn ctd_widget_kind(widget: u64) -> i32
 pub extern "C" fn ctd_widget_alive(widget: u64) -> i32
 pub extern "C" fn ctd_widget_release(widget: u64) -> i32

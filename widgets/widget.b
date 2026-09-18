@@ -4,6 +4,8 @@ package widgets
 import cortado.host
 import cortado.geometry
 import cortado.events
+import cortado.render
+import cortado.visual
 
 /// A control's text with its line breaks and tabs escaped, so one widget
 /// occupies exactly one line of a dump.
@@ -32,9 +34,28 @@ pub abstract class Widget {
     kind_value: WidgetKind = WidgetKind.container
     released: bool = false
 
-    fn init(kind: WidgetKind) {
+    shared_context: Option<render.UiContext> = none
+    shared_object: Option<render.RenderObject> = none
+    shared_error: string = ""
+
+    fn init(kind: WidgetKind, context: Option<render.UiContext> = none, drawing: Option<visual.Kind> = none) {
         self.kind_value = kind
         self.released = false
+        self.shared_context = context
+        match context {
+            none => {}
+            some(owner) => {
+                match SharedFactory.make(kind, owner, drawing) {
+                    err(problem) => { self.shared_error = problem.msg; return }
+                    ok(object) => {
+                        match owner.add(object) {
+                            err(problem) => { self.shared_error = problem.msg; return }
+                            ok(handle) => { self.slot = host.Handle.of(handle); self.shared_object = some(object); return }
+                        }
+                    }
+                }
+            }
+        }
         unsafe {
             self.slot = host.Handle.of(host.ctd_widget_new(kind.code() as i32))
         }
@@ -46,6 +67,16 @@ pub abstract class Widget {
     /// packages and Beans has no `protected`. It is safe to hand out: a handle
     /// is an integer with no dereference, and one that has gone stale is a
     /// checked error rather than a crash.
+    /// Present only for the shared backend; the native API remains usable.
+    pub fn render_context() -> Option<render.UiContext> { return self.shared_context }
+    pub fn render_object() -> Result<render.RenderObject> {
+        match self.shared_object {
+            some(object) => { object.demand_alive()?; return ok(object) }
+            none => { return err(if self.shared_error == "" { "widget uses the native backend" } else { self.shared_error }, "not_rendered") }
+        }
+    }
+    pub fn is_rendered() -> bool { return self.shared_context != none }
+
     pub fn handle() -> host.Handle {
         return self.slot
     }
@@ -57,6 +88,7 @@ pub abstract class Widget {
     /// Whether the host still has this widget. False after `release()`, and
     /// false if construction failed.
     pub fn is_alive() -> bool {
+        match self.shared_object { some(object) => { return object.is_alive() } none => {} }
         if !self.slot.is_set() { return false }
         unsafe {
             return host.ctd_widget_alive(self.slot.raw) == 1
@@ -66,6 +98,7 @@ pub abstract class Widget {
     // ---- geometry ----
 
     pub fn set_frame(frame: geometry.Rect) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_frame(frame) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_view_set_frame(self.slot.raw, frame.x, frame.y,
@@ -75,6 +108,7 @@ pub abstract class Widget {
     }
 
     pub fn frame() -> Result<geometry.Rect> {
+        match self.shared_object { some(object) => { object.demand_alive()?; return ok(object.frame()) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_view_frame(self.slot.raw, scratch.reals) as int,
@@ -94,6 +128,7 @@ pub abstract class Widget {
     /// back — ask `Application.can(Capability.snapshot)` first rather than
     /// finding out here.
     pub fn snapshot() -> Result<Snapshot> {
+        match self.shared_context { some(owner) => { return err("snapshot the shared renderer surface", "unsupported") } none => {} }
         let slot: host.Handle = self.slot
         return Snapshot.read("snapshot a {self.kind_value.name()}",
                              fn(size: RawPtr<f64>, out: RawPtr<i8>, cap: i32) -> i32 {
@@ -109,6 +144,7 @@ pub abstract class Widget {
     /// This is the layout engine's one call into the platform: text metrics
     /// are the only thing cortado cannot compute for itself.
     pub fn measure(available: geometry.Size) -> Result<geometry.Size> {
+        match self.shared_object { some(object) => { return object.measure(available) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_view_measure(self.slot.raw, available.width,
@@ -137,6 +173,7 @@ pub abstract class Widget {
     /// Out of range is a refusal rather than a clamp. A caller that computed
     /// 1.5 has a bug, and quietly showing them 1.0 hides it.
     pub fn set_opacity(value: f64) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_real(host.P_OPACITY, value) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_set_real(self.slot.raw, host.P_OPACITY as i32, value) as int,
@@ -159,6 +196,7 @@ pub abstract class Widget {
     /// show a colour there is to remove the bezel, and then it is not the
     /// platform's text field. See `ctd_kind_has_background`.
     pub fn set_background(shade: Rgba) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_integer(host.P_BG_COLOR, ColorWell.pack(shade)) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_set_int(self.slot.raw, host.P_BG_COLOR as i32,
@@ -183,6 +221,7 @@ pub abstract class Widget {
     /// Without this `set_background` was half a property: a pale background
     /// behind a label and no way to stop the system drawing white on it.
     pub fn set_text_color(shade: Rgba) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_integer(host.P_FG_COLOR, ColorWell.pack(shade)) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_set_int(self.slot.raw, host.P_FG_COLOR as i32,
@@ -198,6 +237,7 @@ pub abstract class Widget {
 
     /// Corner rounding in points. Zero is square.
     pub fn set_corner_radius(points: f64) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_real(host.P_CORNER_RADIUS, points) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_set_real(self.slot.raw, host.P_CORNER_RADIUS as i32, points) as int,
@@ -213,6 +253,7 @@ pub abstract class Widget {
     /// An outline drawn inside the bounds, like CALayer and CSS: an outside
     /// one needs room the layout never gave it.
     pub fn set_border(points: f64, shade: Rgba) -> Result<bool> {
+        match self.shared_object { some(object) => { object.set_integer(host.P_BORDER_COLOR, ColorWell.pack(shade))?; return object.set_real(host.P_BORDER_WIDTH, points) } none => {} }
         self.set_property(host.P_BORDER_COLOR, ColorWell.pack(shade))?
         unsafe {
             return host.check(
@@ -273,6 +314,7 @@ pub abstract class Widget {
     }
 
     fn set_flag(key: int, on: bool, attempt: string) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_integer(key, if on { 1 } else { 0 }) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_set_int(self.slot.raw, key as i32,
@@ -287,6 +329,7 @@ pub abstract class Widget {
     /// name that says what it is — a slider's `value`, a progress bar's — and
     /// the generic form is for them and for the applier.
     fn read_real(key: int, attempt: string) -> Result<f64> {
+        match self.shared_object { some(object) => { return object.real(key) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_get_real(self.slot.raw, key as i32, scratch.reals) as int,
@@ -296,6 +339,7 @@ pub abstract class Widget {
     }
 
     fn read_flag(key: int, attempt: string) -> Result<bool> {
+        match self.shared_object { some(object) => { return ok(object.integer(key)? != 0) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_get_int(self.slot.raw, key as i32, scratch.ints) as int,
@@ -326,6 +370,7 @@ pub abstract class Widget {
     /// scalar properties are, and each subclass exposes the ones it has under
     /// a name that says what they mean.
     fn set_string(key: int, text: string, attempt: string) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_string(key, text) } none => {} }
         let buffer: Bytes = host.HostText.encode(text, attempt)?
         unsafe {
             return host.check(
@@ -337,6 +382,7 @@ pub abstract class Widget {
     }
 
     fn string_at(key: int, attempt: string) -> Result<string> {
+        match self.shared_object { some(object) => { return object.string_at(key) } none => {} }
         let raw: u64 = self.slot.raw
         return host.HostText.read(attempt, fn(out: RawPtr<i8>, cap: i32) -> i32 {
             unsafe { return host.ctd_get_string(raw, key as i32, out, cap) }
@@ -347,6 +393,7 @@ pub abstract class Widget {
     // by widget, not by class. Subclasses expose it under the name their
     // control actually uses: a button has a title, a field has a value.
     fn set_text_raw(text: string) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_text(text) } none => {} }
         let buffer: Bytes = host.HostText.encode(text, "set the text of a {self.kind_value.name()}")?
         unsafe {
             return host.check(
@@ -357,6 +404,7 @@ pub abstract class Widget {
     }
 
     fn text_raw() -> Result<string> {
+        match self.shared_object { some(object) => { object.demand_alive()?; return ok(object.text()) } none => {} }
         let raw: u64 = self.slot.raw
         return host.HostText.read(
             "read the text of a {self.kind_value.name()}",
@@ -374,6 +422,13 @@ pub abstract class Widget {
     // catch.
 
     fn attach_child(child: Widget, index: int) -> Result<bool> {
+        match self.shared_object { some(object) => { let rendered: render.RenderObject = child.render_object()?
+                match child.render_context() { some(owner) => {
+                    match self.shared_context { some(parent) => {
+                        if owner.registry().namespace() != parent.registry().namespace() { return err("cannot mix UI contexts", "bad_owner") }
+                    } none => {} }
+                } none => {} }
+                return object.insert(rendered, index) } none => {} }
         unsafe {
             return host.check(host.ctd_view_add_child(self.slot.raw,
                                                       child.handle().raw,
@@ -383,6 +438,7 @@ pub abstract class Widget {
     }
 
     fn detach_child(child: Widget) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.remove(child.render_object()?) } none => {} }
         unsafe {
             return host.check(host.ctd_view_remove_child(self.slot.raw,
                                                          child.handle().raw) as int,
@@ -391,6 +447,7 @@ pub abstract class Widget {
     }
 
     fn reorder_child(from: int, to: int) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.move_child(from, to) } none => {} }
         unsafe {
             return host.check(host.ctd_view_move_child(self.slot.raw,
                                                        from as i32, to as i32) as int,
@@ -413,6 +470,7 @@ pub abstract class Widget {
 
     /// Writes one integer property by its `host.P_*` id.
     pub fn set_property(property: int, value: int) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_integer(property, value) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_set_int(self.slot.raw, property as i32, value as i64) as int,
@@ -431,6 +489,7 @@ pub abstract class Widget {
     /// what it reads and returns a `CheckState`; this returns an integer whose
     /// meaning is in a C header.
     pub fn read_property(property: int) -> Result<int> {
+        match self.shared_object { some(object) => { return object.integer(property) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_get_int(self.slot.raw, property as i32, scratch.ints) as int,
@@ -450,6 +509,7 @@ pub abstract class Widget {
 
     /// Writes one real-valued property by its `host.P_*` id.
     pub fn set_property_real(property: int, value: f64) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_real(property, value) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_set_real(self.slot.raw, property as i32, value) as int,
@@ -463,6 +523,7 @@ pub abstract class Widget {
     /// `GtkButton`. The test suite golden-files it, because it is the only
     /// answer that proves a real native control was built and not a stand-in.
     pub fn native_class() -> Result<string> {
+        match self.shared_object { some(object) => { object.demand_alive()?; return ok("Cortado{self.kind_value.name()}") } none => {} }
         let raw: u64 = self.slot.raw
         return host.HostText.read(
             "read the native class of a {self.kind_value.name()}",
@@ -473,6 +534,7 @@ pub abstract class Widget {
 
     /// The accessibility role, in one vocabulary shared by every platform.
     pub fn a11y_role() -> Result<string> {
+        match self.shared_object { some(object) => { object.demand_alive()?; return ok(object.role()) } none => {} }
         let raw: u64 = self.slot.raw
         return host.HostText.read(
             "read the accessibility role of a {self.kind_value.name()}",
@@ -488,6 +550,7 @@ pub abstract class Widget {
     /// bookkeeping, and bookkeeping that is never checked against the thing it
     /// describes is how a tree ends up correct on paper and wrong on screen.
     pub fn native_child_count() -> Result<int> {
+        match self.shared_object { some(object) => { object.demand_alive()?; return ok(object.child_count()) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         var count: i32 = 0
         unsafe {
@@ -501,6 +564,7 @@ pub abstract class Widget {
 
     /// The n-th child, as the platform has it. Answers `none` past the end.
     pub fn native_child_at(index: int) -> Option<host.Handle> {
+        match self.shared_object { some(object) => { match object.child_at(index) { some(child) => { return some(host.Handle.of(child.handle())) } none => { return none } } } none => {} }
         unsafe {
             let found: u64 = host.ctd_view_child_at(self.slot.raw, index as i32)
             if found == 0 {
@@ -512,6 +576,7 @@ pub abstract class Widget {
 
     /// The widget this one sits inside, as the platform has it.
     pub fn native_parent() -> Option<host.Handle> {
+        match self.shared_object { some(object) => { return if object.parent() == 0 { none } else { some(host.Handle.of(object.parent())) } } none => {} }
         unsafe {
             let found: u64 = host.ctd_view_parent(self.slot.raw)
             if found == 0 {
@@ -527,12 +592,14 @@ pub abstract class Widget {
     /// Asking again and comparing is what turns "the handle table is correct"
     /// from an assumption into something the test suite checks.
     pub fn native_kind() -> Option<WidgetKind> {
+        match self.shared_object { some(object) => { return if object.is_alive() { some(self.kind_value) } else { none } } none => {} }
         unsafe {
             return WidgetKind.of(host.ctd_widget_kind(self.slot.raw) as int)
         }
     }
 
     pub fn set_font_size(points: f64) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_real(host.P_FONT_SIZE, points) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_set_real(self.slot.raw, host.P_FONT_SIZE as i32, points) as int,
@@ -541,6 +608,7 @@ pub abstract class Widget {
     }
 
     pub fn font_size() -> Result<f64> {
+        match self.shared_object { some(object) => { return object.real(host.P_FONT_SIZE) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_get_real(self.slot.raw, host.P_FONT_SIZE as i32,
@@ -609,6 +677,7 @@ pub abstract class Widget {
     /// never returns for one. Use `set_value_as_user` for anything that
     /// carries a value.
     pub fn activate() -> Result<bool> {
+        match self.shared_context { some(owner) => { return owner.dispatch(events.UiEvent.of(events.EventKind.activate, self.slot)) } none => {} }
         unsafe {
             return host.check(host.ctd_widget_activate(self.slot.raw) as int,
                               "activate a {self.kind_value.name()}")
@@ -639,6 +708,7 @@ pub abstract class Widget {
     /// built. A caller building frames by hand wants it too, and that is why
     /// it is public.
     pub fn content_inset() -> Result<geometry.EdgeInsets> {
+        match self.shared_object { some(object) => { object.demand_alive()?; return ok(object.content_inset()) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_view_content_inset(self.slot.raw, scratch.reals) as int,
@@ -653,6 +723,7 @@ pub abstract class Widget {
     /// A scroll view's frame is its viewport; this is the thing behind it.
     /// Refused on any other control, which scrolls nothing cortado laid out.
     pub fn set_content_size(size: geometry.Size) -> Result<bool> {
+        match self.shared_object { some(object) => { return object.set_content_size(size) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_view_set_content_size(self.slot.raw, size.width, size.height) as int,
@@ -661,6 +732,7 @@ pub abstract class Widget {
     }
 
     pub fn content_size() -> Result<geometry.Size> {
+        match self.shared_object { some(object) => { object.demand_alive()?; return ok(object.content_size()) } none => {} }
         let scratch: host.HostScratch = host.HostScratch.instance
         unsafe {
             host.check(host.ctd_view_content_size(self.slot.raw, scratch.reals) as int,
@@ -670,6 +742,7 @@ pub abstract class Widget {
     }
 
     pub fn set_value_as_user(index: int, value: f64) -> Result<bool> {
+        match self.shared_context { some(owner) => { return owner.set_value_as_user(self.slot.raw, index, value) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_widget_synth_value(self.slot.raw, index as i64, value) as int,
@@ -680,6 +753,10 @@ pub abstract class Widget {
     /// Types text into this control the way a user would, and raises the
     /// commit event that follows.
     pub fn set_text_as_user(text: string) -> Result<bool> {
+        match self.shared_context { some(owner) => { self.set_text_raw(text)?
+                let event: events.UiEvent = events.UiEvent.of(events.EventKind.text_commit, self.slot)
+                event.text = text
+                return owner.dispatch(event) } none => {} }
         let buffer: Bytes = host.HostText.encode(text, "type into a {self.kind_value.name()}")?
         unsafe {
             return host.check(
@@ -705,6 +782,7 @@ pub abstract class Widget {
     /// and refuses on a phone, where there is no Tab key to reach it with and
     /// no focus ring to show it. A program asks rather than assuming.
     pub fn focus() -> Result<bool> {
+        match self.shared_context { some(owner) => { return owner.focus(self.slot.raw) } none => {} }
         unsafe {
             return host.check(host.ctd_widget_focus(self.slot.raw) as int,
                               "point the keyboard at a {self.kind_value.name()}")
@@ -717,6 +795,7 @@ pub abstract class Widget {
     /// to be on screen and in front, which makes it a fact about the desktop
     /// rather than about the program — and unanswerable in a headless run.
     pub fn focused() -> bool {
+        match self.shared_object { some(object) => { return object.focused() } none => {} }
         unsafe {
             return host.ctd_widget_focused(self.slot.raw) != 0
         }
@@ -736,6 +815,9 @@ pub abstract class Widget {
     /// there it runs cortado's own handler — one step short of the platform.
     pub fn point_as_user(kind: events.EventKind, where: geometry.Point,
                          button: events.PointerButton) -> Result<bool> {
+        match self.shared_context { some(owner) => { let event: events.UiEvent = events.UiEvent.of(kind, self.slot)
+                event.position = where; event.index = button.code()
+                return owner.dispatch(event) } none => {} }
         unsafe {
             return host.check(
                 host.ctd_widget_synth_pointer(self.slot.raw, kind.name_code() as i32,
@@ -764,6 +846,9 @@ pub abstract class Widget {
     /// produces nothing and is the whole news for `Key.character`.
     pub fn key_as_user(kind: events.EventKind, key: events.Key, typed: string,
                        modifiers: int) -> Result<bool> {
+        match self.shared_context { some(owner) => { let event: events.UiEvent = events.UiEvent.of(kind, self.slot)
+                event.index = key.code(); event.text = typed; event.modifiers = modifiers
+                return owner.dispatch(event) } none => {} }
         let buffer: Bytes = host.HostText.encode(typed, "type at a {self.kind_value.name()}")?
         unsafe {
             return host.check(
@@ -785,6 +870,10 @@ pub abstract class Widget {
             return
         }
         self.released = true
+        match self.shared_context {
+            some(owner) => { owner.release(self.slot.raw); return }
+            none => {}
+        }
         unsafe {
             host.ctd_widget_release(self.slot.raw)
         }

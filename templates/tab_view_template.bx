@@ -1,0 +1,22 @@
+<VStack background={self.fill} border_color="#bfc3ce" border_width={1}
+        corner_radius={self.radius} align="stretch">
+  $if !self.borderless {
+    <HStack height={28} background="#e4e6ed" align="stretch" spacing={2}>
+      $for index in 0..self.labels.len() {
+        <Label key={"tab-{index}"} text={self.labels[index]}
+               text_color={if self.selected == index { "#ffffffff" } else { self.ink }}
+               background={if self.selected == index { self.accent } else { "#e4e6ed" }}
+               corner_radius={4} font_size={self.font_size} grow={1} />
+      }
+    </HStack>
+  }
+</VStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class TabViewTemplate extends component.TabControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

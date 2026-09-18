@@ -4,6 +4,7 @@ package widgets
 import cortado.host
 import cortado.geometry
 import cortado.layout
+import cortado.render
 
 /// A split view.
 ///
@@ -23,8 +24,8 @@ import cortado.layout
 /// A third pane is refused. A split view with three panes is a thing the
 /// caller believes they have and no platform here provides.
 pub class SplitView extends ChildHolder {
-    pub fn init() {
-        super.init(WidgetKind.split_view)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.split_view, context)
     }
 
     /// A split view, side by side or stacked.

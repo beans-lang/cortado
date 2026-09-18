@@ -58,6 +58,14 @@ pub class Snapshot {
         return self.pixels.len()
     }
 
+    fn present(canvas: host.Handle) -> Result<bool> {
+        unsafe {
+            return host.check(host.ctd_canvas_set_pixels(canvas.raw, self.width as i32,
+                self.height as i32, self.buffer(), self.pixels.len() as i32) as int,
+                "present a shared renderer frame")
+        }
+    }
+
     /// Reads an image out of the host with the two-call shape.
     ///
     /// `probe` is called first with a null buffer and a capacity of zero to

@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A multi-line, scrolling text control.
 ///
@@ -12,8 +13,8 @@ import cortado.host
 /// it outgrows the box. A field stretched to five lines is a field whose
 /// bottom is simply not visible.
 pub class TextArea extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.text_area)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.text_area, context)
     }
 
     pub static fn of(value: string) -> Result<TextArea> {

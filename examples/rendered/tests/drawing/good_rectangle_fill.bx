@@ -1,0 +1,10 @@
+<Rectangle width={20} height={20} fill="#ffffff" />
+<beans>
+package drawing
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class GoodRectangleFill extends component.Component {
+    pub fn init() { super.init() }
+}
+</beans>

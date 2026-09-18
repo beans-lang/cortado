@@ -143,6 +143,14 @@ pub class Mount implements Composer {
         return ok(true)
     }
 
+    /// Re-measure retained controls after shared font metrics or control state
+    /// changes. This preserves component identity and the existing solver.
+    pub fn remeasure() -> Result<bool> {
+        self.lay_out()?
+        self.note_boxes()
+        return ok(true)
+    }
+
     /// Tells `component` the new room, and asks it to render if it follows it.
     fn wake_for_room(component: Component) {
         component.note_viewport(self.bounds)
@@ -230,6 +238,7 @@ pub class Mount implements Composer {
     /// other off. A mount on a container that is in no surface follows
     /// nothing, which is the headless case and not an error.
     fn follow() {
+        if self.root.is_rendered() { return }
         var found: u64 = 0
         unsafe {
             found = host.ctd_view_surface(self.root.handle().raw)
@@ -773,8 +782,10 @@ pub class Mount implements Composer {
             }
         }
         var surface: u64 = 0
-        unsafe {
-            surface = host.ctd_view_surface(self.root.handle().raw)
+        if !self.root.is_rendered() {
+            unsafe {
+                surface = host.ctd_view_surface(self.root.handle().raw)
+            }
         }
         return new Stage(move found, move objects, self.router, host.Handle.of(surface))
     }

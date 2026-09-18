@@ -1,0 +1,31 @@
+<VStack padding={24} spacing={14} align="stretch" background="#f7f7f9">
+  <Label text="Cortado, drawn by Beans" font_size={26} />
+  <Label text="This entire screen is .bx markup." text_color="#555b6b" />
+  <TextField key={"name"} bind:value={self.name} />
+  <Button key={"order"} text="Order coffee" on:click={fn(e: UiEvent) { self.order() }} />
+  <Label key={"count"} text={"Orders: {self.orders}"} />
+  <ScrollView height={160}>
+    <VStack spacing={10} align="stretch">
+      $for row in 0..20 {
+        <HStack key={"row-{row}"} padding={10} spacing={12} background="#e8eaf0" corner_radius={8}>
+          <Label text={"Coffee {row}"} grow={1} />
+          <Label text="Ready" text_color="#365eea" />
+        </HStack>
+      }
+    </VStack>
+  </ScrollView>
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import {view} from cortado.annotations
+
+@view
+pub partial class Screen extends component.Component {
+    pub name: string = ""
+    pub orders: int = 0
+    pub fn init() { super.init() }
+    pub fn order() { self.orders += 1; self.request_render() }
+}
+</beans>

@@ -3,6 +3,67 @@ package component
 
 import cortado.host
 import cortado.widgets
+import cortado.visual
+
+/// Beans-only key for a typed choice list; never sent through the host ABI.
+pub const CHOICES_PROPERTY: int = 1001
+pub const TAB_LABELS_PROPERTY: int = 1002
+pub const TABLE_COLUMNS_PROPERTY: int = 1003
+pub const TABLE_WIDTHS_PROPERTY: int = 1004
+pub const TABLE_SOURCE_PROPERTY: int = 1005
+pub const TABLE_EDIT_POLICY_PROPERTY: int = 1006
+
+pub class TableEditRule {
+    policy: fn(int, int) -> bool
+    pub fn init(policy: fn(int, int) -> bool) { self.policy = policy }
+    pub fn callback() -> fn(int, int) -> bool { return self.policy }
+}
+
+/// Copyable, immutable choice list inside an Attribute value.
+pub class StringItems {
+    entries: List<string> = []
+    pub fn init(values: List<string>) {
+        for value: string in values { self.entries.push(value) }
+    }
+    pub fn count() -> int { return self.entries.len() }
+    pub fn at(index: int) -> string { return self.entries[index] }
+    pub fn same_as(other: StringItems) -> bool {
+        if self.entries.len() != other.entries.len() { return false }
+        for index: int in 0..self.entries.len() { if self.entries[index] != other.entries[index] { return false } }
+        return true
+    }
+    pub fn to_list() -> List<string> {
+        var copy: List<string> = []
+        for value: string in self.entries { copy.push(value) }
+        return move copy
+    }
+    pub fn show() -> string { return self.entries.join(", ") }
+}
+
+pub class NumberItems {
+    entries: List<f64> = []
+    pub fn init(values: List<f64>) {
+        for value: f64 in values { self.entries.push(value) }
+    }
+    pub fn same_as(other: NumberItems) -> bool {
+        if self.entries.len() != other.entries.len() { return false }
+        for index: int in 0..self.entries.len() { if self.entries[index] != other.entries[index] { return false } }
+        return true
+    }
+    pub fn to_list() -> List<f64> {
+        var copy: List<f64> = []
+        for value: f64 in self.entries { copy.push(value) }
+        return move copy
+    }
+    pub fn show() -> string {
+        var output: string = ""
+        for index: int in 0..self.entries.len() {
+            if index > 0 { output = "{output}, " }
+            output = "{output}{self.entries[index]}"
+        }
+        return output
+    }
+}
 
 /// A property a component asked for, as a value that can be compared.
 ///
@@ -23,11 +84,21 @@ pub struct Attribute {
     pub text: string = ""
     pub number: f64 = 0.0
     pub whole: int = 0
+    /// A removed attribute restores framework defaults, which can differ
+    /// from explicitly setting the numeric value zero (transparent ink).
+    pub reset: bool = false
+    pub items_value: Option<StringItems> = none
+    pub numbers_value: Option<NumberItems> = none
+    pub source_value: Option<widgets.TableRows> = none
+    pub edit_policy_value: Option<TableEditRule> = none
 
     /// A widget's text. It carries no property id because the ABI gives text
     /// its own pair of entry points rather than a slot in the property table.
     pub static fn of_text(value: string) -> Attribute {
         return Attribute { property: 0, kind: AttributeKind.text, text: value }
+    }
+    pub static fn of_a11y_label(value: string) -> Attribute {
+        return Attribute { property: host.S_A11Y_LABEL, kind: AttributeKind.text, text: value }
     }
 
     pub static fn of_whole(property: int, value: int) -> Attribute {
@@ -41,6 +112,26 @@ pub struct Attribute {
     pub static fn of_flag(property: int, value: bool) -> Attribute {
         return Attribute { property: property, kind: AttributeKind.flag,
                            whole: if value { 1 } else { 0 } }
+    }
+
+    pub static fn of_items(values: List<string>) -> Attribute {
+        return Attribute { property: CHOICES_PROPERTY, kind: AttributeKind.items, items_value: some(new StringItems(values)) }
+    }
+    pub static fn of_labels(values: List<string>) -> Attribute {
+        return Attribute { property: TAB_LABELS_PROPERTY, kind: AttributeKind.items, items_value: some(new StringItems(values)) }
+    }
+    pub static fn of_columns(values: List<string>) -> Attribute {
+        return Attribute { property: TABLE_COLUMNS_PROPERTY, kind: AttributeKind.items, items_value: some(new StringItems(values)) }
+    }
+    pub static fn of_column_widths(values: List<f64>) -> Attribute {
+        return Attribute { property: TABLE_WIDTHS_PROPERTY, kind: AttributeKind.numbers, numbers_value: some(new NumberItems(values)) }
+    }
+    pub static fn of_table_source(value: widgets.TableRows) -> Attribute {
+        return Attribute { property: TABLE_SOURCE_PROPERTY, kind: AttributeKind.table_source, source_value: some(value) }
+    }
+    pub static fn of_table_edit_policy(value: TableEditRule) -> Attribute {
+        return Attribute { property: TABLE_EDIT_POLICY_PROPERTY, kind: AttributeKind.table_edit_policy,
+                           edit_policy_value: some(value) }
     }
 
     pub fn is_on() -> bool {
@@ -61,6 +152,24 @@ pub struct Attribute {
             real => { return self.number == other.number }
             whole => { return self.whole == other.whole }
             flag => { return self.whole == other.whole }
+            items => {
+                match self.items_value {
+                    none => { return other.items_value == none }
+                    some(left) => {
+                        match other.items_value { some(right) => { return left.same_as(right) } none => { return false } }
+                    }
+                }
+            }
+            numbers => {
+                match self.numbers_value {
+                    none => { return other.numbers_value == none }
+                    some(left) => {
+                        match other.numbers_value { some(right) => { return left.same_as(right) } none => { return false } }
+                    }
+                }
+            }
+            table_source => { return self.source_value == other.source_value }
+            table_edit_policy => { return self.edit_policy_value == other.edit_policy_value }
         }
     }
 
@@ -74,9 +183,23 @@ pub struct Attribute {
     /// why. The defaults below are the platform's, which is what a freshly
     /// created widget of that kind already has.
     pub static fn default_for(property: int, kind: AttributeKind) -> Attribute {
+        var value: Attribute = Attribute.default_value(property, kind)
+        value.reset = true
+        return value
+    }
+    static fn default_value(property: int, kind: AttributeKind) -> Attribute {
         if kind == AttributeKind.text {
+            if property == host.S_A11Y_LABEL { return Attribute.of_a11y_label("") }
             return Attribute.of_text("")
         }
+        if kind == AttributeKind.items {
+            if property == TAB_LABELS_PROPERTY { return Attribute.of_labels([]) }
+            if property == TABLE_COLUMNS_PROPERTY { return Attribute.of_columns([]) }
+            return Attribute.of_items([])
+        }
+        if kind == AttributeKind.numbers { return Attribute.of_column_widths([]) }
+        if kind == AttributeKind.table_source { return Attribute { property: TABLE_SOURCE_PROPERTY, kind: AttributeKind.table_source } }
+        if kind == AttributeKind.table_edit_policy { return Attribute { property: TABLE_EDIT_POLICY_PROPERTY, kind: AttributeKind.table_edit_policy } }
         if property == host.P_ENABLED || property == host.P_EDITABLE {
             return Attribute.of_flag(property, true)
         }
@@ -84,6 +207,7 @@ pub struct Attribute {
             return Attribute.of_flag(property, false)
         }
         if kind == AttributeKind.real {
+            if property == visual.SCALE_X || property == visual.SCALE_Y { return Attribute.of_real(property, 1.0) }
             return Attribute.of_real(property, 0.0)
         }
         return Attribute.of_whole(property, 0)
@@ -92,7 +216,10 @@ pub struct Attribute {
     /// The attribute as a golden file prints it: `enabled=false`, `text="Buy"`.
     pub fn show() -> string {
         match self.kind {
-            text => { return "text=\"{self.text}\"" }
+            text => {
+                let name: string = if self.property == host.S_A11Y_LABEL { "a11y_label" } else { "text" }
+                return "{name}=\"{self.text}\""
+            }
             real => { return "{property_name(self.property)}={self.number}" }
             whole => {
                 // A packed colour is the one whole number a reader cannot
@@ -109,6 +236,15 @@ pub struct Attribute {
                 return "{property_name(self.property)}={self.whole}"
             }
             flag => { return "{property_name(self.property)}={self.is_on()}" }
+            items => {
+                let name: string = property_name(self.property)
+                match self.items_value { some(values) => { return "{name}=[{values.show()}]" } none => { return "{name}=[]" } }
+            }
+            numbers => {
+                match self.numbers_value { some(values) => { return "{property_name(self.property)}=[{values.show()}]" } none => { return "{property_name(self.property)}=[]" } }
+            }
+            table_source => { return "{property_name(self.property)}=<TableRows>" }
+            table_edit_policy => { return "{property_name(self.property)}=<policy>" }
         }
     }
 }
@@ -121,7 +257,10 @@ pub fn is_packed_colour(property: int) -> bool {
     return property == host.P_COLOR ||
            property == host.P_BG_COLOR ||
            property == host.P_BORDER_COLOR ||
-           property == host.P_FG_COLOR
+           property == host.P_FG_COLOR ||
+           property == visual.FILL || property == visual.STROKE ||
+           property == visual.GRADIENT_START || property == visual.GRADIENT_END ||
+           property == visual.SHADOW_COLOR
 }
 
 /// The readable name of a host property id.
@@ -130,6 +269,27 @@ pub fn is_packed_colour(property: int) -> bool {
 /// a guess, so adding a property to the header and forgetting this function
 /// shows up as `p12=3` in a test rather than as the wrong name.
 pub fn property_name(property: int) -> string {
+    if property == CHOICES_PROPERTY { return "items" }
+    if property == TAB_LABELS_PROPERTY { return "labels" }
+    if property == TABLE_COLUMNS_PROPERTY { return "columns" }
+    if property == TABLE_WIDTHS_PROPERTY { return "column_widths" }
+    if property == TABLE_SOURCE_PROPERTY { return "source" }
+    if property == TABLE_EDIT_POLICY_PROPERTY { return "editable_when" }
+    if property == visual.FILL { return "fill" }
+    if property == visual.STROKE { return "stroke" }
+    if property == visual.STROKE_WIDTH { return "stroke_width" }
+    if property == visual.ROTATION { return "rotation" }
+    if property == visual.SCALE_X { return "scale_x" }
+    if property == visual.SCALE_Y { return "scale_y" }
+    if property == visual.GRADIENT_START { return "gradient_start" }
+    if property == visual.GRADIENT_END { return "gradient_end" }
+    if property == visual.SHADOW_COLOR { return "shadow_color" }
+    if property == visual.SHADOW_BLUR { return "shadow_blur" }
+    if property == visual.SHADOW_DX { return "shadow_dx" }
+    if property == visual.SHADOW_DY { return "shadow_dy" }
+    if property == visual.CLIP_RADIUS { return "clip_radius" }
+    if property == visual.TRANSITION_SECONDS { return "transition_seconds" }
+    if property == visual.TRANSITION_EASING { return "transition_easing" }
     if property == host.P_CHECKED { return "checked" }
     if property == host.P_ENABLED { return "enabled" }
     if property == host.P_HIDDEN { return "hidden" }
@@ -151,9 +311,9 @@ pub fn property_name(property: int) -> string {
     if property == host.P_DATE { return "day" }
     if property == host.P_COLOR { return "color" }
     if property == host.P_EXPANDED { return "open" }
-    if property == host.P_AXIS { return "axis" }
-    if property == host.P_DIVIDER { return "divider" }
     if property == host.P_ICON { return "icon" }
+    if property == host.P_AXIS { return "stacked" }
+    if property == host.P_DIVIDER { return "divider" }
     if property == host.P_BG_COLOR { return "background" }
     if property == host.P_CORNER_RADIUS { return "corner_radius" }
     if property == host.P_BORDER_WIDTH { return "border_width" }

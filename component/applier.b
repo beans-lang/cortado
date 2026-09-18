@@ -62,7 +62,7 @@ pub class Applier {
                 match WidgetMaker.write(target, change.attribute) {
                     ok(done) => { return ok(true) }
                     err(problem) => {
-                        if problem.kind == "unsupported" { return ok(true) }
+                        if !target.is_rendered() && problem.kind == "unsupported" { return ok(true) }
                         return err(problem.msg, problem.kind)
                     }
                 }
@@ -88,7 +88,7 @@ pub class Applier {
                 match change.element {
                     none => { return err("a create carried no element to build", "empty_create") }
                     some(element) => {
-                        let built: widgets.Widget = WidgetMaker.make(element)?
+                        let built: widgets.Widget = WidgetMaker.make(element, self.root.render_context())?
                         self.container(target, change)?.insert(built, change.index)?
                         // A `create` carries a whole subtree, and the differ
                         // emits no `bind` for anything inside it — there was no
@@ -256,6 +256,7 @@ pub class Applier {
 
     fn index_at(element: Element, control: widgets.Widget) -> Result<bool> {
         self.owner.record(control.handle().raw, element)
+        match control as? widgets.TabView { some(tabs) => { tabs.validate_pages()? } none => {} }
         if element.count() == 0 {
             return ok(true)
         }

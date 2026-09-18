@@ -7,6 +7,7 @@ import cortado.host
 import cortado.platform
 import cortado.layout
 import cortado.geometry
+import cortado.visual
 
 /// Translates the names an author writes into the integers everything below
 /// uses.
@@ -23,6 +24,7 @@ import cortado.geometry
 pub class Vocabulary {
     /// The widget behind a tag, or `none` for a tag cortado does not know.
     pub static fn kind_of(tag: string) -> Option<widgets.WidgetKind> {
+        if visual.is_tag(tag) { return some(widgets.WidgetKind.canvas) }
         if tag == "VStack" || tag == "HStack" ||
            tag == "Grid" || tag == "Box" || tag == "Container" {
             return some(widgets.WidgetKind.container)
@@ -105,6 +107,17 @@ pub class Vocabulary {
 
     /// The host property an attribute name sets, or -1.
     pub static fn property_of(name: string) -> int {
+        if name == "a11y_label" { return host.S_A11Y_LABEL }
+        if name == "items" { return CHOICES_PROPERTY }
+        if name == "labels" { return TAB_LABELS_PROPERTY }
+        if name == "columns" { return TABLE_COLUMNS_PROPERTY }
+        if name == "column_widths" { return TABLE_WIDTHS_PROPERTY }
+        if name == "source" { return TABLE_SOURCE_PROPERTY }
+        if name == "editable_when" { return TABLE_EDIT_POLICY_PROPERTY }
+        if name == "stacked" { return host.P_AXIS }
+        if name == "divider" { return host.P_DIVIDER }
+        let drawing: int = visual.property_of(name)
+        if drawing >= 0 { return drawing }
         if name == "checked" { return host.P_CHECKED }
         if name == "enabled" { return host.P_ENABLED }
         if name == "hidden" { return host.P_HIDDEN }
@@ -142,6 +155,12 @@ pub class Vocabulary {
     /// ABI. A name that is not a property answers `true`: layout names belong
     /// to no control, and an unknown name is refused before this is reached.
     pub static fn carries(kind: widgets.WidgetKind, name: string) -> bool {
+        if name == "a11y_label" { return true }
+        if name == "items" { return kind == widgets.WidgetKind.combo_box || kind == widgets.WidgetKind.segmented }
+        if name == "labels" { return kind == widgets.WidgetKind.tab_view }
+        if name == "columns" || name == "column_widths" || name == "source" || name == "editable_when" { return kind == widgets.WidgetKind.table }
+        if name == "stacked" || name == "divider" { return kind == widgets.WidgetKind.split_view }
+        if visual.attribute_call(name) != "" { return false }
         let property: int = Vocabulary.property_of(name)
         if property < 0 { return true }
         var answer: int = 0
@@ -188,6 +207,7 @@ pub class Vocabulary {
     /// Whether this attribute's value is a colour, written `#rgb`, `#rrggbb`
     /// or `#rrggbbaa`. Mirrors `bx.is_colour_attribute`.
     pub static fn is_colour(name: string) -> bool {
+        if visual.is_colour(name) { return true }
         return name == "color" || name == "background" ||
                name == "border_color" || name == "text_color"
     }
@@ -204,6 +224,19 @@ pub class Vocabulary {
 
     /// How a property's value travels.
     pub static fn kind_of_property(name: string) -> AttributeKind {
+        if name == "a11y_label" { return AttributeKind.text }
+        if name == "items" { return AttributeKind.items }
+        if name == "labels" { return AttributeKind.items }
+        if name == "columns" { return AttributeKind.items }
+        if name == "column_widths" { return AttributeKind.numbers }
+        if name == "source" { return AttributeKind.table_source }
+        if name == "editable_when" { return AttributeKind.table_edit_policy }
+        if name == "divider" { return AttributeKind.real }
+        if name == "stroke_width" || name == "rotation" || name == "scale_x" || name == "scale_y" ||
+           name == "shadow_blur" || name == "shadow_dx" || name == "shadow_dy" ||
+           name == "clip_radius" || name == "transition_seconds" {
+            return AttributeKind.real
+        }
         if name == "min" || name == "max" || name == "value" ||
            name == "font_size" || name == "step" || name == "opacity" ||
            name == "day" || name == "corner_radius" || name == "border_width" {
@@ -214,6 +247,7 @@ pub class Vocabulary {
         // hands back. It is written in markup as `#rrggbbaa`, and `Builder`
         // is what turns the one into the other.
         if name == "checked" || name == "alignment" || name == "selected" ||
+           name == "transition_easing" ||
            name == "lines" || Vocabulary.is_colour(name) {
             return AttributeKind.whole
         }

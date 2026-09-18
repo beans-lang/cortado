@@ -1,0 +1,14 @@
+<HStack spacing={8} align="center">
+  <Label text={self.mark} text_color="#ffffffff" background={self.track}
+         corner_radius={4} width={20} height={20} />
+  <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+</HStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class CheckBoxTemplate extends component.ToggleControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

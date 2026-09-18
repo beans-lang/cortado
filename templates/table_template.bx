@@ -1,0 +1,47 @@
+<Box width={self.total_width} background={self.fill} border_color="#bfc3ce" border_width={1}>
+  $if self.total_rows == 0 {
+    <Label x={12} y={self.header_height + 12.0} text="No rows" text_color="#676d79" />
+  }
+  $for row in self.rows {
+    <HStack key={"row-{row.index}"} y={row.top} height={self.row_height} width={self.total_width}
+            spacing={0} align="center"
+            background={if row.selected { "#dce7ff" } else if row.index % 2 == 0 { "#ffffff" } else { "#f4f6fa" }}>
+      $for column in 0..row.cells.len() {
+        $if row.editable[column] {
+          <TextField key={"editor-{row.index}-{column}-{self.revision}"} text={row.cells[column]}
+                     width={self.widths[column]} height={self.row_height}
+                     on:commit={fn(e: UiEvent) { self.commit(row.index, column, e.text) }} />
+        } else {
+          <Label key={"cell-{row.index}-{column}"} text={row.cells[column]}
+                 width={self.widths[column]} font_size={self.font_size} text_color={self.ink} />
+        }
+      }
+    </HStack>
+  }
+  <HStack y={0} height={self.header_height} width={self.total_width} spacing={0}
+          align="center" background="#dce0ea">
+    $for column in 0..self.titles.len() {
+      <Label key={"header-{column}"} text={self.titles[column]} width={self.widths[column]}
+             font_size={self.font_size} text_color={self.ink} />
+    }
+  </HStack>
+</Box>
+<beans>
+package templates
+import cortado.component
+import cortado.render
+import {view} from cortado.annotations
+
+@view
+pub partial class TableTemplate extends component.TableControlTemplate {
+    actions: Option<render.ControlActions> = none
+    pub fn init() { super.init() }
+    pub override fn bind_actions(actions: render.ControlActions) { self.actions = some(actions) }
+    pub fn commit(row: int, column: int, text: string) {
+        match self.actions {
+            some(actions) => { actions.commit_cell(row, column, text).expect("commit a table cell") }
+            none => { panic("table template has no actions") }
+        }
+    }
+}
+</beans>

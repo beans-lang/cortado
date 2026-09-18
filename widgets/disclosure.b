@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A disclosure.
 ///
@@ -24,8 +25,8 @@ import cortado.host
 /// not adding them. Saying it plainly here because the alternative is a
 /// framework that quietly re-solves a layout the caller did not ask it to.
 pub class Disclosure extends ChildHolder {
-    pub fn init() {
-        super.init(WidgetKind.disclosure)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.disclosure, context)
     }
 
     /// A disclosure with a title, open or shut.

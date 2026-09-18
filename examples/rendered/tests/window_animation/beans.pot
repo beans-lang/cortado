@@ -1,0 +1,5 @@
+module rendered_window_animation_test
+kind application
+require path "../.."
+require path "../../../.."
+require path "../../../../skia"

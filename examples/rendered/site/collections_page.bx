@@ -1,0 +1,85 @@
+<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+  <Label text="Choices and collections" font_size={23} />
+  <Label text="The item lists are typed Beans values in .bx." text_color="#555b6b" />
+  <Label text="Drink" />
+  <ComboBox key={"drink"} selected={self.drink_index} items={self.drinks}
+            on:change={fn(e: UiEvent) { self.choose_drink(e.index, e.text, e.position.x) }} />
+  <Label text="Cup size" />
+  <Segmented key={"size"} selected={self.size_index} items={self.sizes}
+             on:change={fn(e: UiEvent) { self.choose_size(e.index) }} />
+  <Label text={"Drink {self.drink_index}, size {self.size_index}"} text_color="#555b6b" />
+  <Label text="Tabs" />
+  <TabView key={"tabs"} selected={self.tab_index} labels={self.tab_labels} height={116}
+           on:change={fn(e: UiEvent) { self.choose_tab(e.index) }}>
+    <VStack key={"summary"} padding={10} align="stretch">
+      <Label text="Summary page" />
+    </VStack>
+    <VStack key={"history"} padding={10} align="stretch">
+      <Label text="History page" />
+    </VStack>
+  </TabView>
+  <Label text="Split panes" />
+  <SplitView key={"split"} stacked={false} divider={self.divider} height={108}
+             on:change={fn(e: UiEvent) { self.move_divider(e.index) }}>
+    <VStack key={"left"} padding={10} background="#e9edfa" align="stretch">
+      <Label text="Left pane" />
+    </VStack>
+    <VStack key={"right"} padding={10} background="#ebf3ec" align="stretch">
+      <Label text="Right pane" />
+    </VStack>
+  </SplitView>
+  <Label text="Virtual table" />
+  <Table key={"orders"} columns={self.table_titles} column_widths={self.table_widths}
+         source={self.table_rows} height={156}
+         on:select={fn(e: UiEvent) { self.choose_row(e.index) }} />
+  <Label text={"Selected row {self.selected_row}"} text_color="#555b6b" />
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import cortado.widgets
+import {view} from cortado.annotations
+
+pub class DemoTableRows implements widgets.TableRows {
+    pub calls: int = 0
+    pub total: int = 10000
+    pub fn init() {}
+    pub fn row_count() -> int { return self.total }
+    pub fn cell(row: int, column: int) -> string {
+        self.calls += 1
+        return if column == 0 { "Order {row}" } else { "Cup {row % 3}" }
+    }
+}
+
+@view
+pub partial class CollectionsPage extends component.Component {
+    pub drinks: List<string> = ["Tea", "Coffee", "Water"]
+    pub sizes: List<string> = ["Small", "Medium", "Large"]
+    pub drink_index: int = 1
+    pub last_drink_text: string = ""
+    pub last_drink_value: f64 = -1.0
+    pub size_index: int = 0
+    pub tab_index: int = 0
+    pub tab_labels: List<string> = ["Summary", "History"]
+    pub divider: f64 = 190.0
+    pub table_rows: DemoTableRows
+    pub table_titles: List<string> = ["Order", "Cup"]
+    pub table_widths: List<f64> = [210.0, 190.0]
+    pub selected_row: int = -1
+    pub fn init() { self.table_rows = new DemoTableRows(); super.init() }
+    pub fn choose_drink(index: int, text: string, value: f64) {
+        self.drink_index = index; self.last_drink_text = text; self.last_drink_value = value
+        self.request_render()
+    }
+    pub fn choose_size(index: int) { self.size_index = index; self.request_render() }
+    pub fn choose_tab(index: int) { self.tab_index = index; self.request_render() }
+    pub fn move_divider(index: int) { self.divider = index as f64; self.request_render() }
+    pub fn choose_row(index: int) { self.selected_row = index; self.request_render() }
+    pub fn replace_drinks() {
+        self.drinks = ["Water", "Tea"]
+        self.drink_index = 1
+        self.request_render()
+    }
+}
+</beans>

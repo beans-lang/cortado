@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A single-line field that shows dots instead of what was typed.
 ///
@@ -18,8 +19,8 @@ import cortado.host
 /// not carry what somebody typed. `value()` is there for the program that
 /// actually needs it, and it is a call somebody had to write on purpose.
 pub class SecureField extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.secure_field)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.secure_field, context)
     }
 
     pub static fn of(value: string) -> Result<SecureField> {

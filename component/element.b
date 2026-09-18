@@ -5,6 +5,7 @@ import cortado.host
 import cortado.widgets
 import cortado.layout
 import cortado.events
+import cortado.visual
 
 /// One described widget — not a widget.
 ///
@@ -188,6 +189,7 @@ pub class Element {
     /// that.
     pub fn matches(other: Element) -> bool {
         if self.kind != other.kind { return false }
+        if (visual.is_tag(self.tag) || visual.is_tag(other.tag)) && self.tag != other.tag { return false }
         return self.key == other.key
     }
 }

@@ -91,6 +91,10 @@ void ctd_emit(uint32_t kind, ctd_handle target, int64_t index, int64_t token);
 // Gives a widget the controllers input arrives through, and records the handle
 // it was tracked under. Called from ctd_track for every control there is.
 void ctd_input_attach(gpointer object, ctd_handle handle);
+gboolean ctd_canvas_im_filter(GtkWidget *widget, GdkEvent *event);
+gboolean ctd_canvas_text_active(GtkWidget *widget);
+GtkIMContext *ctd_canvas_im_context(GtkWidget *widget);
+void ctd_canvas_im_focus(GtkWidget *widget, gboolean focused);
 // The handle for the nearest ancestor of a widget that cortado built, starting
 // with the widget itself. 0 for anything cortado did not build.
 ctd_handle ctd_handle_for_widget(GtkWidget *widget);

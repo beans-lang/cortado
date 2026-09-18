@@ -58,9 +58,9 @@ Container CortadoView role=group "" frame=0,0,460,460 children=1
                 CheckBox NSButton role=checkbox "Grind fresh" frame=10,10,382,16
                 CheckBox NSButton role=checkbox "Filtered water" frame=10,32,382,16
             ImageView NSImageView role=image "" frame=8,96,412,20
-            Canvas CortadoView role=group "" frame=8,124,412,20
-            Canvas CortadoView role=group "" frame=8,152,412,44
-            Canvas CortadoView role=group "" frame=8,204,412,44
+            Canvas CortadoSharedCanvas role=group "" frame=8,124,412,20
+            Canvas CortadoSharedCanvas role=group "" frame=8,152,412,44
+            Canvas CortadoSharedCanvas role=group "" frame=8,204,412,44
         Disclosure CortadoDisclosure role=group "Rows" frame=0,1011,428,185 children=1
           Container CortadoView role=group "" frame=0,0,428,164 children=2
             Table NSScrollView role=grid "" frame=8,8,412,80

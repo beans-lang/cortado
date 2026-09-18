@@ -1,0 +1,38 @@
+<VStack padding={20} spacing={12} align="stretch" background="#f7f7f9">
+  <Label text="Accessibility" font_size={23} />
+  <Label text="Use a screen reader to inspect labels, states, focus, and actions." />
+  <Button key={"action"} text="Place order" on:click={fn(e: UiEvent) { self.place_order() }} />
+  <Label text={"Orders placed: {self.orders}"} />
+  <CheckBox key={"updates"} text="Send updates" checked={self.updates == 1}
+            on:change={fn(e: UiEvent) { self.set_updates(e.index) }} />
+  <Label text="Drink" />
+  <ComboBox key={"drink"} a11y_label="Drink" selected={self.drink_index} items={self.drinks}
+            on:change={fn(e: UiEvent) { self.choose_drink(e.index) }} />
+  <Label text="Name" />
+  <TextField key={"name"} a11y_label={self.name_label} hidden={self.hide_name} bind:value={self.name} />
+  <Label text="Private code" />
+  <SecureField key={"secret"} a11y_label="Private code" bind:value={self.secret} />
+  <Label text="The private code is never exposed as an accessibility value." />
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import {view} from cortado.annotations
+
+@view
+pub partial class AccessibilityPage extends component.Component {
+    pub orders: int = 0
+    pub updates: int = 0
+    pub drinks: List<string> = ["Tea", "Coffee", "Water"]
+    pub drink_index: int = 0
+    pub name: string = ""
+    pub name_label: string = "Name"
+    pub hide_name: bool = false
+    pub secret: string = ""
+    pub fn init() { super.init() }
+    pub fn place_order() { self.orders += 1; self.request_render() }
+    pub fn set_updates(value: int) { self.updates = value; self.request_render() }
+    pub fn choose_drink(index: int) { self.drink_index = index; self.request_render() }
+}
+</beans>

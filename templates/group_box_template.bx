@@ -1,0 +1,13 @@
+<VStack background={self.fill} border_color="#bfc3ce" border_width={1}
+        corner_radius={self.radius} padding={8} align="stretch">
+  <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+</VStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class GroupBoxTemplate extends component.ControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

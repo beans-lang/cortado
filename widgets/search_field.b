@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A search field.
 ///
@@ -20,8 +21,8 @@ import cortado.host
 /// Explorer's is exactly that — but it has no clear button, so a program that
 /// leans on one should offer its own.
 pub class SearchField extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.search_field)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.search_field, context)
     }
 
     pub static fn of(hint: string) -> Result<SearchField> {

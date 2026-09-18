@@ -30,6 +30,16 @@ pub class Application {
     pub router: events.EventRouter
     sink: LocalStoredCallback<fn(RawPtr<u8>, RawPtr<host.CtdEvent>)>
     running: bool = false
+    next_render_namespace: int = 1
+
+    /// Window-local render handles include an application-assigned namespace.
+    /// Never recycle it while this application may still hold stale handles.
+    pub fn allocate_render_namespace() -> Result<int> {
+        if self.next_render_namespace > 32767 { return err("render window namespaces exhausted", "out_of_range") }
+        let value: int = self.next_render_namespace
+        self.next_render_namespace += 1
+        return ok(value)
+    }
 
     /// Brings the platform up. Must be called from `main`, which Beans
     /// guarantees runs on the real process main thread under both the

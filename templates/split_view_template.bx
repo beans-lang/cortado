@@ -1,0 +1,17 @@
+<Box background={self.fill}>
+  $if self.stacked {
+    <Box y={self.divider_half} height={6} width_percent={100.0} background="#bfc3ce" />
+  }
+  $if !self.stacked {
+    <Box x={self.divider_half} width={6} height_percent={100.0} background="#bfc3ce" />
+  }
+</Box>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class SplitViewTemplate extends component.SplitControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

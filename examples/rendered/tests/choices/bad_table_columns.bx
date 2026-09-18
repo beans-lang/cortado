@@ -1,0 +1,7 @@
+<Table columns="Order Cup" />
+<beans>
+package choices
+import cortado.component
+import {view} from cortado.annotations
+@view pub partial class BadTableColumns extends component.Component { pub fn init() { super.init() } }
+</beans>

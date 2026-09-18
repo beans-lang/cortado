@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 32
+#define CTD_ABI_VERSION 34
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -486,6 +486,35 @@ ctd_status ctd_clock_prefer(ctd_handle surface, double lowest,
 int32_t ctd_widget_supports(int32_t kind);
 
 ctd_handle ctd_widget_new(int32_t kind);
+/* Present one copied RGBA8, opaque (alpha 255), top-to-bottom raster frame on a
+ * Canvas. Width/height are pixels; the view's existing frame remains points.
+ * This is the software renderer's presentation boundary, not a widget API. */
+ctd_status ctd_canvas_set_pixels(ctd_handle canvas, int32_t width, int32_t height,
+                                  const char *rgba, int32_t length);
+
+/* Services for the single native canvas used by a shared-rendered scene.
+ * All editing, focus and action policy remains in Beans. The host only passes
+ * OS input through and presents Beans' current text/selection/caret to its IME.
+ * `anchor` and `caret` are UTF-8 byte offsets. Coordinates are logical points
+ * in canvas space. `active=0` ends the native input session, 1 is ordinary
+ * editing, and 2 asks the OS for secure keyboard input where supported. */
+ctd_status ctd_canvas_text_state(ctd_handle canvas, int32_t active,
+    const char *utf8, int32_t length, int32_t anchor, int32_t caret,
+    double x, double y, double width, double height);
+ctd_status ctd_clipboard_write(const char *utf8, int32_t length);
+/* Returns required byte count; negative values are CTD_ERR_*. No trailing NUL
+ * is counted or required. */
+int32_t ctd_clipboard_read(char *out, int32_t cap);
+
+/* One complete accessibility snapshot per canvas. Beans supplies roles,
+ * labels, values, bounds, and stable generation-checked IDs. The native host
+ * translates these into the platform tree; action requests return as events. */
+ctd_status ctd_canvas_semantics_clear(ctd_handle canvas);
+ctd_status ctd_canvas_semantics_add(ctd_handle canvas, uint64_t id,
+    const char *role, int32_t role_len, const char *label, int32_t label_len,
+    const char *value, int32_t value_len, double x, double y,
+    double width, double height, int32_t enabled, int32_t focused);
+ctd_status ctd_canvas_semantics_end(ctd_handle canvas);
 int32_t    ctd_widget_kind(ctd_handle widget);   /* -1 when stale */
 int32_t    ctd_widget_alive(ctd_handle widget);
 ctd_status ctd_widget_release(ctd_handle widget);
@@ -1980,10 +2009,20 @@ ctd_status ctd_table_select(ctd_handle table, int32_t row);
 /* A frame of the screen is ready, or was not. `token` echoes the request's and
  * `index` is the byte length waiting — 0 where the capture failed. */
 #define CTD_EV_SCREEN_FRAME     38
+/* Shared canvas input. Scroll x/y are pointer coordinates; width/height are
+ * horizontal/vertical deltas in logical points. Composition index/token are
+ * UTF-8 byte offsets within the event text. */
+#define CTD_EV_POINTER_SCROLL  39
+#define CTD_EV_TEXT_INPUT      40
+#define CTD_EV_COMPOSITION_UPDATE 41
+#define CTD_EV_COMPOSITION_CANCEL 42
+/* target is the canvas, token is a generation-checked render handle, index
+ * is 1 activate or 2 focus. Beans validates and performs the action. */
+#define CTD_EV_SEMANTICS_ACTION 43
 /* One past the last kind. It exists so a host can keep an array per kind —
  * `ctd_listen` is exactly that — and so adding a kind without widening the
  * array is a compile error rather than a write off the end of one. */
-#define CTD_EV_COUNT            39
+#define CTD_EV_COUNT            44
 
 ctd_status ctd_permission_status(int32_t what, int32_t *out);
 /* Asks the user. CTD_ERR_UNSUPPORTED where a prompt cannot appear — which is

@@ -1,6 +1,6 @@
 Container CortadoView role=group "" frame=0,0,300,700 children=1
   Container CortadoView role=group "" frame=0,0,300,700 children=2
-    Canvas CortadoView role=group "" frame=0,0,300,700
+    Canvas CortadoSharedCanvas role=group "" frame=0,0,300,700
     ScrollView NSScrollView role=scrollarea "" frame=0,0,300,700 children=1
       Container CortadoView role=group "" frame=0,0,300,954 children=3
         Container CortadoView role=group "" frame=16,16,268,40 children=1
@@ -36,18 +36,18 @@ Container CortadoView role=group "" frame=0,0,300,700 children=1
               Label NSTextField role=text "#895B8A" frame=0,0,0,0
         Container CortadoView role=group "" frame=16,146,268,792 children=5
           Container CortadoView role=group "" frame=4,0,260,150 children=2
-            Canvas CortadoView role=group "" frame=0,0,260,133
+            Canvas CortadoSharedCanvas role=group "" frame=0,0,260,133
             Label NSTextField role=text "AURORA" frame=0,137,260,13
           Container CortadoView role=group "" frame=4,160,260,151 children=2
-            Canvas CortadoView role=group "" frame=0,0,260,134
+            Canvas CortadoSharedCanvas role=group "" frame=0,0,260,134
             Label NSTextField role=text "FLOW" frame=0,138,260,13
           Container CortadoView role=group "" frame=4,321,260,150 children=2
-            Canvas CortadoView role=group "" frame=0,0,260,133
+            Canvas CortadoSharedCanvas role=group "" frame=0,0,260,133
             Label NSTextField role=text "PRISM" frame=0,137,260,13
           Container CortadoView role=group "" frame=4,481,260,150 children=2
-            Canvas CortadoView role=group "" frame=0,0,260,133
+            Canvas CortadoSharedCanvas role=group "" frame=0,0,260,133
             Label NSTextField role=text "GLOW" frame=0,137,260,13
           Container CortadoView role=group "" frame=4,641,260,151 children=2
-            Canvas CortadoView role=group "" frame=0,0,260,134
+            Canvas CortadoSharedCanvas role=group "" frame=0,0,260,134
             Label NSTextField role=text "SKY" frame=0,138,260,13
 overflowing runs: 0

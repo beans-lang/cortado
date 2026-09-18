@@ -1,5 +1,5 @@
 // Which control carries which attribute, asked three ways and answered once:
-// 35 tags x 71 attributes, then every property set on a real control.
+// Every known tag and attribute, then every property set on a real control.
 package main
 
 import cortado.platform
@@ -7,6 +7,7 @@ import cortado.surface
 import cortado.widgets
 import cortado.component
 import cortado.bx
+import cortado.visual
 import std.io
 
 /// A value that is in range for `name`, so that a refusal is about the control
@@ -50,18 +51,27 @@ fn drive() -> Result<bool> {
     let names: List<string> = bx.attribute_names()
     let tags: List<string> = bx.widget_tags()
 
-    io.println("-- the markup table and the host agree, tag by tag --")
+    io.println("-- legacy markup tags and host kinds agree --")
     var pairs: int = 0
     var same: int = 0
     var told: int = 0
+    var legacy_tags: int = 0
     for tag: string in tags {
+        // Drawing tags share WidgetKind.canvas but have their own typed
+        // vocabulary. A native Canvas kind cannot answer for each shape.
+        if visual.is_tag(tag) { continue }
+        legacy_tags = legacy_tags + 1
         match component.Vocabulary.kind_of(tag) {
             none => { io.println("  {tag} is not a control here, and the two lists say it is") }
             some(kind) => {
                 for name: string in names {
                     pairs = pairs + 1
                     let written: bool = bx.tag_carries(tag, name)
-                    let asked: bool = component.Vocabulary.carries(kind, name)
+                    // Grid.columns is a layout track list; Table.columns is
+                    // a typed control property with the same written name.
+                    let asked: bool = if tag == "Grid" && name == "columns" {
+                        component.Vocabulary.is_layout_name(name)
+                    } else { component.Vocabulary.carries(kind, name) }
                     if written == asked {
                         same = same + 1
                     } else {
@@ -76,8 +86,27 @@ fn drive() -> Result<bool> {
         }
     }
     // The same on every platform: neither table knows what this machine builds.
-    io.println("  every pair was asked: {pairs == 2485}")
+    io.println("  every pair was asked: {pairs == legacy_tags * names.len()}")
     io.println("  and answered the same way by both: {same == pairs}")
+
+    io.println("-- drawing tags agree with the shared visual vocabulary --")
+    var drawing_pairs: int = 0
+    var drawing_same: int = 0
+    for tag: string in visual.tags() {
+        match visual.kind_of(tag) {
+            none => { io.println("  {tag} has no drawing kind") }
+            some(kind) => {
+                for name: string in visual.attribute_names() {
+                    drawing_pairs = drawing_pairs + 1
+                    if bx.tag_carries(tag, name) == visual.carries(kind, name) {
+                        drawing_same = drawing_same + 1
+                    }
+                }
+            }
+        }
+    }
+    io.println("  every drawing pair was asked: {drawing_pairs == visual.tags().len() * visual.attribute_names().len()}")
+    io.println("  and answered the same way by both: {drawing_same == drawing_pairs}")
 
     io.println("-- and the answer is the one the control gives --")
     // A carried property is never refused as `wrong_widget`; one that is not

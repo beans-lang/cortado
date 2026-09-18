@@ -1,0 +1,13 @@
+<HStack background="#d6d8df" corner_radius={6} align="stretch">
+  <Box width_percent={self.percent} background={self.accent} corner_radius={6} />
+  <Box grow={1} />
+</HStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class LevelIndicatorTemplate extends component.RangeControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

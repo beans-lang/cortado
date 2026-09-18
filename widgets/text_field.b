@@ -1,6 +1,8 @@
 // One line of text the user can type into.
 package widgets
 
+import cortado.render
+
 import cortado.host
 
 /// A single-line editable field.
@@ -11,8 +13,8 @@ import cortado.host
 /// Rebuilding any of that is how a toolkit ends up subtly wrong in every
 /// language but English.
 pub class TextField extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.text_field)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.text_field, context)
     }
 
     pub static fn of(value: string) -> Result<TextField> {

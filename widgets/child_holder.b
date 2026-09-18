@@ -1,6 +1,8 @@
 // Everything that holds children, and the one place that logic lives.
 package widgets
 
+import cortado.render
+
 /// A widget with a child list.
 ///
 /// Abstract, because "a thing that holds children" is not a control — `Container` is the plain one
@@ -16,8 +18,8 @@ package widgets
 pub abstract class ChildHolder extends Widget implements Holder {
     contents: List<Widget> = []
 
-    fn init(kind: WidgetKind) {
-        super.init(kind)
+    fn init(kind: WidgetKind, context: Option<render.UiContext> = none) {
+        super.init(kind, context)
     }
 
     /// A copy of the child list, so a caller walking the tree cannot mutate

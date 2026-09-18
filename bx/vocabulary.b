@@ -21,6 +21,8 @@
 
 package bx
 
+import cortado.visual
+
 /// One named thing in the surface, with the form to write and why.
 ///
 /// Three strings rather than a shape per section: an editor renders `name` in
@@ -142,7 +144,7 @@ pub fn controls() -> List<string> {
 /// nothing compared the two.
 pub fn boolean_attributes() -> List<string> {
     return ["animating", "borderless", "compact", "checked", "editable", "enabled", "hidden",
-            "indeterminate", "open", "wrap"]
+            "indeterminate", "open", "stacked", "wrap"]
 }
 
 /// Every attribute, with the kind of value it takes.
@@ -152,12 +154,24 @@ pub fn boolean_attributes() -> List<string> {
 pub fn attributes() -> List<VocabRow> {
     let out: List<VocabRow> = []
     for name: string in attribute_names() {
-        out.push(new VocabRow(name, attribute_call(name), attribute_note(name)))
+        out.push(new VocabRow(name, if name == "a11y_label" { "text" } else if name == "source" { "by tag" } else { attribute_call(name) },
+                              attribute_note(name)))
     }
     return move out
 }
 
 fn attribute_note(name: string) -> string {
+    if name == "a11y_label" { return "the name a screen reader speaks for this control" }
+    if name == "source" { return "a TableRows source for Table or a local image path for ResourceImage" }
+    let drawing: string = visual.attribute_note(name)
+    if drawing != "" { return drawing }
+    if name == "items" { return "a List<string> of choices for ComboBox or Segmented" }
+    if name == "labels" { return "a List<string> of TabView page labels, in child order" }
+    if name == "column_widths" { return "a List<f64> of Table column widths, in title order" }
+    if name == "editable_when" { return "a stable TableEditRule for editable Table cells" }
+    if name == "source" { return "a TableRows source for Table or a local image path for ResourceImage" }
+    if name == "stacked" { return "whether SplitView places its children top to bottom" }
+    if name == "divider" { return "SplitView divider position in points" }
     if name == "text" { return "the text this control shows" }
     if name == "spacing" { return "the gap between a container's children" }
     if name == "line_spacing" { return "the gap between one line of a wrapping run and the next" }
@@ -203,7 +217,7 @@ fn attribute_note(name: string) -> string {
     if name == "lines" { return "how many lines a label may wrap onto: 0 for as many as it needs, 1 for one cut short" }
     if name == "checked" { return "a check box's state" }
     if name == "editable" { return "whether a field accepts typing" }
-    if name == "columns" { return "a grid's columns, as points, shares like 1fr, or auto" }
+    if name == "columns" { return "Grid track words or a Table List<string> of column titles" }
     if name == "min_column" { return "the narrowest a grid column may be, so the count follows the room" }
     if name == "max_column" { return "the widest a share of the room may make a grid column" }
     if name == "column_gap" { return "the gap between a grid's columns" }
@@ -279,6 +293,12 @@ fn json_events() -> List<string> {
     return move out
 }
 
+/// Names whose value type depends on the widget tag.
+fn attribute_overrides() -> List<string> {
+    return ["\{\"tag\": \"Table\", \"name\": \"source\", \"detail\": \"TableRows\"\}",
+            "\{\"tag\": \"ResourceImage\", \"name\": \"source\", \"detail\": \"text\"\}"]
+}
+
 fn block_of(name: string, rows: List<string>) -> string {
     if rows.is_empty() { return "  {json_string(name)}: []" }
     return "  {json_string(name)}: [\n    {rows.join(",\n    ")}\n  ]"
@@ -297,8 +317,8 @@ pub fn vocabulary_json() -> string {
     let lines: List<string> = []
     lines.push(line_of("$generated",
         json_string("Written by `cortado-bx vocabulary`, out of cortado's own tables. Do not edit by hand.")))
-    lines.push(line_of("$source", json_string("cortado bx/vocabulary.b, bx/events.b, bx/widgets.b, bx/parse.b")))
-    lines.push(line_of("$language", json_string("cortado markup — a whole-file document, not Beans with tags in it: outside <beans> every < opens a tag. Tags name native controls, never HTML elements")))
+    lines.push(line_of("$source", json_string("cortado bx/vocabulary.b, bx/events.b, bx/widgets.b, visual/vocabulary.b, bx/parse.b")))
+    lines.push(line_of("$language", json_string("cortado markup — a whole-file document, not Beans with tags in it: outside <beans> every < opens a tag. Tags name controls or shared drawing nodes, never HTML elements")))
     lines.push(block_of("blocks", json_rows(blocks())))
     lines.push(block_of("interpolations", json_rows(interpolations())))
     lines.push(block_of("namespaces", json_rows(namespaces())))
@@ -308,6 +328,7 @@ pub fn vocabulary_json() -> string {
     lines.push(block_of("reservedAttributes", json_rows(reserved_attributes())))
     lines.push(line_of("controls", json_strings(controls())))
     lines.push(block_of("attributes", json_rows(attributes())))
+    lines.push(block_of("attributeOverrides", attribute_overrides()))
     lines.push(line_of("booleanAttributes", json_strings(boolean_attributes())))
     return "\{\n{lines.join(",\n")}\n\}\n"
 }

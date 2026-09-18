@@ -19,11 +19,14 @@
 
 package bx
 
+import cortado.visual
+
 /// Whether `tag` names a control cortado knows.
 ///
 /// The closed set. Anything else that starts with a capital letter is taken to
 /// be a component; anything else that does not is refused by name.
 pub fn is_widget_tag(tag: string) -> bool {
+    if visual.is_tag(tag) { return true }
     if tag == "VStack" { return true }
     if tag == "HStack" { return true }
     if tag == "Grid" { return true }
@@ -103,6 +106,7 @@ pub fn retired_tag(tag: string) -> string {
 
 /// An attribute that is true by being there: `<CheckBox checked />`.
 pub fn is_boolean_attribute(name: string) -> bool {
+    if name == "stacked" { return true }
     if name == "enabled" { return true }
     if name == "hidden" { return true }
     if name == "borderless" || name == "compact" { return true }
@@ -171,11 +175,20 @@ pub fn html_only_attribute(name: string) -> string {
 /// measured — a real property or one of the layout numbers — and `word` a
 /// named choice out of a fixed set.
 pub fn attribute_call(name: string) -> string {
+    if name == "items" { return "items" }
+    if name == "labels" { return "labels" }
+    if name == "column_widths" { return "column_widths" }
+    if name == "editable_when" { return "editable_when" }
+    if name == "source" { return "text" }
+    let drawing: string = visual.attribute_call(name)
+    if drawing != "" { return drawing }
     if name == "text" { return "text" }
+    if name == "a11y_label" { return "a11y_label" }
     if is_boolean_attribute(name) { return "flag" }
     if name == "min" || name == "max" || name == "value" ||
        name == "font_size" || name == "step" || name == "opacity" ||
-       name == "day" || name == "corner_radius" || name == "border_width" {
+       name == "day" || name == "corner_radius" || name == "border_width" ||
+       name == "divider" {
         return "number"
     }
     if name == "alignment" || name == "selected" || name == "lines" { return "number" }
@@ -230,6 +243,7 @@ pub fn attribute_call(name: string) -> string {
 /// A word this attribute would accept, for a refusal that shows the shape
 /// rather than a word from some other attribute's set.
 pub fn word_example(name: string) -> string {
+    if name == "transition_easing" { return "ease_in_out" }
     if name == "font_role" { return "body" }
     if name == "columns" { return "160 1fr auto" }
     return "center"
@@ -255,30 +269,33 @@ pub fn is_placement_attribute(name: string) -> bool {
 /// The attributes whose value is a colour, written `#rgb`, `#rrggbb` or
 /// `#rrggbbaa`. One list, so the spelling is parsed in exactly one place.
 pub fn is_colour_attribute(name: string) -> bool {
+    if visual.is_colour(name) { return true }
     return name == "color" || name == "background" ||
            name == "border_color" || name == "text_color"
 }
 
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
 pub fn attribute_names() -> List<string> {
-    return ["borderless", "compact", "align", "align_self", "alignment", "animating", "aspect_ratio", "background", "basis",
-            "border_color", "border_width", "bottom", "checked", "color", "column_gap", "columns",
+    var names: List<string> = ["a11y_label", "borderless", "compact", "align", "align_self", "alignment", "animating", "aspect_ratio", "background", "basis",
+            "border_color", "border_width", "bottom", "checked", "color", "column_gap", "columns", "column_widths",
             "corner_radius",
-            "day", "editable", "enabled", "flex",
+            "day", "divider", "editable", "editable_when", "enabled", "flex",
             "font_role", "font_size", "grow", "height", "height_percent", "hidden",
-            "hide_above", "hide_below", "indeterminate",
-            "justify", "line_spacing", "lines", "margin", "margin_bottom", "margin_left", "margin_right",
+            "hide_above", "hide_below", "indeterminate", "items",
+            "justify", "labels", "line_spacing", "lines", "margin", "margin_bottom", "margin_left", "margin_right",
             "margin_top", "margin_x", "margin_y", "max", "max_height",
             "max_column", "max_width", "min", "min_column", "min_height", "min_width", "opacity",
             "open", "padding", "padding_bottom", "padding_left",
             "padding_right", "padding_top", "padding_x", "padding_y",
-            "right", "row_gap", "selected", "shrink", "spacing", "step", "text", "text_color",
+            "right", "row_gap", "selected", "shrink", "source", "spacing", "stacked", "step", "text", "text_color",
             "value", "width", "width_percent", "wrap", "x", "y"]
+    for name: string in visual.attribute_names() { if name != "source" { names.push(name) } }
+    return move names
 }
 
 /// Every control tag, for the same reason.
 pub fn widget_tags() -> List<string> {
-    return ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox",
+    var tags: List<string> = ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox",
             "Container", "DatePicker", "Disclosure",
             "Grid", "GroupBox", "HStack", "Image", "Label",
             "LevelIndicator", "Link",
@@ -286,6 +303,8 @@ pub fn widget_tags() -> List<string> {
             "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper",
             "Switch", "TabView", "Table", "TextArea", "TextField", "VStack",
             "OutlineView", "WebView"]
+    for tag: string in visual.tags() { tags.push(tag) }
+    return move tags
 }
 
 /// Whether a control tag carries an attribute.
@@ -296,6 +315,23 @@ pub fn widget_tags() -> List<string> {
 /// A name that is not a control property answers `true`: layout names belong
 /// to the parent's layout, and an unknown name is `is_attribute`'s refusal.
 pub fn tag_carries(tag: string, name: string) -> bool {
+    if name == "a11y_label" { return is_widget_tag(tag) }
+    match visual.kind_of(tag) {
+        some(kind) => {
+            if visual.attribute_call(name) != "" { return visual.carries(kind, name) }
+            return is_placement_attribute(name) || name == "hidden"
+        }
+        none => {}
+    }
+    if name == "items" { return tag == "ComboBox" || tag == "Segmented" }
+    if name == "labels" { return tag == "TabView" }
+    if name == "columns" { return tag == "Grid" || tag == "Table" }
+    if name == "column_widths" || name == "source" { return tag == "Table" }
+    if name == "editable_when" { return tag == "Table" }
+    if name == "stacked" || name == "divider" { return tag == "SplitView" }
+    // Drawing names belong to drawing tags, apart from Table's own source.
+    // Without this guard the legacy final default makes Box.fill look valid.
+    if visual.attribute_call(name) != "" { return false }
     if name == "enabled" { return one_of(tag, ["Button", "TextField", "SecureField",
                                                "SearchField", "CheckBox", "RadioButton",
                                                "Switch", "Slider", "Stepper", "ComboBox",

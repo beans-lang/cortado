@@ -2,6 +2,7 @@
 package component
 
 import cortado.events
+import cortado.host
 
 /// Compares the tree a render just produced with the one before it.
 ///
@@ -60,12 +61,52 @@ pub class Differ {
     }
 
     fn walk_attributes(here: Path, before: Element, after: Element) {
+        // A choice list decides which selected indices are legal. Apply it
+        // first, regardless of markup order, then reapply selected even when
+        // its numeric value did not change.
+        var items_changed: bool = false
+        match after.attribute(CHOICES_PROPERTY, AttributeKind.items) {
+            some(wanted_items) => {
+                match before.attribute(CHOICES_PROPERTY, AttributeKind.items) {
+                    some(held_items) => { if !held_items.same_as(wanted_items) { self.property(here, wanted_items); items_changed = true } }
+                    none => { self.property(here, wanted_items); items_changed = true }
+                }
+            }
+            none => {
+                match before.attribute(CHOICES_PROPERTY, AttributeKind.items) {
+                    some(held_items) => { self.property(here, Attribute.of_items([])); items_changed = true }
+                    none => {}
+                }
+            }
+        }
+        match after.attribute(TAB_LABELS_PROPERTY, AttributeKind.items) {
+            some(wanted_labels) => {
+                match before.attribute(TAB_LABELS_PROPERTY, AttributeKind.items) {
+                    some(held_labels) => { if !held_labels.same_as(wanted_labels) { self.property(here, wanted_labels); items_changed = true } }
+                    none => { self.property(here, wanted_labels); items_changed = true }
+                }
+            }
+            none => {
+                match before.attribute(TAB_LABELS_PROPERTY, AttributeKind.items) {
+                    some(held_labels) => { self.property(here, Attribute.of_labels([])); items_changed = true }
+                    none => {}
+                }
+            }
+        }
+        let columns_changed: bool = self.ordered_attribute(here, before, after,
+            TABLE_COLUMNS_PROPERTY, AttributeKind.items, false)
+        self.ordered_attribute(here, before, after,
+            TABLE_WIDTHS_PROPERTY, AttributeKind.numbers, columns_changed)
+        self.ordered_attribute(here, before, after,
+            TABLE_SOURCE_PROPERTY, AttributeKind.table_source, false)
         var index: int = 0
         for index: int in 0..after.attribute_count() {
             let wanted: Attribute = after.attribute_at(index)
+            if wanted.kind == AttributeKind.items || wanted.kind == AttributeKind.numbers ||
+               wanted.kind == AttributeKind.table_source { continue }
             match before.attribute(wanted.property, wanted.kind) {
                 some(held) => {
-                    if !held.same_as(wanted) { self.property(here, wanted) }
+                    if !held.same_as(wanted) || (items_changed && wanted.property == host.P_SELECTED) { self.property(here, wanted) }
                 }
                 none => { self.property(here, wanted) }
             }
@@ -76,11 +117,34 @@ pub class Differ {
         // deleted.
         for index: int in 0..before.attribute_count() {
             let gone: Attribute = before.attribute_at(index)
+            if gone.kind == AttributeKind.items || gone.kind == AttributeKind.numbers ||
+               gone.kind == AttributeKind.table_source { continue }
             match after.attribute(gone.property, gone.kind) {
                 some(still) => {}
                 none => { self.property(here, Attribute.default_for(gone.property, gone.kind)) }
             }
         }
+    }
+
+    fn ordered_attribute(here: Path, before: Element, after: Element,
+                         property: int, kind: AttributeKind, force: bool) -> bool {
+        match after.attribute(property, kind) {
+            some(wanted) => {
+                match before.attribute(property, kind) {
+                    some(held) => {
+                        if force || !held.same_as(wanted) { self.property(here, wanted); return true }
+                    }
+                    none => { self.property(here, wanted); return true }
+                }
+            }
+            none => {
+                match before.attribute(property, kind) {
+                    some(held) => { self.property(here, Attribute.default_for(property, kind)); return true }
+                    none => {}
+                }
+            }
+        }
+        return false
     }
 
     // Only the *set of event kinds* is compared, never the handlers
@@ -140,7 +204,7 @@ pub class Differ {
             for scan: int in 0..old_count {
                 if taken[scan] { continue }
                 let held: Element = before.child_at(scan)
-                if held.key == want.key && held.kind == want.kind {
+                if held.matches(want) {
                     claimed[index] = scan
                     taken[scan] = true
                     break
@@ -157,7 +221,7 @@ pub class Differ {
             var scan: int = cursor
             for scan < old_count {
                 if !taken[scan] && before.child_at(scan).key == "" &&
-                   before.child_at(scan).kind == want.kind {
+                   before.child_at(scan).matches(want) {
                     claimed[index] = scan
                     taken[scan] = true
                     cursor = scan + 1

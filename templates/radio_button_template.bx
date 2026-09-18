@@ -1,0 +1,16 @@
+<HStack spacing={8} align="center">
+  <HStack background="#ffffffff" border_color={self.track} border_width={2}
+          corner_radius={10} width={20} height={20} align="center" justify="center">
+    $if self.checked { <Box width={10} height={10} background={self.accent} corner_radius={5} /> }
+  </HStack>
+  <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+</HStack>
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class RadioButtonTemplate extends component.ToggleControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

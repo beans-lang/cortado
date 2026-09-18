@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A control for choosing a number in a range.
 ///
@@ -10,8 +11,8 @@ import cortado.host
 /// drive a live preview, which is most of what sliders are for — and a program
 /// that wants the other behaviour ignores the events until they stop.
 pub class Slider extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.slider)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.slider, context)
     }
 
     /// A slider over `low`..`high`, starting at `start`.

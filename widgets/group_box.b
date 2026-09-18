@@ -1,5 +1,6 @@
 // A titled box around a group of controls.
 package widgets
+import cortado.render
 
 /// A group box.
 ///
@@ -15,8 +16,8 @@ package widgets
 /// coordinates, so the frame stays outside the children rather than overlapping
 /// the first one.
 pub class GroupBox extends ChildHolder {
-    pub fn init() {
-        super.init(WidgetKind.group_box)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.group_box, context)
     }
 
     pub static fn of(title: string) -> Result<GroupBox> {

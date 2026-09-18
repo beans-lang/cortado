@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// An on/off switch.
 ///
@@ -24,8 +25,8 @@ import cortado.host
 /// `out_of_range` on every host, which is why `set_on` takes a `bool` and
 /// there is no `CheckState` here.
 pub class Switch extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.switch)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.switch, context)
     }
 
     /// A switch already in a known position.

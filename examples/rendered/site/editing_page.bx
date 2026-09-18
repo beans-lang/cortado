@@ -1,0 +1,37 @@
+<VStack padding={24} spacing={12} align="stretch" background="#f7f7f9">
+    <Label text="Editing and input methods" font_size={24} />
+    <Label text="Type, select, paste, and try your keyboard's input method." />
+    <Label text="Name" />
+    <TextField key={"name"} bind:value={self.name} />
+    <Label text={"Value: {self.name}"} />
+    <Label text="Password" />
+    <SecureField key={"password"} bind:value={self.password} />
+    <Label text="Search" />
+    <SearchField key={"search"} bind:value={self.search} />
+    <Label text="Notes" />
+    <TextArea key={"notes"} height={110} bind:value={self.notes} />
+    <Label text="Use a screen reader to move through every field and button." />
+    <Button key={"clear"} text="Clear fields" on:click={fn(e: UiEvent) { self.clear() }} />
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import {view} from cortado.annotations
+
+@view
+pub partial class EditingPage extends component.Component {
+    pub name: string = ""
+    pub password: string = ""
+    pub search: string = ""
+    pub notes: string = ""
+    pub fn init() { super.init() }
+    pub fn clear() {
+        self.name = ""
+        self.password = ""
+        self.search = ""
+        self.notes = ""
+        self.request_render()
+    }
+}
+</beans>

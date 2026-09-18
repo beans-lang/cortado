@@ -1,2 +1,8 @@
 build/
 DONOT_COMMIT
+generated/
+# Shared framework templates and the reference screen ship generated Beans.
+!/generated/
+/generated/*
+!/generated/templates/
+!/examples/rendered/generated/

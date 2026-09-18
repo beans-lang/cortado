@@ -1,0 +1,10 @@
+<Box background="#bec2cd" />
+<beans>
+package templates
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class SeparatorTemplate extends component.ControlTemplate {
+    pub fn init() { super.init() }
+}
+</beans>

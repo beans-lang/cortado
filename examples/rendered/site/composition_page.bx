@@ -1,0 +1,36 @@
+<VStack padding={24} spacing={18} align="stretch" background="#f7f7f9">
+  <Label text="Build a control with markup" font_size={24} />
+  <Label text="This rating control adds no renderer or platform code." />
+  <VStack padding={18} spacing={12} align="stretch" background="#e8eaf0" corner_radius={12}>
+    <RatingControl value={self.rating} on_change={fn(value: int) { self.rate(value) }} />
+    <Label text={if self.rating == 0 { "Choose a rating with a pointer or the keyboard." } else { "You chose {self.rating} of 5." }} />
+  </VStack>
+  <Label text="Change the window's theme" font_size={20} />
+  <HStack spacing={10} wrap>
+    <Button text="Cortado blue" on:click={fn(e: UiEvent) { self.accent(0x365eeaff) }} />
+    <Button text="Coffee brown" on:click={fn(e: UiEvent) { self.accent(0x87582fff) }} />
+    <Button text="Leaf green" on:click={fn(e: UiEvent) { self.accent(0x26734dff) }} />
+  </HStack>
+  <CheckBox text="Theme preview" checked />
+  <ProgressBar value={65.0} />
+</VStack>
+<beans>
+package site
+import cortado.component
+import cortado.render
+import {view, param} from cortado.annotations
+@view
+pub partial class CompositionPage extends component.Component {
+    @param pub theme: Option<render.Theme> = none
+    pub rating: int = 0
+    pub fn init() { super.init() }
+    pub fn rate(value: int) { self.rating = value; self.request_render() }
+    pub fn accent(color: int) {
+        match self.theme {
+            some(theme) => { theme.set_colors(theme.background(), theme.foreground(), color, theme.surface()) }
+            none => {}
+        }
+        self.request_render()
+    }
+}
+</beans>

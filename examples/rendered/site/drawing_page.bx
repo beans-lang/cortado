@@ -1,0 +1,27 @@
+<VStack padding={24} spacing={14} align="stretch" background="#f7f7f9">
+  <HStack spacing={12} align="center">
+    <Label text="Drawing in .bx" font_size={24} />
+    <Button text="Animate" on:click={fn(e: UiEvent) { self.toggle() }} />
+  </HStack>
+  <Label text="Shapes, gradients, shadows, clips, images, and transforms come from markup." text_color="#555b6b" />
+  <Box height={220} background="#ffffff">
+    <Rectangle x={24} y={40} width={140} height={100} gradient_start={if self.active { "#ed8054" } else { "#365eea" }} gradient_end="#365eea00" stroke="#172b66" stroke_width={4} rotation={if self.active { 8.0 } else { -8.0 }} transition_seconds={0.4} transition_easing="ease_in_out" />
+    <Ellipse x={210} y={35} width={140} height={110} fill="#ec854d" stroke="#95401a" stroke_width={5} scale_x={1.1} shadow_color="#37224a88" shadow_blur={6} shadow_dx={8} shadow_dy={8} />
+    <Path x={410} y={20} width={160} height={150} d="M 10 120 L 75 10 L 140 120 Z" fill="#48b8a0" stroke="#176b60" stroke_width={5} rotation={8} />
+    <ResourceImage x={580} y={35} width={64} height={100} source="examples/rendered/assets/tiles.png" clip_radius={12} />
+  </Box>
+  <Label text="Every shape above comes from this page's markup." />
+</VStack>
+<beans>
+package site
+
+import cortado.component
+import {view, param} from cortado.annotations
+
+@view
+pub partial class DrawingPage extends component.Component {
+    @param pub active: bool = false
+    pub fn init() { super.init() }
+    pub fn toggle() { self.active = !self.active; self.request_render() }
+}
+</beans>

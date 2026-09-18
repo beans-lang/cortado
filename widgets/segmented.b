@@ -2,6 +2,7 @@
 package widgets
 
 import cortado.host
+import cortado.render
 
 /// A segmented control.
 ///
@@ -16,8 +17,8 @@ import cortado.host
 /// list of choices" is one idea and a caller should not have to know which
 /// control it landed in. `select` and `selected` are the index.
 pub class Segmented extends Widget {
-    pub fn init() {
-        super.init(WidgetKind.segmented)
+    pub fn init(context: Option<render.UiContext> = none) {
+        super.init(WidgetKind.segmented, context)
     }
 
     pub static fn of(choices: List<string>) -> Result<Segmented> {
@@ -29,6 +30,10 @@ pub class Segmented extends Widget {
 
     /// Replaces every choice.
     pub fn set_items(choices: List<string>) -> Result<bool> {
+        if self.is_rendered() {
+            let choice: render.SegmentedRender = (self.render_object()? as? render.SegmentedRender).expect("shared segmented control")
+            return choice.replace_items(choices)
+        }
         unsafe {
             host.check(host.ctd_items_clear(self.handle().raw) as int,
                        "clear a segmented control")?
@@ -40,6 +45,10 @@ pub class Segmented extends Widget {
     }
 
     pub fn add_item(text: string) -> Result<bool> {
+        if self.is_rendered() {
+            let choice: render.SegmentedRender = (self.render_object()? as? render.SegmentedRender).expect("shared segmented control")
+            return choice.add_item(text)
+        }
         let buffer: Bytes = host.HostText.encode(text, "add a segment")?
         unsafe {
             return host.check(
@@ -50,6 +59,10 @@ pub class Segmented extends Widget {
     }
 
     pub fn count() -> Result<int> {
+        if self.is_rendered() {
+            let choice: render.SegmentedRender = (self.render_object()? as? render.SegmentedRender).expect("shared segmented control")
+            return ok(choice.count())
+        }
         let scratch: host.HostScratch = host.HostScratch.instance
         var found: i32 = 0
         unsafe {
@@ -62,6 +75,10 @@ pub class Segmented extends Widget {
     }
 
     pub fn item_at(index: int) -> Result<string> {
+        if self.is_rendered() {
+            let choice: render.SegmentedRender = (self.render_object()? as? render.SegmentedRender).expect("shared segmented control")
+            return choice.item_at(index)
+        }
         let raw: u64 = self.handle().raw
         return host.HostText.read("read a segment's words",
             fn(out: RawPtr<i8>, cap: i32) -> i32 {

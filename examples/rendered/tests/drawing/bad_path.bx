@@ -1,0 +1,10 @@
+<Path width={80} height={80} d="M 10" fill="#ff0000" />
+<beans>
+package site
+import cortado.component
+import {view} from cortado.annotations
+@view
+pub partial class BadPath extends component.Component {
+    pub fn init() { super.init() }
+}
+</beans>
