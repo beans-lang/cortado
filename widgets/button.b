@@ -32,6 +32,16 @@ pub class Button extends Widget {
         return self.text_raw()
     }
 
+    /// The one button a screen leads with. macOS fills it with the accent
+    /// colour; a host without that style refuses rather than drawing a plain one.
+    pub fn set_prominent(on: bool) -> Result<bool> {
+        return self.set_property(host.P_PROMINENT, if on { 1 } else { 0 })
+    }
+
+    pub fn prominent() -> Result<bool> {
+        return ok(self.read_property(host.P_PROMINENT)? == 1)
+    }
+
     pub override fn display_text() -> Result<string> {
         return self.title()
     }

@@ -1,8 +1,20 @@
-<HStack spacing={5} align="center">
-  <Label text={self.mark} text_color={self.on_accent} background={self.track}
-         corner_radius={self.radius_small} width={14} height={14}
-         font_size={self.caption} alignment={1} />
-  <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+<HStack spacing={self.toggle_gap} align="start">
+  <Box width={self.toggle_size} height={self.toggle_size}
+       background={if self.checked || self.mixed { self.accent_fill } else { self.track_off }}
+       corner_radius={self.toggle_radius}>
+    $if self.checked {
+      <Path d={"M{self.toggle_size * 0.2125} {self.toggle_size * 0.525} L{self.toggle_size * 0.4125} {self.toggle_size * 0.7375} L{self.toggle_size * 0.7875} {self.toggle_size * 0.2625}"}
+            stroke={self.on_accent} stroke_width={self.toggle_size * 0.1375}
+            stroke_cap="round" stroke_join="round" fill="#00000000" />
+    }
+    $if self.mixed {
+      <Path d={"M{self.toggle_size * 0.235} {self.toggle_size * 0.5} L{self.toggle_size * 0.765} {self.toggle_size * 0.5}"}
+            stroke={self.on_accent} stroke_width={self.toggle_size * 0.1375}
+            stroke_cap="round" fill="#00000000" />
+    }
+  </Box>
+  <Label text={self.title} text_color={self.ink} font_size={self.font_size}
+         baseline={self.toggle_baseline} grow={1} height={self.toggle_size} />
 </HStack>
 <beans>
 package templates

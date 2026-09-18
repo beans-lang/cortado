@@ -511,6 +511,7 @@ static inline int32_t ctd_rule_carries(int32_t kind, int32_t space, int32_t key)
         case CTD_P_HIDDEN:        return 1;
         case CTD_P_OPACITY:       return 1;
         case CTD_P_CORNER_RADIUS: return 1;
+        case CTD_P_OVERHANG:      return 1;
         case CTD_P_BORDER_WIDTH:  return 1;
         case CTD_P_BORDER_COLOR:  return 1;
 
@@ -521,7 +522,11 @@ static inline int32_t ctd_rule_carries(int32_t kind, int32_t space, int32_t key)
         case CTD_P_VALUE:         return ctd_kind_has_range(kind);
         case CTD_P_EDITABLE:      return ctd_kind_has_editable(kind);
         case CTD_P_ALIGNMENT:     return ctd_kind_has_alignment(kind);
-        case CTD_P_FONT_SIZE:     return ctd_kind_has_font_size(kind);
+        case CTD_P_FONT_SIZE:
+        /* Weight and baseline ride with the size: the three together are one
+         * text style, and a control that can be told one can be told all. */
+        case CTD_P_FONT_WEIGHT:
+        case CTD_P_BASELINE:      return ctd_kind_has_font_size(kind);
         case CTD_P_STEP:          return ctd_kind_has_step(kind);
         case CTD_P_SELECTED:      return ctd_kind_has_selected(kind);
         case CTD_P_INDETERMINATE: return ctd_kind_has_indeterminate(kind);
@@ -538,6 +543,7 @@ static inline int32_t ctd_rule_carries(int32_t kind, int32_t space, int32_t key)
         case CTD_P_CODE_MODE:     return kind == CTD_W_TEXT_AREA;
         case CTD_P_BORDERLESS:    return kind == CTD_W_TAB_VIEW;
         case CTD_P_COMPACT:       return kind == CTD_W_TABLE || kind == CTD_W_OUTLINE_VIEW;
+        case CTD_P_PROMINENT:     return kind == CTD_W_BUTTON;
         case CTD_P_FOCUSABLE:
         case CTD_P_A11Y_ROLE:     return ctd_kind_is_drawn(kind);
         default:                  return CTD_ERR_RANGE;

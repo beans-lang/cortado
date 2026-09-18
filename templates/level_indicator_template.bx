@@ -1,7 +1,14 @@
-<HStack align="center">
-  <Box width_percent={self.percent} height={5} background={self.accent} corner_radius={self.radius_small} />
-  <Box grow={1} height={5} background={self.track_off} corner_radius={self.radius_small} />
-</HStack>
+<Box width_percent={100.0} height_percent={100.0}>
+  $for index in 0..self.level_cells {
+    <Box key={"cell-{index}"}
+         x={index as f64 * (self.level_cell_width + self.level_cell_gap)} y={0}
+         width={self.level_cell_width} height={self.level_cell_height}
+         corner_radius={self.level_cell_radius}
+         background={if (index as f64 + 1.0) * (100.0 / self.level_cells as f64) <= self.percent + 0.001 { self.success } else { self.level_empty }}
+         border_width={0.5}
+         border_color={if (index as f64 + 1.0) * (100.0 / self.level_cells as f64) <= self.percent + 0.001 { self.success } else { self.level_border }} />
+  }
+</Box>
 <beans>
 package templates
 import cortado.component

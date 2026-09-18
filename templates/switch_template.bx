@@ -1,8 +1,12 @@
-<HStack background={self.track} corner_radius={self.capsule} padding={2} align="center">
-  $if self.checked { <Box grow={1} /> }
-  <Box width={16} height={16} background={self.knob} corner_radius={self.capsule} />
-  $if !self.checked { <Box grow={1} /> }
-</HStack>
+<Box background={if self.checked { self.accent_fill } else { self.track_off }}
+     corner_radius={self.capsule} width_percent={100.0} height_percent={100.0}>
+  <Rectangle x={if self.checked { self.switch_width - self.switch_inset - self.switch_knob_width } else { self.switch_inset }}
+             y={self.switch_inset}
+             width={self.switch_knob_width} height={self.switch_knob_height}
+             corner_radius={self.switch_knob_height / 2.0}
+             fill={self.knob}
+             shadow_color={self.knob_shadow} shadow_blur={1.5} shadow_dy={0.5} />
+</Box>
 <beans>
 package templates
 import cortado.component

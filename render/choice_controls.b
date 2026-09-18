@@ -71,12 +71,16 @@ pub abstract class ChoiceRender extends RenderObject {
         return new SemanticsNode(self.identity, self.role(), label, self.selected_text(), self.bounds, self.enabled)
     }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
-        var width: f64 = 44.0
+        let padding: f64 = self.theme.control_padding()
+        // The trailing chevron column is what a popup keeps beyond its title.
+        let chevron: f64 = padding + self.theme.control_height() * 0.6
+        var width: f64 = padding * 2.0 + chevron
         for item: string in self.items {
-            let paragraph: paint.Paragraph = self.renderer.paragraph(item, self.font_size(), -1.0, self.text_color())?
-            if paragraph.size().width + 34.0 > width { width = paragraph.size().width + 34.0 }
+            let paragraph: paint.Paragraph = self.renderer.styled_paragraph(item, self.text_style(), -1.0, self.text_color())?
+            let wanted: f64 = paragraph.size().width + padding * 2.0 + chevron
+            if wanted > width { width = wanted }
         }
-        return ok(geometry.Size.of(width, 20.0))
+        return ok(geometry.Size.of(width, self.theme.control_height()))
     }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> { super.paint_self(canvas)?; return self.paint_template(canvas) }
     fn select_as_user(index: int) -> Option<events.UiEvent> {
@@ -131,10 +135,11 @@ pub class ComboBoxRender extends ChoiceRender {
     pub override fn handle_event(event: events.UiEvent) -> Option<events.UiEvent> {
         if !self.enabled || self.hidden || !self.alive { return none }
         if event.kind == events.EventKind.activate { self.show_popup(); return none }
-        if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT { self.tracking = true; return none }
+        if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT { self.tracking = true; self.pressed = true; self.dirty.paint(); return none }
         if event.kind == events.EventKind.pointer_up {
             let was_tracking: bool = self.tracking
             self.tracking = false
+            if self.pressed { self.pressed = false; self.dirty.paint() }
             if was_tracking && geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height).contains(event.position) && self.items.len() > 0 {
                 self.show_popup()
             }
@@ -169,19 +174,21 @@ pub class SegmentedRender extends ChoiceRender {
         if !focused { self.tracking = false }
     }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
+        let padding: f64 = self.theme.control_padding()
         var width: f64 = 0.0
         for item: string in self.items {
-            let paragraph: paint.Paragraph = self.renderer.paragraph(item, self.font_size(), -1.0, self.text_color())?
-            width += paragraph.size().width + 28.0
+            let paragraph: paint.Paragraph = self.renderer.styled_paragraph(item, self.text_style(), -1.0, self.text_color())?
+            width += paragraph.size().width + padding * 2.0
         }
-        return ok(geometry.Size.of(if width > 48.0 { width } else { 48.0 }, 20.0))
+        return ok(geometry.Size.of(if width > 48.0 { width } else { 48.0 }, self.theme.control_height()))
     }
     pub override fn handle_event(event: events.UiEvent) -> Option<events.UiEvent> {
         if !self.enabled || self.hidden || !self.alive { return none }
-        if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT { self.tracking = true; return none }
+        if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT { self.tracking = true; self.pressed = true; self.dirty.paint(); return none }
         if event.kind == events.EventKind.pointer_up {
             let was_tracking: bool = self.tracking
             self.tracking = false
+            if self.pressed { self.pressed = false; self.dirty.paint() }
             if was_tracking && self.items.len() > 0 && geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height).contains(event.position) {
                 let index: int = (event.position.x * self.items.len() as f64 / self.bounds.width) as int
                 return self.select_as_user(index)

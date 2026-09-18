@@ -169,15 +169,16 @@ int32_t ctd_skia_visual(void *context, int32_t kind, double x, double y, double 
                         double stroke, uint32_t gradient_start, uint32_t gradient_end,
                         int32_t gradient_enabled,
                         uint32_t shadow_color, double shadow_blur, double shadow_dx,
-                        double shadow_dy, double clip_radius) {
+                        double shadow_dy, double clip_radius,
+                        int32_t stroke_cap, int32_t stroke_join) {
     typedef int32_t (*Function)(void *, int32_t, double, double, double, double, const char *, int32_t,
                                 uint32_t, uint32_t, double, uint32_t, uint32_t, int32_t, uint32_t,
-                                double, double, double, double);
+                                double, double, double, double, int32_t, int32_t);
     Function function = (Function)ctd_skia_symbol("ctd_skia_visual");
     return function ? function(context, kind, x, y, width, height, data, length, fill, outline,
                                stroke, gradient_start, gradient_end, gradient_enabled,
-                               shadow_color, shadow_blur,
-                               shadow_dx, shadow_dy, clip_radius) : -1;
+                               shadow_color, shadow_blur, shadow_dx, shadow_dy, clip_radius,
+                               stroke_cap, stroke_join) : -1;
 }
 
 uint64_t ctd_skia_image_new(void *context, const char *source, int32_t length) {
@@ -206,11 +207,26 @@ int32_t ctd_skia_image_draw(void *context, uint64_t image,
 }
 
 uint64_t ctd_skia_paragraph_new(void *context, const char *text, int32_t length,
-                               double size, double width, uint32_t rgba) {
+                               double size, double width, uint32_t rgba,
+                               int32_t weight, double tracking, int32_t align) {
     typedef uint64_t (*Function)(void *context, const char *text, int32_t length,
-                               double size, double width, uint32_t rgba);
+                               double size, double width, uint32_t rgba,
+                               int32_t weight, double tracking, int32_t align);
     Function function = (Function)ctd_skia_symbol("ctd_skia_paragraph_new");
-    return function ? function(context, text, length, size, width, rgba) : 0;
+    return function ? function(context, text, length, size, width, rgba,
+                               weight, tracking, align) : 0;
+}
+
+int32_t ctd_skia_font_register(void *context, const char *path, int32_t length) {
+    typedef int32_t (*Function)(void *context, const char *path, int32_t length);
+    Function function = (Function)ctd_skia_symbol("ctd_skia_font_register");
+    return function ? function(context, path, length) : -1;
+}
+
+int32_t ctd_skia_paragraph_metrics(void *context, uint64_t paragraph, double *out) {
+    typedef int32_t (*Function)(void *context, uint64_t paragraph, double *out);
+    Function function = (Function)ctd_skia_symbol("ctd_skia_paragraph_metrics");
+    return function ? function(context, paragraph, out) : -1;
 }
 
 int32_t ctd_skia_paragraph_release(void *context, uint64_t paragraph) {

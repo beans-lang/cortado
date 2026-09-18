@@ -16,6 +16,8 @@ pub const SHADOW_DY: int = 1112
 pub const CLIP_RADIUS: int = 1113
 pub const TRANSITION_SECONDS: int = 1114
 pub const TRANSITION_EASING: int = 1115
+pub const STROKE_CAP: int = 1116
+pub const STROKE_JOIN: int = 1117
 
 pub enum Kind {
     rectangle
@@ -46,13 +48,16 @@ pub fn tags() -> List<string> { return ["Ellipse", "Path", "Rectangle", "Resourc
 pub fn attribute_names() -> List<string> {
     return ["clip_radius", "d", "fill", "gradient_end", "gradient_start", "rotation",
             "scale_x", "scale_y", "shadow_blur", "shadow_color", "shadow_dx", "shadow_dy",
-            "source", "stroke", "stroke_width", "transition_easing", "transition_seconds"]
+            "source", "stroke", "stroke_cap", "stroke_join", "stroke_width",
+            "transition_easing", "transition_seconds"]
 }
 pub fn attribute_note(name: string) -> string {
     if name == "d" { return "SVG path data for Path" }
     if name == "fill" { return "fill colour for a drawing shape" }
     if name == "stroke" { return "outline colour for a drawing shape" }
     if name == "stroke_width" { return "outline width for a drawing shape" }
+    if name == "stroke_cap" { return "butt, round or square ends on an open stroke" }
+    if name == "stroke_join" { return "miter, round or bevel corners on a stroke" }
     if name == "rotation" { return "shape rotation in degrees" }
     if name == "scale_x" || name == "scale_y" { return "positive shape scale" }
     if name == "gradient_start" { return "top colour of a vertical linear fill gradient" }
@@ -69,6 +74,7 @@ pub fn attribute_note(name: string) -> string {
 pub fn attribute_call(name: string) -> string {
     if name == "d" || name == "source" { return "text" }
     if name == "transition_easing" { return "word" }
+    if name == "stroke_cap" || name == "stroke_join" { return "word" }
     if name == "fill" || name == "stroke" || name == "gradient_start" ||
        name == "gradient_end" || name == "shadow_color" { return "word" }
     if name == "stroke_width" || name == "rotation" || name == "scale_x" || name == "scale_y" ||
@@ -94,6 +100,8 @@ pub fn property_of(name: string) -> int {
     if name == "clip_radius" { return CLIP_RADIUS }
     if name == "transition_seconds" { return TRANSITION_SECONDS }
     if name == "transition_easing" { return TRANSITION_EASING }
+    if name == "stroke_cap" { return STROKE_CAP }
+    if name == "stroke_join" { return STROKE_JOIN }
     return -1
 }
 pub fn is_colour(name: string) -> bool {
@@ -102,6 +110,11 @@ pub fn is_colour(name: string) -> bool {
 }
 pub fn carries(kind: Kind, name: string) -> bool {
     if name == "hidden" { return true }
+    // A drawing's painted box can reach past its layout box, the same way a
+    // control's can: a slider knob is taller than the track it sits on.
+    if name == "overhang" { return true }
+    // A drawn rectangle rounds its corners; the other kinds have their own shape.
+    if name == "corner_radius" { return kind == Kind.rectangle }
     if attribute_call(name) == "" { return false }
     if name == "d" { return kind == Kind.path }
     if name == "source" { return kind == Kind.resource_image }
@@ -110,6 +123,22 @@ pub fn carries(kind: Kind, name: string) -> bool {
                name == "transition_seconds" || name == "transition_easing"
     }
     return true
+}
+
+/// A stroke's ends: 0 butt, 1 round, 2 square. AppKit's own glyphs are drawn
+/// with round ends, so a butt-capped copy of one reads as a different mark.
+pub fn cap_code(name: string) -> int {
+    if name == "butt" { return 0 }
+    if name == "round" { return 1 }
+    if name == "square" { return 2 }
+    return -1
+}
+/// A stroke's corners: 0 miter, 1 round, 2 bevel.
+pub fn join_code(name: string) -> int {
+    if name == "miter" { return 0 }
+    if name == "round" { return 1 }
+    if name == "bevel" { return 2 }
+    return -1
 }
 
 pub fn easing_code(name: string) -> int {

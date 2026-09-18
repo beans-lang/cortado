@@ -22,27 +22,35 @@ pub partial class SliderTemplate extends component.RangeControlTemplate {
 
 partial class SliderTemplate {
     pub override fn render(b: Builder) {
-        b.open("HStack")  // slider_template.bx:1
-        b.word("align", "center")
+        b.open("Box")  // slider_template.bx:1
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
         b.open("Box")  // slider_template.bx:2
-        b.number("width", (self.thumb_leading) as f64)
-        b.number("height", (3) as f64)
-        b.word("background", self.accent)
-        b.number("corner_radius", (self.capsule) as f64)
-        b.close()
-        b.open("Box")  // slider_template.bx:3
-        b.number("width", (14) as f64)
-        b.number("height", (14) as f64)
-        b.word("background", self.knob)
-        b.number("corner_radius", (self.capsule) as f64)
-        b.number("border_width", (1) as f64)
-        b.word("border_color", self.track_off)
-        b.close()
-        b.open("Box")  // slider_template.bx:5
-        b.number("grow", (1) as f64)
-        b.number("height", (3) as f64)
+        b.number("y", ((self.slider_height - self.slider_track) / 2.0) as f64)
+        b.number("width_percent", (100.0) as f64)
+        b.number("height", (self.slider_track) as f64)
         b.word("background", self.track_off)
         b.number("corner_radius", (self.capsule) as f64)
+        b.close()
+        b.open("Box")  // slider_template.bx:5
+        b.number("y", ((self.slider_height - self.slider_track) / 2.0) as f64)
+        b.number("width", (self.thumb_leading + self.slider_knob / 2.0) as f64)
+        b.number("height", (self.slider_track) as f64)
+        b.word("background", self.accent_fill)
+        b.number("corner_radius", (self.capsule) as f64)
+        b.close()
+        b.open("Ellipse")  // slider_template.bx:8
+        b.number("x", (self.thumb_leading + self.slider_overhang) as f64)
+        b.number("y", (0) as f64)
+        b.number("width", (self.slider_knob - self.slider_overhang * 2.0) as f64)
+        b.number("height", (self.slider_knob - self.slider_overhang * 2.0) as f64)
+        b.number("overhang", (self.slider_overhang) as f64)
+        b.word("fill", self.knob)
+        b.word("stroke", self.track_off)
+        b.number("stroke_width", (0.5) as f64)
+        b.word("shadow_color", self.knob_shadow)
+        b.number("shadow_blur", (1.5) as f64)
+        b.number("shadow_dy", (0.5) as f64)
         b.close()
         b.close()
     }

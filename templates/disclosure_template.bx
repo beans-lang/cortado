@@ -1,4 +1,4 @@
-<VStack background={self.card} corner_radius={self.radius_medium}
+<VStack background={self.card} corner_radius={self.radius}
         border_width={1} border_color={self.separator} align="stretch">
   <HStack spacing={4} padding={4} align="center">
     <Label text={self.glyph} text_color={self.muted} font_size={self.caption} />

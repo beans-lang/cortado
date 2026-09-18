@@ -32,6 +32,13 @@ pub abstract class RenderObject {
     /// 0 leading, 1 center, 2 trailing — the same three the hosts take.
     alignment: int = 0
     font: f64 = 0.0
+    /// 0 the kind's own weight, then light, regular, medium, semibold, bold, heavy.
+    weight: int = 0
+    /// Where this control's text baseline must land, from the top of its box.
+    /// Below zero centres the line, which is what a plain label does.
+    baseline_target: f64 = -1.0
+    /// How far this node's own drawing reaches past its layout box.
+    overhang: f64 = 0.0
     a11y_name: string = ""
     a11y_role: string = ""
     a11y_value: string = ""
@@ -113,7 +120,18 @@ pub abstract class RenderObject {
         return err("shared control requires a .bx template", "missing_template")
     }
     pub fn frame() -> geometry.Rect { return self.bounds }
-    pub fn visual_frame() -> geometry.Rect { return self.bounds }
+    /// The painted box: the layout box grown by the overhang. Layout never
+    /// reads this, which is the whole point of having the two.
+    pub fn visual_frame() -> geometry.Rect {
+        if self.overhang <= 0.0 { return self.bounds }
+        return geometry.Rect.of(self.bounds.x - self.overhang, self.bounds.y - self.overhang,
+            self.bounds.width + self.overhang * 2.0, self.bounds.height + self.overhang * 2.0)
+    }
+    /// The same box in this node's own coordinates, for painting.
+    pub fn painted_box() -> geometry.Rect {
+        return geometry.Rect.of(0.0 - self.overhang, 0.0 - self.overhang,
+            self.bounds.width + self.overhang * 2.0, self.bounds.height + self.overhang * 2.0)
+    }
     pub fn child_count() -> int { return self.contents.len() }
     pub fn child_at(index: int) -> Option<RenderObject> {
         if index < 0 || index >= self.contents.len() { return none }
@@ -171,6 +189,11 @@ pub abstract class RenderObject {
             if value < 0 || value > 2 { return err("text alignment is leading, center or trailing", "out_of_range") }
             self.alignment = value
         }
+        else if key == host.P_FONT_WEIGHT {
+            if value < 0 || value > 6 { return err("font weight runs from 0 to 6", "out_of_range") }
+            self.weight = value
+            self.dirty.layout()
+        }
         else { return err("integer property is not supported by this shared control", "unsupported") }
         self.dirty.paint()
         if key == host.P_ENABLED || key == host.P_HIDDEN || key == host.P_FOCUSABLE { self.dirty.semantics() }
@@ -185,12 +208,15 @@ pub abstract class RenderObject {
         if key == host.P_FG_COLOR { return ok(self.text_color()) }
         if key == host.P_BORDER_COLOR { return ok(self.border_color) }
         if key == host.P_ALIGNMENT { return ok(self.alignment) }
+        if key == host.P_FONT_WEIGHT { return ok(self.weight) }
         return err("integer property is not supported by this shared control", "unsupported")
     }
     pub fn set_real(key: int, value: f64) -> Result<bool> {
         self.demand_alive()?
         if !(value >= 0.0 && value < 10000000.0) { return err("invalid shared control property", "out_of_range") }
         if key == host.P_FONT_SIZE { self.font = value; self.dirty.layout() }
+        else if key == host.P_BASELINE { self.baseline_target = value }
+        else if key == host.P_OVERHANG { self.overhang = value; self.dirty.semantics() }
         else if key == host.P_CORNER_RADIUS { self.radius = value }
         else if key == host.P_BORDER_WIDTH { self.border_width = value }
         else { return err("real property is not supported by this shared control", "unsupported") }
@@ -200,11 +226,21 @@ pub abstract class RenderObject {
     pub fn real(key: int) -> Result<f64> {
         self.demand_alive()?
         if key == host.P_FONT_SIZE { return ok(self.font_size()) }
+        if key == host.P_BASELINE { return ok(self.baseline_target) }
+        if key == host.P_OVERHANG { return ok(self.overhang) }
         if key == host.P_CORNER_RADIUS { return ok(self.radius) }
         if key == host.P_BORDER_WIDTH { return ok(self.border_width) }
         return err("real property is not supported by this shared control", "unsupported")
     }
     pub fn font_size() -> f64 { return if self.font > 0.0 { self.font } else { self.theme.font_size() } }
+    pub fn font_weight() -> int { return self.weight }
+    /// The one place a control's text style is assembled, so size, weight,
+    /// tracking and alignment can never be set apart from each other.
+    pub fn text_style() -> paint.TextStyle {
+        return paint.TextStyle {
+            size: self.font_size(), weight: self.weight, tracking: self.theme.tracking()
+        }
+    }
     pub fn text_color() -> int { return if self.foreground >= 0 { self.foreground } else { self.theme.foreground() } }
     pub fn clear_text_color() -> Result<bool> {
         self.demand_alive()?
@@ -258,7 +294,7 @@ pub abstract class RenderObject {
         return ok(true)
     }
     pub fn paint_self(canvas: paint.Canvas) -> Result<bool> {
-        let box: geometry.Rect = geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height)
+        let box: geometry.Rect = self.painted_box()
         if self.background != 0 { canvas.rectangle(box, self.radius, self.background, 0.0)? }
         if self.border_width > 0.0 { canvas.rectangle(box, self.radius, self.border_color, self.border_width)? }
         return ok(true)

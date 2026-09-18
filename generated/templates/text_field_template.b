@@ -24,11 +24,27 @@ pub partial class TextFieldTemplate extends component.ControlTemplate {
 
 partial class TextFieldTemplate {
     pub override fn render(b: Builder) {
-        b.open("VStack")  // text_field_template.bx:1
-        b.word("background", self.card)
-        b.number("corner_radius", (self.radius_small) as f64)
-        b.number("border_width", (1) as f64)
-        b.word("border_color", if self.focused { self.accent } else { self.separator })
+        b.open("Box")  // text_field_template.bx:1
+        b.number("overhang", (self.field_overhang) as f64)
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
+        b.word("background", self.field)
+        b.number("corner_radius", (self.field_radius) as f64)
+        b.number("border_width", (self.field_border_width) as f64)
+        b.word("border_color", self.field_border)
+        if self.focused {  // text_field_template.bx:4
+            b.open("Rectangle")  // text_field_template.bx:5
+            b.number("x", (0) as f64)
+            b.number("y", (0) as f64)
+            b.number("width_percent", (100.0) as f64)
+            b.number("height_percent", (100.0) as f64)
+            b.number("overhang", (self.field_overhang + self.focus_width / 2.0) as f64)
+            b.number("corner_radius", (self.field_radius + self.focus_width / 2.0) as f64)
+            b.word("fill", "#00000000")
+            b.word("stroke", self.focus_ring)
+            b.number("stroke_width", (self.focus_width) as f64)
+            b.close()
+        }
         b.close()
     }
 }

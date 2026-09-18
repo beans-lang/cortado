@@ -43,7 +43,7 @@ pub class TableRender extends ScrollRender {
     /// A list row and its header, from the theme rather than a constant, so
     /// the whole window tightens or loosens together.
     pub fn row_height() -> f64 { return self.theme.row_height() }
-    pub fn header_height() -> f64 { return self.theme.control_height() }
+    pub fn header_height() -> f64 { return self.theme.header_height() }
     pub fn row_count() -> int { return self.rows_value }
     pub fn column_count() -> int { return self.titles.len() }
     pub fn selected() -> int { return self.selected_value }

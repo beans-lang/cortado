@@ -1,5 +1,5 @@
 <VStack background={self.card} border_color={self.separator} border_width={1}
-        corner_radius={self.radius_medium} align="stretch">
+        corner_radius={self.radius} align="stretch">
   $if !self.borderless {
     <HStack height={20} background={self.track_off} align="stretch" spacing={1} padding={1}>
       $for index in 0..self.labels.len() {

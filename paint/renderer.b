@@ -6,6 +6,11 @@ import cortado.geometry
 /// resources; no platform or graphics-library type crosses this interface.
 pub interface Renderer {
     fn paragraph(text: string, size: f64, width: f64, color: int) -> Result<Paragraph>
+    /// The same shaping with a weight, tracking and alignment.
+    fn styled_paragraph(text: string, style: TextStyle, width: f64, color: int) -> Result<Paragraph>
+    /// Makes one font file the family every later paragraph uses, on every
+    /// platform. An empty path returns to the platform's own UI font.
+    fn use_font(path: string) -> Result<bool>
     fn begin(size: geometry.Size, scale: f64, background: int) -> Result<Canvas>
     fn end() -> Result<bool>
     fn graphemes(text: string) -> Result<List<int>>
@@ -20,6 +25,7 @@ pub interface ImageResource {
 /// A shaped paragraph is used for both measurement and painting.
 pub interface Paragraph {
     fn size() -> geometry.Size
+    fn metrics() -> LineMetrics
     fn hit_test(x: f64, y: f64) -> int
     fn caret(byte_offset: int) -> geometry.Rect
     fn selection(first_byte: int, last_byte: int) -> Result<List<geometry.Rect>>

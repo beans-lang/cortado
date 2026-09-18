@@ -23,22 +23,40 @@ pub partial class CheckBoxTemplate extends component.ToggleControlTemplate {
 partial class CheckBoxTemplate {
     pub override fn render(b: Builder) {
         b.open("HStack")  // check_box_template.bx:1
-        b.number("spacing", (5) as f64)
-        b.word("align", "center")
-        b.open("Label")  // check_box_template.bx:2
-        b.text("{self.mark}")
-        b.word("text_color", self.on_accent)
-        b.word("background", self.track)
-        b.number("corner_radius", (self.radius_small) as f64)
-        b.number("width", (14) as f64)
-        b.number("height", (14) as f64)
-        b.number("font_size", (self.caption) as f64)
-        b.number("alignment", (1) as f64)
+        b.number("spacing", (self.toggle_gap) as f64)
+        b.word("align", "start")
+        b.open("Box")  // check_box_template.bx:2
+        b.number("width", (self.toggle_size) as f64)
+        b.number("height", (self.toggle_size) as f64)
+        b.word("background", if self.checked || self.mixed { self.accent_fill } else { self.track_off })
+        b.number("corner_radius", (self.toggle_radius) as f64)
+        if self.checked {  // check_box_template.bx:5
+            b.open("Path")  // check_box_template.bx:6
+            b.text("M{self.toggle_size * 0.2125} {self.toggle_size * 0.525} L{self.toggle_size * 0.4125} {self.toggle_size * 0.7375} L{self.toggle_size * 0.7875} {self.toggle_size * 0.2625}")
+            b.word("stroke", self.on_accent)
+            b.number("stroke_width", (self.toggle_size * 0.1375) as f64)
+            b.word("stroke_cap", "round")
+            b.word("stroke_join", "round")
+            b.word("fill", "#00000000")
+            b.close()
+        }
+        if self.mixed {  // check_box_template.bx:10
+            b.open("Path")  // check_box_template.bx:11
+            b.text("M{self.toggle_size * 0.235} {self.toggle_size * 0.5} L{self.toggle_size * 0.765} {self.toggle_size * 0.5}")
+            b.word("stroke", self.on_accent)
+            b.number("stroke_width", (self.toggle_size * 0.1375) as f64)
+            b.word("stroke_cap", "round")
+            b.word("fill", "#00000000")
+            b.close()
+        }
         b.close()
-        b.open("Label")  // check_box_template.bx:5
+        b.open("Label")  // check_box_template.bx:16
         b.text("{self.title}")
         b.word("text_color", self.ink)
         b.number("font_size", (self.font_size) as f64)
+        b.number("baseline", (self.toggle_baseline) as f64)
+        b.number("grow", (1) as f64)
+        b.number("height", (self.toggle_size) as f64)
         b.close()
         b.close()
     }

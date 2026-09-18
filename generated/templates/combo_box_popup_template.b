@@ -63,7 +63,7 @@ partial class ComboBoxPopupTemplate {
         b.word("background", self.card)
         b.word("border_color", self.separator)
         b.number("border_width", (1) as f64)
-        b.number("corner_radius", (self.radius_medium) as f64)
+        b.number("corner_radius", (self.radius) as f64)
         b.open("VStack")  // combo_box_popup_template.bx:2
         b.number("spacing", (0) as f64)
         b.word("align", "stretch")

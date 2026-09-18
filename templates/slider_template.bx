@@ -1,9 +1,17 @@
-<HStack align="center">
-  <Box width={self.thumb_leading} height={3} background={self.accent} corner_radius={self.capsule} />
-  <Box width={14} height={14} background={self.knob} corner_radius={self.capsule}
-       border_width={1} border_color={self.track_off} />
-  <Box grow={1} height={3} background={self.track_off} corner_radius={self.capsule} />
-</HStack>
+<Box width_percent={100.0} height_percent={100.0}>
+  <Box y={(self.slider_height - self.slider_track) / 2.0}
+       width_percent={100.0} height={self.slider_track}
+       background={self.track_off} corner_radius={self.capsule} />
+  <Box y={(self.slider_height - self.slider_track) / 2.0}
+       width={self.thumb_leading + self.slider_knob / 2.0} height={self.slider_track}
+       background={self.accent_fill} corner_radius={self.capsule} />
+  <Ellipse x={self.thumb_leading + self.slider_overhang} y={0}
+           width={self.slider_knob - self.slider_overhang * 2.0}
+           height={self.slider_knob - self.slider_overhang * 2.0}
+           overhang={self.slider_overhang}
+           fill={self.knob} stroke={self.track_off} stroke_width={0.5}
+           shadow_color={self.knob_shadow} shadow_blur={1.5} shadow_dy={0.5} />
+</Box>
 <beans>
 package templates
 import cortado.component

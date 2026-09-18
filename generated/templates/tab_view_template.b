@@ -26,7 +26,7 @@ partial class TabViewTemplate {
         b.word("background", self.card)
         b.word("border_color", self.separator)
         b.number("border_width", (1) as f64)
-        b.number("corner_radius", (self.radius_medium) as f64)
+        b.number("corner_radius", (self.radius) as f64)
         b.word("align", "stretch")
         if !self.borderless {  // tab_view_template.bx:3
             b.open("HStack")  // tab_view_template.bx:4

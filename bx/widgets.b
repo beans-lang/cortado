@@ -116,6 +116,7 @@ pub fn is_boolean_attribute(name: string) -> bool {
     if name == "indeterminate" { return true }
     if name == "open" { return true }
     if name == "animating" { return true }
+    if name == "prominent" { return true }
     return false
 }
 
@@ -188,10 +189,11 @@ pub fn attribute_call(name: string) -> string {
     if name == "min" || name == "max" || name == "value" ||
        name == "font_size" || name == "step" || name == "opacity" ||
        name == "day" || name == "corner_radius" || name == "border_width" ||
-       name == "divider" {
+       name == "baseline" || name == "overhang" || name == "divider" {
         return "number"
     }
-    if name == "alignment" || name == "selected" || name == "lines" { return "number" }
+    if name == "alignment" || name == "selected" || name == "lines" ||
+       name == "font_weight" { return "number" }
     if name == "spacing" || name == "line_spacing" || name == "padding" || name == "margin" ||
        name == "grow" || name == "shrink" || name == "basis" || name == "flex" ||
        name == "width" || name == "height" ||
@@ -280,12 +282,12 @@ pub fn attribute_names() -> List<string> {
             "border_color", "border_width", "bottom", "checked", "color", "column_gap", "columns", "column_widths",
             "corner_radius",
             "day", "divider", "editable", "editable_when", "enabled", "flex",
-            "font_role", "font_size", "grow", "height", "height_percent", "hidden",
+            "baseline", "font_role", "font_size", "font_weight", "grow", "height", "height_percent", "hidden",
             "hide_above", "hide_below", "indeterminate", "items",
             "justify", "labels", "line_spacing", "lines", "margin", "margin_bottom", "margin_left", "margin_right",
             "margin_top", "margin_x", "margin_y", "max", "max_height",
-            "max_column", "max_width", "min", "min_column", "min_height", "min_width", "opacity",
-            "open", "padding", "padding_bottom", "padding_left",
+            "max_column", "max_width", "min", "min_column", "min_height", "min_width", "opacity", "overhang",
+            "open", "padding", "prominent", "padding_bottom", "padding_left",
             "padding_right", "padding_top", "padding_x", "padding_y",
             "right", "row_gap", "selected", "shrink", "source", "spacing", "stacked", "step", "text", "text_color",
             "value", "width", "width_percent", "wrap", "x", "y"]
@@ -319,7 +321,9 @@ pub fn tag_carries(tag: string, name: string) -> bool {
     match visual.kind_of(tag) {
         some(kind) => {
             if visual.attribute_call(name) != "" { return visual.carries(kind, name) }
-            return is_placement_attribute(name) || name == "hidden"
+            // A drawing's painted box can reach past its layout box too.
+            return is_placement_attribute(name) || name == "hidden" ||
+                   name == "overhang" || name == "corner_radius"
         }
         none => {}
     }
@@ -351,7 +355,8 @@ pub fn tag_carries(tag: string, name: string) -> bool {
     // words, and none of them is here: those words are a title or a cell
     // rather than the control's own text, and one name meaning both would be
     // worse than no name at all.
-    if name == "font_size" || name == "font_role" {
+    if name == "font_size" || name == "font_role" || name == "font_weight" ||
+       name == "baseline" {
         return one_of(tag, ["Label", "Button", "TextField",
                             "SecureField", "SearchField", "TextArea",
                             "CheckBox", "RadioButton", "ComboBox",
@@ -360,6 +365,7 @@ pub fn tag_carries(tag: string, name: string) -> bool {
     if name == "step" { return one_of(tag, ["Slider", "Stepper"]) }
     // Only a label wraps; every other control draws its words on one line.
     if name == "lines" { return tag == "Label" }
+    if name == "prominent" { return tag == "Button" }
     if name == "borderless" { return tag == "TabView" }
     if name == "compact" { return tag == "Table" || tag == "OutlineView" }
     // The four bezelled text controls draw an opaque bezel over anything set

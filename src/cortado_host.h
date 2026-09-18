@@ -771,6 +771,30 @@ ctd_status ctd_view_content_size(ctd_handle widget, double *out_size);
 #define CTD_P_BORDERLESS    30
 #define CTD_P_COMPACT       31
 
+/* The weight a control draws its text at: 0 the kind's own, 1 light, 2 regular,
+ * 3 medium, 4 semibold, 5 bold, 6 heavy. A native host that has no way to ask
+ * for a weight answers CTD_ERR_UNSUPPORTED; the shared renderer honours it. */
+#define CTD_P_FONT_WEIGHT   32
+
+/* Where a control's text baseline sits, in points down from the top of its
+ * box; below zero centres the line instead. macOS baselines are not the middle
+ * of the box at every control size, so centring alone cannot reproduce them.
+ * A native host owns its own baselines and answers CTD_ERR_UNSUPPORTED. */
+#define CTD_P_BASELINE      33
+
+/* How far a control's own drawing reaches beyond its layout box, in points on
+ * every edge. Native controls have visual bounds wider than their frames — a
+ * macOS text field draws its bezel a point outside — and laying out to the
+ * painted edge instead would move every neighbour. Layout is unchanged; only
+ * the painted box and the visual frame grow. A native host owns its own
+ * bounds and answers CTD_ERR_UNSUPPORTED. */
+#define CTD_P_OVERHANG      34
+
+/* Whether a button is the prominent one on its screen — what macOS draws as
+ * the default button, filled with the accent colour. Carried by CTD_W_BUTTON
+ * alone. A native host that has no such style answers CTD_ERR_UNSUPPORTED. */
+#define CTD_P_PROMINENT     35
+
 /* ---- a control a program draws itself ------------------------------------
  *
  * Two keys and a string, all about the one control whose contents cortado did

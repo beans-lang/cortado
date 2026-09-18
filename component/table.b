@@ -21,8 +21,6 @@ pub abstract class TableControlTemplate extends ControlTemplate {
     pub rows: List<TableVisibleRow> = []
     pub total_rows: int = 0
     pub total_width: f64 = 0.0
-    pub row_height: f64 = 28.0
-    pub header_height: f64 = 30.0
     pub revision: int = -1
     pub editing_row: int = -1
     pub editing_column: int = -1

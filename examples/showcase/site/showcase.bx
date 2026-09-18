@@ -6,11 +6,16 @@
     <Label text="Appearance" font_size={self.footnote} text_color={self.muted} />
     <Segmented key={"appearance"} selected={self.mode} items={self.modes} width={120}
                on:change={fn(e: UiEvent) { self.set_mode(e.index) }} />
+    <Label text="Size" font_size={self.footnote} text_color={self.muted} />
+    <Segmented key={"size"} selected={self.control_size} items={self.control_sizes} width={200}
+               on:change={fn(e: UiEvent) { self.set_control_size(e.index) }} />
     <Label text="Accent" font_size={self.footnote} text_color={self.muted} />
     $for index in 0..self.accent_names.len() {
       <Button key={"accent-{index}"} text={self.accent_names[index]}
               on:click={fn(e: UiEvent) { self.set_accent(index) }} />
     }
+    <Button key={"window-key"} text={if self.window_active { "Window: key" } else { "Window: inactive" }}
+            on:click={fn(e: UiEvent) { self.toggle_active() }} />
   </HStack>
   <Separator height={1} />
 
@@ -26,6 +31,32 @@
             <Button key={"clear"} text="Clear" on:click={fn(e: UiEvent) { self.clear() }} />
             <Label text={"{self.orders} placed"} font_size={self.footnote} text_color={self.muted} />
           </HStack>
+
+          <Box height={4} />
+          <Label text="STATES" font_size={self.caption} text_color={self.muted} />
+          <HStack spacing={5} align="center" wrap>
+            <Button key={"state-normal"} text="Normal" />
+            <Button key={"state-prominent"} text="Prominent" prominent />
+            <Button key={"state-off"} text="Disabled" enabled={false} />
+            <Button key={"state-prominent-off"} text="Prominent off" prominent enabled={false} />
+          </HStack>
+          <HStack spacing={12} align="center" wrap>
+            <CheckBox key={"state-check-on"} text="Checked" checked />
+            <CheckBox key={"state-check-off"} text="Unchecked" />
+            <CheckBox key={"state-check-dis"} text="Disabled" checked enabled={false} />
+            <Switch key={"state-switch-on"} checked />
+            <Switch key={"state-switch-off"} />
+          </HStack>
+          <Label text="Click a control to see its pressed and focused states."
+                 font_size={self.caption} text_color={self.muted} />
+
+          <Box height={4} />
+          <Label text="TYPOGRAPHY" font_size={self.caption} text_color={self.muted} />
+          <Label text="Large title" font_size={self.large_title} text_color={self.ink} />
+          <Label text="Title 1" font_size={self.title1} text_color={self.ink} />
+          <Label text="Headline" font_size={self.headline_size} font_weight={5} text_color={self.ink} />
+          <Label text="Body — the control font at this size" font_size={self.font_size} text_color={self.ink} />
+          <Label text="Footnote" font_size={self.footnote} text_color={self.muted} />
 
           <Box height={4} />
           <Label text="TOGGLES" font_size={self.caption} text_color={self.muted} />
@@ -170,6 +201,12 @@ pub partial class Showcase extends component.Component {
 
     pub modes: List<string> = ["Light", "Dark"]
     pub mode: int = 0
+    pub control_sizes: List<string> = ["Mini", "Small", "Regular", "Large"]
+    pub control_size: int = 2
+    pub window_active: bool = true
+    pub large_title: f64 = 26.0
+    pub title1: f64 = 22.0
+    pub headline_size: f64 = 13.0
     pub accent_names: List<string> = ["Blue", "Pink", "Green", "Orange", "Purple"]
     pub accent_values: List<int> = [0x0088ffff, 0xff2d55ff, 0x34c759ff, 0xff8d28ff, 0xcb30e0ff]
 
@@ -215,6 +252,9 @@ pub partial class Showcase extends component.Component {
                 self.font_size = theme.font_size()
                 self.footnote = theme.footnote()
                 self.caption = theme.caption1()
+                self.large_title = theme.large_title()
+                self.title1 = theme.title1()
+                self.headline_size = theme.headline()
             }
             none => {}
         }
@@ -224,6 +264,23 @@ pub partial class Showcase extends component.Component {
         if index < 0 || index >= self.modes.len() { return }
         self.mode = index
         match self.theme { some(theme) => { theme.set_dark(index == 1) } none => {} }
+        self.resync()
+    }
+    /// macOS control sizes. They move height, radius, padding and font at once,
+    /// which is why one picker drives them all.
+    pub fn set_control_size(index: int) {
+        if index < 0 || index >= self.control_sizes.len() { return }
+        self.control_size = index
+        match self.theme {
+            some(theme) => { match theme.set_control_size(index) { ok(done) => {} err(problem) => {} } }
+            none => {}
+        }
+        self.resync()
+    }
+    /// Shows what every filled control does when its window loses the keyboard.
+    pub fn toggle_active() {
+        self.window_active = !self.window_active
+        match self.theme { some(theme) => { theme.set_window_active(self.window_active) } none => {} }
         self.resync()
     }
     pub fn set_accent(index: int) {

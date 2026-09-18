@@ -22,26 +22,56 @@ pub partial class ComboBoxTemplate extends component.ChoiceControlTemplate {
 
 partial class ComboBoxTemplate {
     pub override fn render(b: Builder) {
-        b.open("HStack")  // combo_box_template.bx:1
+        b.open("Box")  // combo_box_template.bx:1
         b.word("background", self.fill)
         b.number("corner_radius", (self.radius) as f64)
-        b.number("border_width", (1) as f64)
-        b.word("border_color", if self.focused { self.accent } else { self.separator })
-        b.number("padding_x", (6) as f64)
-        b.number("padding_y", (2) as f64)
-        b.word("align", "center")
-        b.number("spacing", (4) as f64)
-        b.open("Label")  // combo_box_template.bx:4
+        b.open("Label")  // combo_box_template.bx:2
         b.text("{self.selected_text}")
         b.word("text_color", self.ink)
         b.number("font_size", (self.font_size) as f64)
-        b.number("grow", (1) as f64)
+        b.number("baseline", (self.baseline) as f64)
+        b.number("x", (self.control_padding) as f64)
+        b.number("y", (0) as f64)
+        b.number("right", (self.control_padding * 2.0 + self.chevron_width) as f64)
+        b.number("height_percent", (100.0) as f64)
         b.close()
-        b.open("Label")  // combo_box_template.bx:5
-        b.text("⌄")
-        b.word("text_color", self.muted)
-        b.number("font_size", (self.font_size) as f64)
+        b.open("Path")  // combo_box_template.bx:5
+        b.number("right", (self.control_padding) as f64)
+        b.number("y", (self.control_height / 2.0 - self.chevron_height - 1.5) as f64)
+        b.number("width", (self.chevron_width) as f64)
+        b.number("height", (self.chevron_height) as f64)
+        b.text("M0 {self.chevron_height} L{self.chevron_width / 2.0} 0 L{self.chevron_width} {self.chevron_height}")
+        b.word("stroke", self.ink)
+        b.number("stroke_width", (self.stepper_stroke) as f64)
+        b.word("stroke_cap", "round")
+        b.word("stroke_join", "round")
+        b.word("fill", "#00000000")
         b.close()
+        b.open("Path")  // combo_box_template.bx:10
+        b.number("right", (self.control_padding) as f64)
+        b.number("y", (self.control_height / 2.0 + 1.5) as f64)
+        b.number("width", (self.chevron_width) as f64)
+        b.number("height", (self.chevron_height) as f64)
+        b.text("M0 0 L{self.chevron_width / 2.0} {self.chevron_height} L{self.chevron_width} 0")
+        b.word("stroke", self.ink)
+        b.number("stroke_width", (self.stepper_stroke) as f64)
+        b.word("stroke_cap", "round")
+        b.word("stroke_join", "round")
+        b.word("fill", "#00000000")
+        b.close()
+        if self.focused {  // combo_box_template.bx:15
+            b.open("Rectangle")  // combo_box_template.bx:16
+            b.number("x", (0) as f64)
+            b.number("y", (0) as f64)
+            b.number("width_percent", (100.0) as f64)
+            b.number("height_percent", (100.0) as f64)
+            b.number("overhang", (self.focus_width / 2.0) as f64)
+            b.number("corner_radius", (self.radius + self.focus_width / 2.0) as f64)
+            b.word("fill", "#00000000")
+            b.word("stroke", self.focus_ring)
+            b.number("stroke_width", (self.focus_width) as f64)
+            b.close()
+        }
         b.close()
     }
 }

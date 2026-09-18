@@ -1,10 +1,15 @@
-<HStack spacing={5} align="center">
-  <HStack background={if self.checked { self.accent } else { self.background }}
-          border_color={if self.checked { self.accent } else { self.track }} border_width={1}
-          corner_radius={self.capsule} width={14} height={14} align="center" justify="center">
-    $if self.checked { <Box width={5} height={5} background={self.knob} corner_radius={self.capsule} /> }
-  </HStack>
-  <Label text={self.title} text_color={self.ink} font_size={self.font_size} />
+<HStack spacing={self.toggle_gap} align="start">
+  <Box width={self.toggle_size} height={self.toggle_size}
+       background={if self.checked { self.accent_fill } else { self.track_off }}
+       corner_radius={self.capsule}>
+    $if self.checked {
+      <Ellipse x={self.toggle_size * 0.34375} y={self.toggle_size * 0.34375}
+               width={self.toggle_size * 0.3125} height={self.toggle_size * 0.3125}
+               fill={self.on_accent} />
+    }
+  </Box>
+  <Label text={self.title} text_color={self.ink} font_size={self.font_size}
+         baseline={self.toggle_baseline} grow={1} height={self.toggle_size} />
 </HStack>
 <beans>
 package templates

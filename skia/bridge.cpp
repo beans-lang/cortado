@@ -19,6 +19,7 @@
 #include "modules/skparagraph/include/FontCollection.h"
 #include "modules/skparagraph/include/Paragraph.h"
 #include "modules/skparagraph/include/ParagraphBuilder.h"
+#include "modules/skparagraph/include/TypefaceFontProvider.h"
 #include "modules/skunicode/include/SkUnicode_icu.h"
 #ifdef __APPLE__
 #include "include/ports/SkFontMgr_mac_ct.h"
@@ -64,6 +65,8 @@ struct Engine {
     std::unordered_map<uint64_t, Text> paragraphs;
     std::unordered_map<uint64_t, Image> images;
     std::unordered_map<std::string, uint64_t> image_cache;
+    SkString font_family;
+    sk_sp<SkData> font_data;
     uint64_t next = 1;
     uint64_t next_image = 1;
     bool drawing = false;
@@ -141,15 +144,50 @@ bool select_backend(Engine *e, int32_t requested) {
     e->backend = e->gpu ? actual : 0;
     return true;
 }
-/* The platform's own UI typeface. Apple resolves it per point size so the
- * optical variant matches what a native control draws; the rest name families. */
-void ui_font(TextStyle &style, double size) {
+/* Weights the caller may ask for, as SkFontStyle weights. */
+SkFontStyle::Weight weight_of(int32_t weight) {
+    switch (weight) {
+        case 1: return SkFontStyle::kLight_Weight;
+        case 2: return SkFontStyle::kNormal_Weight;
+        case 3: return SkFontStyle::kMedium_Weight;
+        case 4: return SkFontStyle::kSemiBold_Weight;
+        case 5: return SkFontStyle::kBold_Weight;
+        case 6: return SkFontStyle::kExtraBold_Weight;
+        default: return SkFontStyle::kNormal_Weight;
+    }
+}
 #ifdef __APPLE__
-    CTFontRef face = CTFontCreateUIFontForLanguage(kCTFontUIFontSystem, size, nullptr);
-    if (face) {
-        style.setTypeface(SkMakeTypefaceFromCTFont(face));
-        CFRelease(face);
+CTFontUIFontType ui_type(int32_t weight) { (void)weight; return kCTFontUIFontSystem; }
+#endif
+
+/* The typeface a control draws with.
+ *
+ * A registered asset wins on every platform, which is the only way the same
+ * pixels appear on macOS, Windows and Linux. Without one, Apple resolves its UI
+ * font per point size so the optical variant matches a native control, and the
+ * other platforms name families. */
+void ui_font(Engine *e, TextStyle &style, double size, int32_t weight) {
+    const SkFontStyle wanted(weight_of(weight), SkFontStyle::kNormal_Width,
+                             SkFontStyle::kUpright_Slant);
+    style.setFontStyle(wanted);
+    if (e && !e->font_family.isEmpty()) {
+        style.setFontFamilies({e->font_family});
         return;
+    }
+#ifdef __APPLE__
+    CTFontRef face = CTFontCreateUIFontForLanguage(ui_type(weight), size, nullptr);
+    if (face) {
+        sk_sp<SkTypeface> base = SkMakeTypefaceFromCTFont(face);
+        CFRelease(face);
+        if (base && weight != 2 && weight != 0) {
+            // The UI font is one variable face; ask its manager for the weight.
+            sk_sp<SkFontMgr> manager = SkFontMgr_New_CoreText(nullptr);
+            SkString family;
+            base->getFamilyName(&family);
+            sk_sp<SkTypeface> styled(manager->matchFamilyStyle(family.c_str(), wanted));
+            if (styled) base = styled;
+        }
+        if (base) { style.setTypeface(base); return; }
     }
     style.setFontFamilies({SkString("Helvetica Neue"), SkString("sans-serif")});
 #elif defined(_WIN32)
@@ -297,15 +335,19 @@ int32_t ctd_skia_visual(void *raw, int32_t kind, double x, double y, double w, d
                         double stroke, uint32_t gradient_start, uint32_t gradient_end,
                         int32_t gradient_enabled,
                         uint32_t shadow_color, double shadow_blur, double shadow_dx,
-                        double shadow_dy, double clip_radius) {
+                        double shadow_dy, double clip_radius,
+                        int32_t stroke_cap, int32_t stroke_join) {
     auto *c = canvas(raw);
-    if (!c || kind < 0 || kind > 2 || !rect_ok(x, y, w, h, clip_radius) ||
+    if (!c || kind < 0 || kind > 3 || !rect_ok(x, y, w, h, clip_radius) ||
         !valid_number(stroke) || stroke < 0 || !valid_number(shadow_blur) || shadow_blur < 0 ||
-        !valid_number(shadow_dx) || !valid_number(shadow_dy)) return invalid;
+        !valid_number(shadow_dx) || !valid_number(shadow_dy) ||
+        stroke_cap < 0 || stroke_cap > 2 || stroke_join < 0 || stroke_join > 2) return invalid;
     const SkRect rect = SkRect::MakeXYWH(x, y, w, h);
     SkPath shape;
     if (kind == 0) shape.addRect(rect);
     else if (kind == 1) shape.addOval(rect);
+    // kind 3 is a rounded rectangle; clip_radius doubles as its corner radius.
+    else if (kind == 3) shape.addRRect(SkRRect::MakeRectXY(rect, clip_radius, clip_radius));
     else {
         if (!data || length <= 0 || length > 1048576) return invalid;
         std::string source(data, length);
@@ -342,6 +384,10 @@ int32_t ctd_skia_visual(void *raw, int32_t kind, double x, double y, double w, d
         paint.setColor(color(outline));
         paint.setStyle(SkPaint::kStroke_Style);
         paint.setStrokeWidth(stroke);
+        paint.setStrokeCap(stroke_cap == 1 ? SkPaint::kRound_Cap
+                           : stroke_cap == 2 ? SkPaint::kSquare_Cap : SkPaint::kButt_Cap);
+        paint.setStrokeJoin(stroke_join == 1 ? SkPaint::kRound_Join
+                            : stroke_join == 2 ? SkPaint::kBevel_Join : SkPaint::kMiter_Join);
         c->drawPath(shape, paint);
     }
     c->restore();
@@ -395,17 +441,23 @@ int32_t ctd_skia_image_draw(void *raw, uint64_t id, double x, double y, double w
                      SkSamplingOptions(SkFilterMode::kLinear));
     return 0;
 }
-uint64_t ctd_skia_paragraph_new(void *raw, const char *s, int32_t n, double size, double width, uint32_t rgba) {
+uint64_t ctd_skia_paragraph_new(void *raw, const char *s, int32_t n, double size, double width,
+                                uint32_t rgba, int32_t weight, double tracking, int32_t align) {
     auto *e = engine(raw);
-    if (!e || n < 0 || n > 16777216 || (!s && n) || !valid_number(size) || size <= 0 || !valid_number(width)) return 0;
+    if (!e || n < 0 || n > 16777216 || (!s && n) || !valid_number(size) || size <= 0 ||
+        !valid_number(width) || !valid_number(tracking) || weight < 0 || weight > 6 ||
+        align < 0 || align > 2) return 0;
     Text t;
     if (!positions(s, n, t.bytes)) return 0;
     t.utf8.assign(s ? s : "", n);
     ParagraphStyle style;
     TextStyle font;
     font.setFontSize(size); font.setColor(color(rgba));
-    ui_font(font, size);
+    font.setLetterSpacing(static_cast<SkScalar>(tracking));
+    ui_font(e, font, size, weight);
     style.setTextStyle(font);
+    style.setTextAlign(align == 1 ? TextAlign::kCenter
+                       : align == 2 ? TextAlign::kRight : TextAlign::kLeft);
     auto builder = ParagraphBuilder::make(style, e->fonts, e->unicode);
     if (!builder) return 0;
     builder->addText(t.utf8.c_str(), t.utf8.size());
@@ -415,6 +467,46 @@ uint64_t ctd_skia_paragraph_new(void *raw, const char *s, int32_t n, double size
     uint64_t id = e->next++;
     if (!id) return 0;
     e->paragraphs.emplace(id, std::move(t)); return id;
+}
+/* Registers one font file as the family every paragraph uses from now on.
+ * An empty path clears it and returns to the platform's UI font. Paragraphs
+ * already shaped keep the face they were built with. */
+int32_t ctd_skia_font_register(void *raw, const char *path, int32_t length) {
+    auto *e = engine(raw);
+    if (!e || length < 0 || length > 4096 || (!path && length)) return invalid;
+    if (!length) { e->font_family.reset(); e->font_data.reset(); return 0; }
+    std::string file(path, length);
+    sk_sp<SkData> data = SkData::MakeFromFileName(file.c_str());
+    if (!data) return invalid;
+    sk_sp<SkFontMgr> manager = e->fonts->getFallbackManager();
+    if (!manager) return invalid;
+    sk_sp<SkTypeface> face = manager->makeFromData(data);
+    if (!face) return invalid;
+    SkString family;
+    face->getFamilyName(&family);
+    if (family.isEmpty()) return invalid;
+    auto provider = sk_make_sp<skia::textlayout::TypefaceFontProvider>();
+    if (provider->registerTypeface(face) == 0) return invalid;
+    e->fonts->setAssetFontManager(provider);
+    e->font_family = family;
+    e->font_data = std::move(data);
+    return 0;
+}
+/* ascent, descent, line height, and the baseline from the top of the box. */
+int32_t ctd_skia_paragraph_metrics(void *raw, uint64_t id, double *out) {
+    auto *t = text(raw, id); if (!t || !out) return stale;
+    std::vector<skia::textlayout::LineMetrics> lines;
+    t->paragraph->getLineMetrics(lines);
+    if (lines.empty()) {
+        out[0] = t->paragraph->getHeight(); out[1] = 0; out[2] = t->paragraph->getHeight();
+        out[3] = t->paragraph->getAlphabeticBaseline();
+        return 0;
+    }
+    out[0] = lines[0].fAscent;
+    out[1] = lines[0].fDescent;
+    out[2] = lines[0].fHeight;
+    out[3] = lines[0].fBaseline;
+    return 0;
 }
 int32_t ctd_skia_paragraph_release(void *raw, uint64_t id) {
     auto *e = engine(raw); return e && e->paragraphs.erase(id) ? 0 : stale;

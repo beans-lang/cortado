@@ -26,6 +26,8 @@ pub class VisualRender extends RenderObject {
     image_value: Option<paint.ImageResource> = none
     transition_seconds_value: f64 = 0.0
     transition_easing_value: int = 0
+    stroke_cap_value: int = 0
+    stroke_join_value: int = 0
     transitions_armed: bool = false
     scalar_tweens: Map<int, ScalarTween> = {}
     color_tweens: Map<int, ColorTween> = {}
@@ -158,6 +160,18 @@ pub class VisualRender extends RenderObject {
             self.transition_easing_value = value
             return ok(true)
         }
+        if key == visual.STROKE_CAP || key == visual.STROKE_JOIN {
+            if value < 0 || value > 2 { return err("stroke cap and join run from 0 to 2", "out_of_range") }
+            if key == visual.STROKE_CAP {
+                if self.stroke_cap_value == value { return ok(false) }
+                self.stroke_cap_value = value
+            } else {
+                if self.stroke_join_value == value { return ok(false) }
+                self.stroke_join_value = value
+            }
+            self.dirty.paint()
+            return ok(true)
+        }
         if key == visual.FILL || key == visual.STROKE || key == visual.SHADOW_COLOR {
             return self.change_color(key, value)
         }
@@ -184,6 +198,8 @@ pub class VisualRender extends RenderObject {
         if key == visual.GRADIENT_START { return ok(self.gradient_start_value) }
         if key == visual.GRADIENT_END { return ok(self.gradient_end_value) }
         if key == visual.SHADOW_COLOR { return ok(self.shadow_color_value) }
+        if key == visual.STROKE_CAP { return ok(self.stroke_cap_value) }
+        if key == visual.STROKE_JOIN { return ok(self.stroke_join_value) }
         if key == visual.TRANSITION_EASING { return ok(self.transition_easing_value) }
         return super.integer(key)
     }
@@ -249,7 +265,7 @@ pub class VisualRender extends RenderObject {
         canvas.rotate(self.rotation_value)?
         canvas.scale(self.scale_x_value, self.scale_y_value)?
         canvas.translate(-width / 2.0, -height / 2.0)?
-        let rect: geometry.Rect = geometry.Rect.of(0.0, 0.0, width, height)
+        let rect: geometry.Rect = self.painted_box()
         if self.kind_value == visual.Kind.resource_image {
             if self.text() == "" { canvas.restore()?; return ok(true) }
             match self.image_value {
@@ -273,10 +289,23 @@ pub class VisualRender extends RenderObject {
             gradient_enabled: self.gradient_start_set && self.gradient_end_set,
             shadow_color: self.shadow_color_value, shadow_blur: self.shadow_blur_value,
             shadow_dx: self.shadow_dx_value, shadow_dy: self.shadow_dy_value,
-            clip_radius: self.clip_radius_value
+            // A rounded rectangle carries its corner radius in the same field;
+            // for every other kind the value is the clip it always was.
+            clip_radius: if self.kind_value == visual.Kind.rectangle && self.radius > 0.0 {
+                self.radius
+            } else { self.clip_radius_value },
+            stroke_cap: self.stroke_cap_value, stroke_join: self.stroke_join_value
         }
         match self.kind_value {
-            rectangle => { canvas.visual(0, rect, "", style)? }
+            // A rounded drawn rectangle is one clip radius away from a plain
+            // one, and it is what a knob with a shadow needs.
+            rectangle => {
+                if self.radius > 0.0 {
+                    canvas.visual(3, rect, "", style)?
+                } else {
+                    canvas.visual(0, rect, "", style)?
+                }
+            }
             ellipse => { canvas.visual(1, rect, "", style)? }
             path => { canvas.visual(2, rect, self.text(), style)? }
             resource_image => {}

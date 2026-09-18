@@ -127,6 +127,10 @@ pub class Vocabulary {
         if name == "editable" { return host.P_EDITABLE }
         if name == "alignment" { return host.P_ALIGNMENT }
         if name == "font_size" { return host.P_FONT_SIZE }
+        if name == "font_weight" { return host.P_FONT_WEIGHT }
+        if name == "baseline" { return host.P_BASELINE }
+        if name == "overhang" { return host.P_OVERHANG }
+        if name == "prominent" { return host.P_PROMINENT }
         // A role is a size, so it lands on the same property — and two
         // names on one property is what makes the last one written win.
         if name == "font_role" { return host.P_FONT_SIZE }
@@ -160,6 +164,7 @@ pub class Vocabulary {
         if name == "labels" { return kind == widgets.WidgetKind.tab_view }
         if name == "columns" || name == "column_widths" || name == "source" || name == "editable_when" { return kind == widgets.WidgetKind.table }
         if name == "stacked" || name == "divider" { return kind == widgets.WidgetKind.split_view }
+        if name == "overhang" { return true }
         if visual.attribute_call(name) != "" { return false }
         let property: int = Vocabulary.property_of(name)
         if property < 0 { return true }
@@ -239,7 +244,8 @@ pub class Vocabulary {
         }
         if name == "min" || name == "max" || name == "value" ||
            name == "font_size" || name == "step" || name == "opacity" ||
-           name == "day" || name == "corner_radius" || name == "border_width" {
+           name == "day" || name == "corner_radius" || name == "border_width" ||
+           name == "baseline" || name == "overhang" {
             return AttributeKind.real
         }
         // A colour travels as a whole number, packed 0xRRGGBBAA — the same
@@ -247,11 +253,11 @@ pub class Vocabulary {
         // hands back. It is written in markup as `#rrggbbaa`, and `Builder`
         // is what turns the one into the other.
         if name == "checked" || name == "alignment" || name == "selected" ||
-           name == "transition_easing" ||
+           name == "transition_easing" || name == "font_weight" ||
            name == "lines" || Vocabulary.is_colour(name) {
             return AttributeKind.whole
         }
-        if name == "open" || name == "animating" { return AttributeKind.flag }
+        if name == "open" || name == "animating" || name == "prominent" { return AttributeKind.flag }
         return AttributeKind.flag
     }
 

@@ -18,12 +18,14 @@ pub extern "C" fn ctd_skia_clip(context: RawPtr<u8>, x: f64, y: f64, width: f64,
 pub extern "C" fn ctd_skia_rect(context: RawPtr<u8>, x: f64, y: f64, width: f64, height: f64, radius: f64, rgba: u32, stroke: f64) -> i32
 pub extern "C" fn ctd_skia_ellipse(context: RawPtr<u8>, x: f64, y: f64, width: f64, height: f64, fill: u32, outline: u32, stroke: f64) -> i32
 pub extern "C" fn ctd_skia_path(context: RawPtr<u8>, data: RawPtr<i8>, length: i32, fill: u32, outline: u32, stroke: f64) -> i32
-pub extern "C" fn ctd_skia_visual(context: RawPtr<u8>, kind: i32, x: f64, y: f64, width: f64, height: f64, data: RawPtr<i8>, length: i32, fill: u32, outline: u32, stroke: f64, gradient_start: u32, gradient_end: u32, gradient_enabled: i32, shadow_color: u32, shadow_blur: f64, shadow_dx: f64, shadow_dy: f64, clip_radius: f64) -> i32
+pub extern "C" fn ctd_skia_visual(context: RawPtr<u8>, kind: i32, x: f64, y: f64, width: f64, height: f64, data: RawPtr<i8>, length: i32, fill: u32, outline: u32, stroke: f64, gradient_start: u32, gradient_end: u32, gradient_enabled: i32, shadow_color: u32, shadow_blur: f64, shadow_dx: f64, shadow_dy: f64, clip_radius: f64, stroke_cap: i32, stroke_join: i32) -> i32
 pub extern "C" fn ctd_skia_image_new(context: RawPtr<u8>, source: RawPtr<i8>, length: i32) -> u64
 pub extern "C" fn ctd_skia_image_release(context: RawPtr<u8>, image: u64) -> i32
 pub extern "C" fn ctd_skia_image_size(context: RawPtr<u8>, image: u64, size: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_skia_image_draw(context: RawPtr<u8>, image: u64, x: f64, y: f64, width: f64, height: f64) -> i32
-pub extern "C" fn ctd_skia_paragraph_new(context: RawPtr<u8>, text: RawPtr<i8>, length: i32, size: f64, width: f64, rgba: u32) -> u64
+pub extern "C" fn ctd_skia_paragraph_new(context: RawPtr<u8>, text: RawPtr<i8>, length: i32, size: f64, width: f64, rgba: u32, weight: i32, tracking: f64, align: i32) -> u64
+pub extern "C" fn ctd_skia_font_register(context: RawPtr<u8>, path: RawPtr<i8>, length: i32) -> i32
+pub extern "C" fn ctd_skia_paragraph_metrics(context: RawPtr<u8>, paragraph: u64, out: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_skia_paragraph_release(context: RawPtr<u8>, paragraph: u64) -> i32
 pub extern "C" fn ctd_skia_paragraph_size(context: RawPtr<u8>, paragraph: u64, size: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_skia_paragraph_paint(context: RawPtr<u8>, paragraph: u64, x: f64, y: f64) -> i32

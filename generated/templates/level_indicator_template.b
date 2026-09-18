@@ -22,20 +22,24 @@ pub partial class LevelIndicatorTemplate extends component.RangeControlTemplate 
 
 partial class LevelIndicatorTemplate {
     pub override fn render(b: Builder) {
-        b.open("HStack")  // level_indicator_template.bx:1
-        b.word("align", "center")
-        b.open("Box")  // level_indicator_template.bx:2
-        b.number("width_percent", (self.percent) as f64)
-        b.number("height", (5) as f64)
-        b.word("background", self.accent)
-        b.number("corner_radius", (self.radius_small) as f64)
-        b.close()
-        b.open("Box")  // level_indicator_template.bx:3
-        b.number("grow", (1) as f64)
-        b.number("height", (5) as f64)
-        b.word("background", self.track_off)
-        b.number("corner_radius", (self.radius_small) as f64)
-        b.close()
+        b.open("Box")  // level_indicator_template.bx:1
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
+        var _cortado_row_0: int = 0
+        for index in 0..self.level_cells {  // level_indicator_template.bx:2
+            b.open("Box")  // level_indicator_template.bx:3
+            b.key("{"cell-{index}"}")
+            b.number("x", (index as f64 * (self.level_cell_width + self.level_cell_gap)) as f64)
+            b.number("y", (0) as f64)
+            b.number("width", (self.level_cell_width) as f64)
+            b.number("height", (self.level_cell_height) as f64)
+            b.number("corner_radius", (self.level_cell_radius) as f64)
+            b.word("background", if (index as f64 + 1.0) * (100.0 / self.level_cells as f64) <= self.percent + 0.001 { self.success } else { self.level_empty })
+            b.number("border_width", (0.5) as f64)
+            b.word("border_color", if (index as f64 + 1.0) * (100.0 / self.level_cells as f64) <= self.percent + 0.001 { self.success } else { self.level_border })
+            b.close()
+            _cortado_row_0 += 1
+        }
         b.close()
     }
 }

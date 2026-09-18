@@ -61,10 +61,12 @@ class SkiaParagraph implements paint.Paragraph {
     engine: Engine
     id: u64
     measured: geometry.Size
-    pub fn init(engine: Engine, id: u64, measured: geometry.Size) {
-        self.engine = engine; self.id = id; self.measured = measured
+    line: paint.LineMetrics
+    pub fn init(engine: Engine, id: u64, measured: geometry.Size, line: paint.LineMetrics) {
+        self.engine = engine; self.id = id; self.measured = measured; self.line = line
     }
     pub fn size() -> geometry.Size { return self.measured }
+    pub fn metrics() -> paint.LineMetrics { return self.line }
     pub fn hit_test(x: f64, y: f64) -> int {
         unsafe { return ctd_skia_paragraph_hit(self.engine.raw, self.id, x, y) as int }
     }
@@ -141,15 +143,37 @@ pub class SkiaRenderer implements paint.Renderer {
         return ok(true)
     }
     pub fn paragraph(text: string, size: f64, width: f64, color: int) -> Result<paint.Paragraph> {
+        return self.styled_paragraph(text, paint.TextStyle.of(size), width, color)
+    }
+    pub fn styled_paragraph(text: string, style: paint.TextStyle, width: f64,
+                            color: int) -> Result<paint.Paragraph> {
         let bytes: Bytes = Bytes.from(text)
         var id: u64 = 0
         unsafe {
             id = ctd_skia_paragraph_new(self.engine.raw, host.HostText.pointer(bytes),
-                bytes.len() as i32, size, width, color as u32)
+                bytes.len() as i32, style.size, width, color as u32,
+                style.weight as i32, style.tracking, style.align as i32)
         }
         if id == 0 { return err("Skia could not shape paragraph", "renderer_error") }
         unsafe { self.engine.checked(ctd_skia_paragraph_size(self.engine.raw, id, self.engine.scratch))? }
-        return ok(new SkiaParagraph(self.engine, id, geometry.Size.of(self.engine.value(0), self.engine.value(1))))
+        let measured: geometry.Size = geometry.Size.of(self.engine.value(0), self.engine.value(1))
+        unsafe { self.engine.checked(ctd_skia_paragraph_metrics(self.engine.raw, id, self.engine.scratch))? }
+        // Skia reports the ascent as a negative offset from the baseline.
+        let line: paint.LineMetrics = paint.LineMetrics {
+            ascent: -self.engine.value(0), descent: self.engine.value(1),
+            height: self.engine.value(2), baseline: self.engine.value(3)
+        }
+        return ok(new SkiaParagraph(self.engine, id, measured, line))
+    }
+    /// One font file for every platform. Paragraphs already shaped keep theirs.
+    pub fn use_font(path: string) -> Result<bool> {
+        let bytes: Bytes = Bytes.from(path)
+        unsafe {
+            self.engine.checked(ctd_skia_font_register(self.engine.raw,
+                host.HostText.pointer(bytes), bytes.len() as i32))?
+        }
+        self.revision_value += 1
+        return ok(true)
     }
     pub fn begin(size: geometry.Size, scale: f64, background: int) -> Result<paint.Canvas> {
         unsafe { self.engine.checked(ctd_skia_begin(self.engine.raw, size.width, size.height, scale, background as u32))? }
@@ -231,7 +255,8 @@ class SkiaCanvas implements paint.Canvas {
             style.fill as u32, style.outline as u32, style.stroke_width,
             style.gradient_start as u32, style.gradient_end as u32,
             if style.gradient_enabled { 1 } else { 0 }, style.shadow_color as u32,
-            style.shadow_blur, style.shadow_dx, style.shadow_dy, style.clip_radius)) }
+            style.shadow_blur, style.shadow_dx, style.shadow_dy, style.clip_radius,
+            style.stroke_cap as i32, style.stroke_join as i32)) }
     }
     pub fn image(value: paint.ImageResource, rect: geometry.Rect) -> Result<bool> {
         match value as? SkiaImage {

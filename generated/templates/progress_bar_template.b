@@ -22,19 +22,24 @@ pub partial class ProgressBarTemplate extends component.RangeControlTemplate {
 
 partial class ProgressBarTemplate {
     pub override fn render(b: Builder) {
-        b.open("HStack")  // progress_bar_template.bx:1
-        b.word("align", "center")
+        b.open("Box")  // progress_bar_template.bx:1
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
         b.open("Box")  // progress_bar_template.bx:2
-        b.number("width_percent", (if self.indeterminate { 35.0 } else { self.percent }) as f64)
-        b.number("height", (4) as f64)
-        b.word("background", self.accent)
-        b.number("corner_radius", (self.capsule) as f64)
+        b.number("y", ((self.bar_control_height - self.bar_height) / 2.0) as f64)
+        b.number("width_percent", (100.0) as f64)
+        b.number("height", (self.bar_height) as f64)
+        b.word("background", self.bar_track)
+        b.number("border_width", (0.5) as f64)
+        b.word("border_color", self.bar_border)
+        b.number("corner_radius", (self.bar_radius) as f64)
         b.close()
-        b.open("Box")  // progress_bar_template.bx:4
-        b.number("grow", (1) as f64)
-        b.number("height", (4) as f64)
-        b.word("background", self.track_off)
-        b.number("corner_radius", (self.capsule) as f64)
+        b.open("Box")  // progress_bar_template.bx:6
+        b.number("y", ((self.bar_control_height - self.bar_height) / 2.0) as f64)
+        b.number("width_percent", (if self.indeterminate { 35.0 } else { self.percent }) as f64)
+        b.number("height", (self.bar_height) as f64)
+        b.word("background", self.accent)
+        b.number("corner_radius", (self.bar_radius) as f64)
         b.close()
         b.close()
     }

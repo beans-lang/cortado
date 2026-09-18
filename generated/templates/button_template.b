@@ -24,20 +24,32 @@ pub partial class ButtonTemplate extends component.ControlTemplate {
 
 partial class ButtonTemplate {
     pub override fn render(b: Builder) {
-        b.open("VStack")  // button_template.bx:1
-        b.word("background", self.fill)
+        b.open("Box")  // button_template.bx:1
+        b.word("background", if self.prominent { self.accent_fill } else { self.fill })
         b.number("corner_radius", (self.radius) as f64)
-        b.number("padding", (3) as f64)
-        b.number("border_width", (1) as f64)
-        b.word("border_color", if self.focused { self.accent } else { self.separator })
-        b.word("align", "center")
-        b.word("justify", "center")
-        b.open("Label")  // button_template.bx:4
+        b.open("Label")  // button_template.bx:3
         b.text("{self.title}")
-        b.word("text_color", self.ink)
+        b.word("text_color", if self.prominent { self.on_accent } else { self.ink })
         b.number("font_size", (self.font_size) as f64)
+        b.number("font_weight", (self.font_weight) as f64)
+        b.number("baseline", (self.baseline) as f64)
         b.number("alignment", (1) as f64)
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
         b.close()
+        if self.focused {  // button_template.bx:8
+            b.open("Rectangle")  // button_template.bx:9
+            b.number("x", (0) as f64)
+            b.number("y", (0) as f64)
+            b.number("width_percent", (100.0) as f64)
+            b.number("height_percent", (100.0) as f64)
+            b.number("overhang", (self.focus_width / 2.0) as f64)
+            b.number("corner_radius", (self.radius + self.focus_width / 2.0) as f64)
+            b.word("fill", "#00000000")
+            b.word("stroke", self.focus_ring)
+            b.number("stroke_width", (self.focus_width) as f64)
+            b.close()
+        }
         b.close()
     }
 }

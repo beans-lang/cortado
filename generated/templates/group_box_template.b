@@ -24,7 +24,7 @@ partial class GroupBoxTemplate {
     pub override fn render(b: Builder) {
         b.open("VStack")  // group_box_template.bx:1
         b.word("background", self.card)
-        b.number("corner_radius", (self.radius_medium) as f64)
+        b.number("corner_radius", (self.radius) as f64)
         b.number("padding", (6) as f64)
         b.number("border_width", (1) as f64)
         b.word("border_color", self.separator)

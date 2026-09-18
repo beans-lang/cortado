@@ -28,19 +28,29 @@ int32_t ctd_skia_ellipse(void *context, double x, double y, double width, double
                          uint32_t fill, uint32_t outline, double stroke);
 int32_t ctd_skia_path(void *context, const char *data, int32_t length,
                       uint32_t fill, uint32_t outline, double stroke);
+/* kind: 0 rectangle, 1 ellipse, 2 path, 3 rounded rectangle. */
 int32_t ctd_skia_visual(void *context, int32_t kind, double x, double y, double width, double height,
                         const char *data, int32_t length, uint32_t fill, uint32_t outline,
                         double stroke, uint32_t gradient_start, uint32_t gradient_end,
                         int32_t gradient_enabled,
                         uint32_t shadow_color, double shadow_blur, double shadow_dx,
-                        double shadow_dy, double clip_radius);
+                        double shadow_dy, double clip_radius,
+                        int32_t stroke_cap, int32_t stroke_join);
 uint64_t ctd_skia_image_new(void *context, const char *source, int32_t length);
 int32_t ctd_skia_image_release(void *context, uint64_t image);
 int32_t ctd_skia_image_size(void *context, uint64_t image, double *size);
 int32_t ctd_skia_image_draw(void *context, uint64_t image,
                              double x, double y, double width, double height);
+/* weight: 0 default, 1 light, 2 regular, 3 medium, 4 semibold, 5 bold, 6 heavy.
+ * align: 0 leading, 1 centre, 2 trailing. tracking is in points. */
 uint64_t ctd_skia_paragraph_new(void *context, const char *text, int32_t length,
-                               double size, double width, uint32_t rgba);
+                               double size, double width, uint32_t rgba,
+                               int32_t weight, double tracking, int32_t align);
+/* Registers one font file as the family every later paragraph uses, on every
+ * platform. An empty path returns to the platform's own UI font. */
+int32_t ctd_skia_font_register(void *context, const char *path, int32_t length);
+/* ascent, descent, line height, baseline from the top. Four doubles. */
+int32_t ctd_skia_paragraph_metrics(void *context, uint64_t paragraph, double *out);
 int32_t ctd_skia_paragraph_release(void *context, uint64_t paragraph);
 int32_t ctd_skia_paragraph_size(void *context, uint64_t paragraph, double *size);
 int32_t ctd_skia_paragraph_paint(void *context, uint64_t paragraph, double x, double y);

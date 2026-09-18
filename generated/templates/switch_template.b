@@ -22,27 +22,22 @@ pub partial class SwitchTemplate extends component.ToggleControlTemplate {
 
 partial class SwitchTemplate {
     pub override fn render(b: Builder) {
-        b.open("HStack")  // switch_template.bx:1
-        b.word("background", self.track)
+        b.open("Box")  // switch_template.bx:1
+        b.word("background", if self.checked { self.accent_fill } else { self.track_off })
         b.number("corner_radius", (self.capsule) as f64)
-        b.number("padding", (2) as f64)
-        b.word("align", "center")
-        if self.checked {  // switch_template.bx:2
-            b.open("Box")
-            b.number("grow", (1) as f64)
-            b.close()
-        }
-        b.open("Box")  // switch_template.bx:3
-        b.number("width", (16) as f64)
-        b.number("height", (16) as f64)
-        b.word("background", self.knob)
-        b.number("corner_radius", (self.capsule) as f64)
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
+        b.open("Rectangle")  // switch_template.bx:3
+        b.number("x", (if self.checked { self.switch_width - self.switch_inset - self.switch_knob_width } else { self.switch_inset }) as f64)
+        b.number("y", (self.switch_inset) as f64)
+        b.number("width", (self.switch_knob_width) as f64)
+        b.number("height", (self.switch_knob_height) as f64)
+        b.number("corner_radius", (self.switch_knob_height / 2.0) as f64)
+        b.word("fill", self.knob)
+        b.word("shadow_color", self.knob_shadow)
+        b.number("shadow_blur", (1.5) as f64)
+        b.number("shadow_dy", (0.5) as f64)
         b.close()
-        if !self.checked {  // switch_template.bx:4
-            b.open("Box")
-            b.number("grow", (1) as f64)
-            b.close()
-        }
         b.close()
     }
 }

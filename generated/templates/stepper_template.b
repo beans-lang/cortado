@@ -22,30 +22,41 @@ pub partial class StepperTemplate extends component.RangeControlTemplate {
 
 partial class StepperTemplate {
     pub override fn render(b: Builder) {
-        b.open("HStack")  // stepper_template.bx:1
-        b.word("background", self.fill)
+        b.open("Box")  // stepper_template.bx:1
+        b.word("background", self.surface)
         b.number("corner_radius", (self.radius) as f64)
-        b.number("padding_x", (4) as f64)
-        b.number("border_width", (1) as f64)
-        b.word("border_color", self.separator)
-        b.word("align", "center")
-        b.word("justify", "space_between")
-        b.open("Label")  // stepper_template.bx:3
-        b.text("−")
-        b.word("text_color", self.ink)
-        b.number("font_size", (self.font_size) as f64)
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
+        b.open("Path")  // stepper_template.bx:3
+        b.number("x", ((self.stepper_width - self.stepper_glyph_width) / 2.0) as f64)
+        b.number("y", (self.stepper_glyph_top) as f64)
+        b.number("width", (self.stepper_glyph_width) as f64)
+        b.number("height", (self.stepper_glyph_height * 0.34) as f64)
+        b.text("M0 {self.stepper_glyph_height * 0.34} L{self.stepper_glyph_width / 2.0} 0 L{self.stepper_glyph_width} {self.stepper_glyph_height * 0.34}")
+        b.word("stroke", self.ink)
+        b.number("stroke_width", (self.stepper_stroke) as f64)
+        b.word("stroke_cap", "round")
+        b.word("stroke_join", "round")
+        b.word("fill", "#00000000")
         b.close()
-        b.open("Label")  // stepper_template.bx:4
-        b.text("{self.number}")
-        b.word("text_color", self.ink)
-        b.number("font_size", (self.font_size) as f64)
-        b.number("alignment", (1) as f64)
-        b.number("grow", (1) as f64)
+        b.open("Box")  // stepper_template.bx:8
+        b.number("x", ((self.stepper_width - self.stepper_glyph_width) / 2.0) as f64)
+        b.number("y", (self.stepper_glyph_top + self.stepper_glyph_height / 2.0) as f64)
+        b.number("width", (self.stepper_glyph_width) as f64)
+        b.number("height", (self.hairline_width) as f64)
+        b.word("background", self.separator)
         b.close()
-        b.open("Label")  // stepper_template.bx:5
-        b.text("+")
-        b.word("text_color", self.ink)
-        b.number("font_size", (self.font_size) as f64)
+        b.open("Path")  // stepper_template.bx:12
+        b.number("x", ((self.stepper_width - self.stepper_glyph_width) / 2.0) as f64)
+        b.number("y", (self.stepper_glyph_top + self.stepper_glyph_height * 0.66) as f64)
+        b.number("width", (self.stepper_glyph_width) as f64)
+        b.number("height", (self.stepper_glyph_height * 0.34) as f64)
+        b.text("M0 0 L{self.stepper_glyph_width / 2.0} {self.stepper_glyph_height * 0.34} L{self.stepper_glyph_width} 0")
+        b.word("stroke", self.ink)
+        b.number("stroke_width", (self.stepper_stroke) as f64)
+        b.word("stroke_cap", "round")
+        b.word("stroke_join", "round")
+        b.word("fill", "#00000000")
         b.close()
         b.close()
     }

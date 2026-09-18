@@ -43,8 +43,9 @@ pub abstract class ToggleRender extends RenderObject {
     }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
         self.demand_alive()?
-        let paragraph: paint.Paragraph = self.renderer.paragraph(self.words, self.font_size(), -1.0, self.text_color())?
-        return ok(geometry.Size.of(paragraph.size().width + 22.0, if paragraph.size().height > 16.0 { paragraph.size().height } else { 16.0 }))
+        let paragraph: paint.Paragraph = self.renderer.styled_paragraph(self.words, self.text_style(), -1.0, self.text_color())?
+        let lead: f64 = self.theme.toggle_size() + self.theme.toggle_gap()
+        return ok(geometry.Size.of(lead + paragraph.size().width, self.theme.toggle_row_height()))
     }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> {
         super.paint_self(canvas)?
@@ -101,7 +102,9 @@ pub class SwitchRender extends ToggleRender {
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty) }
     pub override fn role() -> string { return "switch" }
     pub override fn set_text(text: string) -> Result<bool> { self.demand_alive()?; return err("switch does not carry text", "unsupported") }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(45.0, 20.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
+        return ok(geometry.Size.of(self.theme.switch_width(), self.theme.switch_height()))
+    }
 }
 
 pub abstract class RangeRender extends RenderObject {
@@ -161,7 +164,15 @@ pub abstract class RangeRender extends RenderObject {
         if key == host.P_STEP { return if self.allows_step() { ok(self.increment) } else { err("this range control has no step", "unsupported") } }
         return super.real(key)
     }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(140.0, 14.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
+        return ok(geometry.Size.of(160.0, self.theme.slider_height()))
+    }
+    /// The knob reaches past the track on both edges, the way AppKit draws it.
+    pub override fn visual_frame() -> geometry.Rect {
+        let reach: f64 = self.theme.slider_overhang()
+        return geometry.Rect.of(self.bounds.x, self.bounds.y - reach,
+            self.bounds.width, self.bounds.height + reach * 2.0)
+    }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> { super.paint_self(canvas)?; return self.paint_template(canvas) }
     fn change_as_user(value: f64) -> Option<events.UiEvent> {
         if self.high_value <= self.low_value || !(value > -10000000.0 && value < 10000000.0) { return none }
@@ -225,16 +236,21 @@ pub class StepperRender extends RangeRender {
         self.change_as_user(value)
         return ok(before != self.current_value)
     }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(72.0, 20.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
+        return ok(geometry.Size.of(self.theme.stepper_width(), self.theme.stepper_height()))
+    }
     pub override fn handle_event(event: events.UiEvent) -> Option<events.UiEvent> {
         if !self.enabled || self.hidden || !self.alive { return none }
         if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT {
             self.tracking = true
+            self.pressed = true
+            self.dirty.paint()
             return none
         }
         if event.kind == events.EventKind.pointer_up {
             let was_tracking: bool = self.tracking
             self.tracking = false
+            if self.pressed { self.pressed = false; self.dirty.paint() }
             if !was_tracking || event.index != host.BTN_LEFT || !geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height).contains(event.position) { return none }
             return self.change_as_user(self.current_value + if event.position.x >= self.bounds.width / 2.0 { self.increment } else { -self.increment })
         }
@@ -251,7 +267,9 @@ pub class ProgressBarRender extends RangeRender {
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty) }
     pub override fn role() -> string { return "progressbar" }
     pub fn indeterminate() -> bool { return self.indeterminate_value }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(140.0, 12.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
+        return ok(geometry.Size.of(160.0, self.theme.bar_control_height()))
+    }
     pub override fn set_integer(key: int, value: int) -> Result<bool> {
         if key != host.P_INDETERMINATE { return super.set_integer(key, value) }
         self.demand_alive()?
@@ -269,7 +287,9 @@ pub class ProgressBarRender extends RangeRender {
 pub class LevelIndicatorRender extends RangeRender {
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty) }
     pub override fn role() -> string { return "meter" }
-    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> { return ok(geometry.Size.of(140.0, 12.0)) }
+    pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
+        return ok(geometry.Size.of(120.0, self.theme.level_height()))
+    }
 }
 
 pub class SeparatorRender extends RenderObject {

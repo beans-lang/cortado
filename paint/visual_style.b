@@ -13,4 +13,8 @@ pub struct VisualStyle {
     pub shadow_dx: f64 = 0.0
     pub shadow_dy: f64 = 0.0
     pub clip_radius: f64 = 0.0
+    /// 0 butt, 1 round, 2 square.
+    pub stroke_cap: int = 0
+    /// 0 miter, 1 round, 2 bevel.
+    pub stroke_join: int = 0
 }

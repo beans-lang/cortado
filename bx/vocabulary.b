@@ -223,6 +223,10 @@ fn attribute_note(name: string) -> string {
     if name == "column_gap" { return "the gap between a grid's columns" }
     if name == "row_gap" { return "the gap between a grid's rows" }
     if name == "font_size" { return "text size in points" }
+    if name == "font_weight" { return "text weight: 0 the control's own, 1 light to 6 heavy" }
+    if name == "baseline" { return "text baseline in points from the top; below zero centres" }
+    if name == "overhang" { return "how far this node's drawing reaches past its layout box, in points" }
+    if name == "prominent" { return "the leading button on a screen, filled with the accent colour" }
     if name == "font_role" { return "text size by the job it does: body, heading or caption, at the platform's own size" }
     if name == "value" { return "a slider or progress value" }
     if name == "min" { return "the low end of a range" }

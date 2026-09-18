@@ -1,9 +1,21 @@
-<HStack background={self.fill} corner_radius={self.radius} padding_x={4}
-        border_width={1} border_color={self.separator} align="center" justify="space_between">
-  <Label text="−" text_color={self.ink} font_size={self.font_size} />
-  <Label text={self.number} text_color={self.ink} font_size={self.font_size} alignment={1} grow={1} />
-  <Label text="+" text_color={self.ink} font_size={self.font_size} />
-</HStack>
+<Box background={self.surface} corner_radius={self.radius}
+     width_percent={100.0} height_percent={100.0}>
+  <Path x={(self.stepper_width - self.stepper_glyph_width) / 2.0} y={self.stepper_glyph_top}
+        width={self.stepper_glyph_width} height={self.stepper_glyph_height * 0.34}
+        d={"M0 {self.stepper_glyph_height * 0.34} L{self.stepper_glyph_width / 2.0} 0 L{self.stepper_glyph_width} {self.stepper_glyph_height * 0.34}"}
+        stroke={self.ink} stroke_width={self.stepper_stroke}
+        stroke_cap="round" stroke_join="round" fill="#00000000" />
+  <Box x={(self.stepper_width - self.stepper_glyph_width) / 2.0}
+       y={self.stepper_glyph_top + self.stepper_glyph_height / 2.0}
+       width={self.stepper_glyph_width} height={self.hairline_width}
+       background={self.separator} />
+  <Path x={(self.stepper_width - self.stepper_glyph_width) / 2.0}
+        y={self.stepper_glyph_top + self.stepper_glyph_height * 0.66}
+        width={self.stepper_glyph_width} height={self.stepper_glyph_height * 0.34}
+        d={"M0 0 L{self.stepper_glyph_width / 2.0} {self.stepper_glyph_height * 0.34} L{self.stepper_glyph_width} 0"}
+        stroke={self.ink} stroke_width={self.stepper_stroke}
+        stroke_cap="round" stroke_join="round" fill="#00000000" />
+</Box>
 <beans>
 package templates
 import cortado.component

@@ -380,6 +380,20 @@ pub class Builder {
                     else { element.set(Attribute.of_whole(visual.TRANSITION_EASING, code)) }
                     return
                 }
+                if name == "stroke_cap" {
+                    if self.refuse_unless_carried(element, name) { return }
+                    let code: int = visual.cap_code(value)
+                    if code < 0 { self.faults.push("stroke_cap must be butt, round or square") }
+                    else { element.set(Attribute.of_whole(visual.STROKE_CAP, code)) }
+                    return
+                }
+                if name == "stroke_join" {
+                    if self.refuse_unless_carried(element, name) { return }
+                    let code: int = visual.join_code(value)
+                    if code < 0 { self.faults.push("stroke_join must be miter, round or bevel") }
+                    else { element.set(Attribute.of_whole(visual.STROKE_JOIN, code)) }
+                    return
+                }
                 // Parsed here rather than in the markup compiler, so `#abc`
                 // means one thing in `<ColorWell />` and in a shader.
                 if Vocabulary.is_colour(name) {

@@ -94,7 +94,7 @@ pub class TextFieldRender extends TextRender {
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
         self.demand_alive()?
         let measured: geometry.Size = self.shaped(if self.multiline_value { 180.0 } else { -1.0 })?.size()
-        return ok(geometry.Size.of(180.0, if self.multiline_value { 100.0 } else { measured.height + 16.0 }))
+        return ok(geometry.Size.of(180.0, if self.multiline_value { 100.0 } else { self.theme.field_height() }))
     }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> {
         self.paint_template(canvas)?
