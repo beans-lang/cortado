@@ -12,7 +12,8 @@
 -- dialogs --
   token=201 button=0 text=""
   token=202 button=1 text=""
-  both dialogs answered: true
+  token=203 button=1 text=""
+  all dialogs answered: true
 -- settling --
   four events all reached the handler: true
   and settled once, not four times: true

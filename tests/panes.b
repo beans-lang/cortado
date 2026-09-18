@@ -482,6 +482,47 @@ fn drive() -> Result<bool> {
     io.println("  the viewport is the height it was given: {viewport == 40.0}")
     io.println("  what it scrolls over is taller: {behind > viewport}")
 
+    // A user drag moves the native panes immediately. The mount must resize
+    // the controls *inside* them without a component render or window resize.
+    var split_content_follows: bool = true
+    if widgets.WidgetKind.split_view.available() {
+        var sizing_box: widgets.Container = new widgets.Container()
+        var sizing_mount: component.Mount = new component.Mount(sizing_box, app.router)
+        sizing_mount.set_bounds(geometry.Size.of(300.0, 200.0))
+        let watchers_before: int = app.router.watching()
+        var sizing_screen: Divided = new Divided()
+        sizing_mount.show(sizing_screen)?
+        split_content_follows = app.router.watching() == watchers_before + 1
+        match sizing_screen.held {
+            none => { split_content_follows = false }
+            some(control) => {
+                match sizing_screen.inside {
+                    none => { split_content_follows = false }
+                    some(inner) => {
+                        control.set_property_real(host.P_DIVIDER, 80.0)?
+                        sizing_mount.refresh()?
+                        let before: f64 = inner.frame()?.width
+                        control.set_value_as_user(0, 150.0)?
+                        let after: f64 = inner.frame()?.width
+                        split_content_follows = after > before && after > 140.0 &&
+                                                after <= control.frame()?.width
+                        // The root's own size change is a second path through
+                        // the same reflow, including the native divider move.
+                        sizing_mount.resized(geometry.Size.of(360.0, 200.0))?
+                        let resized: f64 = inner.frame()?.width
+                        split_content_follows = split_content_follows &&
+                                                resized > 0.0 &&
+                                                resized <= control.frame()?.width
+                    }
+                }
+            }
+        }
+        sizing_mount.close()?
+        split_content_follows = split_content_follows &&
+                                app.router.watching() == watchers_before
+    }
+    io.println("  a dragged divider resizes the controls inside its pane: {split_content_follows}")
+
     // A split view reads its divider back the same way, and the mount asks it
     // on every pass to arrange the panes.
     var split_gone: bool = true
@@ -566,17 +607,24 @@ class Scrolled extends component.Component {
 /// its divider is on every pass.
 class Divided extends component.Component {
     pub held: Option<widgets.Widget> = none
+    pub inside: Option<widgets.Widget> = none
 
     pub fn init() { super.init() }
 
     pub override fn on_mount(stage: component.Stage) {
         self.held = stage.widget("panes")
+        self.inside = stage.widget("inside")
     }
 
     pub override fn render(into: component.Builder) {
         into.open("SplitView")
         into.key("panes")
-        into.open("Container")
+        into.open("VStack")
+        into.word("align", "stretch")
+        into.open("Label")
+        into.key("inside")
+        into.text("inside")
+        into.close()
         into.close()
         into.open("Container")
         into.close()

@@ -44,6 +44,8 @@
   ],
   "controls": ["Box", "Button", "Canvas", "CheckBox", "ColorWell", "ComboBox", "Container", "DatePicker", "Disclosure", "Grid", "GroupBox", "HStack", "Image", "Label", "LevelIndicator", "Link", "ProgressBar", "RadioButton", "ScrollView", "SecureField", "SearchField", "Segmented", "Separator", "Slider", "Spinner", "SplitView", "Stepper", "Switch", "TabView", "Table", "TextArea", "TextField", "VStack", "OutlineView", "WebView"],
   "attributes": [
+    {"name": "borderless", "detail": "flag", "note": "macOS tab pages without a strip or border; use an external selector"},
+    {"name": "compact", "detail": "flag", "note": "macOS dense data grid or plain outline sidebar"},
     {"name": "align", "detail": "word", "note": "cross-axis placement: start, center, end, stretch"},
     {"name": "align_self", "detail": "word", "note": "this element's own cross-axis place in its run: start, center, end, stretch"},
     {"name": "alignment", "detail": "number", "note": "text alignment inside the control"},
@@ -114,5 +116,5 @@
     {"name": "x", "detail": "number", "note": "how far from the left of a <Box> this control is placed, in points"},
     {"name": "y", "detail": "number", "note": "how far from the top of a <Box> this control is placed, in points"}
   ],
-  "booleanAttributes": ["animating", "checked", "editable", "enabled", "hidden", "indeterminate", "open", "wrap"]
+  "booleanAttributes": ["animating", "borderless", "compact", "checked", "editable", "enabled", "hidden", "indeterminate", "open", "wrap"]
 }

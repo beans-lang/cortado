@@ -122,6 +122,8 @@ pub class Vocabulary {
         if name == "indeterminate" { return host.P_INDETERMINATE }
         if name == "opacity" { return host.P_OPACITY }
         if name == "lines" { return host.P_LINES }
+        if name == "borderless" { return host.P_BORDERLESS }
+        if name == "compact" { return host.P_COMPACT }
         if name == "day" { return host.P_DATE }
         if name == "color" { return host.P_COLOR }
         if name == "open" { return host.P_EXPANDED }

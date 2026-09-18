@@ -121,6 +121,11 @@ ctd_status ctd_toolbar_set(ctd_handle surface, ctd_handle menu_handle) {
     NSToolbar *bar = [[NSToolbar alloc] initWithIdentifier:@"cortado"];
     [bar setDelegate:delegate];
     [bar setAllowsUserCustomization:NO];
+    // Let AppKit draw the unified title bar. On current macOS that includes
+    // the system's Liquid Glass material; older systems keep their own look.
+    if (@available(macOS 11.0, *)) {
+        [window setToolbarStyle:NSWindowToolbarStyleUnified];
+    }
     [window setToolbar:bar];
     [g_targets addObject:delegate];
     [delegate release];

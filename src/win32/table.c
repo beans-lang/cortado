@@ -75,6 +75,22 @@ ctd_status ctd_set_table_source(ctd_table_fn source, void *context) {
     return CTD_OK;
 }
 
+ctd_status ctd_set_table_edit_policy(ctd_table_editable_fn policy, void *context) {
+    (void)policy; (void)context;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_table_editing(ctd_handle table, int32_t on) {
+    (void)table; (void)on;
+    return CTD_ERR_UNSUPPORTED;
+}
+
+ctd_status ctd_table_edit_as_user(ctd_handle table, int32_t row, int32_t column,
+                                  const char *utf8, int32_t len) {
+    (void)table; (void)row; (void)column; (void)utf8; (void)len;
+    return CTD_ERR_UNSUPPORTED;
+}
+
 ctd_status ctd_table_columns(ctd_handle table, int32_t count) {
     ctd_status problem;
     HWND view = ctd_table_window(table, &problem);

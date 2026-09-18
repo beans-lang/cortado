@@ -347,6 +347,11 @@ ctd_status ctd_widget_focus(ctd_handle widget) {
     if (!object) return CTD_ERR_STALE;
     if (![object isKindOfClass:[NSView class]]) return CTD_ERR_UNSUPPORTED;
     NSView *view = (NSView *)object;
+    // The handle belongs to the scroller; the document owns the keyboard.
+    NSTextView *editor = ctd_text_view(object);
+    NSTableView *table = ctd_table_view(object);
+    if (editor) view = editor;
+    else if (table) view = table;
     if (![view acceptsFirstResponder]) {
         // Two different answers to two different questions. A canvas *can*
         // take the keyboard on this platform and simply has not been asked to;
@@ -367,13 +372,18 @@ int32_t ctd_widget_focused(ctd_handle widget) {
     id object = ctd_resolve(widget);
     if (![object isKindOfClass:[NSView class]]) return 0;
     NSView *view = (NSView *)object;
+    // The handle belongs to the scroller; the document owns the keyboard.
+    NSTextView *editor = ctd_text_view(object);
+    NSTableView *table = ctd_table_view(object);
+    if (editor) view = editor;
+    else if (table) view = table;
     NSWindow *window = [view window];
     if (!window) return 0;
     // "The control this window would type into", not "the control the user is
     // typing into". The second needs the window to be on screen and in front,
     // which makes it a fact about the desktop rather than about the program —
     // and would make this unanswerable in a headless run.
-    return ctd_responder_view([window firstResponder]) == view ? 1 : 0;
+    return ctd_handle_for_view(ctd_responder_view([window firstResponder])) == widget ? 1 : 0;
 }
 
 // ----------------------------------------------------------------- synthesis

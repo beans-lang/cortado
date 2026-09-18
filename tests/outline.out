@@ -20,4 +20,6 @@
   a node it is not showing is refused: true
 -- a second column --
   a second column is given, or refused as unsupported: true
+-- node icons --
+  an icon policy keeps native text intact: true
 drove=true

@@ -43,6 +43,19 @@ pub class TextArea extends Widget {
         return self.text_raw()
     }
 
+    /// Use the platform's native plain-text editor for code such as SQL.
+    ///
+    /// On macOS this uses the monospaced system font and stops smart quotes,
+    /// smart dashes, text replacements and spelling correction. Other hosts
+    /// refuse this mode until they can offer the same native editing rules.
+    pub fn set_code_mode(on: bool) -> Result<bool> {
+        return self.set_flag(host.P_CODE_MODE, on, "set code mode on a text area")
+    }
+
+    pub fn is_code_mode() -> Result<bool> {
+        return self.read_flag(host.P_CODE_MODE, "read code mode on a text area")
+    }
+
     pub override fn display_text() -> Result<string> {
         return self.text_raw()
     }

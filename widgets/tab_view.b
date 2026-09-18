@@ -21,6 +21,11 @@ import cortado.host
 /// text on any platform cortado targets. `set_label` names one by index, the
 /// same shape a table's column titles use.
 pub class TabView extends ChildHolder {
+    /// Hide the native strip and border when an external control selects pages.
+    pub fn set_borderless(on: bool) -> Result<bool> {
+        return self.set_property(host.P_BORDERLESS, if on { 1 } else { 0 })
+    }
+
     pub fn init() {
         super.init(WidgetKind.tab_view)
     }

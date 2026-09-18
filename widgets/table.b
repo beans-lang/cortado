@@ -25,6 +25,11 @@ import cortado.host
 pub class Table extends Widget {
     priv columns: int = 0
 
+    /// Dense native macOS data grid or sidebar.
+    pub fn set_compact(on: bool) -> Result<bool> {
+        return self.set_property(host.P_COMPACT, if on { 1 } else { 0 })
+    }
+
     pub fn init() {
         super.init(WidgetKind.table)
     }
@@ -74,6 +79,45 @@ pub class Table extends Widget {
             return host.check(
                 host.ctd_table_column_width(self.handle().raw, column as i32, points) as int,
                 "set the width of a table column")
+        }
+    }
+
+    /// Allow the native editor only for cells whose policy returns true.
+    /// The policy must answer immediately. A committed edit raises
+    /// `text_commit` on this table: `index` is the row, `token` the column,
+    /// and `text` the proposed value. Save it in your source and call
+    /// `reload()`; if the source does not change, the cell reverts.
+    /// Tables are read-only until this is called.
+    pub fn set_editable_when(policy: fn(int, int) -> bool) -> Result<bool> {
+        unsafe {
+            host.check(host.ctd_table_editing(self.handle().raw, 1) as int,
+                       "enable native table cell editing")?
+        }
+        TableDesk.instance.set_edit_policy(self.handle().raw, policy)
+        return ok(true)
+    }
+
+    /// Return the table to its default read-only state.
+    pub fn clear_editable() -> Result<bool> {
+        unsafe {
+            host.check(host.ctd_table_editing(self.handle().raw, 0) as int,
+                       "disable native table cell editing")?
+        }
+        TableDesk.instance.clear_edit_policy(self.handle().raw)
+        return ok(true)
+    }
+
+    /// Simulate a user committing one cell, through the native data source.
+    /// Useful in tests that run without a visible window.
+    pub fn edit_as_user(row: int, column: int, text: string) -> Result<bool> {
+        let buffer: Bytes = host.HostText.encode(text, "edit a table cell")?
+        unsafe {
+            return host.check(
+                host.ctd_table_edit_as_user(self.handle().raw, row as i32,
+                                            column as i32,
+                                            host.HostText.pointer(buffer),
+                                            buffer.len() as i32) as int,
+                "edit a table cell as the user")
         }
     }
 

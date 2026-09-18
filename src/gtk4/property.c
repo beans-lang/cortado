@@ -71,6 +71,9 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
                                     value == 0 ? PANGO_ELLIPSIZE_NONE : PANGO_ELLIPSIZE_END);
             return CTD_OK;
         }
+        case CTD_P_CODE_MODE:
+            return ctd_slot_kind(widget) == CTD_W_TEXT_AREA
+                 ? CTD_ERR_UNSUPPORTED : CTD_ERR_KIND;
         case CTD_P_AXIS:
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             if (value < 0 || value > 1) return CTD_ERR_RANGE;
@@ -269,6 +272,9 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             value = lines < 0 ? 0 : lines;
             break;
         }
+        case CTD_P_CODE_MODE:
+            return ctd_slot_kind(widget) == CTD_W_TEXT_AREA
+                 ? CTD_ERR_UNSUPPORTED : CTD_ERR_KIND;
         case CTD_P_AXIS:
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = gtk_orientable_get_orientation(GTK_ORIENTABLE(object)) ==

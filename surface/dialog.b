@@ -78,6 +78,13 @@ pub class Dialog {
         return Dialog.open(parent.handle(), kind, title, body, token)
     }
 
+    /// Opens a sheet on a surface handle supplied by a component Stage.
+    /// The answer arrives as a `post` event carrying `token`.
+    pub static fn ask_on(parent: host.Handle, kind: DialogKind, title: string,
+                         body: string, token: int) -> Result<bool> {
+        return Dialog.open(parent, kind, title, body, token)
+    }
+
     /// The same, with no surface to attach to.
     pub static fn ask_free(kind: DialogKind, title: string, body: string,
                            token: int) -> Result<bool> {

@@ -49,6 +49,10 @@ static NSString *ctd_shortcut(NSString *spec, NSEventModifierFlags *mask) {
             key = part;
         }
     }
+    // AppKit expects the character produced by Return, not the word
+    // "return". A literal word leaves the menu label intact but never fires.
+    if ([key isEqualToString:@"return"] || [key isEqualToString:@"enter"])
+        return @"\r";
     return key;
 }
 
@@ -62,7 +66,7 @@ static NSString *ctd_shortcut_text(NSMenuItem *item) {
     if (mask & NSEventModifierFlagControl) [parts addObject:@"ctrl"];
     if (mask & NSEventModifierFlagOption)  [parts addObject:@"alt"];
     if (mask & NSEventModifierFlagShift)   [parts addObject:@"shift"];
-    [parts addObject:[key lowercaseString]];
+    [parts addObject:[key isEqualToString:@"\r"] ? @"return" : [key lowercaseString]];
     return [parts componentsJoinedByString:@"+"];
 }
 
@@ -154,12 +158,21 @@ ctd_status ctd_menu_add_item(ctd_handle handle, const char *title, int32_t title
     if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
     if (role < 0 || role > CTD_CMD_FULLSCREEN) return CTD_ERR_RANGE;
 
-    NSString *shown = ctd_role_title(role, ctd_string(title, title_len));
+    NSString *requested = ctd_string(title, title_len);
+    NSString *shown = ctd_role_title(role, requested);
+    // The app host uses token zero for its standard macOS commands. Keep the
+    // app name in those titles; an explicit application command can still use
+    // the role's ordinary platform title and its own token.
+    if (token == 0 && [requested length] > 0 &&
+        (role == CTD_CMD_ABOUT || role == CTD_CMD_HIDE || role == CTD_CMD_QUIT))
+        shown = requested;
     NSString *spec = ctd_role_key(role, ctd_string(key, key_len));
     NSEventModifierFlags mask = 0;
     NSString *equivalent = ctd_shortcut(spec, &mask);
 
     SEL action = ctd_role_selector(role);
+    if (role == CTD_CMD_ABOUT && token == 0)
+        action = @selector(orderFrontStandardAboutPanel:);
     NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:shown
                                                  action:action ? action : @selector(chose:)
                                           keyEquivalent:equivalent];
@@ -218,9 +231,71 @@ int32_t ctd_menu_item_key(ctd_handle handle, int32_t index, char *out, int32_t c
     return ctd_copy_out(ctd_shortcut_text([menu itemAtIndex:index]), out, cap);
 }
 
+// AppKit owns these application actions. Add them when a caller installs a
+// normal application menu, rather than handing fake command tokens to Beans.
+// This also gives a manually assembled Cortado menu the expected macOS items.
+static void ctd_complete_app_menu(NSMenu *bar) {
+    if ([bar numberOfItems] == 0) return;
+    NSMenu *app = [[bar itemAtIndex:0] submenu];
+    if (!app) return;
+
+    NSInteger hide_index = -1;
+    NSInteger quit_index = -1;
+    BOOL has_native_visibility_items = NO;
+    for (NSInteger index = 0; index < [app numberOfItems]; index++) {
+        NSMenuItem *item = [app itemAtIndex:index];
+        SEL action = [item action];
+        if (action == @selector(hide:)) hide_index = index;
+        if (action == @selector(terminate:)) quit_index = index;
+        if (action == @selector(hideOtherApplications:) ||
+            action == @selector(unhideAllApplications:) ||
+            [[item title] isEqualToString:@"Services"])
+            has_native_visibility_items = YES;
+    }
+    // A caller that supplied any of these items controls its own app menu.
+    if (hide_index < 0 || quit_index <= hide_index || has_native_visibility_items) return;
+
+    if (hide_index > 0 && ![[app itemAtIndex:hide_index - 1] isSeparatorItem]) {
+        [app insertItem:[NSMenuItem separatorItem] atIndex:hide_index];
+        hide_index++;
+    }
+
+    NSMenu *services = [[NSMenu alloc] initWithTitle:@"Services"];
+    NSMenuItem *services_item = [[NSMenuItem alloc] initWithTitle:@"Services"
+                                                        action:NULL
+                                                 keyEquivalent:@""];
+    [services_item setSubmenu:services];
+    [app insertItem:services_item atIndex:hide_index];
+    [NSApp setServicesMenu:services];
+    [services_item release];
+    [services release];
+
+    // One after Services separates it from the visibility commands.
+    [app insertItem:[NSMenuItem separatorItem] atIndex:hide_index + 1];
+    hide_index += 2;
+
+    NSMenuItem *others = [[NSMenuItem alloc] initWithTitle:@"Hide Others"
+                                                   action:@selector(hideOtherApplications:)
+                                            keyEquivalent:@"h"];
+    [others setKeyEquivalentModifierMask:NSEventModifierFlagCommand |
+                                         NSEventModifierFlagOption];
+    [others setTarget:nil];
+    [app insertItem:others atIndex:hide_index + 1];
+    [others release];
+
+    NSMenuItem *show_all = [[NSMenuItem alloc] initWithTitle:@"Show All"
+                                                     action:@selector(unhideAllApplications:)
+                                              keyEquivalent:@""];
+    [show_all setTarget:nil];
+    [app insertItem:show_all atIndex:hide_index + 2];
+    [show_all release];
+    [app insertItem:[NSMenuItem separatorItem] atIndex:hide_index + 3];
+}
+
 ctd_status ctd_menu_set_bar(ctd_handle handle) {
     NSMenu *menu = ctd_menu_of(handle);
     if (!menu) return ctd_resolve(handle) ? CTD_ERR_KIND : CTD_ERR_STALE;
+    ctd_complete_app_menu(menu);
     [NSApp setMainMenu:menu];
     return CTD_OK;
 }

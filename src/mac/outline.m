@@ -16,6 +16,7 @@
 // something else than it did before.
 
 #import "internal.h"
+#import <objc/runtime.h>
 
 static ctd_outline_fn      g_outline_shape;
 static void               *g_outline_shape_context;
@@ -92,6 +93,70 @@ static void               *g_outline_text_context;
     NSInteger at = [[view tableColumns] indexOfObject:column];
     if (at == NSNotFound) return @"";
     return ctd_outline_words(_handle, [self nodeOf:item], (int32_t)at);
+}
+
+// A native view cell gives the first column room for an SF Symbol beside its
+// text. AppKit keeps selection, focus, disclosure triangles, colors, and row
+// reuse; Cortado supplies only the role of the symbol for the visible node.
+- (NSView *)outlineView:(NSOutlineView *)view
+    viewForTableColumn:(NSTableColumn *)column
+                  item:(id)item {
+    NSInteger at = [[view tableColumns] indexOfObject:column];
+    if (at == NSNotFound) return nil;
+
+    NSString *identifier = at == 0 ? @"cortado-outline-icon-cell"
+                                    : @"cortado-outline-text-cell";
+    NSTableCellView *cell = [view makeViewWithIdentifier:identifier owner:self];
+    if (!cell) {
+        CGFloat width = [column width];
+        CGFloat height = [view rowHeight];
+        cell = [[[NSTableCellView alloc]
+            initWithFrame:NSMakeRect(0.0, 0.0, width, height)] autorelease];
+        [cell setIdentifier:identifier];
+
+        NSTextField *label = [[[NSTextField alloc]
+            initWithFrame:NSMakeRect(2.0, 0.0, width - 4.0, height)] autorelease];
+        [label setBezeled:NO];
+        [label setEditable:NO];
+        [label setSelectable:NO];
+        [label setDrawsBackground:NO];
+        [label setFont:[NSFont systemFontOfSize:[NSFont systemFontSize]]];
+        [label setLineBreakMode:NSLineBreakByTruncatingTail];
+        [label setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+        [cell addSubview:label];
+        [cell setTextField:label];
+
+        if (at == 0) {
+            NSImageView *picture = [[[NSImageView alloc]
+                initWithFrame:NSMakeRect(2.0, (height - 15.0) / 2.0,
+                                         15.0, 15.0)] autorelease];
+            [picture setImageScaling:NSImageScaleProportionallyDown];
+            [picture setAutoresizingMask:NSViewMinYMargin | NSViewMaxYMargin];
+            [cell addSubview:picture];
+            [cell setImageView:picture];
+        }
+    }
+
+    if ([objc_getAssociatedObject(view, @selector(ctdCompact)) boolValue]) {
+        [[cell textField] setFont:[NSFont monospacedSystemFontOfSize:12.0 weight:NSFontWeightRegular]];
+    }
+    [[cell textField] setStringValue:ctd_outline_words(_handle, [self nodeOf:item],
+                                                        (int32_t)at)];
+    if (at == 0) {
+        int32_t role = CTD_ICON_NONE;
+        if (g_outline_shape) {
+            role = (int32_t)g_outline_shape(g_outline_shape_context, _handle,
+                                            CTD_OUTLINE_ICON, [self nodeOf:item], 0);
+        }
+        NSImage *symbol = ctd_icon_image(role);
+        [[cell imageView] setImage:symbol];
+        [[cell imageView] setHidden:(symbol == nil)];
+        CGFloat left = symbol ? 21.0 : 2.0;
+        CGFloat width = [column width] - left - 2.0;
+        [[cell textField] setFrame:NSMakeRect(left, 0.0,
+            width > 0.0 ? width : 0.0, [view rowHeight])];
+    }
+    return cell;
 }
 
 - (void)outlineViewSelectionDidChange:(NSNotification *)note {

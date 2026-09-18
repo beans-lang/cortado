@@ -1,0 +1,7 @@
+default read-only: true
+cell policy gates edits: true
+row, column and UTF-8 text commit: true
+empty text commits: true
+unsaved edit reverts: true
+clearing the policy restores read-only: true
+drove=true

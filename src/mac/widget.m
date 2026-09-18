@@ -2,6 +2,69 @@
 
 #import "internal.h"
 
+static NSFont *ctd_code_font(CGFloat points) {
+    if (@available(macOS 10.15, *)) {
+        return [NSFont monospacedSystemFontOfSize:points weight:NSFontWeightRegular];
+    }
+    return [NSFont userFixedPitchFontOfSize:points];
+}
+
+@implementation CortadoTextView
+
+- (void)dealloc {
+    [_ctdRegularFont release];
+    [super dealloc];
+}
+
+- (BOOL)ctdCodeMode { return _ctdCodeMode; }
+
+- (void)ctdSetCodeMode:(BOOL)on {
+    if (on == _ctdCodeMode) return;
+    if (on) {
+        _ctdRegularFont = [[self font] retain];
+        _ctdRichText = [self isRichText];
+        _ctdSmartQuotes = [self isAutomaticQuoteSubstitutionEnabled];
+        _ctdSmartDashes = [self isAutomaticDashSubstitutionEnabled];
+        _ctdReplacements = [self isAutomaticTextReplacementEnabled];
+        _ctdSpellingCorrection = [self isAutomaticSpellingCorrectionEnabled];
+        _ctdSpellChecking = [self isContinuousSpellCheckingEnabled];
+
+        CGFloat size = _ctdRegularFont ? [_ctdRegularFont pointSize]
+                                       : [NSFont systemFontSize];
+        [self setRichText:NO];
+        [self setAutomaticQuoteSubstitutionEnabled:NO];
+        [self setAutomaticDashSubstitutionEnabled:NO];
+        [self setAutomaticTextReplacementEnabled:NO];
+        [self setAutomaticSpellingCorrectionEnabled:NO];
+        [self setContinuousSpellCheckingEnabled:NO];
+        [self setFont:ctd_code_font(size)];
+    } else {
+        [self setFont:_ctdRegularFont ? _ctdRegularFont
+                                      : [NSFont systemFontOfSize:[NSFont systemFontSize]]];
+        [self setRichText:_ctdRichText];
+        [self setAutomaticQuoteSubstitutionEnabled:_ctdSmartQuotes];
+        [self setAutomaticDashSubstitutionEnabled:_ctdSmartDashes];
+        [self setAutomaticTextReplacementEnabled:_ctdReplacements];
+        [self setAutomaticSpellingCorrectionEnabled:_ctdSpellingCorrection];
+        [self setContinuousSpellCheckingEnabled:_ctdSpellChecking];
+        [_ctdRegularFont release];
+        _ctdRegularFont = nil;
+    }
+    _ctdCodeMode = on;
+}
+
+- (void)ctdSetFontSize:(CGFloat)points {
+    if (_ctdCodeMode) {
+        [_ctdRegularFont release];
+        _ctdRegularFont = [[NSFont systemFontOfSize:points] retain];
+        [self setFont:ctd_code_font(points)];
+    } else {
+        [self setFont:[NSFont systemFontOfSize:points]];
+    }
+}
+
+@end
+
 // -------------------------------------------------------------------- widgets
 
 // Everything in the header, because AppKit has a control for all of it. The
@@ -144,7 +207,7 @@ ctd_handle ctd_widget_new(int32_t kind) {
             NSScrollView *scroller =
                 [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 100, 60)];
             NSTextView *text =
-                [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 100, 60)];
+                [[CortadoTextView alloc] initWithFrame:NSMakeRect(0, 0, 100, 60)];
             [text setMinSize:NSMakeSize(0, 0)];
             [text setMaxSize:NSMakeSize(FLT_MAX, FLT_MAX)];
             [text setVerticallyResizable:YES];
@@ -189,11 +252,15 @@ ctd_handle ctd_widget_new(int32_t kind) {
             NSScrollView *scroller =
                 [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 200, 120)];
             NSTableView *rows =
-                [[NSTableView alloc] initWithFrame:NSMakeRect(0, 0, 200, 120)];
+                [[CortadoDataTable alloc] initWithFrame:NSMakeRect(0, 0, 200, 120)];
             [rows setUsesAlternatingRowBackgroundColors:YES];
-            [rows setColumnAutoresizingStyle:NSTableViewUniformColumnAutoresizingStyle];
+            // Database grids give columns deliberate widths. AppKit's uniform
+            // autoresizing squeezes them back into the viewport whenever the
+            // split pane changes, clipping values with no way to reach them.
+            [rows setColumnAutoresizingStyle:NSTableViewNoColumnAutoresizing];
             [scroller setDocumentView:rows];
             [scroller setHasVerticalScroller:YES];
+            [scroller setHasHorizontalScroller:YES];
             [scroller setBorderType:NSBezelBorder];
             [rows release];
             view = scroller;

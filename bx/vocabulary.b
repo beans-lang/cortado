@@ -141,7 +141,7 @@ pub fn controls() -> List<string> {
 /// `<ProgressBar indeterminate />` needed a value. Nothing said so, because
 /// nothing compared the two.
 pub fn boolean_attributes() -> List<string> {
-    return ["animating", "checked", "editable", "enabled", "hidden",
+    return ["animating", "borderless", "compact", "checked", "editable", "enabled", "hidden",
             "indeterminate", "open", "wrap"]
 }
 
@@ -197,6 +197,8 @@ fn attribute_note(name: string) -> string {
     if name == "align" { return "cross-axis placement: start, center, end, stretch" }
     if name == "justify" { return "main-axis distribution: start, center, end, space_between, space_around, space_evenly" }
     if name == "enabled" { return "whether the control responds" }
+    if name == "borderless" { return "macOS tab pages without a strip or border; use an external selector" }
+    if name == "compact" { return "macOS dense data grid or plain outline sidebar" }
     if name == "hidden" { return "whether the control is drawn; hidden takes no room in the layout" }
     if name == "lines" { return "how many lines a label may wrap onto: 0 for as many as it needs, 1 for one cut short" }
     if name == "checked" { return "a check box's state" }

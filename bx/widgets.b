@@ -105,6 +105,7 @@ pub fn retired_tag(tag: string) -> string {
 pub fn is_boolean_attribute(name: string) -> bool {
     if name == "enabled" { return true }
     if name == "hidden" { return true }
+    if name == "borderless" || name == "compact" { return true }
     if name == "wrap" { return true }
     if name == "checked" { return true }
     if name == "editable" { return true }
@@ -260,7 +261,7 @@ pub fn is_colour_attribute(name: string) -> bool {
 
 /// Every attribute name cortado knows, for a diagnostic that can suggest one.
 pub fn attribute_names() -> List<string> {
-    return ["align", "align_self", "alignment", "animating", "aspect_ratio", "background", "basis",
+    return ["borderless", "compact", "align", "align_self", "alignment", "animating", "aspect_ratio", "background", "basis",
             "border_color", "border_width", "bottom", "checked", "color", "column_gap", "columns",
             "corner_radius",
             "day", "editable", "enabled", "flex",
@@ -323,6 +324,8 @@ pub fn tag_carries(tag: string, name: string) -> bool {
     if name == "step" { return one_of(tag, ["Slider", "Stepper"]) }
     // Only a label wraps; every other control draws its words on one line.
     if name == "lines" { return tag == "Label" }
+    if name == "borderless" { return tag == "TabView" }
+    if name == "compact" { return tag == "Table" || tag == "OutlineView" }
     // The four bezelled text controls draw an opaque bezel over anything set
     // behind them. Corners and borders have no such rule.
     if name == "background" { return !is_typed_into(tag) }

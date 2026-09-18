@@ -535,6 +535,9 @@ static inline int32_t ctd_rule_carries(int32_t kind, int32_t space, int32_t key)
         case CTD_P_BG_COLOR:      return ctd_kind_has_background(kind);
         case CTD_P_FG_COLOR:      return ctd_kind_has_fg_color(kind);
         case CTD_P_LINES:         return ctd_kind_has_lines(kind);
+        case CTD_P_CODE_MODE:     return kind == CTD_W_TEXT_AREA;
+        case CTD_P_BORDERLESS:    return kind == CTD_W_TAB_VIEW;
+        case CTD_P_COMPACT:       return kind == CTD_W_TABLE || kind == CTD_W_OUTLINE_VIEW;
         case CTD_P_FOCUSABLE:
         case CTD_P_A11Y_ROLE:     return ctd_kind_is_drawn(kind);
         default:                  return CTD_ERR_RANGE;

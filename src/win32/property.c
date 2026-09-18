@@ -79,6 +79,8 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             InvalidateRect(view, NULL, TRUE);
             return CTD_OK;
         }
+        case CTD_P_CODE_MODE:
+            return kind == CTD_W_TEXT_AREA ? CTD_ERR_UNSUPPORTED : CTD_ERR_KIND;
         case CTD_P_HIDDEN:
             ShowWindow(view, value ? SW_HIDE : SW_SHOW);
             return CTD_OK;
@@ -226,6 +228,8 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             if (!ctd_kind_has_lines(kind)) return CTD_ERR_KIND;
             value = g_lines[(uint32_t)(widget & 0xffffffffu)];
             break;
+        case CTD_P_CODE_MODE:
+            return kind == CTD_W_TEXT_AREA ? CTD_ERR_UNSUPPORTED : CTD_ERR_KIND;
         case CTD_P_HIDDEN:
             // The style bit, not `IsWindowVisible`, which also answers no for
             // every child of a window that has not been shown — and in a

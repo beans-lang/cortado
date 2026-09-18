@@ -15,9 +15,11 @@ pub class UiEvent {
     pub kind: EventKind = EventKind.unknown
     pub target: host.Handle = host.Handle.none()
     pub modifiers: int = 0
-    /// Row, tab, selected index or key code, depending on `kind`.
+    /// Row, tab, selected index or key code, depending on `kind`. For a table
+    /// cell's `text_commit`, this is the row.
     pub index: int = 0
-    /// Echoes the word passed to `Application.post`, for `post` events.
+    /// Echoes the word passed to `Application.post`, for `post` events. For a
+    /// table cell's `text_commit`, this is the column.
     pub token: int = 0
     pub position: geometry.Point = geometry.Point.zero()
     pub size: geometry.Size = geometry.Size.zero()

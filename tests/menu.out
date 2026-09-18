@@ -4,7 +4,12 @@ menu bar available: true
     About
     Settings…  [mod+,]
     -
+    Services
+    -
     Hide  [mod+h]
+    Hide Others  [mod+alt+h]
+    Show All
+    -
     Quit  [mod+q]
   file:
     New Order  [mod+n]

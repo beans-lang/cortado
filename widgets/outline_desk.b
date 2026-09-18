@@ -11,6 +11,8 @@ import cortado.host
 class OutlineBook {
     priv handles: List<u64> = []
     priv sources: List<OutlineNodes> = []
+    priv icon_handles: List<u64> = []
+    priv icon_policies: List<fn(int) -> SystemIcon> = []
 
     pub fn init() {}
 
@@ -28,6 +30,7 @@ class OutlineBook {
     }
 
     pub fn forget(handle: u64) {
+        self.clear_icon_when(handle)
         var index: int = 0
         for index < self.handles.len() {
             if self.handles[index] == handle {
@@ -37,6 +40,42 @@ class OutlineBook {
             }
             index = index + 1
         }
+    }
+
+    pub fn set_icon_when(handle: u64, policy: fn(int) -> SystemIcon) {
+        var index: int = 0
+        for index < self.icon_handles.len() {
+            if self.icon_handles[index] == handle {
+                self.icon_policies[index] = policy
+                return
+            }
+            index = index + 1
+        }
+        self.icon_handles.push(handle)
+        self.icon_policies.push(policy)
+    }
+
+    pub fn clear_icon_when(handle: u64) {
+        var index: int = 0
+        for index < self.icon_handles.len() {
+            if self.icon_handles[index] == handle {
+                self.icon_handles.remove(index)
+                self.icon_policies.remove(index)
+                return
+            }
+            index = index + 1
+        }
+    }
+
+    pub fn icon_of(handle: u64, node: int) -> SystemIcon {
+        var index: int = 0
+        for index < self.icon_handles.len() {
+            if self.icon_handles[index] == handle {
+                return self.icon_policies[index](node)
+            }
+            index = index + 1
+        }
+        return SystemIcon.none
     }
 
     pub fn find(handle: u64) -> Option<OutlineNodes> {
@@ -66,6 +105,9 @@ class OutlineBook {
         if (what as int) == host.OUTLINE_EXPANDS {
             if nodes.expandable(node as int) { return 1 }
             return 0
+        }
+        if (what as int) == host.OUTLINE_ICON {
+            return self.icon_of(handle, node as int).code() as i64
         }
         return 0
     }
@@ -131,6 +173,12 @@ pub singleton class OutlineDesk {
 
     pub fn put(handle: u64, nodes: OutlineNodes) { self.book.put(handle, nodes) }
     pub fn forget(handle: u64) { self.book.forget(handle) }
+
+    pub fn set_icon_when(handle: u64, policy: fn(int) -> SystemIcon) {
+        self.book.set_icon_when(handle, policy)
+    }
+
+    pub fn clear_icon_when(handle: u64) { self.book.clear_icon_when(handle) }
 
     pub fn nodes_of(handle: u64) -> Option<OutlineNodes> {
         return self.book.find(handle)

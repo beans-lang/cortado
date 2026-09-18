@@ -39,6 +39,11 @@ import cortado.host
 pub class OutlineView extends Widget {
     priv columns: int = 0
 
+    /// Dense native macOS data grid or sidebar.
+    pub fn set_compact(on: bool) -> Result<bool> {
+        return self.set_property(host.P_COMPACT, if on { 1 } else { 0 })
+    }
+
     pub fn init() {
         super.init(WidgetKind.outline_view)
     }
@@ -102,6 +107,15 @@ pub class OutlineView extends Widget {
     /// source, the same arrangement a table uses — see `OutlineDesk`.
     pub fn set_source(nodes: OutlineNodes) -> Result<bool> {
         OutlineDesk.instance.put(self.handle().raw, nodes)
+        return self.reload()
+    }
+
+    /// Draw a system icon beside each visible node in the first column.
+    /// Return `SystemIcon.none` for a row without an icon. The callback runs
+    /// while the native view draws, so it must answer from data already held
+    /// in memory. macOS uses SF Symbols; other hosts may show text only.
+    pub fn set_icon_when(policy: fn(int) -> SystemIcon) -> Result<bool> {
+        OutlineDesk.instance.set_icon_when(self.handle().raw, policy)
         return self.reload()
     }
 

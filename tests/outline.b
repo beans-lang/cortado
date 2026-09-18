@@ -132,6 +132,7 @@ fn drive() -> Result<bool> {
     var root_clears: bool = true
     var select_unseen: bool = true
     var second_column: bool = true
+    var icons_keep_text: bool = true
 
     if here {
         // One column, because that is what every host with an outline has. A
@@ -141,6 +142,13 @@ fn drive() -> Result<bool> {
         root.add(tree)?
         tree.set_frame(geometry.Rect.of(0.0, 0.0, 300.0, 220.0))?
         tree.set_source(forest)?
+
+        // An icon policy is optional. Adding one must leave the same source
+        // and native text path intact, including on hosts that draw text only.
+        icons_keep_text = tree.set_icon_when(fn(node: int) -> widgets.SystemIcon {
+            if node <= 4 { return widgets.SystemIcon.folder }
+            return widgets.SystemIcon.document
+        }).or(false) && tree.native_cell(1, 0).or("?") == "node 1"
 
         // Out through the source, into the platform's own tree, and back.
         // Node 1 is a root, so the control has it without anything opening.
@@ -220,6 +228,9 @@ fn drive() -> Result<bool> {
 
     io.println("-- a second column --")
     io.println("  a second column is given, or refused as unsupported: {second_column}")
+
+    io.println("-- node icons --")
+    io.println("  an icon policy keeps native text intact: {icons_keep_text}")
 
     app.shutdown()
     return ok(true)

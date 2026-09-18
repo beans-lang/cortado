@@ -17,6 +17,7 @@ import std.io
 
 const SAY_HELLO: int = 201
 const PICK_FILE: int = 202
+const PICK_FROM_HANDLE: int = 203
 
 class Answers {
     pub lines: List<string> = []
@@ -73,10 +74,12 @@ fn build() -> Result<bool> {
 
     surface.Dialog.ask_free(surface.DialogKind.message, "Hello", "Nothing is wrong", SAY_HELLO)?
     surface.Dialog.ask(window, surface.DialogKind.open_file, "Open", "Pick a file", PICK_FILE)?
+    surface.Dialog.ask_on(window.handle(), surface.DialogKind.open_file,
+                          "Open from a component", "Pick a file", PICK_FROM_HANDLE)?
     for line: string in seen.lines {
         io.println("  {line}")
     }
-    io.println("  both dialogs answered: {seen.lines.len() == 2}")
+    io.println("  all dialogs answered: {seen.lines.len() == 3}")
 
     // **How often a program re-renders follows the screen, not the mouse.**
     //

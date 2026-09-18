@@ -54,6 +54,11 @@ pub class WindowSpec {
 pub class AppOptions {
     /// `gui` for a program, `headless` for a gate. `--dump` overrides it.
     pub role: platform.AppRole = platform.AppRole.gui
+    /// The menu bar heading for the root screen's `@command` methods.
+    /// A database editor may call this "Run"; a general app can use "Commands".
+    pub command_menu_title: string = "Commands"
+    /// Keep commands in the menu when the screen supplies its own toolbar.
+    pub native_toolbar: bool = true
     /// Registrations a scan cannot find — a factory, a closed generic, an
     /// instance built before the container. Runs after `barista.add_services`,
     /// so it can also replace what the scan found.
@@ -180,14 +185,19 @@ fn root_component<T>(container: Container) -> Result<Root> {
 ///
 /// Routing is separate and comes after the screen exists — see
 /// `route_commands` — because a handler needs something to call.
-fn install_commands(described: reflect.Type, window: surface.Window, title: string) -> Result<List<DeclaredCommand>> {
+fn install_commands(described: reflect.Type, window: surface.Window,
+                    title: string, command_menu_title: string, native_toolbar: bool) -> Result<List<DeclaredCommand>> {
     let declared: List<DeclaredCommand> = declared_commands(described)?
-    if declared.is_empty() { return ok(move declared) }
-    let menu: surface.Menu = build_menu(title, declared)?
-    // A platform with no toolbar still gets the menu bar, which is where the
-    // host puts a command table when there is nowhere else for it.
-    if platform.Capability.toolbar.available() {
-        window.set_toolbar(menu)?
+    if native_toolbar && !declared.is_empty() && platform.Capability.toolbar.available() {
+        let toolbar: surface.Menu = build_menu(title, declared)?
+        window.set_toolbar(toolbar)?
+    }
+    // Every desktop application needs its normal application and editing
+    // menus, even when the root screen declares no toolbar commands.
+    if platform.Capability.menu_bar.available() {
+        let bar: surface.Menu = build_application_menu(
+            title, command_menu_title, declared)?
+        bar.install()?
     }
     return ok(move declared)
 }
@@ -204,7 +214,7 @@ pub fn run<T>(options: AppOptions) -> Result<bool> {
     var root: widgets.Container = new widgets.Container()
     window.set_root(root)?
     let declared: List<DeclaredCommand> =
-        install_commands(type_of(T), window, spec.title)?
+        install_commands(type_of(T), window, spec.title, options.command_menu_title, options.native_toolbar)?
 
     var mount: component.Mount = new component.Mount(root, app.router)
     mount.use_services(container)
@@ -254,7 +264,7 @@ pub fn dump<T>(options: AppOptions) -> Result<bool> {
     var root: widgets.Container = new widgets.Container()
     window.set_root(root)?
     let declared: List<DeclaredCommand> =
-        install_commands(type_of(T), window, spec.title)?
+        install_commands(type_of(T), window, spec.title, options.command_menu_title, options.native_toolbar)?
 
     var mount: component.Mount = new component.Mount(root, app.router)
     mount.use_services(container)

@@ -1,0 +1,10 @@
+starts in ordinary mode: true
+code mode turns on: true
+code mode keeps the text: true
+code mode keeps the point size: true
+font size can change in code mode: true
+ordinary mode returns: true
+ordinary mode keeps the new point size: true
+turning code mode off keeps the text: true
+invalid mode refused: out_of_range
+wrong control refused: wrong_widget

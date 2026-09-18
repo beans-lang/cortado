@@ -12,6 +12,8 @@ import cortado.host
 class TableBook {
     priv handles: List<u64> = []
     priv sources: List<TableRows> = []
+    priv edit_handles: List<u64> = []
+    priv edit_policies: List<fn(int, int) -> bool> = []
 
     pub fn init() {}
 
@@ -29,6 +31,7 @@ class TableBook {
     }
 
     pub fn forget(handle: u64) {
+        self.clear_edit_policy(handle)
         var index: int = 0
         for index < self.handles.len() {
             if self.handles[index] == handle {
@@ -38,6 +41,43 @@ class TableBook {
             }
             index = index + 1
         }
+    }
+
+    pub fn set_edit_policy(handle: u64, policy: fn(int, int) -> bool) {
+        var index: int = 0
+        for index < self.edit_handles.len() {
+            if self.edit_handles[index] == handle {
+                self.edit_policies[index] = policy
+                return
+            }
+            index = index + 1
+        }
+        self.edit_handles.push(handle)
+        self.edit_policies.push(policy)
+    }
+
+    pub fn clear_edit_policy(handle: u64) {
+        var index: int = 0
+        for index < self.edit_handles.len() {
+            if self.edit_handles[index] == handle {
+                self.edit_handles.remove(index)
+                self.edit_policies.remove(index)
+                return
+            }
+            index = index + 1
+        }
+    }
+
+    pub fn may_edit(handle: u64, row: i32, column: i32) -> i32 {
+        var index: int = 0
+        for index < self.edit_handles.len() {
+            if self.edit_handles[index] == handle {
+                if self.edit_policies[index](row as int, column as int) { return 1 }
+                return 0
+            }
+            index = index + 1
+        }
+        return 0
     }
 
     pub fn find(handle: u64) -> Option<TableRows> {
@@ -83,6 +123,7 @@ class TableBook {
 pub singleton class TableDesk {
     priv book: TableBook = new TableBook()
     priv hook: LocalStoredCallback<fn(RawPtr<u8>, u64, i32, i32, RawPtr<i8>, i32) -> i32>
+    priv edit_hook: LocalStoredCallback<fn(RawPtr<u8>, u64, i32, i32) -> i32>
 
     pub fn init() {
         let book: TableBook = new TableBook()
@@ -91,8 +132,13 @@ pub singleton class TableDesk {
             fn(table: u64, row: i32, column: i32, out: RawPtr<i8>, cap: i32) -> i32 {
                 return book.fill(table, row, column, out, cap)
             })
+        self.edit_hook = LocalStoredCallback.create(0,
+            fn(table: u64, row: i32, column: i32) -> i32 {
+                return book.may_edit(table, row, column)
+            })
         unsafe {
             host.ctd_set_table_source(self.hook.function(), self.hook.context())
+            host.ctd_set_table_edit_policy(self.edit_hook.function(), self.edit_hook.context())
         }
     }
 
@@ -100,4 +146,8 @@ pub singleton class TableDesk {
     pub fn forget(handle: u64) { self.book.forget(handle) }
 
     pub fn rows_of(handle: u64) -> Option<TableRows> { return self.book.find(handle) }
+    pub fn set_edit_policy(handle: u64, policy: fn(int, int) -> bool) {
+        self.book.set_edit_policy(handle, policy)
+    }
+    pub fn clear_edit_policy(handle: u64) { self.book.clear_edit_policy(handle) }
 }

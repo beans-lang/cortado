@@ -937,6 +937,20 @@ pub class Mount implements Composer {
     /// Framework use: records which element a control stands for.
     pub fn record(handle: u64, element: Element) {
         self.by_handle[handle] = element
+        // AppKit moves a split view's panes while the user drags its divider.
+        // Their descendants still have the boxes from the last solve until
+        // the mount solves again. Watch every mounted split, including nested
+        // ones; EventRouter.watch replaces an existing watch on a refresh.
+        if element.kind == widgets.WidgetKind.split_view {
+            let owner: Mount = self
+            self.router.watch(host.Handle.of(handle), events.EventKind.value_changed,
+                fn(event: events.UiEvent) {
+                    match owner.lay_out() {
+                        ok(done) => { owner.note_boxes() }
+                        err(problem) => {}
+                    }
+                })
+        }
         // The element keeps its control too, which is what lets `Stage` hand a
         // component the controls it rendered without a reverse map anybody has
         // to keep correct.

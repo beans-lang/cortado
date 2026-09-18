@@ -28,5 +28,6 @@
 -- a scroll view --
   the viewport is the height it was given: true
   what it scrolls over is taller: true
+  a dragged divider resizes the controls inside its pane: true
   a released split view is not arranged on a guess: true
 drove=true

@@ -156,9 +156,12 @@ pub extern "C" fn ctd_tab_set_label(widget: u64, index: i32, utf8: RawPtr<i8>, l
 pub extern "C" fn ctd_tab_label(widget: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_items_at(widget: u64, index: i32, out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_set_table_source(source: fn(RawPtr<u8>, u64, i32, i32, RawPtr<i8>, i32) -> i32, context: RawPtr<u8>) -> i32
+pub extern "C" fn ctd_set_table_edit_policy(policy: fn(RawPtr<u8>, u64, i32, i32) -> i32, context: RawPtr<u8>) -> i32
 pub extern "C" fn ctd_table_columns(table: u64, count: i32) -> i32
 pub extern "C" fn ctd_table_column_title(table: u64, column: i32, utf8: RawPtr<i8>, len: i32) -> i32
 pub extern "C" fn ctd_table_column_width(table: u64, column: i32, points: f64) -> i32
+pub extern "C" fn ctd_table_editing(table: u64, on: i32) -> i32
+pub extern "C" fn ctd_table_edit_as_user(table: u64, row: i32, column: i32, utf8: RawPtr<i8>, len: i32) -> i32
 pub extern "C" fn ctd_table_rows(table: u64, count: i32) -> i32
 pub extern "C" fn ctd_table_reload(table: u64) -> i32
 pub extern "C" fn ctd_table_cell(table: u64, row: i32, column: i32, out: RawPtr<i8>, cap: i32) -> i32

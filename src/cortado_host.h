@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 
-#define CTD_ABI_VERSION 30
+#define CTD_ABI_VERSION 32
 
 /* A widget, surface or image. High 32 bits are the slot's generation, low 32
  * the slot itself. Zero is "no handle" and is always invalid. */
@@ -91,7 +91,7 @@ typedef struct ctd_event {
 
 #define CTD_EV_ACTIVATE         1  /* button pressed, menu item chosen        */
 #define CTD_EV_VALUE_CHANGED    2  /* slider moved, checkbox toggled, typed   */
-#define CTD_EV_TEXT_COMMIT      3  /* return pressed, or focus left the field */
+#define CTD_EV_TEXT_COMMIT      3  /* field commit; table: row=index, column=token */
 #define CTD_EV_SELECTION        4  /* list or table selection moved           */
 #define CTD_EV_POINTER_DOWN     5  /* mouse button or finger down             */
 #define CTD_EV_POINTER_UP       6
@@ -728,6 +728,19 @@ ctd_status ctd_view_content_size(ctd_handle widget, double *out_size);
  * 1 for one line cut with an ellipsis, negative is CTD_ERR_RANGE. Carried by
  * CTD_W_LABEL alone; every other kind draws its text on one line. */
 #define CTD_P_LINES         28
+
+/* Native plain-text editing for source code. Only a text area carries this
+ * property. On macOS it uses a monospaced system font and turns off smart
+ * quotes, smart dashes, text replacements and spelling correction. The
+ * original text-entry settings return when it is turned off. Other hosts
+ * answer CTD_ERR_UNSUPPORTED until they have an equivalent native mode. */
+#define CTD_P_CODE_MODE     29
+
+/* macOS presentation, opt-in. Other hosts return UNSUPPORTED.
+ * BORDERLESS: TabView hides its strip and border; select pages with Segmented.
+ * COMPACT: Table uses a 23pt monospaced grid; OutlineView uses a plain sidebar. */
+#define CTD_P_BORDERLESS    30
+#define CTD_P_COMPACT       31
 
 /* ---- a control a program draws itself ------------------------------------
  *
@@ -1468,6 +1481,10 @@ int32_t ctd_toolbar_label(ctd_handle surface, int32_t index, char *out, int32_t 
  * database has none and must not. A host that inferred one from the other
  * would make "empty" and "closed" the same thing. */
 #define CTD_OUTLINE_EXPANDS   2
+/* The system icon role for `node`, or CTD_ICON_NONE. The host asks this only
+ * for a visible row and draws the icon from its own system set. `index` is
+ * unused. A source with no icon callback answers zero. */
+#define CTD_OUTLINE_ICON      3
 
 typedef int64_t (*ctd_outline_fn)(void *context, ctd_handle outline,
                                   int32_t what, int64_t node, int32_t index);
@@ -1813,8 +1830,15 @@ typedef int32_t (*ctd_table_fn)(void *context, ctd_handle table,
                                 int32_t row, int32_t column,
                                 char *out, int32_t cap);
 
+/* Whether one cell may enter the native editor. Called on the UI thread and
+ * must return immediately, just like ctd_table_fn. Zero means read-only.
+ * The default, before a policy is registered or editing is enabled, is zero. */
+typedef int32_t (*ctd_table_editable_fn)(void *context, ctd_handle table,
+                                         int32_t row, int32_t column);
+
 /* One source for the process, like the event sink. */
 ctd_status ctd_set_table_source(ctd_table_fn source, void *context);
+ctd_status ctd_set_table_edit_policy(ctd_table_editable_fn policy, void *context);
 
 /* How many columns, and what each is called. Columns are set before rows:
  * a table with no columns has nothing to draw a row into, and every host
@@ -1830,6 +1854,17 @@ ctd_status ctd_table_columns(ctd_handle table, int32_t count);
 ctd_status ctd_table_column_title(ctd_handle table, int32_t column,
                                   const char *utf8, int32_t len);
 ctd_status ctd_table_column_width(ctd_handle table, int32_t column, double points);
+
+/* Opt in to native cell editing. Each edit still asks the policy above.
+ * An accepted edit raises CTD_EV_TEXT_COMMIT on the table: index is the row,
+ * token is the column, and text is the proposed value. The program owns the
+ * source; after the event the host reads it again, so a rejected edit reverts.
+ * Other hosts may answer CTD_ERR_UNSUPPORTED. */
+ctd_status ctd_table_editing(ctd_handle table, int32_t on);
+/* Drive the same commit callback as the native editor for deterministic tests.
+ * Refuses cells that the edit policy keeps read-only. */
+ctd_status ctd_table_edit_as_user(ctd_handle table, int32_t row, int32_t column,
+                                  const char *utf8, int32_t len);
 
 /* How many rows there are. Pushed rather than pulled, because it is one
  * integer the program already knows and asking for it during a draw would be

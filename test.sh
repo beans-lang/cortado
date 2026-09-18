@@ -138,7 +138,7 @@ legs=0
 pass() { legs=$((legs + 1)); }
 
 # Cases that need a platform host. Only macOS has one so far.
-cases=(tree events attributes bridge mount viewport culled reflow scaled fluid fonts box nested slots shelf menu system roles text pixels applied leaks enabled checked controls numbers strings table outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
+cases=(tree events attributes bridge mount viewport culled reflow scaled fluid fonts box nested slots shelf menu system roles text code_mode pixels applied leaks enabled checked controls numbers strings table table_edit outline input surface machine gated pickers panes shell web page permission icons opacity styled custom clock clocks frames anim gpu triangle shapes canvas shader named_gradients)
 
 # The cases whose golden names nothing a platform gets to decide, so every host
 # must print them byte for byte. This is the list that makes "write once, run
@@ -545,6 +545,29 @@ if [[ "$host_os" == "Darwin" && $have_host -eq 1 ]]; then
         pass
     done
     echo "ok metal: 4 cases clean under Metal API Validation"
+fi
+
+# AppKit owns a table's document width. A portable TableRows test cannot see
+# whether a narrow split pane can still scroll to its last column, so exercise
+# the native scroll view directly against the same host sources Beans links.
+if [[ "$host_os" == "Darwin" && $have_host -eq 1 ]]; then
+    for native_case in mac_table_scroll mac_browser; do
+        if ! clang -w -fno-objc-arc \
+            -framework AppKit -framework Foundation -framework CoreVideo \
+            -framework QuartzCore -framework Metal -framework WebKit \
+            -framework AVFoundation -framework CoreBluetooth \
+            -framework CoreLocation -framework ScreenCaptureKit \
+            -framework Network -framework IOKit \
+            "$root"/src/mac/*.m "$root/tests/${native_case}.m" \
+            -o "$tmp/${native_case}" >"$tmp/${native_case}.build" 2>&1; then
+            cat "$tmp/${native_case}.build" >&2
+            exit 1
+        fi
+        "$tmp/${native_case}" >"$tmp/${native_case}.out"
+        grep -q ": true$" "$tmp/${native_case}.out"
+        pass
+        echo "ok mac: ${native_case}"
+    done
 fi
 
 # ------------------------------------------------------------- negative control

@@ -45,6 +45,23 @@ enum { CTD_SLOTS = 8192 };
 @property (nonatomic) int32_t ctdRole;
 @end
 
+// The native editor inside a text area's scroll view. Keeping its code-mode
+// state here ties it to the view's lifetime, even when handle slots are reused.
+@interface CortadoTextView : NSTextView {
+    NSFont *_ctdRegularFont;
+    BOOL _ctdCodeMode;
+    BOOL _ctdRichText;
+    BOOL _ctdSmartQuotes;
+    BOOL _ctdSmartDashes;
+    BOOL _ctdReplacements;
+    BOOL _ctdSpellingCorrection;
+    BOOL _ctdSpellChecking;
+}
+- (BOOL)ctdCodeMode;
+- (void)ctdSetCodeMode:(BOOL)on;
+- (void)ctdSetFontSize:(CGFloat)points;
+@end
+
 // AppKit's target/action wants an object with a selector. One of these sits
 // between a control and the sink, carrying the handle the event belongs to.
 // The control holds its target weakly, so `g_targets` keeps it alive.
@@ -74,9 +91,15 @@ enum { CTD_SLOTS = 8192 };
 - (void)forget;
 @end
 
+// Native data-grid navigation. Standard tables keep AppKit's normal behavior.
+@interface CortadoDataTable : NSTableView
+@property (assign) NSInteger ctdActiveColumn;
+@end
+
 @interface CortadoTableSource : NSObject <NSTableViewDataSource, NSTableViewDelegate>
 @property (assign) ctd_handle handle;
 @property (assign) NSInteger rows;
+@property (assign) BOOL editable;
 @end
 
 // A title you press to show or hide what is under it.

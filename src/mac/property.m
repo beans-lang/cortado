@@ -4,6 +4,7 @@
 // AppKit's — see `ctd_kind_has_enabled` in ../cortado_rules.h.
 
 #import "internal.h"
+#import <objc/runtime.h>
 
 // ----------------------------------------------------------------- properties
 
@@ -139,10 +140,13 @@ ctd_status ctd_set_string(ctd_handle widget, int32_t key,
         case CTD_S_A11Y_LABEL: {
             // Carried by every kind: a label on a button is a legitimate
             // override, and it is how a toolbar of icons is usable at all.
-            [(NSView *)object setAccessibilityLabel:
-                len == 0 ? nil : [[NSString alloc] initWithBytes:utf8
-                                                          length:(NSUInteger)len
-                                                        encoding:NSUTF8StringEncoding]];
+            NSString *label = len == 0 ? nil : ctd_string(utf8, len);
+            [(NSView *)object setAccessibilityLabel:label];
+            [(NSView *)object setToolTip:label];
+            NSTableView *table = ctd_table_view(object);
+            if (table) [table setAccessibilityLabel:label];
+            NSTextView *text = ctd_text_view(object);
+            if (text) [text setAccessibilityLabel:label];
             return CTD_OK;
         }
         case CTD_S_HINT:
@@ -257,6 +261,40 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             [(NSControl *)object setEnabled:value ? YES : NO];
             return CTD_OK;
+        case CTD_P_BORDERLESS:
+            if (ctd_slot_kind(widget) != CTD_W_TAB_VIEW) return CTD_ERR_KIND;
+            if (value != 0 && value != 1) return CTD_ERR_RANGE;
+            [(NSTabView *)object setTabViewType:value ? NSNoTabsNoBorder : NSTopTabsBezelBorder];
+            [(NSTabView *)object setDrawsBackground:!value];
+            return CTD_OK;
+        case CTD_P_COMPACT: {
+            int kind = ctd_slot_kind(widget);
+            if (kind != CTD_W_TABLE && kind != CTD_W_OUTLINE_VIEW) return CTD_ERR_KIND;
+            if (value != 0 && value != 1) return CTD_ERR_RANGE;
+            NSTableView *table = ctd_table_view(object);
+            [(NSScrollView *)object setBorderType:value ? NSNoBorder : NSBezelBorder];
+            [(NSScrollView *)object setAutohidesScrollers:YES];
+            if (@available(macOS 11.0, *)) [table setStyle:value ? NSTableViewStylePlain : NSTableViewStyleAutomatic];
+            [table setFocusRingType:value ? NSFocusRingTypeNone : NSFocusRingTypeDefault];
+            [table setRowHeight:value ? 23.0 : 17.0];
+            [table setIntercellSpacing:NSMakeSize(3.0, 1.0)];
+            [table setGridStyleMask:value && kind == CTD_W_TABLE ? NSTableViewSolidVerticalGridLineMask : NSTableViewGridNone];
+            if (kind == CTD_W_OUTLINE_VIEW) {
+                if (value) [table setHeaderView:nil];
+                else if (![table headerView]) [table setHeaderView:[[[NSTableHeaderView alloc] initWithFrame:NSMakeRect(0, 0, 100, 23)] autorelease]];
+                [table setUsesAlternatingRowBackgroundColors:!value];
+                [table setBackgroundColor:value ? [NSColor colorWithName:nil dynamicProvider:^NSColor *(NSAppearance *appearance) {
+                    BOOL dark = [[appearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqualToString:NSAppearanceNameDarkAqua];
+                    return [NSColor colorWithCalibratedWhite:dark ? 0.145 : 0.96 alpha:1];
+                }] : [NSColor controlBackgroundColor]];
+            }
+            objc_setAssociatedObject(table, @selector(ctdCompact), @(value), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            for (NSTableColumn *column in [table tableColumns]) {
+                [[column dataCell] setFont:value ? [NSFont monospacedSystemFontOfSize:12.0 weight:NSFontWeightRegular] : [NSFont systemFontOfSize:13.0]];
+            }
+            [table reloadData];
+            return CTD_OK;
+        }
         case CTD_P_HIDDEN:
             [(NSView *)object setHidden:value ? YES : NO];
             return CTD_OK;
@@ -268,6 +306,12 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             // One line is cut short rather than wrapped into a box one line tall.
             [[label cell] setLineBreakMode:value == 1 ? NSLineBreakByTruncatingTail
                                                       : NSLineBreakByWordWrapping];
+            return CTD_OK;
+        }
+        case CTD_P_CODE_MODE: {
+            if (ctd_slot_kind(widget) != CTD_W_TEXT_AREA) return CTD_ERR_KIND;
+            if (value != 0 && value != 1) return CTD_ERR_RANGE;
+            [(CortadoTextView *)ctd_text_view(object) ctdSetCodeMode:value == 1];
             return CTD_OK;
         }
         case CTD_P_AXIS: {
@@ -472,12 +516,24 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             if (!ctd_kind_has_enabled(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = [(NSControl *)object isEnabled] ? 1 : 0;
             break;
+        case CTD_P_BORDERLESS:
+            if (ctd_slot_kind(widget) != CTD_W_TAB_VIEW) return CTD_ERR_KIND;
+            value = [(NSTabView *)object tabViewType] == NSNoTabsNoBorder;
+            break;
+        case CTD_P_COMPACT:
+            if (ctd_slot_kind(widget) != CTD_W_TABLE && ctd_slot_kind(widget) != CTD_W_OUTLINE_VIEW) return CTD_ERR_KIND;
+            value = [objc_getAssociatedObject(ctd_table_view(object), @selector(ctdCompact)) boolValue];
+            break;
         case CTD_P_HIDDEN:
             value = [(NSView *)object isHidden] ? 1 : 0;
             break;
         case CTD_P_LINES:
             if (!ctd_kind_has_lines(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = (int64_t)[(NSTextField *)object maximumNumberOfLines];
+            break;
+        case CTD_P_CODE_MODE:
+            if (ctd_slot_kind(widget) != CTD_W_TEXT_AREA) return CTD_ERR_KIND;
+            value = [(CortadoTextView *)ctd_text_view(object) ctdCodeMode] ? 1 : 0;
             break;
         case CTD_P_AXIS:
             if (!ctd_kind_has_divider(ctd_slot_kind(widget))) return CTD_ERR_KIND;
@@ -635,11 +691,13 @@ ctd_status ctd_set_real(ctd_handle widget, int32_t key, double value) {
         case CTD_P_FONT_SIZE: {
             /* NSControl said yes to a slider and no to a text area. */
             if (!ctd_kind_has_font_size(ctd_slot_kind(widget))) return CTD_ERR_KIND;
-            NSFont *font = [NSFont systemFontOfSize:value];
             NSTextView *inner = ctd_text_view(object);
-            if (inner) { [inner setFont:font]; return CTD_OK; }
+            if (inner) {
+                [(CortadoTextView *)inner ctdSetFontSize:value];
+                return CTD_OK;
+            }
             if (![object isKindOfClass:[NSControl class]]) return CTD_ERR_KIND;
-            [(NSControl *)object setFont:font];
+            [(NSControl *)object setFont:[NSFont systemFontOfSize:value]];
             return CTD_OK;
         }
         case CTD_P_CORNER_RADIUS:

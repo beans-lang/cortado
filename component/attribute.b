@@ -144,6 +144,9 @@ pub fn property_name(property: int) -> string {
     if property == host.P_INDETERMINATE { return "indeterminate" }
     if property == host.P_OPACITY { return "opacity" }
     if property == host.P_LINES { return "lines" }
+    if property == host.P_BORDERLESS { return "borderless" }
+    if property == host.P_COMPACT { return "compact" }
+    if property == host.P_CODE_MODE { return "code_mode" }
     if property == host.P_ANIMATING { return "animating" }
     if property == host.P_DATE { return "day" }
     if property == host.P_COLOR { return "color" }

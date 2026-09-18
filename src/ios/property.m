@@ -38,6 +38,9 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
                                                : NSLineBreakByWordWrapping];
             return CTD_OK;
         }
+        case CTD_P_CODE_MODE:
+            return ctd_slot_kind(widget) == CTD_W_TEXT_AREA
+                 ? CTD_ERR_UNSUPPORTED : CTD_ERR_KIND;
         case CTD_P_AXIS:
             // No kind this platform builds has one; the kind refusal is what
             // every other host answers for a control that is not a split view.
@@ -216,6 +219,9 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             if (!ctd_kind_has_lines(ctd_slot_kind(widget))) return CTD_ERR_KIND;
             value = (int64_t)[(UILabel *)object numberOfLines];
             break;
+        case CTD_P_CODE_MODE:
+            return ctd_slot_kind(widget) == CTD_W_TEXT_AREA
+                 ? CTD_ERR_UNSUPPORTED : CTD_ERR_KIND;
         case CTD_P_AXIS:
             return CTD_ERR_KIND;
         case CTD_P_ICON:

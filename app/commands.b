@@ -180,6 +180,48 @@ pub fn build_menu(title: string, commands: List<DeclaredCommand>) -> Result<surf
     return ok(menu)
 }
 
+/// The native desktop menu bar around a screen's declared commands.
+///
+/// The toolbar and command submenu are both made from the same declarations.
+/// Platform roles keep text editing and window commands in the responder
+/// chain, so a focused native control handles them itself.
+pub fn build_application_menu(title: string, command_menu_title: string,
+                              commands: List<DeclaredCommand>) -> Result<surface.Menu> {
+    var app: surface.Menu = surface.Menu.of(title)?
+    app.add("About {title}", "", surface.CommandRole.about, 0)?
+    app.separator()?
+    app.add("Hide {title}", "", surface.CommandRole.hide, 0)?
+    app.add("Quit {title}", "", surface.CommandRole.quit, 0)?
+
+    var file: surface.Menu = surface.Menu.of("File")?
+    file.add("", "", surface.CommandRole.close, 0)?
+
+    var edit: surface.Menu = surface.Menu.of("Edit")?
+    edit.add("", "", surface.CommandRole.undo, 0)?
+    edit.add("", "", surface.CommandRole.redo, 0)?
+    edit.separator()?
+    edit.add("", "", surface.CommandRole.cut, 0)?
+    edit.add("", "", surface.CommandRole.copy, 0)?
+    edit.add("", "", surface.CommandRole.paste, 0)?
+    edit.add("", "", surface.CommandRole.select_all, 0)?
+
+    var window: surface.Menu = surface.Menu.of("Window")?
+    window.add("", "", surface.CommandRole.minimize, 0)?
+    window.add("", "", surface.CommandRole.fullscreen, 0)?
+
+    var bar: surface.Menu = surface.Menu.of("")?
+    bar.submenu(app)?
+    bar.submenu(file)?
+    bar.submenu(edit)?
+    if !commands.is_empty() {
+        let heading: string = if command_menu_title == "" { "Commands" } else { command_menu_title }
+        let actions: surface.Menu = build_menu(heading, commands)?
+        bar.submenu(actions)?
+    }
+    bar.submenu(window)?
+    return ok(bar)
+}
+
 /// Route the platform's `command` events back to the methods that declared
 /// them.
 ///

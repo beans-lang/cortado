@@ -11,7 +11,7 @@
 // `host.HostStatus`, and the capabilities as `platform.Capability`.
 package host
 
-pub const ABI_VERSION: int = 30
+pub const ABI_VERSION: int = 32
 
 // ---- statuses ----
 
@@ -178,6 +178,9 @@ pub const P_FOCUSABLE: int = 25
 pub const P_A11Y_ROLE: int = 26
 pub const P_FG_COLOR: int = 27
 pub const P_LINES: int = 28
+pub const P_CODE_MODE: int = 29
+pub const P_BORDERLESS: int = 30
+pub const P_COMPACT: int = 31
 pub const A11Y_AUTO: int = 0
 pub const A11Y_BUTTON: int = 1
 pub const A11Y_IMAGE: int = 2
@@ -189,6 +192,7 @@ pub const OUTLINE_ROOT: int = 0
 pub const OUTLINE_CHILDREN: int = 0
 pub const OUTLINE_CHILD: int = 1
 pub const OUTLINE_EXPANDS: int = 2
+pub const OUTLINE_ICON: int = 3
 
 // The system icon roles. See "icons" in src/cortado_host.h.
 pub const ICON_NONE: int = 0
