@@ -132,6 +132,8 @@
     {"name": "fill", "detail": "word", "note": "fill colour for a drawing shape"},
     {"name": "gradient_end", "detail": "word", "note": "bottom colour of a vertical linear fill gradient"},
     {"name": "gradient_start", "detail": "word", "note": "top colour of a vertical linear fill gradient"},
+    {"name": "offset_x", "detail": "number", "note": "points the drawing moves from its layout box"},
+    {"name": "offset_y", "detail": "number", "note": "points the drawing moves from its layout box"},
     {"name": "rotation", "detail": "number", "note": "shape rotation in degrees"},
     {"name": "scale_x", "detail": "number", "note": "positive shape scale"},
     {"name": "scale_y", "detail": "number", "note": "positive shape scale"},
@@ -150,5 +152,5 @@
     {"tag": "Table", "name": "source", "detail": "TableRows"},
     {"tag": "ResourceImage", "name": "source", "detail": "text"}
   ],
-  "booleanAttributes": ["animating", "borderless", "compact", "checked", "editable", "enabled", "hidden", "indeterminate", "open", "stacked", "wrap"]
+  "booleanAttributes": ["animating", "borderless", "compact", "checked", "editable", "enabled", "hidden", "indeterminate", "open", "prominent", "stacked", "wrap"]
 }

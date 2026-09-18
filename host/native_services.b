@@ -2,6 +2,10 @@ package host
 
 /// Thin ABI bridge. OS text and accessibility policy belongs to render/.
 pub class NativeServices {
+    /// The system's "reduce motion" setting. False where a platform has none.
+    pub static fn reduce_motion() -> bool {
+        unsafe { return ctd_reduce_motion() == 1 }
+    }
     pub static fn clipboard_write(text: string) -> Result<bool> {
         let bytes: Bytes = HostText.encode(text, "copy text")?
         unsafe { check(ctd_clipboard_write(HostText.pointer(bytes), bytes.len() as i32) as int, "copy text")? }

@@ -103,7 +103,17 @@ pub class SwitchRender extends ToggleRender {
     pub override fn role() -> string { return "switch" }
     pub override fn set_text(text: string) -> Result<bool> { self.demand_alive()?; return err("switch does not carry text", "unsupported") }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
-        return ok(geometry.Size.of(self.theme.switch_width(), self.theme.switch_height()))
+        return ok(geometry.Size.of(self.theme.switch_frame_width(), self.theme.switch_frame_height()))
+    }
+    /// At large the painted switch is wider and taller than the frame.
+    pub override fn visual_frame() -> geometry.Rect {
+        let across: f64 = (self.theme.switch_width() - self.bounds.width) / 2.0
+        let down: f64 = (self.theme.switch_height() - self.bounds.height) / 2.0
+        if across <= 0.0 && down <= 0.0 { return self.bounds }
+        let x: f64 = if across > 0.0 { across } else { 0.0 }
+        let y: f64 = if down > 0.0 { down } else { 0.0 }
+        return geometry.Rect.of(self.bounds.x - x, self.bounds.y - y,
+            self.bounds.width + x * 2.0, self.bounds.height + y * 2.0)
     }
 }
 
@@ -225,6 +235,8 @@ pub class SliderRender extends RangeRender {
 
 pub class StepperRender extends RangeRender {
     tracking: bool = false
+    /// Which half the pointer went down on: -1 none, 0 lower, 1 upper.
+    pressed_half: int = -1
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty); self.increment = 1.0; self.focusable = true }
     pub override fn role() -> string { return "spinbutton" }
     pub override fn needs_positive_step() -> bool { return true }
@@ -244,21 +256,29 @@ pub class StepperRender extends RangeRender {
         if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT {
             self.tracking = true
             self.pressed = true
+            // AppKit steps on the press, not on the release, and the half that
+            // was pressed is the one that lights up.
+            self.pressed_half = if event.position.y < self.bounds.height / 2.0 { 1 } else { 0 }
             self.dirty.paint()
-            return none
+            return self.change_as_user(self.current_value +
+                if self.pressed_half == 1 { self.increment } else { 0.0 - self.increment })
         }
         if event.kind == events.EventKind.pointer_up {
-            let was_tracking: bool = self.tracking
             self.tracking = false
-            if self.pressed { self.pressed = false; self.dirty.paint() }
-            if !was_tracking || event.index != host.BTN_LEFT || !geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height).contains(event.position) { return none }
-            return self.change_as_user(self.current_value + if event.position.x >= self.bounds.width / 2.0 { self.increment } else { -self.increment })
+            if self.pressed { self.pressed = false; self.pressed_half = -1; self.dirty.paint() }
+            return none
         }
         if event.kind == events.EventKind.key_down {
             if event.key() == events.Key.up || event.key() == events.Key.right { return self.change_as_user(self.current_value + self.increment) }
             if event.key() == events.Key.down || event.key() == events.Key.left { return self.change_as_user(self.current_value - self.increment) }
         }
         return none
+    }
+    /// -1 while nothing is held, else the half under the pointer.
+    pub fn held_half() -> int { return self.pressed_half }
+    pub override fn focus_changed(focused: bool) {
+        super.focus_changed(focused)
+        if !focused { self.tracking = false; self.pressed = false; self.pressed_half = -1 }
     }
 }
 

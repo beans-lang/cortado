@@ -31,26 +31,30 @@ partial class CheckBoxTemplate {
         b.word("background", if self.checked || self.mixed { self.accent_fill } else { self.track_off })
         b.number("corner_radius", (self.toggle_radius) as f64)
         if self.checked {  // check_box_template.bx:5
-            b.open("Path")  // check_box_template.bx:6
-            b.text("M{self.toggle_size * 0.2125} {self.toggle_size * 0.525} L{self.toggle_size * 0.4125} {self.toggle_size * 0.7375} L{self.toggle_size * 0.7875} {self.toggle_size * 0.2625}")
+            b.open("Path")  // check_box_template.bx:8
+            b.text("M{self.toggle_size * 0.22} {self.toggle_size * 0.49} L{self.toggle_size * 0.43} {self.toggle_size * 0.735} L{self.toggle_size * 0.72} {self.toggle_size * 0.285}")
             b.word("stroke", self.on_accent)
-            b.number("stroke_width", (self.toggle_size * 0.1375) as f64)
+            b.number("stroke_width", (self.mark_stroke) as f64)
             b.word("stroke_cap", "round")
             b.word("stroke_join", "round")
             b.word("fill", "#00000000")
             b.close()
         }
-        if self.mixed {  // check_box_template.bx:10
-            b.open("Path")  // check_box_template.bx:11
-            b.text("M{self.toggle_size * 0.235} {self.toggle_size * 0.5} L{self.toggle_size * 0.765} {self.toggle_size * 0.5}")
+        if self.mixed {  // check_box_template.bx:12
+            b.open("Path")  // check_box_template.bx:13
+            b.number("x", ((self.toggle_size - self.dash_width) / 2.0) as f64)
+            b.number("y", ((self.toggle_size - self.dash_thickness) / 2.0) as f64)
+            b.number("width", (self.dash_width) as f64)
+            b.number("height", (self.dash_thickness) as f64)
+            b.text("M{self.dash_thickness / 2.0} {self.dash_thickness / 2.0} L{self.dash_width - self.dash_thickness / 2.0} {self.dash_thickness / 2.0}")
             b.word("stroke", self.on_accent)
-            b.number("stroke_width", (self.toggle_size * 0.1375) as f64)
+            b.number("stroke_width", (self.dash_thickness) as f64)
             b.word("stroke_cap", "round")
             b.word("fill", "#00000000")
             b.close()
         }
         b.close()
-        b.open("Label")  // check_box_template.bx:16
+        b.open("Label")  // check_box_template.bx:21
         b.text("{self.title}")
         b.word("text_color", self.ink)
         b.number("font_size", (self.font_size) as f64)

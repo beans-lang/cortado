@@ -166,6 +166,14 @@ pub class StackLayout extends Layout {
             }
             let measured: geometry.Size = child.measure(offer, ruler)?
             var base: f64 = self.axis.main_of(measured)
+            // A scroll view that grows starts from nothing and takes what is
+            // left. Starting from its content instead made the run overflow by
+            // whatever it was going to scroll, and the shrinking that followed
+            // came off its siblings — a header losing the second line it had
+            // just wrapped onto.
+            if child.layout().scrolls() && child.spec.grow > 0.0 {
+                base = 0.0
+            }
             if child.spec.basis >= 0.0 {
                 base = child.spec.basis
             }

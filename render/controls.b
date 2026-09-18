@@ -74,15 +74,27 @@ pub class TextRender extends RenderObject {
 /// A template never receives pointer/keyboard ownership from its control.
 pub class ButtonRender extends RenderObject {
     prominent_value: bool = false
+    checked_value: bool = false
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) {
         super.init(renderer, theme, dirty)
         self.focusable = true
     }
     pub override fn role() -> string { return "button" }
     pub override fn needs_template() -> bool { return true }
-    /// The one button a screen leads with: macOS fills it with the accent.
+    /// Filled with the accent: the button a screen leads with, and the menu
+    /// row the pointer or keyboard is on.
     pub fn prominent() -> bool { return self.prominent_value }
+    /// A button that is on. A menu row uses it for its mark.
+    pub fn checked() -> bool { return self.checked_value }
     pub override fn set_integer(key: int, value: int) -> Result<bool> {
+        if key == host.P_CHECKED {
+            self.demand_alive()?
+            if value != 0 && value != 1 { return err("a button is on or off", "out_of_range") }
+            if self.checked_value == (value == 1) { return ok(false) }
+            self.checked_value = value == 1
+            self.dirty.paint(); self.dirty.semantics()
+            return ok(true)
+        }
         if key != host.P_PROMINENT { return super.set_integer(key, value) }
         self.demand_alive()?
         if value != 0 && value != 1 { return err("prominent is on or off", "out_of_range") }
@@ -91,6 +103,7 @@ pub class ButtonRender extends RenderObject {
         return ok(true)
     }
     pub override fn integer(key: int) -> Result<int> {
+        if key == host.P_CHECKED { self.demand_alive()?; return ok(if self.checked_value { 1 } else { 0 }) }
         if key == host.P_PROMINENT { self.demand_alive()?; return ok(if self.prominent_value { 1 } else { 0 }) }
         return super.integer(key)
     }

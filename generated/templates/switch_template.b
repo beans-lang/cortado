@@ -23,16 +23,30 @@ pub partial class SwitchTemplate extends component.ToggleControlTemplate {
 partial class SwitchTemplate {
     pub override fn render(b: Builder) {
         b.open("Box")  // switch_template.bx:1
-        b.word("background", if self.checked { self.accent_fill } else { self.track_off })
-        b.number("corner_radius", (self.capsule) as f64)
         b.number("width_percent", (100.0) as f64)
         b.number("height_percent", (100.0) as f64)
-        b.open("Rectangle")  // switch_template.bx:3
-        b.number("x", (if self.checked { self.switch_width - self.switch_inset - self.switch_knob_width } else { self.switch_inset }) as f64)
-        b.number("y", (self.switch_inset) as f64)
+        b.open("Rectangle")  // switch_template.bx:6
+        b.number("x", (0) as f64)
+        b.number("y", (0) as f64)
+        b.number("width", (self.switch_width) as f64)
+        b.number("height", (self.switch_height) as f64)
+        b.number("offset_x", ((self.width - self.switch_width) / 2.0) as f64)
+        b.number("offset_y", ((self.height - self.switch_height) / 2.0) as f64)
+        b.number("corner_radius", (self.switch_height / 2.0) as f64)
+        b.number("transition_seconds", (if self.pressed { 0.0 } else { self.motion_switch }) as f64)
+        b.word("transition_easing", "ease_in_out")
+        b.word("fill", if self.checked { self.accent_fill } else { self.track_off })
+        b.close()
+        b.open("Rectangle")  // switch_template.bx:15
+        b.number("x", (0) as f64)
+        b.number("y", (0) as f64)
         b.number("width", (self.switch_knob_width) as f64)
         b.number("height", (self.switch_knob_height) as f64)
+        b.number("offset_x", ((self.width - self.switch_width) / 2.0 + self.switch_inset + (if self.checked { self.switch_travel } else { 0.0 })) as f64)
+        b.number("offset_y", ((self.height - self.switch_height) / 2.0 + self.switch_inset) as f64)
         b.number("corner_radius", (self.switch_knob_height / 2.0) as f64)
+        b.number("transition_seconds", (if self.pressed { 0.0 } else { self.motion_switch }) as f64)
+        b.word("transition_easing", "ease_in_out")
         b.word("fill", self.knob)
         b.word("shadow_color", self.knob_shadow)
         b.number("shadow_blur", (1.5) as f64)

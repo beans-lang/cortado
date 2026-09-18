@@ -28,6 +28,8 @@ pub class VisualRender extends RenderObject {
     transition_easing_value: int = 0
     stroke_cap_value: int = 0
     stroke_join_value: int = 0
+    offset_x_value: f64 = 0.0
+    offset_y_value: f64 = 0.0
     transitions_armed: bool = false
     scalar_tweens: Map<int, ScalarTween> = {}
     color_tweens: Map<int, ColorTween> = {}
@@ -117,6 +119,8 @@ pub class VisualRender extends RenderObject {
         return ok(true)
     }
     fn real_at(key: int) -> f64 {
+        if key == visual.OFFSET_X { return self.offset_x_value }
+        if key == visual.OFFSET_Y { return self.offset_y_value }
         if key == visual.STROKE_WIDTH { return self.stroke_width_value }
         if key == visual.ROTATION { return self.rotation_value }
         if key == visual.SCALE_X { return self.scale_x_value }
@@ -127,7 +131,9 @@ pub class VisualRender extends RenderObject {
         return self.clip_radius_value
     }
     fn apply_real(key: int, value: f64) {
-        if key == visual.STROKE_WIDTH { self.stroke_width_value = value }
+        if key == visual.OFFSET_X { self.offset_x_value = value }
+        else if key == visual.OFFSET_Y { self.offset_y_value = value }
+        else if key == visual.STROKE_WIDTH { self.stroke_width_value = value }
         else if key == visual.ROTATION { self.rotation_value = value }
         else if key == visual.SCALE_X { self.scale_x_value = value }
         else if key == visual.SCALE_Y { self.scale_y_value = value }
@@ -225,7 +231,8 @@ pub class VisualRender extends RenderObject {
         if key == visual.STROKE_WIDTH || key == visual.ROTATION ||
            key == visual.SCALE_X || key == visual.SCALE_Y ||
            key == visual.SHADOW_BLUR || key == visual.SHADOW_DX ||
-           key == visual.SHADOW_DY || key == visual.CLIP_RADIUS {
+           key == visual.SHADOW_DY || key == visual.CLIP_RADIUS ||
+           key == visual.OFFSET_X || key == visual.OFFSET_Y {
             if !(value > -100000.0 && value < 100000.0) {
                 return err("invalid drawing transform or stroke width", "out_of_range")
             }
@@ -246,6 +253,8 @@ pub class VisualRender extends RenderObject {
     }
     pub override fn real(key: int) -> Result<f64> {
         self.demand_alive()?
+        if key == visual.OFFSET_X { return ok(self.offset_x_value) }
+        if key == visual.OFFSET_Y { return ok(self.offset_y_value) }
         if key == visual.STROKE_WIDTH { return ok(self.stroke_width_value) }
         if key == visual.ROTATION { return ok(self.rotation_value) }
         if key == visual.SCALE_X { return ok(self.scale_x_value) }
@@ -261,6 +270,9 @@ pub class VisualRender extends RenderObject {
         canvas.save()?
         let width: f64 = self.frame().width
         let height: f64 = self.frame().height
+        // The offset moves the whole drawing, so it goes outside the rotation
+        // and the scale: a knob that slides must not also swing.
+        canvas.translate(self.offset_x_value, self.offset_y_value)?
         canvas.translate(width / 2.0, height / 2.0)?
         canvas.rotate(self.rotation_value)?
         canvas.scale(self.scale_x_value, self.scale_y_value)?
@@ -328,8 +340,8 @@ pub class VisualRender extends RenderObject {
                            (if sine < 0.0 { -sine } else { sine }) * half_h
         let outer_h: f64 = (if sine < 0.0 { -sine } else { sine }) * half_w +
                            (if cosine < 0.0 { -cosine } else { cosine }) * half_h
-        var left: f64 = frame.x + frame.width / 2.0 - outer_w
-        var top: f64 = frame.y + frame.height / 2.0 - outer_h
+        var left: f64 = frame.x + self.offset_x_value + frame.width / 2.0 - outer_w
+        var top: f64 = frame.y + self.offset_y_value + frame.height / 2.0 - outer_h
         var right: f64 = left + outer_w * 2.0
         var bottom: f64 = top + outer_h * 2.0
         if (self.shadow_color_value & 255) != 0 {

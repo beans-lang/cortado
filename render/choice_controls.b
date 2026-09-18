@@ -72,12 +72,13 @@ pub abstract class ChoiceRender extends RenderObject {
     }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
         let padding: f64 = self.theme.control_padding()
-        // The trailing chevron column is what a popup keeps beyond its title.
-        let chevron: f64 = padding + self.theme.control_height() * 0.6
-        var width: f64 = padding * 2.0 + chevron
+        // A popup button is its widest title, the leading inset, and the column
+        // it keeps for the chevrons — which is wider than the chevrons alone.
+        let column: f64 = self.theme.chevron_column()
+        var width: f64 = padding + column
         for item: string in self.items {
             let paragraph: paint.Paragraph = self.renderer.styled_paragraph(item, self.text_style(), -1.0, self.text_color())?
-            let wanted: f64 = paragraph.size().width + padding * 2.0 + chevron
+            let wanted: f64 = paragraph.size().width + padding + column
             if wanted > width { width = wanted }
         }
         return ok(geometry.Size.of(width, self.theme.control_height()))
@@ -108,9 +109,26 @@ pub class ComboBoxRender extends ChoiceRender {
         self.tracking = false
         self.dirty.paint(); self.dirty.semantics()
     }
+    /// The menu NSPopUpButton opens: as wide as its widest title plus the
+    /// mark column, and placed so the chosen row sits over the control.
     pub override fn popup_bounds() -> geometry.Rect {
-        let height: f64 = if self.items.len() * 32 < 240 { self.items.len() as f64 * 32.0 } else { 240.0 }
-        return geometry.Rect.of(0.0, self.bounds.height + 2.0, self.bounds.width, height)
+        let row: f64 = self.theme.menu_row_height()
+        let pad: f64 = self.theme.menu_padding()
+        var widest: f64 = 0.0
+        for item: string in self.items {
+            match self.renderer.styled_paragraph(item, self.text_style(), -1.0, self.text_color()) {
+                ok(paragraph) => { if paragraph.size().width > widest { widest = paragraph.size().width } }
+                err(_) => {}
+            }
+        }
+        var width: f64 = widest + self.theme.menu_width_over_text() + self.theme.menu_check_column()
+        if width < self.bounds.width { width = self.bounds.width }
+        let height: f64 = self.items.len() as f64 * row + pad * 2.0
+        let index: f64 = (if self.chosen > 0 { self.chosen } else { 0 }) as f64
+        // The chosen row lands on the control, not under it.
+        let y: f64 = 0.0 - pad - index * row + (self.bounds.height - row) / 2.0
+        let x: f64 = self.theme.control_padding() - self.theme.menu_text_inset()
+        return geometry.Rect.of(x, y, width, height)
     }
     pub override fn set_value_as_user(index: int, value: f64) -> Result<bool> {
         let changed: bool = super.set_value_as_user(index, value)?
@@ -174,11 +192,13 @@ pub class SegmentedRender extends ChoiceRender {
         if !focused { self.tracking = false }
     }
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
-        let padding: f64 = self.theme.control_padding()
+        // Each segment is its own title plus the measured padding, so a long
+        // label makes one segment wider rather than every segment wider.
+        let padding: f64 = self.theme.segment_padding()
         var width: f64 = 0.0
         for item: string in self.items {
             let paragraph: paint.Paragraph = self.renderer.styled_paragraph(item, self.text_style(), -1.0, self.text_color())?
-            width += paragraph.size().width + padding * 2.0
+            width += paragraph.size().width + padding
         }
         return ok(geometry.Size.of(if width > 48.0 { width } else { 48.0 }, self.theme.control_height()))
     }

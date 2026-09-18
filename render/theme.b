@@ -19,6 +19,9 @@ pub class Theme {
     /// macOS drains the accent out of every filled control when its window
     /// stops being the key one. Windows carry this; a standalone scene is key.
     active_value: bool = true
+    /// The OS accessibility setting. Every motion token answers zero while it
+    /// is on, so a template that reads one animates or does not without asking.
+    reduced_motion: bool = false
     font_value: f64 = -1.0
     revision: int = 0
     pub fn init() {}
@@ -113,12 +116,29 @@ pub class Theme {
         if self.accent_value >= 0 { return Theme.shade(self.accent_value, 0.976) }
         return self.pick(0x0077f9ff, 0x067dffff)
     }
+    /// A prominent button held down: the accent itself, one step darker.
     pub fn accent_pressed() -> int {
         if self.accent_value >= 0 { return Theme.shade(self.accent_value, if self.dark_mode { 1.09 } else { 0.9 }) }
         return self.pick(0x006ee6ff, 0x1987ffff)
     }
+    /// A switch, a selected segment or a slider fill held down. It starts from
+    /// accent_control rather than the accent, so it is not the same colour a
+    /// pressed default button reaches.
+    pub fn accent_control_pressed() -> int {
+        if self.accent_value >= 0 { return Theme.shade(self.accent_value, if self.dark_mode { 1.11 } else { 0.88 }) }
+        return self.pick(0x006be1ff, 0x1e8affff)
+    }
+    /// A filled toggle that is off for good. AppKit fades the accent rather
+    /// than replacing it with grey, which is what tells a disabled switch that
+    /// is on from a disabled switch that is off.
+    pub fn accent_disabled() -> int {
+        if self.accent_value >= 0 { return Theme.shade(self.accent_value, if self.dark_mode { 0.45 } else { 1.0 }) }
+        return self.pick(0x8fc2fbff, 0x154981ff)
+    }
     /// What a switch or slider fill becomes in a window that is not key.
     pub fn accent_inactive() -> int { return self.pick(0xdbdbdbff, 0x3e3e3eff) }
+    /// The same for a selected segment that is also disabled.
+    pub fn selection_disabled() -> int { return self.pick(0x83b7efff, 0x1f528cff) }
     /// The same for a selected segment, which AppKit drains one step further.
     pub fn selection_inactive() -> int { return self.pick(0xcdcdcdff, 0x4a4a4aff) }
     pub fn destructive() -> int { return self.pick(0xff383cff, 0xff4245ff) }
@@ -139,7 +159,24 @@ pub class Theme {
     pub fn focus_ring_width() -> f64 { return 3.0 }
     /// The unfilled half of a switch, slider or check box.
     pub fn track() -> int { return self.pick(0xe6e6e6ff, 0x343434ff) }
-    pub fn track_disabled() -> int { return self.pick(0xf1f1f1ff, 0x232323ff) }
+    pub fn track_disabled() -> int { return self.pick(0xf2f2f2ff, 0x292929ff) }
+    /// A toggle held down. A push button's bezel darkens to a different grey,
+    /// so the two cannot share one token.
+    pub fn track_pressed() -> int { return self.pick(0xcfcfcfff, 0x484848ff) }
+
+    /// NSSwitch draws its capsule with its own set of these, close to a check
+    /// box's but not the same: a pressed switch is d3d3d3 where a pressed
+    /// check box is cfcfcf. They are separate because the captures say so.
+    pub fn switch_track_pressed() -> int { return self.pick(0xd3d3d3ff, 0x444444ff) }
+    pub fn switch_accent_pressed() -> int {
+        if self.accent_value >= 0 { return self.accent_control_pressed() }
+        return self.pick(0x056ee3ff, 0x1e8affff)
+    }
+    pub fn switch_accent_disabled() -> int {
+        if self.accent_value >= 0 { return self.accent_disabled() }
+        return self.pick(0x95c5fbff, 0x16467cff)
+    }
+    pub fn switch_accent_inactive() -> int { return self.pick(0xdededeff, 0x3b3b3bff) }
     /// A progress or level track, which is lighter than a switch track.
     pub fn bar_track() -> int { return self.pick(0xf0f0f0ff, 0x303030ff) }
     pub fn bar_track_border() -> int { return self.pick(0xdfdfdfff, 0x3a3a3aff) }
@@ -147,6 +184,14 @@ pub class Theme {
     pub fn knob() -> int { return self.pick(0xffffffff, 0xe1e1e1ff) }
     /// The knob of a switch that is on, in dark mode a cool tint.
     pub fn knob_on() -> int { return self.pick(0xffffffff, 0xdaecffff) }
+    /// A knob over a drained track picks up a little of it. Four more measured
+    /// colours rather than one rule: white over the track fits the pale states
+    /// and not the blue one, and a rule that fits three cases out of four is
+    /// a guess wearing arithmetic.
+    pub fn knob_disabled() -> int { return self.pick(0xffffffff, 0xdfdfdfff) }
+    pub fn knob_disabled_on() -> int { return self.pick(0xf7fafeff, 0xdae2ebff) }
+    pub fn knob_inactive() -> int { return self.pick(0xffffffff, 0xe1e1e1ff) }
+    pub fn knob_inactive_on() -> int { return self.pick(0xfcfcfcff, 0xe1e1e1ff) }
     pub fn knob_shadow() -> int { return self.pick(0x00000026, 0x00000040) }
     /// Every other row of a table, so long rows stay trackable.
     pub fn stripe() -> int { return self.pick(0xf4f5f5ff, 0x2a2a2aff) }
@@ -211,10 +256,16 @@ pub class Theme {
     pub fn control_baseline() -> f64 { return self.by_size(12.0, 14.0, 17.0, 19.0) }
     /// A text field's bezel is drawn one point outside its frame on every edge.
     pub fn field_overhang() -> f64 { return 1.0 }
-    pub fn field_height() -> f64 { return self.by_size(22.0, 24.0, 24.0, 24.0) }
+    /// NSTextField sizes to 19, 22, 24, 24 — it stops growing at regular.
+    pub fn field_height() -> f64 { return self.by_size(19.0, 22.0, 24.0, 24.0) }
     pub fn field_radius() -> f64 { return Theme.radius_for(self.field_height() + 2.0) }
-    /// Text inset inside a field, left and right.
-    pub fn field_padding() -> f64 { return self.by_size(4.0, 5.0, 6.0, 7.0) }
+    /// Text inset inside a field. The cell's drawing rect starts 4 points in and
+    /// its text another 2, at every control size — this one does not scale.
+    pub fn field_padding() -> f64 { return 6.0 }
+    /// Where a field's own text baseline sits, measured down from its frame.
+    /// It is not the button baseline: a 24-point field and a 24-point button
+    /// put their text in different places.
+    pub fn field_baseline() -> f64 { return self.by_size(13.0, 15.0, 17.0, 17.0) }
     pub fn field_border_width() -> f64 { return 1.0 }
 
     /// A check box or radio button is a square as tall as its row: 12, 14, 16.
@@ -224,14 +275,31 @@ pub class Theme {
     pub fn toggle_gap() -> f64 { return self.by_size(4.0, 4.0, 6.0, 6.0) }
     pub fn toggle_row_height() -> f64 { return self.by_size(12.0, 14.0, 16.0, 18.0) }
     pub fn toggle_baseline() -> f64 { return self.by_size(9.5, 11.0, 13.0, 14.0) }
+    /// The white dot inside a selected radio button: 4 points at mini, 5 at
+    /// every other size. It does not scale with the circle.
+    pub fn radio_dot() -> f64 { return self.by_size(4.0, 5.0, 5.0, 5.0) }
+    /// The check mark's stroke, and the mixed state's dash, both measured off
+    /// the 4x captures rather than derived from the box.
+    pub fn toggle_mark_stroke() -> f64 { return self.by_size(1.5, 1.75, 2.0, 2.0) }
+    pub fn toggle_dash_width() -> f64 { return self.by_size(5.5, 6.5, 6.5, 8.0) }
+    pub fn toggle_dash_thickness() -> f64 { return 2.0 }
 
-    /// NSSwitch: 36x16, 44x20, 54x24 at mini, small and regular.
-    pub fn switch_width() -> f64 { return self.by_size(36.0, 44.0, 54.0, 54.0) }
-    pub fn switch_height() -> f64 { return self.by_size(16.0, 20.0, 24.0, 24.0) }
+    /// NSSwitch keeps one frame at every control size and paints a different
+    /// switch inside it. Layout gets the frame; the template gets the drawing.
+    pub fn switch_frame_width() -> f64 { return 54.0 }
+    pub fn switch_frame_height() -> f64 { return 24.0 }
+    /// NSSwitch paints 36x16, 44x20, 54x24, 64x28 — at large it reaches five
+    /// points past its own frame on each side, and two above and below.
+    pub fn switch_width() -> f64 { return self.by_size(36.0, 44.0, 54.0, 64.0) }
+    pub fn switch_height() -> f64 { return self.by_size(16.0, 20.0, 24.0, 28.0) }
     pub fn switch_knob_inset() -> f64 { return self.by_size(1.5, 2.0, 2.0, 2.0) }
-    /// The knob is a wide capsule, not a circle: 21, 26 and 32 points across.
-    pub fn switch_knob_width() -> f64 { return self.by_size(21.0, 26.0, 32.0, 32.0) }
+    /// The knob is a wide capsule, not a circle: 21, 26, 32 and 38 across.
+    pub fn switch_knob_width() -> f64 { return self.by_size(21.0, 26.0, 32.0, 38.0) }
     pub fn switch_knob_height() -> f64 { return self.switch_height() - self.switch_knob_inset() * 2.0 }
+    /// How far the knob slides between off and on.
+    pub fn switch_travel() -> f64 {
+        return self.switch_width() - self.switch_knob_inset() * 2.0 - self.switch_knob_width()
+    }
 
     /// A slider's knob is a circle half a point taller than the frame, so it
     /// overhangs by that much on each edge — which is what AppKit draws.
@@ -247,26 +315,115 @@ pub class Theme {
     /// NSLevelIndicator is ten touching cells, 12 by 16, each with a hairline
     /// round it; the filled ones lose the line. The frame is two points taller
     /// than the cells, which sit at its top.
+    /// Ten cells 12 by 16 across the top of an 18 point frame, each with a
+    /// hairline rule. Every colour here is a flat interior pixel of the 2x
+    /// capture: the 4x one blends its edges, and a colour read off a blended
+    /// pixel is a colour nothing on screen is.
     pub fn level_height() -> f64 { return 18.0 }
-    pub fn level_content_height() -> f64 { return 16.25 }
+    pub fn level_content_height() -> f64 { return 16.0 }
     pub fn level_cells() -> int { return 10 }
     pub fn level_cell_width() -> f64 { return 12.0 }
     pub fn level_cell_height() -> f64 { return 16.0 }
     pub fn level_cell_gap() -> f64 { return 0.0 }
     pub fn level_cell_radius() -> f64 { return 2.0 }
-    pub fn level_cell_empty() -> int { return self.pick(0xedededff, 0x2a2a2aff) }
-    pub fn level_cell_border() -> int { return self.pick(0xcececeff, 0x3a3a3aff) }
+    pub fn level_cell_empty() -> int { return self.pick(0xedededff, 0x353535ff) }
+    pub fn level_cell_border() -> int { return self.pick(0xcececeff, 0x2e2e2eff) }
+    pub fn level_cell_fill() -> int { return self.pick(0x34c759ff, 0x30d158ff) }
+    pub fn level_cell_fill_border() -> int { return self.pick(0x2dad4dff, 0x2ab64dff) }
 
     pub fn stepper_width() -> f64 { return self.by_size(13.0, 17.0, 20.0, 23.0) }
     pub fn stepper_height() -> f64 { return self.by_size(20.0, 22.0, 26.0, 30.0) }
-    /// The two chevrons and the rule between them, as one block.
-    pub fn stepper_glyph_width() -> f64 { return self.by_size(7.5, 9.0, 11.5, 13.0) }
-    pub fn stepper_glyph_height() -> f64 { return self.by_size(14.5, 16.25, 19.5, 22.5) }
-    pub fn stepper_glyph_top() -> f64 { return self.by_size(3.0, 3.25, 3.5, 4.0) }
-    pub fn stepper_stroke() -> f64 { return self.by_size(1.2, 1.4, 1.6, 1.8) }
-    /// The two-chevron glyph on a popup button's trailing edge.
-    pub fn chevron_width() -> f64 { return self.by_size(5.5, 6.0, 7.0, 8.0) }
-    pub fn chevron_height() -> f64 { return self.by_size(2.6, 3.0, 3.5, 4.0) }
+    /// One chevron, measured off the 4x capture. There is no rule between the
+    /// two halves: the native stepper draws the bezel and two arrows, nothing else.
+    pub fn stepper_glyph_width() -> f64 { return self.by_size(7.75, 9.0, 11.5, 11.5) }
+    pub fn stepper_glyph_height() -> f64 { return self.by_size(4.5, 5.25, 6.75, 6.75) }
+    pub fn stepper_glyph_top() -> f64 { return self.by_size(3.0, 3.25, 3.25, 4.25) }
+    /// Clear space under the lower chevron, which is not the same as above the upper one.
+    pub fn stepper_glyph_bottom() -> f64 { return self.by_size(2.5, 2.5, 3.0, 4.0) }
+    pub fn stepper_stroke() -> f64 { return self.by_size(1.5, 1.7, 2.0, 2.0) }
+    /// The rule between the two halves. It is nearly the bezel's own colour,
+    /// which is why a first pass at this looked like there was no rule at all.
+    pub fn stepper_divider() -> int { return self.pick(0xd4d4d4ff, 0x444444ff) }
+    pub fn stepper_divider_inset() -> f64 { return self.by_size(2.0, 3.0, 3.0, 4.0) }
+    pub fn stepper_divider_height() -> f64 { return 1.0 }
+    /// The two-chevron glyph on a popup button's trailing edge. The block holds
+    /// both arrows and the gap: each arrow is four tenths of it, the gap two.
+    pub fn chevron_width() -> f64 { return self.by_size(6.25, 6.25, 7.25, 9.25) }
+    pub fn chevron_block() -> f64 { return self.by_size(8.75, 8.75, 10.5, 13.25) }
+    pub fn chevron_height() -> f64 { return self.chevron_block() * 0.4 }
+    pub fn chevron_gap() -> f64 { return self.chevron_block() * 0.2 }
+    pub fn chevron_stroke() -> f64 { return self.by_size(1.5, 1.5, 1.75, 2.0) }
+    /// Clear space between the chevrons and the control's trailing edge.
+    pub fn chevron_inset() -> f64 { return self.by_size(6.25, 8.25, 10.25, 10.75) }
+    /// Everything a popup button keeps past its title: the blank, the chevrons
+    /// and the trailing inset. NSPopUpButton sizes to title plus this.
+    pub fn chevron_column() -> f64 { return self.by_size(24.0, 30.0, 36.0, 42.0) }
+    /// One NSSegmentedControl segment is its title plus this much, shared
+    /// between its two sides — not an equal share of the whole control.
+    pub fn segment_padding() -> f64 { return self.by_size(15.0, 19.0, 21.0, 25.0) }
+
+    // --------------------------------------------------------------- the menu
+    /// An NSMenu row, and the padding above the first and below the last.
+    /// Read off NSMenu.size: one item is 34 high and each further item adds 24.
+    pub fn menu_row_height() -> f64 { return 24.0 }
+    pub fn menu_padding() -> f64 { return 5.0 }
+    pub fn menu_separator_height() -> f64 { return 11.0 }
+    /// A menu is its widest title plus this much, and eight more when any item
+    /// carries a mark — which is the width of the mark column.
+    pub fn menu_width_over_text() -> f64 { return 32.0 }
+    /// The mark column is what the measurement says an item's mark costs: a
+    /// menu with one checked item is eight points wider than the same menu
+    /// without one.
+
+    pub fn menu_check_column() -> f64 { return 8.0 }
+    pub fn menu_indent_step() -> f64 { return 12.0 }
+    /// Where the mark column starts, and where the title starts after it.
+    ///
+    /// AppKit gives the sum — a menu is its title plus 32, and 8 more once any
+    /// item carries a mark — but not the split between the two sides. These
+    /// three add up to that sum and are the only numbers in this file that are
+    /// not read off a capture: a menu window is drawn outside the process, so
+    /// it cannot be captured offscreen. See tools/reference/README.md.
+    /// The mark's own advance is 11.18 points at 13, with 8.72 of ink in it —
+    /// CTLineGetImageBounds on the menu font's check. A leading margin of ten
+    /// plus that advance puts the title at 21, which is where the measured
+    /// width says it goes.
+    pub fn menu_mark_inset() -> f64 { return 10.0 + self.menu_font_size() * 0.098 }
+    pub fn menu_mark_width() -> f64 { return self.menu_font_size() * 0.671 }
+    pub fn menu_mark_height() -> f64 { return self.menu_font_size() * 0.661 }
+    pub fn menu_mark_stroke() -> f64 { return self.menu_font_size() * 0.1 }
+    pub fn menu_text_inset() -> f64 { return 10.0 + self.menu_font_size() * 0.86 }
+    pub fn menu_trailing() -> f64 { return 19.0 }
+    /// A popup button's menu takes the button's font, not a fixed one.
+    pub fn menu_font_size() -> f64 { return self.font_size() }
+    pub fn menu_radius() -> f64 { return 10.0 }
+    pub fn menu_row_radius() -> f64 { return 4.0 }
+    /// The rows are inset from the menu's own edges by its padding.
+    pub fn menu_row_inset() -> f64 { return 5.0 }
+    pub fn menu_background() -> int { return self.pick(0xffffffff, 0x1e1e1eff) }
+    pub fn menu_border() -> int { return self.pick(0x00000019, 0xffffff19) }
+    pub fn menu_shadow() -> int { return self.pick(0x0000004c, 0x00000099) }
+    pub fn menu_shadow_blur() -> f64 { return 12.0 }
+    pub fn menu_shadow_dy() -> f64 { return 4.0 }
+    /// A menu opens with its chosen row over the control it belongs to.
+    pub fn menu_gap() -> f64 { return 0.0 }
+
+    // -------------------------------------------------------------- the motion
+    /// Recorded off real clicks on real controls; see tools/reference/motion.sh.
+    /// A switch slides and fades over about a sixth of a second. A segmented
+    /// control, a tab, a check box and a button press do not animate at all,
+    /// so there is no token for them: instant is the native answer.
+    pub fn motion_switch() -> f64 { return if self.reduced_motion { 0.0 } else { 0.15 } }
+    /// Clicking a slider's track walks the knob to the click; dragging does not.
+    pub fn motion_slider() -> f64 { return if self.reduced_motion { 0.0 } else { 0.23 } }
+    /// 0 linear, 1 ease-in-out. The recorded switch curve is a smoothstep.
+    pub fn motion_curve() -> int { return 1 }
+    pub fn is_reduced_motion() -> bool { return self.reduced_motion }
+    pub fn set_reduced_motion(on: bool) {
+        if self.reduced_motion == on { return }
+        self.reduced_motion = on
+        self.revision += 1
+    }
 
     /// NSTableView's own row height and header, and NSScroller's width.
     pub fn row_height() -> f64 { return self.by_size(18.0, 20.0, 24.0, 28.0) }

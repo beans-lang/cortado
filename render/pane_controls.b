@@ -17,11 +17,17 @@ pub class TabViewRender extends BoxRender {
     }
     pub override fn role() -> string { return "tablist" }
     pub override fn needs_template() -> bool { return true }
+    /// The band the tab row takes above the content, which moves with the
+    /// control size the way the row itself does.
+    fn tab_band() -> f64 {
+        if self.borderless_value { return 0.0 }
+        return self.theme.control_height() + self.theme.spacing()
+    }
     pub override fn content_inset() -> geometry.EdgeInsets {
-        return geometry.EdgeInsets { left: 0.0, top: if self.borderless_value { 0.0 } else { 30.0 }, right: 0.0, bottom: 0.0 }
+        return geometry.EdgeInsets { left: 0.0, top: self.tab_band(), right: 0.0, bottom: 0.0 }
     }
     pub override fn child_offset() -> geometry.Point {
-        return geometry.Point.at(0.0, if self.borderless_value { 0.0 } else { 30.0 })
+        return geometry.Point.at(0.0, self.tab_band())
     }
     pub override fn shows_child(index: int) -> bool { return index == self.chosen }
     pub fn selected() -> int { return self.chosen }

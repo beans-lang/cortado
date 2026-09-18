@@ -1,9 +1,24 @@
-<Box background={if self.checked { self.accent_fill } else { self.track_off }}
-     corner_radius={self.capsule} width_percent={100.0} height_percent={100.0}>
-  <Rectangle x={if self.checked { self.switch_width - self.switch_inset - self.switch_knob_width } else { self.switch_inset }}
-             y={self.switch_inset}
+<Box width_percent={100.0} height_percent={100.0}>
+  <!-- AppKit keeps one 54x24 frame at every control size and paints a switch of
+       its own size centred in it. At large that switch is bigger than the frame
+       and reaches outside it, which is why the centring is an offset rather
+       than a layout position: a layout position cannot be negative. -->
+  <Rectangle x={0} y={0} width={self.switch_width} height={self.switch_height}
+             offset_x={(self.width - self.switch_width) / 2.0}
+             offset_y={(self.height - self.switch_height) / 2.0}
+             corner_radius={self.switch_height / 2.0}
+             transition_seconds={if self.pressed { 0.0 } else { self.motion_switch }}
+             transition_easing="ease_in_out"
+             fill={if self.checked { self.accent_fill } else { self.track_off }} />
+  <!-- The knob keeps its layout box and travels by an offset, so a toggle
+       reversed in flight carries on from where it is. -->
+  <Rectangle x={0} y={0}
              width={self.switch_knob_width} height={self.switch_knob_height}
+             offset_x={(self.width - self.switch_width) / 2.0 + self.switch_inset + (if self.checked { self.switch_travel } else { 0.0 })}
+             offset_y={(self.height - self.switch_height) / 2.0 + self.switch_inset}
              corner_radius={self.switch_knob_height / 2.0}
+             transition_seconds={if self.pressed { 0.0 } else { self.motion_switch }}
+             transition_easing="ease_in_out"
              fill={self.knob}
              shadow_color={self.knob_shadow} shadow_blur={1.5} shadow_dy={0.5} />
 </Box>

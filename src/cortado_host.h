@@ -501,6 +501,10 @@ ctd_status ctd_canvas_set_pixels(ctd_handle canvas, int32_t width, int32_t heigh
 ctd_status ctd_canvas_text_state(ctd_handle canvas, int32_t active,
     const char *utf8, int32_t length, int32_t anchor, int32_t caret,
     double x, double y, double width, double height);
+/* Whether the person asked the system to cut down on movement. 1 yes, 0 no,
+ * and 0 on a platform with no such setting. Beans zeroes every motion token
+ * while it answers 1, so a template animates or does not without asking. */
+int32_t ctd_reduce_motion(void);
 ctd_status ctd_clipboard_write(const char *utf8, int32_t length);
 /* Returns required byte count; negative values are CTD_ERR_*. No trailing NUL
  * is counted or required. */
@@ -790,9 +794,9 @@ ctd_status ctd_view_content_size(ctd_handle widget, double *out_size);
  * bounds and answers CTD_ERR_UNSUPPORTED. */
 #define CTD_P_OVERHANG      34
 
-/* Whether a button is the prominent one on its screen — what macOS draws as
- * the default button, filled with the accent colour. Carried by CTD_W_BUTTON
- * alone. A native host that has no such style answers CTD_ERR_UNSUPPORTED. */
+/* Whether a button is drawn filled with the accent colour: the default button
+ * on a screen, and the row a menu's pointer or keyboard is on. Carried by
+ * CTD_W_BUTTON alone. A host with no such style answers CTD_ERR_UNSUPPORTED. */
 #define CTD_P_PROMINENT     35
 
 /* ---- a control a program draws itself ------------------------------------

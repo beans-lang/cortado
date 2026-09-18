@@ -9,6 +9,9 @@ ctd_status ctd_canvas_text_state(ctd_handle canvas, int32_t active,
     (void)x; (void)y; (void)width; (void)height;
     return CTD_ERR_UNSUPPORTED;
 }
+int32_t ctd_reduce_motion(void) {
+    return UIAccessibilityIsReduceMotionEnabled() ? 1 : 0;
+}
 ctd_status ctd_clipboard_write(const char *utf8, int32_t length) {
     (void)utf8; (void)length;
     return CTD_ERR_UNSUPPORTED;

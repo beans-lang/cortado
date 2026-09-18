@@ -30,19 +30,24 @@ fn window(headless: bool) -> Result<bool> {
     return ok(true)
 }
 
-/// Writes both appearances to build/ so the look can be checked without a display.
+/// Writes both appearances at every control size to build/, so the look can be
+/// checked without a display — and so a size that overflows is visible.
 fn shots() -> Result<bool> {
-    for dark: bool in [false, true] {
-        let view: Showcase = new Showcase()
-        let scene: cortado_skia.Scene = new cortado_skia.Scene(geometry.Size.of(980.0, 640.0))
-        scene.show(view)?
-        view.use_theme(scene.context().theme())
-        view.set_mode(if dark { 1 } else { 0 })
-        scene.refresh()?
-        let name: string = if dark { "build/showcase-dark.png" } else { "build/showcase-light.png" }
-        scene.renderer().write_png(name)?
-        scene.close()
-        io.println("wrote {name}")
+    let names: List<string> = ["mini", "small", "regular", "large"]
+    for size: int in 0..4 {
+        for dark: bool in [false, true] {
+            let view: Showcase = new Showcase()
+            let scene: cortado_skia.Scene = new cortado_skia.Scene(geometry.Size.of(980.0, 640.0))
+            scene.show(view)?
+            view.use_theme(scene.context().theme())
+            view.set_mode(if dark { 1 } else { 0 })
+            view.set_control_size(size)
+            scene.refresh()?
+            let name: string = "build/showcase-{names[size]}-{if dark { "dark" } else { "light" }}.png"
+            scene.renderer().write_png(name)?
+            scene.close()
+            io.println("wrote {name}")
+        }
     }
     return ok(true)
 }

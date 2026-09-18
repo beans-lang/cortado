@@ -3,8 +3,10 @@
        background={if self.checked { self.accent_fill } else { self.track_off }}
        corner_radius={self.capsule}>
     $if self.checked {
-      <Ellipse x={self.toggle_size * 0.34375} y={self.toggle_size * 0.34375}
-               width={self.toggle_size * 0.3125} height={self.toggle_size * 0.3125}
+      <!-- The dot fills the circle's own box and is scaled about its centre.
+           A separately placed box rounds its two edges apart and drifts off centre. -->
+      <Ellipse width_percent={100.0} height_percent={100.0}
+               scale_x={self.radio_dot / self.toggle_size} scale_y={self.radio_dot / self.toggle_size}
                fill={self.on_accent} />
     }
   </Box>

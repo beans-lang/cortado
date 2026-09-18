@@ -67,6 +67,11 @@ for shot in shots:
     delta = np.abs(region_n.astype(np.int32) - region_o.astype(np.int32))[..., :3]
     worst = int(delta.max()) if delta.size else 0
     wrong = int((delta.max(axis=2) > 2).sum())
+    # The acceptance target is the strict count above. This second one says
+    # what is left when a pixel has to be wrong by more than a rasteriser's
+    # antialiasing to count — it separates "a glyph edge lands differently"
+    # from "this is the wrong colour, in the wrong place".
+    visible = int((delta.max(axis=2) > 16).sum())
     total = int(delta.shape[0] * delta.shape[1]) or 1
 
     side = np.zeros((native.shape[0], native.shape[1] * 2 + 8, 4), dtype=np.int16)
@@ -102,8 +107,10 @@ for shot in shots:
         "status": "compared",
         "worstChannel": worst,
         "wrongPixels": wrong,
+        "visiblePixels": visible,
         "regionPixels": total,
         "wrongShare": round(wrong / total, 5),
+        "visibleShare": round(visible / total, 5),
         "nativeFrame": frame(box_n),
         "cortadoFrame": frame(box_o),
     })

@@ -19,7 +19,8 @@ fn find(root: widgets.Widget, kind: widgets.WidgetKind) -> Option<widgets.Widget
     return none
 }
 
-/// Every colour here came out of AppKit; tools/read_apple_tokens.swift prints them.
+/// Every colour here is a flat pixel of a pinned AppKit capture; the captures
+/// and what they could not answer are in tools/reference/README.md.
 fn tokens() -> Result<bool> {
     let theme: render.Theme = new render.Theme()
     require(!theme.is_dark(), "a new theme is light")
@@ -27,7 +28,10 @@ fn tokens() -> Result<bool> {
     require(theme.foreground() == 0x000000d8, "light label is 85% black, not pure black")
     require(theme.background() == 0xffffffff, "light window is white")
     require(theme.card() == 0xffffffff, "light content area is white")
-    require(theme.surface() == 0xefefefff, "light bezel, sampled off a small NSButton")
+    // Read off the pinned captures rather than a colour lookup: an NSButton's
+    // bezel paints ebebeb at every control size, in every state that is not
+    // pressed or disabled. See tools/reference/README.md.
+    require(theme.surface() == 0xebebebff, "light bezel, as a push button paints it")
     require(theme.separator() == 0x00000019, "light separator carries its alpha")
     require(theme.secondary_label() == 0x0000007f, "light secondary label carries its alpha")
     require(theme.selection() == 0x0064e1ff, "light row selection")
@@ -40,23 +44,33 @@ fn tokens() -> Result<bool> {
     require(theme.foreground() == 0xffffffd8, "dark label is 85% white")
     require(theme.background() == 0x1e1e1eff, "dark window is 1e1e1e, not black")
     require(theme.card() == 0x1e1e1eff, "dark content area matches the window")
-    require(theme.surface() == 0x363636ff, "dark bezel, sampled off a small NSButton")
+    require(theme.surface() == 0x303030ff, "dark bezel, as a push button paints it")
     require(theme.separator() == 0xffffff19, "dark separator carries its alpha")
     require(theme.selection() == 0x0059d1ff, "dark row selection")
-    require(theme.knob() == 0xffffffff, "a knob stays white in the dark")
+    // A dark knob is not white: the capture reads e1e1e1 off an NSSwitch.
+    require(theme.knob() == 0xe1e1e1ff, "a dark knob is dimmed, not white")
     require(theme.on_accent() == 0xffffffff, "text on accent stays white")
 
     let steady: int = theme.version()
     theme.set_dark(true)
     require(theme.version() == steady, "setting the same appearance is not a change")
 
-    // The type scale and metrics are iOS point sizes, not the old 14pt guesses.
-    require(theme.body() == 11.0 && theme.font_size() == 11.0, "body text is smallSystemFontSize")
-    require(theme.large_title() == 22.0 && theme.footnote() == 10.0, "the type scale is macOS's")
-    require(theme.control_height() == 20.0, "a small control is 20pt tall")
-    require(theme.row_height() == 18.0, "a list row is 18pt")
-    require(theme.radius_medium() == 5.0, "a bezel corner is 5pt, measured")
-    require(theme.switch_width() == 45.0 && theme.switch_height() == 20.0, "a switch rides the 20pt row")
+    // The type scale and the metrics are macOS's own, at the regular control
+    // size a new theme starts on. Every number here is in build/reference:
+    // the sizes from fonts.json, the heights from geometry.json, the switch
+    // from its 4x capture, the corner from height/4 - 0.5.
+    require(theme.body() == 13.0 && theme.font_size() == 13.0, "body text is systemFontSize")
+    require(theme.large_title() == 26.0 && theme.footnote() == 10.0, "the type scale is macOS's")
+    require(theme.control_height() == 24.0, "a regular control is 24pt tall")
+    require(theme.row_height() == 24.0, "a list row is NSTableView's 24pt")
+    require(theme.radius_medium() == 5.5, "a bezel corner is height/4 - 0.5")
+    require(theme.switch_width() == 54.0 && theme.switch_height() == 24.0, "a switch is 54 by 24")
+    // A control size moves them all together, and nothing else does.
+    theme.set_control_size(1)?
+    require(theme.font_size() == 11.0 && theme.control_height() == 20.0 &&
+            theme.field_height() == 22.0 && theme.radio_dot() == 5.0,
+            "the small control size did not move every metric with it")
+    theme.set_control_size(2)?
     require(theme.capsule() > theme.control_height(), "a capsule radius outgrows any control")
     return ok(true)
 }
@@ -91,15 +105,15 @@ fn templates_follow_the_theme() -> Result<bool> {
     let probe: Probe = new Probe()
     probe.update(object, theme)
     require(probe.card == "#ffffffff", "a template starts on the light card")
-    require(probe.surface == "#efefefff", "a template starts on the light bezel")
-    require(probe.track_off == "#d8d8d8ff", "a template starts on the light track")
+    require(probe.surface == "#ebebebff", "a template starts on the light bezel")
+    require(probe.track_off == "#e6e6e6ff", "a template starts on the light track")
 
     theme.set_dark(true)
     probe.update(object, theme)
     require(probe.card == "#1e1e1eff", "a template re-reads its card when the theme turns dark")
-    require(probe.track_off == "#4a4a4aff", "a template re-reads its track when the theme turns dark")
+    require(probe.track_off == "#343434ff", "a template re-reads its track when the theme turns dark")
     require(probe.ink == "#ffffffd8", "a template re-reads its ink when the theme turns dark")
-    require(probe.surface == "#363636ff", "a template re-reads its bezel when the theme turns dark")
+    require(probe.surface == "#303030ff", "a template re-reads its bezel when the theme turns dark")
     require(scene.refresh()?, "turning the theme dark repaints the scene")
 
     // A theme move that leaves fill, ink and accent alone still has to reach

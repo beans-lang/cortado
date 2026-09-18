@@ -239,7 +239,8 @@ pub class Vocabulary {
         if name == "divider" { return AttributeKind.real }
         if name == "stroke_width" || name == "rotation" || name == "scale_x" || name == "scale_y" ||
            name == "shadow_blur" || name == "shadow_dx" || name == "shadow_dy" ||
-           name == "clip_radius" || name == "transition_seconds" {
+           name == "clip_radius" || name == "transition_seconds" ||
+           name == "offset_x" || name == "offset_y" {
             return AttributeKind.real
         }
         if name == "min" || name == "max" || name == "value" ||

@@ -40,6 +40,19 @@ fn node_named(scene: cortado_skia.Scene, label: string) -> Option<render.Semanti
     for node: render.SemanticsNode in scene.semantics() { if node.label() == label { return some(node) } }
     return none
 }
+fn scroller_in(node: render.RenderObject) -> Option<render.ScrollRender> {
+    match node as? render.ScrollRender { some(found) => { return some(found) } none => {} }
+    for index: int in 0..node.child_count() {
+        match node.child_at(index) {
+            some(child) => {
+                match scroller_in(child) { some(found) => { return some(found) } none => {} }
+            }
+            none => {}
+        }
+    }
+    return none
+}
+
 fn verify() -> Result<bool> {
     let page: CollectionsPage = new CollectionsPage()
     let scene: cortado_skia.Scene = new cortado_skia.Scene(geometry.Size.of(600.0, 850.0))
@@ -147,7 +160,7 @@ fn verify() -> Result<bool> {
     // metrics it happened to have when this case was written.
     let metrics: render.Theme = scene.context().theme()
     let table_row: geometry.Point = geometry.Point.at(table_frame.x + 60.0,
-        table_frame.y + metrics.control_height() + metrics.row_height() * 2.5)
+        table_frame.y + metrics.header_height() + metrics.row_height() * 2.5)
     scene.pointer(events.EventKind.pointer_down, table_row)?
     scene.pointer(events.EventKind.pointer_up, table_row)?
     require(table.selected()? == 2 && page.selected_row == 2, "table pointer did not select row")
@@ -168,7 +181,7 @@ fn verify() -> Result<bool> {
     // The middle of the sliver of row 10 still under the header.
     let sliver: f64 = (metrics.row_height() - nudge) / 2.0
     let partly_visible: geometry.Point = geometry.Point.at(table_frame.x + 60.0,
-        table_frame.y + metrics.control_height() + sliver)
+        table_frame.y + metrics.header_height() + sliver)
     scene.pointer(events.EventKind.pointer_down, partly_visible)?
     scene.pointer(events.EventKind.pointer_up, partly_visible)?
     require(table.selected()? == 10 && page.selected_row == 10, "partly visible table row did not select")
@@ -181,7 +194,7 @@ fn verify() -> Result<bool> {
     scene.refresh()?
     // Within one row of the bottom, whatever a row costs.
     let content: f64 = page.table_rows.total as f64 * metrics.row_height()
-    let body: f64 = table_frame.height - metrics.control_height()
+    let body: f64 = table_frame.height - metrics.header_height()
     require(table_render.scroll_offset() >= content - body - metrics.row_height() &&
             has_label(scene, "Order 9999"),
             "programmatic table selection did not reveal the final row")
@@ -205,19 +218,26 @@ fn verify() -> Result<bool> {
             partial_cell.bounds().x + partial_cell.bounds().width > table_frame.x,
             "horizontal scroll dropped partly visible first column")
     match table.native_cell(2, 0) { ok(_) => { panic("shared table pretended to have a native cell") } err(_) => {} }
-    // Long enough to overflow the popup's cap at any row height this theme
-    // could pick, not just the one it had when this case was written.
-    combo.set_items(["Item 0", "Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6",
-                     "Item 7", "Item 8", "Item 9", "Item 10", "Item 11", "Item 12", "Item 13",
-                     "Item 14", "Item 15", "Item 16", "Item 17", "Item 18", "Item 19", "Item 20",
-                     "Item 21", "Item 22", "Item 23"])?
+    // Long enough to reach past the surface it opens in. A menu is as tall as
+    // its rows and no taller than the room it has, which is what AppKit does
+    // against the screen — there is no cap of its own.
+    var many: List<string> = []
+    for index: int in 0..48 { many.push("Item {index}") }
+    combo.set_items(many)?
     combo.select(0)?
     scene.refresh()?
     click(scene, combo, 0.5)?
     let popup: render.RenderObject = scene.context().popups().root().expect("long combo popup")
     let popup_frame: geometry.Rect = scene.global_frame(popup)?
-    require(popup_frame.height <= 240.0 && popup_frame.height > 0.0, "long popup was not capped")
-    let scroll: render.ScrollRender = (popup.child_at(0).expect("popup scroll view") as? render.ScrollRender).expect("popup scroll type")
+    let rows_tall: f64 = 48.0 * metrics.menu_row_height() + metrics.menu_padding() * 2.0
+    let room: f64 = scene.root().render_object()?.frame().height
+    require(popup_frame.height == (if rows_tall > room { room } else { rows_tall }),
+            "a long popup is its rows, or the room it has, and it was neither")
+    require(popup_frame.y >= 0.0 && popup_frame.y + popup_frame.height <= room,
+            "a long popup opened outside the surface")
+    // Found rather than indexed: a menu draws its sheet before its rows, so
+    // the scroll view is not the first thing under the popup's root.
+    let scroll: render.ScrollRender = scroller_in(popup).expect("popup scroll view")
     require(scroll.content_size().height > popup_frame.height, "popup list did not create scrollable content")
     scene.scroll(geometry.Point.at(popup_frame.x + popup_frame.width / 2.0, popup_frame.y + popup_frame.height / 2.0), 0.0, 96.0)?
     require(scroll.child_offset().y < 0.0, "long popup did not scroll")
@@ -245,7 +265,12 @@ fn verify() -> Result<bool> {
     click(nested, nested_combo, 0.5)?
     let outside: render.SemanticsNode = option_named(nested, "Water").expect("popup beyond clip")
     let outside_frame: geometry.Rect = outside.bounds()
-    require(outside_frame.y > clip_frame.y + clip_frame.height, "popup row did not extend beyond scroll ancestor")
+    // A pop-up button opens its menu *over* the control, so a row can fall
+    // either side of the clip. What matters is that a row lands outside it and
+    // is still hit: the popup is not clipped by the scroll view it opened from.
+    require(outside_frame.y + outside_frame.height > clip_frame.y + clip_frame.height ||
+            outside_frame.y < clip_frame.y,
+            "popup row did not reach past the scroll ancestor")
     nested.renderer().write_png("build/rendered-popup.png")?
     let outside_point: geometry.Point = geometry.Point.at(outside_frame.x + outside_frame.width / 2.0,
                                                          outside_frame.y + outside_frame.height / 2.0)

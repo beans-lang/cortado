@@ -102,7 +102,7 @@ pub class TemplateSet {
         self.popup_used = {}
         self.viewport = root.render_object()?.frame().size()
         self.context.popups().validate()
-        self.visit(root, 0)?
+        self.visit(root, 0, false)?
         for key: u64 in self.popups.keys() {
             match self.popups.get(key) {
                 some(instance) => {
@@ -122,22 +122,38 @@ pub class TemplateSet {
         }
         return ok(true)
     }
-    fn visit(widget: widgets.Widget, depth: int) -> Result<bool> {
+    /// The look a control takes where it stands. Inside an open popup a theme
+    /// may dress it differently; a theme that does not just answers the same.
+    fn look(object: render.RenderObject, in_popup: bool) -> Option<ControlTemplate> {
+        if in_popup {
+            match self.factory as? PopupRowTemplateFactory {
+                some(factory) => {
+                    match factory.create_in_popup(object) {
+                        some(view) => { return some(view) }
+                        none => {}
+                    }
+                }
+                none => {}
+            }
+        }
+        return self.factory.create(object)
+    }
+    fn visit(widget: widgets.Widget, depth: int, in_popup: bool) -> Result<bool> {
         if depth > 64 { return err("control templates contain a recursive visual tree", "template_cycle") }
         let object: render.RenderObject = widget.render_object()?
         if object.needs_template() {
             let key: u64 = object.handle()
             self.used[key] = true
             match self.mounted.get(key) {
-                some(instance) => { instance.refresh(self.viewport)?; self.visit(instance.root, depth + 1)? }
+                some(instance) => { instance.refresh(self.viewport)?; self.visit(instance.root, depth + 1, in_popup)? }
                 none => {
-                    match self.factory.create(object) {
+                    match self.look(object, in_popup) {
                         none => { return err("no .bx template for shared control", "missing_template") }
                         some(view) => {
                             let instance: TemplateInstance = new TemplateInstance(object, self.context, view)
                             instance.refresh(self.viewport)?
                             self.mounted[key] = instance
-                            self.visit(instance.root, depth + 1)?
+                            self.visit(instance.root, depth + 1, in_popup)?
                         }
                     }
                 }
@@ -147,7 +163,7 @@ pub class TemplateSet {
             let key: u64 = object.handle()
             self.popup_used[key] = true
             match self.popups.get(key) {
-                some(instance) => { instance.refresh(self.viewport)?; self.visit(instance.root, depth + 1)? }
+                some(instance) => { instance.refresh(self.viewport)?; self.visit(instance.root, depth + 1, true)? }
                 none => {
                     match self.factory as? PopupTemplateFactory {
                         some(factory) => {
@@ -156,7 +172,7 @@ pub class TemplateSet {
                                     let instance: TemplateInstance = new TemplateInstance(object, self.context, view, true)
                                     instance.refresh(self.viewport)?
                                     self.popups[key] = instance
-                                    self.visit(instance.root, depth + 1)?
+                                    self.visit(instance.root, depth + 1, true)?
                                 }
                                 none => { return err("no .bx popup template for shared control", "missing_template") }
                             }
@@ -166,7 +182,7 @@ pub class TemplateSet {
                 }
             }
         }
-        for child: widgets.Widget in widget.children() { self.visit(child, depth + 1)? }
+        for child: widgets.Widget in widget.children() { self.visit(child, depth + 1, in_popup)? }
         return ok(true)
     }
     pub fn close() {

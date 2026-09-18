@@ -1,13 +1,13 @@
 <VStack spacing={0} align="stretch">
   <HStack padding_x={10} padding_y={6} spacing={10} align="center" background={self.chrome} wrap>
     <Label text="Cortado" font_size={15} text_color={self.ink} />
-    <Label text="macOS tokens, small control size" font_size={self.footnote} text_color={self.muted} />
+    <Label text={"macOS 26.5 tokens · {self.control_sizes[self.control_size]} control size"} font_size={self.footnote} text_color={self.muted} />
     <Box grow={1} />
     <Label text="Appearance" font_size={self.footnote} text_color={self.muted} />
-    <Segmented key={"appearance"} selected={self.mode} items={self.modes} width={120}
+    <Segmented key={"appearance"} selected={self.mode} items={self.modes}
                on:change={fn(e: UiEvent) { self.set_mode(e.index) }} />
     <Label text="Size" font_size={self.footnote} text_color={self.muted} />
-    <Segmented key={"size"} selected={self.control_size} items={self.control_sizes} width={200}
+    <Segmented key={"size"} selected={self.control_size} items={self.control_sizes}
                on:change={fn(e: UiEvent) { self.set_control_size(e.index) }} />
     <Label text="Accent" font_size={self.footnote} text_color={self.muted} />
     $for index in 0..self.accent_names.len() {
@@ -47,7 +47,7 @@
             <Switch key={"state-switch-on"} checked />
             <Switch key={"state-switch-off"} />
           </HStack>
-          <Label text="Click a control to see its pressed and focused states."
+          <Label text="Click a control for its pressed and focused look."
                  font_size={self.caption} text_color={self.muted} />
 
           <Box height={4} />
@@ -74,6 +74,18 @@
             <Label text="Notify when ready" text_color={self.ink} font_size={self.font_size} grow={1} />
             <Switch key={"notify"} checked={self.notify}
                     on:change={fn(e: UiEvent) { self.set_notify(e.index) }} />
+          </HStack>
+
+          <Box height={4} />
+          <Label text="MOTION" font_size={self.caption} text_color={self.muted} />
+          <Label text={self.motion_note} font_size={self.caption} text_color={self.muted} />
+          <HStack spacing={12} align="center" wrap>
+            <Switch key={"motion-a"} checked={self.motion_a}
+                    on:change={fn(e: UiEvent) { self.set_motion_a(e.index) }} />
+            <Switch key={"motion-b"} checked={self.motion_b}
+                    on:change={fn(e: UiEvent) { self.set_motion_b(e.index) }} />
+            <Label text="Toggle fast to interrupt a slide mid-way."
+                   font_size={self.caption} text_color={self.muted} grow={1} />
           </HStack>
 
           <Box height={4} />
@@ -119,9 +131,12 @@
           <Label text="CHOICES" font_size={self.caption} text_color={self.muted} />
           <HStack spacing={6} align="center">
             <Label text="Drink" text_color={self.muted} font_size={self.footnote} width={60} />
-            <ComboBox key={"drink"} selected={self.drink} items={self.drinks} grow={1}
+            <ComboBox key={"drink"} selected={self.drink} items={self.drinks}
                       on:change={fn(e: UiEvent) { self.set_drink(e.index) }} />
+            <Box grow={1} />
           </HStack>
+          <Label text="Click Drink for the menu."
+                 font_size={self.caption} text_color={self.muted} />
           <Segmented key={"roast"} selected={self.roast} items={self.roasts}
                      on:change={fn(e: UiEvent) { self.set_roast(e.index) }} />
           <TabView key={"tabs"} selected={self.tab} labels={self.tabs} height={86}
@@ -228,11 +243,15 @@ pub partial class Showcase extends component.Component {
     pub tabs: List<string> = ["Recipe", "Notes"]
     pub tab: int = 0
     pub details: bool = false
-    pub divider: f64 = 260.0
+    pub divider: f64 = 150.0
     pub columns: List<string> = ["Order", "Drink", "Wait"]
     pub widths: List<f64> = [140.0, 200.0, 120.0]
     pub rows: OrderRows
     pub row: int = -1
+    pub motion_a: bool = false
+    pub motion_b: bool = true
+    pub motion_note: string = "Switch: 0.15s ease-in-out. Everything else is instant, as measured."
+
 
     pub fn init() { self.rows = new OrderRows(); super.init() }
 
@@ -255,6 +274,11 @@ pub partial class Showcase extends component.Component {
                 self.large_title = theme.large_title()
                 self.title1 = theme.title1()
                 self.headline_size = theme.headline()
+                self.motion_note = if theme.is_reduced_motion() {
+                    "Reduce motion is on, so every animation is off."
+                } else {
+                    "Switch: 0.15s ease-in-out. Segmented, tabs, check box, button press: none."
+                }
             }
             none => {}
         }
@@ -303,5 +327,7 @@ pub partial class Showcase extends component.Component {
     pub fn set_details(value: int) { self.details = value == 1; self.request_render() }
     pub fn set_divider(value: int) { self.divider = value as f64; self.request_render() }
     pub fn select_row(index: int) { self.row = index; self.request_render() }
+    pub fn set_motion_a(value: int) { self.motion_a = value == 1; self.request_render() }
+    pub fn set_motion_b(value: int) { self.motion_b = value == 1; self.request_render() }
 }
 </beans>

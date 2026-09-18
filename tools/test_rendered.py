@@ -109,7 +109,7 @@ def main():
                 run([sanitized_service], env=env)
     if args.skip_interpreter:
         print("SKIP interpreter: explicitly requested")
-    print("ok shared renderer: markup drift, Skia pixels, editing, ownership, .bx scene, desktop surface, showcase")
+    print("ok shared renderer: markup drift, Skia pixels, editing, ownership, macOS appearance,\n   control sizes, motion, .bx scene, desktop surface, showcase")
 
 
 if __name__ == "__main__":

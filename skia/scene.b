@@ -30,6 +30,9 @@ pub class Scene {
         self.root_value = new widgets.Container(some(self.context_value))
         self.mount = new component.Mount(self.root_value, self.context_value.router())
         self.templates = new component.TemplateSet(self.context_value, new templates.DefaultTemplates())
+        // Read the accessibility setting once, where the window is made. Every
+        // motion token answers zero while it is on.
+        self.context_value.theme().set_reduced_motion(host.NativeServices.reduce_motion())
     }
     pub fn context() -> render.UiContext { return self.context_value }
     pub fn renderer() -> SkiaRenderer { return self.renderer_value }

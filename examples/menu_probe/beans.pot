@@ -1,0 +1,4 @@
+module cortado_menu_probe
+kind application
+require path "../.."
+require path "../../skia"

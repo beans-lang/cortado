@@ -23,7 +23,19 @@ pub class TextFieldRender extends TextRender {
     pub fn editing_text() -> string { return self.editor_value.text() }
     pub fn is_secure() -> bool { return self.secure_value }
     pub fn is_multiline() -> bool { return self.multiline_value }
-    fn paragraph_width() -> f64 { return if self.multiline_value { self.bounds.width - 16.0 } else { -1.0 } }
+    /// The one content box every part of this field reads: the text, the caret,
+    /// the selection and the hit test. They cannot drift apart because there is
+    /// no second copy of these numbers.
+    pub fn text_inset() -> f64 { return self.theme.field_padding() }
+    /// Where the first line's baseline lands, down from the frame's top. It is
+    /// the field's own baseline, not a centred line box: AppKit puts a 13 point
+    /// run's baseline 17 points down a 24 point field whatever the line height.
+    fn field_top(paragraph: paint.Paragraph) -> f64 {
+        return self.theme.field_baseline() - paragraph.metrics().baseline
+    }
+    fn paragraph_width() -> f64 {
+        return if self.multiline_value { self.bounds.width - self.text_inset() * 2.0 } else { -1.0 }
+    }
     fn display_offset(offset: int) -> int {
         if !self.secure_value { return offset }
         var count: int = 0
@@ -44,9 +56,10 @@ pub class TextFieldRender extends TextRender {
     }
     pub fn caret_rect() -> Result<geometry.Rect> {
         self.demand_alive()?
-        let caret: geometry.Rect = self.shaped(self.paragraph_width())?.caret(self.display_offset(self.editor_value.caret()))
-        return ok(geometry.Rect.of(caret.x + 8.0 - self.text_offset,
-                   caret.y + 8.0 - self.vertical_offset, caret.width, caret.height))
+        let paragraph: paint.Paragraph = self.shaped(self.paragraph_width())?
+        let caret: geometry.Rect = paragraph.caret(self.display_offset(self.editor_value.caret()))
+        return ok(geometry.Rect.of(caret.x + self.text_inset() - self.text_offset,
+                   caret.y + self.field_top(paragraph) - self.vertical_offset, caret.width, caret.height))
     }
     pub override fn needs_template() -> bool { return true }
     pub override fn role() -> string { return "textbox" }
@@ -98,19 +111,23 @@ pub class TextFieldRender extends TextRender {
     }
     pub override fn paint_self(canvas: paint.Canvas) -> Result<bool> {
         self.paint_template(canvas)?
-        if self.bounds.width <= 16.0 || self.bounds.height <= 8.0 { return ok(true) }
-        canvas.save()?
-        canvas.clip(geometry.Rect.of(8.0, 4.0, self.bounds.width - 16.0, self.bounds.height - 8.0), 0.0)?
+        let inset: f64 = self.text_inset()
+        if self.bounds.width <= inset * 2.0 || self.bounds.height <= 4.0 { return ok(true) }
         let paragraph: paint.Paragraph = self.shaped(self.paragraph_width())?
+        let top: f64 = self.field_top(paragraph)
+        canvas.save()?
+        // The clip is the content box, which is the frame less the same inset
+        // the text is drawn at — never a second set of numbers.
+        canvas.clip(geometry.Rect.of(inset, 0.0, self.bounds.width - inset * 2.0, self.bounds.height), 0.0)?
         var caret: geometry.Rect = paragraph.caret(self.display_offset(self.editor_value.caret()))
         if self.has_focus {
-            let available: f64 = self.bounds.width - 17.0
+            let available: f64 = self.bounds.width - inset * 2.0 - 1.0
             if !self.multiline_value {
                 if caret.x < self.text_offset { self.text_offset = caret.x }
                 if caret.x > self.text_offset + available { self.text_offset = caret.x - available }
             } else {
                 self.text_offset = 0.0
-                let height: f64 = self.bounds.height - 16.0
+                let height: f64 = self.bounds.height - top * 2.0
                 if caret.y < self.vertical_offset { self.vertical_offset = caret.y }
                 if caret.y + caret.height > self.vertical_offset + height {
                     self.vertical_offset = caret.y + caret.height - height
@@ -122,13 +139,14 @@ pub class TextFieldRender extends TextRender {
             if first > last { let swap: int = first; first = last; last = swap }
             let rectangles: List<geometry.Rect> = paragraph.selection(self.display_offset(first), self.display_offset(last))?
             for rect: geometry.Rect in rectangles {
-                canvas.rectangle(geometry.Rect.of(rect.x + 8.0 - self.text_offset, rect.y + 8.0 - self.vertical_offset, rect.width, rect.height),
+                canvas.rectangle(geometry.Rect.of(rect.x + inset - self.text_offset,
+                    rect.y + top - self.vertical_offset, rect.width, rect.height),
                     0.0, (self.theme.accent() & 0xffffff00) | 0x44, 0.0)?
             }
         }
-        canvas.paragraph(paragraph, 8.0 - self.text_offset, 8.0 - self.vertical_offset)?
+        canvas.paragraph(paragraph, inset - self.text_offset, top - self.vertical_offset)?
         if self.has_focus {
-            caret.x += 8.0 - self.text_offset; caret.y += 8.0 - self.vertical_offset
+            caret.x += inset - self.text_offset; caret.y += top - self.vertical_offset
             canvas.rectangle(caret, 0.0, self.theme.accent(), 0.0)?
         }
         canvas.restore()?
@@ -182,8 +200,10 @@ pub class TextFieldRender extends TextRender {
         if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT {
             match self.shaped(self.paragraph_width()) {
                 ok(paragraph) => {
-                    let hit: int = self.source_offset(paragraph.hit_test(event.position.x - 8.0 + self.text_offset,
-                                                      event.position.y - 8.0 + self.vertical_offset))
+                    let inset: f64 = self.text_inset()
+                    let top: f64 = self.field_top(paragraph)
+                    let hit: int = self.source_offset(paragraph.hit_test(event.position.x - inset + self.text_offset,
+                                                      event.position.y - top + self.vertical_offset))
                     match self.renderer.graphemes(self.words) {
                         ok(boundaries) => {
                             var at: int = 0

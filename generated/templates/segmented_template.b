@@ -28,12 +28,13 @@ partial class SegmentedTemplate {
         b.word("align", "stretch")
         var _cortado_row_0: int = 0
         for index in 0..self.choices.len() {  // segmented_template.bx:2
-            b.open("Box")  // segmented_template.bx:3
+            b.open("Box")  // segmented_template.bx:5
             b.key("{"segment-{index}"}")
             b.number("grow", (1) as f64)
+            b.number("padding_x", (self.segment_padding / 2.0) as f64)
             b.word("background", if self.selected == index { self.selection_fill } else { self.clear })
             b.number("corner_radius", (self.radius) as f64)
-            b.open("Label")  // segmented_template.bx:6
+            b.open("Label")  // segmented_template.bx:8
             b.text("{self.choices[index]}")
             b.word("text_color", if self.selected == index && self.active { self.on_accent } else { self.ink })
             b.number("font_weight", (if self.selected == index { self.selected_weight } else { 0 }) as f64)

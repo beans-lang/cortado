@@ -51,6 +51,16 @@ pub abstract class Layout {
         return true
     }
 
+    /// Whether this layout shows less than it holds.
+    ///
+    /// A run asks so it can leave a scrolling child out of the shrinking: a
+    /// control that scrolls has no minimum along its scroll axis, and a run
+    /// that treated its content as one would squeeze every other child to fit
+    /// something that was going to scroll anyway.
+    pub fn scrolls() -> bool {
+        return false
+    }
+
     /// The name goldens print for this layout.
     pub fn label() -> string {
         return "layout"

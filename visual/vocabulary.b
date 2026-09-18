@@ -18,6 +18,8 @@ pub const TRANSITION_SECONDS: int = 1114
 pub const TRANSITION_EASING: int = 1115
 pub const STROKE_CAP: int = 1116
 pub const STROKE_JOIN: int = 1117
+pub const OFFSET_X: int = 1118
+pub const OFFSET_Y: int = 1119
 
 pub enum Kind {
     rectangle
@@ -46,8 +48,8 @@ pub fn kind_of(tag: string) -> Option<Kind> {
 pub fn is_tag(tag: string) -> bool { return kind_of(tag) != none }
 pub fn tags() -> List<string> { return ["Ellipse", "Path", "Rectangle", "ResourceImage"] }
 pub fn attribute_names() -> List<string> {
-    return ["clip_radius", "d", "fill", "gradient_end", "gradient_start", "rotation",
-            "scale_x", "scale_y", "shadow_blur", "shadow_color", "shadow_dx", "shadow_dy",
+    return ["clip_radius", "d", "fill", "gradient_end", "gradient_start", "offset_x", "offset_y",
+            "rotation", "scale_x", "scale_y", "shadow_blur", "shadow_color", "shadow_dx", "shadow_dy",
             "source", "stroke", "stroke_cap", "stroke_join", "stroke_width",
             "transition_easing", "transition_seconds"]
 }
@@ -59,6 +61,7 @@ pub fn attribute_note(name: string) -> string {
     if name == "stroke_cap" { return "butt, round or square ends on an open stroke" }
     if name == "stroke_join" { return "miter, round or bevel corners on a stroke" }
     if name == "rotation" { return "shape rotation in degrees" }
+    if name == "offset_x" || name == "offset_y" { return "points the drawing moves from its layout box" }
     if name == "scale_x" || name == "scale_y" { return "positive shape scale" }
     if name == "gradient_start" { return "top colour of a vertical linear fill gradient" }
     if name == "gradient_end" { return "bottom colour of a vertical linear fill gradient" }
@@ -79,7 +82,8 @@ pub fn attribute_call(name: string) -> string {
        name == "gradient_end" || name == "shadow_color" { return "word" }
     if name == "stroke_width" || name == "rotation" || name == "scale_x" || name == "scale_y" ||
        name == "shadow_blur" || name == "shadow_dx" || name == "shadow_dy" ||
-       name == "clip_radius" || name == "transition_seconds" {
+       name == "clip_radius" || name == "transition_seconds" ||
+       name == "offset_x" || name == "offset_y" {
         return "number"
     }
     return ""
@@ -102,6 +106,8 @@ pub fn property_of(name: string) -> int {
     if name == "transition_easing" { return TRANSITION_EASING }
     if name == "stroke_cap" { return STROKE_CAP }
     if name == "stroke_join" { return STROKE_JOIN }
+    if name == "offset_x" { return OFFSET_X }
+    if name == "offset_y" { return OFFSET_Y }
     return -1
 }
 pub fn is_colour(name: string) -> bool {
@@ -120,6 +126,7 @@ pub fn carries(kind: Kind, name: string) -> bool {
     if name == "source" { return kind == Kind.resource_image }
     if kind == Kind.resource_image {
         return name == "clip_radius" || name == "rotation" || name == "scale_x" || name == "scale_y" ||
+               name == "offset_x" || name == "offset_y" ||
                name == "transition_seconds" || name == "transition_easing"
     }
     return true

@@ -35,6 +35,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -61,6 +62,12 @@ struct Engine {
     std::unique_ptr<CtdGpuDevice> gpu;
     int32_t backend = 0;
     sk_sp<FontCollection> fonts = sk_make_sp<FontCollection>();
+    /* Faces this engine names itself: the per-point-size UI font, and a
+     * registered asset. skparagraph resolves by family name, so both have to
+     * be in one provider under a name of their own. */
+    sk_sp<skia::textlayout::TypefaceFontProvider> provider =
+        sk_make_sp<skia::textlayout::TypefaceFontProvider>();
+    std::set<std::string> named;
     sk_sp<SkUnicode> unicode = SkUnicodes::ICU::Make();
     std::unordered_map<uint64_t, Text> paragraphs;
     std::unordered_map<uint64_t, Image> images;
@@ -166,6 +173,22 @@ CTFontUIFontType ui_type(int32_t weight) { (void)weight; return kCTFontUIFontSys
  * pixels appear on macOS, Windows and Linux. Without one, Apple resolves its UI
  * font per point size so the optical variant matches a native control, and the
  * other platforms name families. */
+/* Gives one typeface a family name of its own and hands the name back.
+ *
+ * Setting a typeface on a TextStyle is not enough: the shaper looks a face up
+ * by family, so a UI font left unnamed is resolved again from its family and
+ * comes back as a different optical cut — narrower glyphs and a taller line
+ * than the control it is copying. */
+SkString name_face(Engine *e, sk_sp<SkTypeface> face, const char *prefix, double size, int32_t weight) {
+    char buffer[64];
+    snprintf(buffer, sizeof buffer, "%s-%d-%d", prefix, (int)llround(size * 100.0), weight);
+    SkString alias(buffer);
+    if (e->named.insert(std::string(buffer)).second) {
+        e->provider->registerTypeface(face, alias);
+    }
+    return alias;
+}
+
 void ui_font(Engine *e, TextStyle &style, double size, int32_t weight) {
     const SkFontStyle wanted(weight_of(weight), SkFontStyle::kNormal_Width,
                              SkFontStyle::kUpright_Slant);
@@ -186,6 +209,11 @@ void ui_font(Engine *e, TextStyle &style, double size, int32_t weight) {
             base->getFamilyName(&family);
             sk_sp<SkTypeface> styled(manager->matchFamilyStyle(family.c_str(), wanted));
             if (styled) base = styled;
+        }
+        if (base && e) {
+            style.setFontFamilies({name_face(e, base, "CortadoUI", size, weight)});
+            style.setTypeface(base);
+            return;
         }
         if (base) { style.setTypeface(base); return; }
     }
@@ -211,6 +239,7 @@ void *ctd_skia_new() {
 #else
     e->fonts->setDefaultFontManager(SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType()));
 #endif
+    e->fonts->setAssetFontManager(e->provider);
     e->fonts->enableFontFallback();
     return e.release();
 }
@@ -485,9 +514,7 @@ int32_t ctd_skia_font_register(void *raw, const char *path, int32_t length) {
     SkString family;
     face->getFamilyName(&family);
     if (family.isEmpty()) return invalid;
-    auto provider = sk_make_sp<skia::textlayout::TypefaceFontProvider>();
-    if (provider->registerTypeface(face) == 0) return invalid;
-    e->fonts->setAssetFontManager(provider);
+    if (e->provider->registerTypeface(face) == 0) return invalid;
     e->font_family = family;
     e->font_data = std::move(data);
     return 0;
@@ -505,7 +532,16 @@ int32_t ctd_skia_paragraph_metrics(void *raw, uint64_t id, double *out) {
     out[0] = lines[0].fAscent;
     out[1] = lines[0].fDescent;
     out[2] = lines[0].fHeight;
-    out[3] = lines[0].fBaseline;
+    /* Where paint() actually puts the first baseline, from the y it is given.
+     *
+     * Neither getAlphabeticBaseline() nor the line's own fBaseline is that
+     * number: the shaper reports the face's metrics and lays the line out on
+     * the rounded ones. Painting at the reported baseline put every control's
+     * text three quarters of a point low at 13pt. Measured at 8, 9, 10, 11,
+     * 12, 13, 14, 17, 22 and 26 point against the painted ink, the baseline
+     * paint() uses is the rounded ascent every time — including 17, 22 and 26,
+     * where that is not the point size. */
+    out[3] = SkScalarRoundToScalar(SkScalarAbs(lines[0].fAscent));
     return 0;
 }
 int32_t ctd_skia_paragraph_release(void *raw, uint64_t id) {

@@ -129,6 +129,11 @@ ctd_status ctd_clipboard_write(const char *utf8, int32_t length) {
     }
     CloseClipboard(); return CTD_OK;
 }
+int32_t ctd_reduce_motion(void) {
+    BOOL animations = TRUE;
+    if (!SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animations, 0)) return 0;
+    return animations ? 0 : 1;
+}
 int32_t ctd_clipboard_read(char *out, int32_t cap) {
     if (cap < 0) return CTD_ERR_RANGE;
     if (!OpenClipboard(NULL)) return CTD_ERR_PLATFORM;

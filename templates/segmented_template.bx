@@ -1,6 +1,8 @@
 <HStack background={self.surface} corner_radius={self.radius} align="stretch">
   $for index in 0..self.choices.len() {
-    <Box key={"segment-{index}"} grow={1}
+    <!-- A segment is its own title plus the measured padding. Extra width is
+         shared, which is what AppKit does with a control wider than its content. -->
+    <Box key={"segment-{index}"} grow={1} padding_x={self.segment_padding / 2.0}
          background={if self.selected == index { self.selection_fill } else { self.clear }}
          corner_radius={self.radius}>
       <Label text={self.choices[index]}

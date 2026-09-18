@@ -87,6 +87,10 @@ pub class ScrollLayout extends Layout {
         return ok(geometry.Size.of(widest, tallest))
     }
 
+    pub override fn scrolls() -> bool {
+        return true
+    }
+
     /// Nothing to mirror: one child, and it fills the width either way.
     pub override fn mirrors_in_rtl() -> bool {
         return false

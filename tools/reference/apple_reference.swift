@@ -195,8 +195,16 @@ func makers(_ cs: NSControl.ControlSize, on: Bool) -> [(String, NSView)] {
         ("progress_bar", bar), ("level_indicator", level),
         ("disclosure", disclosure), ("group_box", box),
     ]
+    // Setting controlSize alone leaves the font at 13pt, so a mini bezel would be
+    // captured with regular-size text. Interface Builder resizes it; so do we.
+    let sized = NSFont.systemFont(ofSize: NSFont.systemFontSize(for: cs))
     for (_, v) in rows {
-        if let c = v as? NSControl { c.controlSize = cs }
+        if let c = v as? NSControl {
+            c.controlSize = cs
+            if !(v is NSSwitch) && !(v is NSStepper) && !(v is NSSlider) && !(v is NSLevelIndicator) {
+                c.font = sized
+            }
+        }
         if let p = v as? NSProgressIndicator { p.controlSize = cs }
     }
     return rows
@@ -258,10 +266,26 @@ func geometryJSON() -> String {
                     ("intercellWidth", fmt(Double(table.intercellSpacing.width))),
                     ("intercellHeight", fmt(Double(table.intercellSpacing.height))),
                     ("headerHeight", fmt(Double(NSTableHeaderView().frame.height)))])
-    let menu = NSMenu(); menu.addItem(withTitle: "Item", action: nil, keyEquivalent: "")
-    extra("menu", [("font", quote(NSFont.menuFont(ofSize: 0).fontName)),
-                   ("fontSize", fmt(Double(NSFont.menuFont(ofSize: 0).pointSize))),
-                   ("width", fmt(Double(menu.size.width))), ("height", fmt(Double(menu.size.height)))])
+    // A menu's own layout, read off NSMenu.size rather than a screenshot: one
+    // item gives the chrome, each further item the row height.
+    let menuFont = NSFont.menuFont(ofSize: 0)
+    func sized(_ build: (NSMenu) -> Void) -> NSSize { let m = NSMenu(); build(m); return m.size }
+    let one = sized { $0.addItem(withTitle: "Item 0", action: nil, keyEquivalent: "") }
+    let two = sized { $0.addItem(withTitle: "Item 0", action: nil, keyEquivalent: "")
+                      $0.addItem(withTitle: "Item 0", action: nil, keyEquivalent: "") }
+    let sep = sized { $0.addItem(NSMenuItem.separator()) }
+    let checked = sized { let i = NSMenuItem(title: "Item 0", action: nil, keyEquivalent: ""); i.state = .on; $0.addItem(i) }
+    let indented = sized { let i = NSMenuItem(title: "Item 0", action: nil, keyEquivalent: ""); i.indentationLevel = 1; $0.addItem(i) }
+    let titleWidth = ("Item 0" as NSString).size(withAttributes: [.font: menuFont]).width
+    extra("menu", [("font", quote(menuFont.fontName)),
+                   ("fontSize", fmt(Double(menuFont.pointSize))),
+                   ("rowHeight", fmt(Double(two.height - one.height))),
+                   ("chromeHeight", fmt(Double(one.height - (two.height - one.height)))),
+                   ("separatorHeight", fmt(Double(sep.height - (one.height - (two.height - one.height))))),
+                   ("widthOverText", fmt(Double(one.width) - Double(titleWidth.rounded(.up)))),
+                   ("checkColumn", fmt(Double(checked.width - one.width))),
+                   ("indentStep", fmt(Double(indented.width - one.width))),
+                   ("width", fmt(Double(one.width))), ("height", fmt(Double(one.height)))])
     return "{\n  \"controls\": [\n" + rows.joined(separator: ",\n")
         + "\n  ],\n  \"extras\": [\n" + extras.joined(separator: ",\n") + "\n  ]\n}"
 }
@@ -457,7 +481,7 @@ final class Delegate: NSObject, NSApplicationDelegate {
         write("colors.json", colourJSON())
         write("fonts.json", fontJSON())
         write("geometry.json", geometryJSON())
-        for (sizeName, cs) in sizes where sizeName != "large" {
+        for (sizeName, cs) in sizes {
             for name in shotControls {
                 for state in ShotState.allCases {
                     for (appearanceName, appearance) in [("light", aqua), ("dark", darkAqua)] {

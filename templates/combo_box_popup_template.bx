@@ -1,12 +1,24 @@
-<ScrollView background={self.card} border_color={self.separator} border_width={1} corner_radius={self.radius}>
-  <VStack spacing={0} align="stretch">
-    $for index in 0..self.choices.len() {
-      <Button key={"option-{index}"}
-              text={if index == self.highlighted { "▸ {self.choices[index]}" } else if index == self.selected { "✓ {self.choices[index]}" } else { "  {self.choices[index]}" }}
-              height={20} on:click={fn(e: UiEvent) { self.choose(index) }} />
-    }
-  </VStack>
-</ScrollView>
+<Box width_percent={100.0} height_percent={100.0}>
+  <!-- The sheet is a drawing so it can carry a real shadow; a Box paints a
+       background and a border and nothing under them. -->
+  <Rectangle x={0} y={0} width_percent={100.0} height_percent={100.0}
+             corner_radius={self.menu_radius} fill={self.menu_fill}
+             stroke={self.menu_border} stroke_width={self.hairline_width}
+             shadow_color={self.menu_shadow} shadow_blur={self.menu_shadow_blur}
+             shadow_dy={self.menu_shadow_dy} />
+  <ScrollView x={0} y={self.menu_padding} width_percent={100.0}
+              bottom={self.menu_padding} background={self.clear}>
+    <VStack spacing={0} align="stretch" padding_x={self.menu_row_inset}>
+      $for index in 0..self.choices.len() {
+        <Button key={"option-{index}"} text={self.choices[index]}
+                height={self.menu_row_height}
+                checked={index == self.selected}
+                prominent={index == self.highlighted}
+                on:click={fn(e: UiEvent) { self.choose(index) }} />
+      }
+    </VStack>
+  </ScrollView>
+</Box>
 <beans>
 package templates
 import cortado.component

@@ -288,8 +288,14 @@ pub fn property_name(property: int) -> string {
     if property == visual.SHADOW_DX { return "shadow_dx" }
     if property == visual.SHADOW_DY { return "shadow_dy" }
     if property == visual.CLIP_RADIUS { return "clip_radius" }
+    if property == visual.OFFSET_X { return "offset_x" }
+    if property == visual.OFFSET_Y { return "offset_y" }
     if property == visual.TRANSITION_SECONDS { return "transition_seconds" }
     if property == visual.TRANSITION_EASING { return "transition_easing" }
+    if property == host.P_FONT_WEIGHT { return "font_weight" }
+    if property == host.P_BASELINE { return "baseline" }
+    if property == host.P_OVERHANG { return "overhang" }
+    if property == host.P_PROMINENT { return "prominent" }
     if property == host.P_CHECKED { return "checked" }
     if property == host.P_ENABLED { return "enabled" }
     if property == host.P_HIDDEN { return "hidden" }

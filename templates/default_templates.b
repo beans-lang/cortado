@@ -5,10 +5,10 @@ import cortado.render
 import {ButtonTemplate, TextFieldTemplate, CheckBoxTemplate, RadioButtonTemplate, SwitchTemplate,
         SliderTemplate, StepperTemplate, ProgressBarTemplate, LevelIndicatorTemplate,
         SeparatorTemplate, GroupBoxTemplate, DisclosureTemplate, ComboBoxTemplate,
-        ComboBoxPopupTemplate, SegmentedTemplate, TabViewTemplate, SplitViewTemplate,
-        TableTemplate} from cortado.generated.templates
+        ComboBoxPopupTemplate, MenuRowTemplate, SegmentedTemplate, TabViewTemplate,
+        SplitViewTemplate, TableTemplate} from cortado.generated.templates
 
-pub class DefaultTemplates implements component.PopupTemplateFactory {
+pub class DefaultTemplates implements component.PopupRowTemplateFactory {
     pub fn init() {}
     pub fn create(control: render.RenderObject) -> Option<component.ControlTemplate> {
         match control as? render.ButtonRender {
@@ -38,6 +38,12 @@ pub class DefaultTemplates implements component.PopupTemplateFactory {
     }
     pub fn create_popup(control: render.RenderObject) -> Option<component.ControlTemplate> {
         match control as? render.ComboBoxRender { some(_) => { return some(new ComboBoxPopupTemplate()) } none => {} }
+        return none
+    }
+    /// A button inside an open menu is a menu row. Everything else keeps the
+    /// look it has outside one.
+    pub fn create_in_popup(control: render.RenderObject) -> Option<component.ControlTemplate> {
+        match control as? render.ButtonRender { some(_) => { return some(new MenuRowTemplate()) } none => {} }
         return none
     }
 }

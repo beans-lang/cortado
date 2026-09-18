@@ -304,6 +304,10 @@ ctd_status ctd_clipboard_write(const char *utf8, int32_t length) {
     return accepted ? CTD_OK : CTD_ERR_PLATFORM;
 }
 
+int32_t ctd_reduce_motion(void) {
+    return [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion] ? 1 : 0;
+}
+
 int32_t ctd_clipboard_read(char *out, int32_t cap) {
     if (cap < 0) return CTD_ERR_RANGE;
     NSString *text = [ctd_clipboard() stringForType:NSPasteboardTypeString];

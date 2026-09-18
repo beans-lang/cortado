@@ -340,7 +340,7 @@ pub fn tag_carries(tag: string, name: string) -> bool {
                                                "SearchField", "CheckBox", "RadioButton",
                                                "Switch", "Slider", "Stepper", "ComboBox",
                                                "Segmented", "DatePicker", "ColorWell"]) }
-    if name == "checked" { return one_of(tag, ["CheckBox", "RadioButton", "Switch"]) }
+    if name == "checked" { return one_of(tag, ["Button", "CheckBox", "RadioButton", "Switch"]) }
     if name == "min" || name == "max" || name == "value" {
         return one_of(tag, ["Slider", "Stepper", "ProgressBar", "LevelIndicator"])
     }

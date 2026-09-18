@@ -151,6 +151,13 @@ static gboolean ctd_clipboard_timeout(gpointer data) {
     g_main_loop_quit(read->loop);
     return G_SOURCE_REMOVE;
 }
+int32_t ctd_reduce_motion(void) {
+    GtkSettings *settings = gtk_settings_get_default();
+    if (!settings) return 0;
+    gboolean animations = TRUE;
+    g_object_get(settings, "gtk-enable-animations", &animations, NULL);
+    return animations ? 0 : 1;
+}
 int32_t ctd_clipboard_read(char *out, int32_t cap) {
     if (cap < 0) return CTD_ERR_RANGE;
     GdkDisplay *display = gdk_display_get_default();

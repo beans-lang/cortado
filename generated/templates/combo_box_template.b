@@ -32,35 +32,35 @@ partial class ComboBoxTemplate {
         b.number("baseline", (self.baseline) as f64)
         b.number("x", (self.control_padding) as f64)
         b.number("y", (0) as f64)
-        b.number("right", (self.control_padding * 2.0 + self.chevron_width) as f64)
+        b.number("right", (self.chevron_inset + self.chevron_width + self.control_padding) as f64)
         b.number("height_percent", (100.0) as f64)
         b.close()
-        b.open("Path")  // combo_box_template.bx:5
-        b.number("right", (self.control_padding) as f64)
-        b.number("y", (self.control_height / 2.0 - self.chevron_height - 1.5) as f64)
+        b.open("Path")  // combo_box_template.bx:6
+        b.number("right", (self.chevron_inset) as f64)
+        b.number("y", ((self.control_height - self.chevron_block) / 2.0) as f64)
         b.number("width", (self.chevron_width) as f64)
         b.number("height", (self.chevron_height) as f64)
-        b.text("M0 {self.chevron_height} L{self.chevron_width / 2.0} 0 L{self.chevron_width} {self.chevron_height}")
+        b.text("M{self.chevron_stroke / 2.0} {self.chevron_height - self.chevron_stroke / 2.0} L{self.chevron_width / 2.0} {self.chevron_stroke / 2.0} L{self.chevron_width - self.chevron_stroke / 2.0} {self.chevron_height - self.chevron_stroke / 2.0}")
         b.word("stroke", self.ink)
-        b.number("stroke_width", (self.stepper_stroke) as f64)
+        b.number("stroke_width", (self.chevron_stroke) as f64)
         b.word("stroke_cap", "round")
         b.word("stroke_join", "round")
         b.word("fill", "#00000000")
         b.close()
-        b.open("Path")  // combo_box_template.bx:10
-        b.number("right", (self.control_padding) as f64)
-        b.number("y", (self.control_height / 2.0 + 1.5) as f64)
+        b.open("Path")  // combo_box_template.bx:11
+        b.number("right", (self.chevron_inset) as f64)
+        b.number("y", ((self.control_height + self.chevron_block) / 2.0 - self.chevron_height) as f64)
         b.number("width", (self.chevron_width) as f64)
         b.number("height", (self.chevron_height) as f64)
-        b.text("M0 0 L{self.chevron_width / 2.0} {self.chevron_height} L{self.chevron_width} 0")
+        b.text("M{self.chevron_stroke / 2.0} {self.chevron_stroke / 2.0} L{self.chevron_width / 2.0} {self.chevron_height - self.chevron_stroke / 2.0} L{self.chevron_width - self.chevron_stroke / 2.0} {self.chevron_stroke / 2.0}")
         b.word("stroke", self.ink)
-        b.number("stroke_width", (self.stepper_stroke) as f64)
+        b.number("stroke_width", (self.chevron_stroke) as f64)
         b.word("stroke_cap", "round")
         b.word("stroke_join", "round")
         b.word("fill", "#00000000")
         b.close()
-        if self.focused {  // combo_box_template.bx:15
-            b.open("Rectangle")  // combo_box_template.bx:16
+        if self.focused {  // combo_box_template.bx:17
+            b.open("Rectangle")  // combo_box_template.bx:18
             b.number("x", (0) as f64)
             b.number("y", (0) as f64)
             b.number("width_percent", (100.0) as f64)

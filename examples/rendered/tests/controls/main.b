@@ -20,9 +20,11 @@ fn find(root: widgets.Widget, kind: widgets.WidgetKind, text: string = "") -> Op
     return none
 }
 
-fn click(scene: cortado_skia.Scene, widget: widgets.Widget, fraction: f64 = 0.5) -> Result<bool> {
+fn click(scene: cortado_skia.Scene, widget: widgets.Widget, fraction: f64 = 0.5,
+         down_fraction: f64 = 0.5) -> Result<bool> {
     let frame: geometry.Rect = scene.global_frame(widget.render_object()?)?
-    let point: geometry.Point = geometry.Point.at(frame.x + frame.width * fraction, frame.y + frame.height / 2.0)
+    let point: geometry.Point = geometry.Point.at(frame.x + frame.width * fraction,
+                                                  frame.y + frame.height * down_fraction)
     scene.pointer(events.EventKind.pointer_down, point)?
     return scene.pointer(events.EventKind.pointer_up, point)
 }
@@ -83,16 +85,23 @@ fn verify() -> Result<bool> {
     match slider.set_value_as_user(0, math.infinity() - math.infinity()) { ok(_) => { panic("NaN slider value was accepted") } err(_) => {} }
     let old_shots: f64 = view.shots
     let stepper_frame: geometry.Rect = scene.global_frame(stepper.render_object()?)?
-    scene.pointer(events.EventKind.pointer_up, geometry.Point.at(stepper_frame.x + stepper_frame.width * 0.9,
-                                                                   stepper_frame.y + stepper_frame.height / 2.0))?
+    // A stepper's two halves are its top and its bottom, the way NSStepper's
+    // are — a release with no press before it still changes nothing.
+    scene.pointer(events.EventKind.pointer_up, geometry.Point.at(stepper_frame.x + stepper_frame.width * 0.5,
+                                                                   stepper_frame.y + stepper_frame.height * 0.25))?
     require(view.shots == old_shots, "stepper changed on release without press")
-    click(scene, stepper, 0.9)?
+    click(scene, stepper, 0.5, 0.25)?
     require(view.shots == old_shots + 1.0 && stepper.value()? == view.shots, "stepper click did not increment")
-    scene.pointer(events.EventKind.pointer_down, geometry.Point.at(stepper_frame.x + stepper_frame.width * 0.9,
-                                                                     stepper_frame.y + stepper_frame.height / 2.0))?
+    // A stepper steps on the press, which is what makes press-and-hold a hold
+    // of something rather than a wait for a release. Dragging off it and
+    // releasing outside adds nothing more.
+    let after_press: f64 = view.shots
+    scene.pointer(events.EventKind.pointer_down, geometry.Point.at(stepper_frame.x + stepper_frame.width * 0.5,
+                                                                     stepper_frame.y + stepper_frame.height * 0.75))?
+    require(view.shots == after_press - 1.0, "the lower half did not step down on the press")
     scene.pointer(events.EventKind.pointer_up, geometry.Point.at(stepper_frame.x + stepper_frame.width + 20.0,
                                                                    stepper_frame.y + stepper_frame.height / 2.0))?
-    require(view.shots == old_shots + 1.0, "stepper changed after release outside")
+    require(view.shots == after_press - 1.0, "stepper changed again on a release outside")
     match stepper.set_step(0.0) { ok(_) => { panic("zero step was accepted") } err(_) => {} }
 
     progress.set_value(70.0)?

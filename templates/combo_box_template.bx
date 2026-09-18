@@ -1,16 +1,18 @@
 <Box background={self.fill} corner_radius={self.radius}>
   <Label text={self.selected_text} text_color={self.ink} font_size={self.font_size}
          baseline={self.baseline} x={self.control_padding} y={0}
-         right={self.control_padding * 2.0 + self.chevron_width} height_percent={100.0} />
-  <Path right={self.control_padding} y={self.control_height / 2.0 - self.chevron_height - 1.5}
+         right={self.chevron_inset + self.chevron_width + self.control_padding} height_percent={100.0} />
+  <!-- One chevron above the other, sized and placed from the 4x capture. -->
+  <Path right={self.chevron_inset} y={(self.control_height - self.chevron_block) / 2.0}
         width={self.chevron_width} height={self.chevron_height}
-        d={"M0 {self.chevron_height} L{self.chevron_width / 2.0} 0 L{self.chevron_width} {self.chevron_height}"}
-        stroke={self.ink} stroke_width={self.stepper_stroke}
+        d={"M{self.chevron_stroke / 2.0} {self.chevron_height - self.chevron_stroke / 2.0} L{self.chevron_width / 2.0} {self.chevron_stroke / 2.0} L{self.chevron_width - self.chevron_stroke / 2.0} {self.chevron_height - self.chevron_stroke / 2.0}"}
+        stroke={self.ink} stroke_width={self.chevron_stroke}
         stroke_cap="round" stroke_join="round" fill="#00000000" />
-  <Path right={self.control_padding} y={self.control_height / 2.0 + 1.5}
+  <Path right={self.chevron_inset}
+        y={(self.control_height + self.chevron_block) / 2.0 - self.chevron_height}
         width={self.chevron_width} height={self.chevron_height}
-        d={"M0 0 L{self.chevron_width / 2.0} {self.chevron_height} L{self.chevron_width} 0"}
-        stroke={self.ink} stroke_width={self.stepper_stroke}
+        d={"M{self.chevron_stroke / 2.0} {self.chevron_stroke / 2.0} L{self.chevron_width / 2.0} {self.chevron_height - self.chevron_stroke / 2.0} L{self.chevron_width - self.chevron_stroke / 2.0} {self.chevron_stroke / 2.0}"}
+        stroke={self.ink} stroke_width={self.chevron_stroke}
         stroke_cap="round" stroke_join="round" fill="#00000000" />
   $if self.focused {
     <Rectangle x={0} y={0} width_percent={100.0} height_percent={100.0}

@@ -144,7 +144,7 @@ pub fn controls() -> List<string> {
 /// nothing compared the two.
 pub fn boolean_attributes() -> List<string> {
     return ["animating", "borderless", "compact", "checked", "editable", "enabled", "hidden",
-            "indeterminate", "open", "stacked", "wrap"]
+            "indeterminate", "open", "prominent", "stacked", "wrap"]
 }
 
 /// Every attribute, with the kind of value it takes.

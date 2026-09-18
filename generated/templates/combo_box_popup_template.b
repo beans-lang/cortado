@@ -59,24 +59,45 @@ pub partial class ComboBoxPopupTemplate extends component.ChoiceControlTemplate 
 
 partial class ComboBoxPopupTemplate {
     pub override fn render(b: Builder) {
-        b.open("ScrollView")  // combo_box_popup_template.bx:1
-        b.word("background", self.card)
-        b.word("border_color", self.separator)
-        b.number("border_width", (1) as f64)
-        b.number("corner_radius", (self.radius) as f64)
-        b.open("VStack")  // combo_box_popup_template.bx:2
+        b.open("Box")  // combo_box_popup_template.bx:1
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
+        b.open("Rectangle")  // combo_box_popup_template.bx:4
+        b.number("x", (0) as f64)
+        b.number("y", (0) as f64)
+        b.number("width_percent", (100.0) as f64)
+        b.number("height_percent", (100.0) as f64)
+        b.number("corner_radius", (self.menu_radius) as f64)
+        b.word("fill", self.menu_fill)
+        b.word("stroke", self.menu_border)
+        b.number("stroke_width", (self.hairline_width) as f64)
+        b.word("shadow_color", self.menu_shadow)
+        b.number("shadow_blur", (self.menu_shadow_blur) as f64)
+        b.number("shadow_dy", (self.menu_shadow_dy) as f64)
+        b.close()
+        b.open("ScrollView")  // combo_box_popup_template.bx:9
+        b.number("x", (0) as f64)
+        b.number("y", (self.menu_padding) as f64)
+        b.number("width_percent", (100.0) as f64)
+        b.number("bottom", (self.menu_padding) as f64)
+        b.word("background", self.clear)
+        b.open("VStack")  // combo_box_popup_template.bx:11
         b.number("spacing", (0) as f64)
         b.word("align", "stretch")
+        b.number("padding_x", (self.menu_row_inset) as f64)
         var _cortado_row_0: int = 0
-        for index in 0..self.choices.len() {  // combo_box_popup_template.bx:3
-            b.open("Button")  // combo_box_popup_template.bx:4
+        for index in 0..self.choices.len() {  // combo_box_popup_template.bx:12
+            b.open("Button")  // combo_box_popup_template.bx:13
             b.key("{"option-{index}"}")
-            b.text("{if index == self.highlighted { "▸ {self.choices[index]}" } else if index == self.selected { "✓ {self.choices[index]}" } else { "  {self.choices[index]}" }}")
-            b.number("height", (20) as f64)
+            b.text("{self.choices[index]}")
+            b.number("height", (self.menu_row_height) as f64)
+            b.flag("checked", index == self.selected)
+            b.flag("prominent", index == self.highlighted)
             b.on("click", fn(e: UiEvent) { self.choose(index) })
             b.close()
             _cortado_row_0 += 1
         }
+        b.close()
         b.close()
         b.close()
     }

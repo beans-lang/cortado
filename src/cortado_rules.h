@@ -377,7 +377,10 @@ static inline int ctd_kind_has_animating(int32_t kind) {
 static inline int ctd_kind_has_checked(int32_t kind) {
     return kind == CTD_W_CHECK_BOX
         || kind == CTD_W_RADIO_BUTTON
-        || kind == CTD_W_SWITCH;
+        || kind == CTD_W_SWITCH
+        /* A button is on or off too: NSButton has a state, and a menu row is a
+         * button that carries a mark. Mixed is still only a check box. */
+        || kind == CTD_W_BUTTON;
 }
 
 /* Whether a kind has the third, mixed state.

@@ -156,12 +156,23 @@ fn render_one(scene: cortado_skia.Scene, shot: Shot, out_dir: string) -> Result<
             }
             if shot.state == "pressed" || shot.state == "pressedChecked" {
                 // A real pointer press, so the template sees the state the same
-                // way it does in a running window.
+                // way it does in a running window. Focus is dropped again: the
+                // native pressed shot was highlighted, not made first responder,
+                // so a focus ring here would be compared against nothing.
                 context.pointer(root.render_object()?, events.EventKind.pointer_down,
                     geometry.Point.at(shot.pad + shot.width / 2.0, shot.pad + shot.height / 2.0),
                     host.BTN_LEFT)?
+                match context.focus(0) { ok(done) => {} err(problem) => {} }
             }
         }
+    }
+    scene.refresh()?
+    // A still is of a settled control. The native shot was taken after AppKit
+    // finished; a cortado shot taken mid-transition would be compared against
+    // an end state and read as a colour bug.
+    for step: int in 0..64 {
+        if !scene.has_active_animations() { break }
+        scene.advance(0.05)?
     }
     scene.refresh()?
     scene.renderer().write_png("{out_dir}/{shot.file}")?

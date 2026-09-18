@@ -45,6 +45,7 @@ pub extern "C" fn ctd_widget_new(kind: i32) -> u64
 pub extern "C" fn ctd_canvas_set_pixels(canvas: u64, width: i32, height: i32, rgba: RawPtr<i8>, length: i32) -> i32
 pub extern "C" fn ctd_canvas_text_state(canvas: u64, active: i32, utf8: RawPtr<i8>, length: i32,
     anchor: i32, caret: i32, x: f64, y: f64, width: f64, height: f64) -> i32
+pub extern "C" fn ctd_reduce_motion() -> i32
 pub extern "C" fn ctd_clipboard_write(utf8: RawPtr<i8>, length: i32) -> i32
 pub extern "C" fn ctd_clipboard_read(out: RawPtr<i8>, cap: i32) -> i32
 pub extern "C" fn ctd_canvas_semantics_clear(canvas: u64) -> i32
