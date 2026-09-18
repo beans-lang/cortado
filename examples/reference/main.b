@@ -72,7 +72,16 @@ fn build(shot: Shot, context: render.UiContext, root: widgets.Container) -> Resu
     if shot.control == "switch_control" {
         let toggle: widgets.Switch = new widgets.Switch(held)
         toggle.set_on(on)?
-        return place(toggle, shot, root)
+        // AppKit keeps one 54 by 24 frame and paints a switch of its own size
+        // inside it. Cortado's switch is as big as it paints, so it is centred
+        // on the same board and the two still overlay.
+        let wanted: geometry.Size = toggle.render_object()?.measure(geometry.Size.of(shot.width, shot.height))?
+        toggle.set_frame(geometry.Rect.of(shot.pad + (shot.width - wanted.width) / 2.0,
+                                          shot.pad + (shot.height - wanted.height) / 2.0,
+                                          wanted.width, wanted.height))?
+        if shot.state == "disabled" || shot.state == "disabledChecked" { toggle.set_enabled(false)? }
+        root.add(toggle)?
+        return ok(true)
     }
     if shot.control == "popup_button" {
         let combo: widgets.ComboBox = new widgets.ComboBox(held)

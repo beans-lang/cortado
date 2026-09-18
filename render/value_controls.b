@@ -102,18 +102,12 @@ pub class SwitchRender extends ToggleRender {
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty) }
     pub override fn role() -> string { return "switch" }
     pub override fn set_text(text: string) -> Result<bool> { self.demand_alive()?; return err("switch does not carry text", "unsupported") }
+    /// The size it paints, not the 54 by 24 frame AppKit keeps at every control
+    /// size. A drawing cannot be wider than the box it sits in, so a frame that
+    /// small would clamp a large switch's track while its knob kept travelling
+    /// the full distance — the knob then walks out of its own track.
     pub override fn measure(available: geometry.Size) -> Result<geometry.Size> {
-        return ok(geometry.Size.of(self.theme.switch_frame_width(), self.theme.switch_frame_height()))
-    }
-    /// At large the painted switch is wider and taller than the frame.
-    pub override fn visual_frame() -> geometry.Rect {
-        let across: f64 = (self.theme.switch_width() - self.bounds.width) / 2.0
-        let down: f64 = (self.theme.switch_height() - self.bounds.height) / 2.0
-        if across <= 0.0 && down <= 0.0 { return self.bounds }
-        let x: f64 = if across > 0.0 { across } else { 0.0 }
-        let y: f64 = if down > 0.0 { down } else { 0.0 }
-        return geometry.Rect.of(self.bounds.x - x, self.bounds.y - y,
-            self.bounds.width + x * 2.0, self.bounds.height + y * 2.0)
+        return ok(geometry.Size.of(self.theme.switch_width(), self.theme.switch_height()))
     }
 }
 

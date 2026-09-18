@@ -17,19 +17,29 @@ func fmt(_ v: Double) -> String {
     return String(format: "%.4f", v)
 }
 
-/// Renders the *presentation* tree, not the model tree. A plain
-/// `displayIgnoringOpacity` draws where the control is going; the presentation
-/// layer is where it is right now, which is the only thing worth recording.
+/// Draws the view as it stands right now, the same way the still capture does.
+///
+/// Two earlier versions of this were wrong in ways worth writing down.
+/// `layer.presentation()?.render(in:)` renders a grey approximation, because
+/// these controls are not layer backed — a recording made from one says a
+/// switch moved and nothing about what colour it was. `cacheDisplay` draws the
+/// control, but drops the appearance, so an accent comes back grey. This is
+/// the still capture's path: an explicit appearance, in sRGB, on a key window.
 func snapshot(_ view: NSView, scale: CGFloat) -> NSBitmapImageRep? {
     let bounds = view.bounds
     let px = Int((bounds.width * scale).rounded()), py = Int((bounds.height * scale).rounded())
     guard px > 0, py > 0, let space = CGColorSpace(name: CGColorSpace.sRGB),
           let cg = CGContext(data: nil, width: px, height: py, bitsPerComponent: 8,
                              bytesPerRow: px * 4, space: space,
-                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
-          let layer = view.layer else { return nil }
+                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
     cg.scaleBy(x: scale, y: scale)
-    (layer.presentation() ?? layer).render(in: cg)
+    let ctx = NSGraphicsContext(cgContext: cg, flipped: false)
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = ctx
+    NSAppearance(named: .aqua)!.performAsCurrentDrawingAppearance {
+        view.displayIgnoringOpacity(bounds, in: ctx)
+    }
+    NSGraphicsContext.restoreGraphicsState()
     guard let image = cg.makeImage() else { return nil }
     return NSBitmapImageRep(cgImage: image)
 }
@@ -50,6 +60,20 @@ func signature(_ rep: NSBitmapImageRep) -> (Double, Double, Double) {
         y += 2
     }
     return n > 0 ? (r / n, g / n, b / n) : (0, 0, 0)
+}
+
+/// The left edge of the accent-coloured run on the middle row: where a
+/// selected segment's pill actually starts. A centroid over a whole board
+/// moves by a point or two when a pill jumps fifty, and reads as "instant".
+func accentEdge(_ rep: NSBitmapImageRep) -> Double {
+    let y = rep.pixelsHigh / 2
+    for x in 0..<rep.pixelsWide {
+        guard let c = rep.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { continue }
+        if c.blueComponent > 0.6 && c.redComponent < 0.4 && c.greenComponent < 0.75 {
+            return Double(x)
+        }
+    }
+    return .nan
 }
 
 /// Where the moving part is, as a fraction of its travel: the mean x of every
@@ -87,8 +111,16 @@ final class Recorder {
 
     func host(_ control: NSView, width: CGFloat, height: CGFloat) -> NSView {
         let board = NSView(frame: NSRect(x: 0, y: 0, width: width + 20, height: height + 20))
+        // The appearance is set on the board, not just on the window: a control
+        // added before the window's appearance was is otherwise drawn in
+        // whatever the app inherited, and a dark switch on a dark board is the
+        // same recording as no recording.
+        board.appearance = NSAppearance(named: .aqua)
         board.wantsLayer = true
-        board.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        NSAppearance(named: .aqua)!.performAsCurrentDrawingAppearance {
+            board.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        }
+        control.appearance = NSAppearance(named: .aqua)
         control.setFrameOrigin(NSPoint(x: 10, y: 10))
         board.addSubview(control)
         return board
@@ -113,15 +145,26 @@ final class Recorder {
         NSApp.sendEvent(down)
     }
 
+    /// `edge` follows the accent run's left edge instead of a centroid, for a
+    /// control whose moving part is a coloured pill.
     func record(_ name: String, _ board: NSView, _ control: NSView,
-                hit: NSPoint? = nil, apply: @escaping (Int) -> Void) {
+                hit: NSPoint? = nil, edge: Bool = false, apply: @escaping (Int) -> Void) {
         window.orderOut(nil)
         window = KeyWindow(contentRect: NSRect(x: 60, y: 60, width: board.frame.width, height: board.frame.height),
                            styleMask: [.titled], backing: .buffered, defer: false)
         window.contentView = board
+        window.appearance = NSAppearance(named: .aqua)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         pump(0.15)
+        // Without a key window the accent drains out of every filled control,
+        // and a recording of a grey switch is a recording of nothing.
+        if !window.isKeyWindow {
+            pump(0.4)
+            if !window.isKeyWindow {
+                FileHandle.standardError.write(Data("\(name): window never became key\n".utf8))
+            }
+        }
         apply(0)
         board.layoutSubtreeIfNeeded(); board.displayIfNeeded()
         pump(0.3)
@@ -135,7 +178,7 @@ final class Recorder {
         while CACurrentMediaTime() - start < recordSeconds {
             let t = CACurrentMediaTime() - start
             if let rep = snapshot(board, scale: scale) {
-                samples.append((t, centroidX(rep, background)))
+                samples.append((t, edge ? accentEdge(rep) : centroidX(rep, background)))
                 colours.append(signature(rep))
                 if index % 4 == 0 {
                     let file = "\(name)_\(String(format: "%03d", index)).png"
@@ -209,7 +252,7 @@ final class Delegate: NSObject, NSApplicationDelegate {
         let seg = NSSegmentedControl(labels: ["One", "Two", "Three"], trackingMode: .selectOne, target: nil, action: nil)
         seg.sizeToFit(); seg.selectedSegment = 0
         rec.record("segmented", rec.host(seg, width: seg.frame.width, height: seg.frame.height), seg,
-                   hit: NSPoint(x: seg.frame.width * 5 / 6, y: seg.frame.height / 2)) { step in
+                   hit: NSPoint(x: seg.frame.width * 5 / 6, y: seg.frame.height / 2), edge: true) { step in
             if step == 0 { seg.selectedSegment = 0 }
         }
         let slider = NSSlider(value: 0.1, minValue: 0, maxValue: 1, target: nil, action: nil)
@@ -228,8 +271,16 @@ final class Delegate: NSObject, NSApplicationDelegate {
         let b = NSTabViewItem(identifier: "b"); b.label = "Beta"
         tabView.addTabViewItem(a); tabView.addTabViewItem(b)
         rec.record("tab_view", rec.host(tabView, width: 220, height: 120), tabView,
-                   hit: NSPoint(x: 128, y: 111)) { step in
+                   hit: NSPoint(x: 128, y: 111), edge: true) { step in
             if step == 0 { tabView.selectTabViewItem(at: 0) }
+        }
+        // The same question asked of the control a tab row is made of, with the
+        // pill moved one segment rather than two.
+        let near = NSSegmentedControl(labels: ["One", "Two"], trackingMode: .selectOne, target: nil, action: nil)
+        near.sizeToFit(); near.selectedSegment = 0
+        rec.record("segmented_next", rec.host(near, width: near.frame.width, height: near.frame.height), near,
+                   hit: NSPoint(x: near.frame.width * 3 / 4, y: near.frame.height / 2), edge: true) { step in
+            if step == 0 { near.selectedSegment = 0 }
         }
         let push = NSButton(title: "Button", target: nil, action: nil); push.bezelStyle = .push
         push.sizeToFit()

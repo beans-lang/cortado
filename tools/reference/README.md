@@ -71,9 +71,27 @@ screen. Reading the level indicator's green off a 4x shot gave `33c458` for a
 control that paints `34c759`, and every filled pixel then counted as wrong.
 
 **Motion is recorded from a real click.** AppKit only animates a control a
-person operated: `switch.state = .on` jumps. Recording programmatic changes
-would have said every macOS control is instant, which is false for exactly one
-of them.
+person operated: `switch.state = .on` jumps.
+
+**The motion recorder is not yet trustworthy, and its numbers are withdrawn.**
+Three versions of `snapshot` were wrong in three different ways, each of which
+produced a plausible-looking recording:
+
+1. `layer.presentation()?.render(in:)` renders a grey approximation of the
+   tree. These controls are not layer backed, so none of their own drawing is
+   in it — the recording said a switch moved and nothing about its colour.
+2. `cacheDisplay(in:to:)` draws the control, but not in a named appearance, so
+   the accent came back grey.
+3. The window never became key, and an inactive control drains its accent
+   anyway — the same trap the still capture solved with one persistent key
+   window in a bundle.
+
+The current version uses the still capture's path (`displayIgnoringOpacity`
+into an sRGB context under an explicit appearance) and still catches the switch
+mid-press. Until a recording shows a control's real colours moving through
+intermediate positions, **no duration here is measured**, including the
+switch's 0.15s: treat every motion token in `render/theme.b` as unverified and
+read its own doc comment for where the number came from.
 
 ## What could not be measured
 

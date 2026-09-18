@@ -219,6 +219,18 @@ pub class Theme {
         if size <= 26.0 { return 30.0 }
         return size * 1.18
     }
+    /// The ascent `paint()` rounds to. Apple's UI face measured 0.9668 of the
+    /// point size at every optical cut in build/reference/fonts.json.
+    pub static fn ascent(size: f64) -> f64 {
+        let exact: f64 = size * 0.9668
+        let down: f64 = (exact as int) as f64
+        return if exact - down >= 0.5 { down + 1.0 } else { down }
+    }
+    /// A run centred in a box: its line box is centred, and the first baseline
+    /// sits a rounded ascent below that line box's top.
+    pub static fn centred_baseline(box: f64, size: f64) -> f64 {
+        return (box - Theme.line_height(size)) / 2.0 + Theme.ascent(size)
+    }
     /// The named text styles, at the sizes NSFont.preferredFont reports.
     pub fn large_title() -> f64 { return 26.0 }
     pub fn title1() -> f64 { return 22.0 }
@@ -301,12 +313,14 @@ pub class Theme {
         return self.switch_width() - self.switch_knob_inset() * 2.0 - self.switch_knob_width()
     }
 
-    /// A slider's knob is a circle half a point taller than the frame, so it
-    /// overhangs by that much on each edge — which is what AppKit draws.
+    /// A slider's knob is a capsule, not a circle: 19.5 by 14.5 at the regular
+    /// size, which is what the 4x capture measures. Only its shadow reaches
+    /// past the frame, by half a point.
     pub fn slider_height() -> f64 { return self.by_size(12.0, 14.0, 16.0, 20.0) }
-    pub fn slider_track_thickness() -> f64 { return self.by_size(4.0, 5.0, 6.0, 6.0) }
-    pub fn slider_knob_size() -> f64 { return self.by_size(13.0, 15.0, 17.0, 20.0) }
-    pub fn slider_overhang() -> f64 { return (self.slider_knob_size() - self.slider_height()) / 2.0 }
+    pub fn slider_track_thickness() -> f64 { return self.by_size(4.0, 4.0, 6.0, 6.0) }
+    pub fn slider_knob_width() -> f64 { return self.by_size(15.5, 17.5, 19.5, 23.25) }
+    pub fn slider_knob_height() -> f64 { return self.by_size(10.25, 12.25, 14.5, 17.5) }
+    pub fn slider_overhang() -> f64 { return 0.5 }
 
     /// A progress bar's frame is taller than its bar, which sits in the middle.
     pub fn bar_control_height() -> f64 { return self.by_size(12.0, 12.0, 20.0, 20.0) }
@@ -397,6 +411,13 @@ pub class Theme {
     /// A popup button's menu takes the button's font, not a fixed one.
     pub fn menu_font_size() -> f64 { return self.font_size() }
     pub fn menu_radius() -> f64 { return 10.0 }
+    /// A menu row is 24 points at every control size — NSMenu.size says so even
+    /// when the menu carries a mini font — so its text is centred in the row and
+    /// not on the owning control's baseline. On a large popup that difference
+    /// was two points, and the row read as bottom-heavy.
+    pub fn menu_baseline() -> f64 {
+        return Theme.centred_baseline(self.menu_row_height(), self.menu_font_size())
+    }
     pub fn menu_row_radius() -> f64 { return 4.0 }
     /// The rows are inset from the menu's own edges by its padding.
     pub fn menu_row_inset() -> f64 { return 5.0 }
@@ -416,6 +437,15 @@ pub class Theme {
     pub fn motion_switch() -> f64 { return if self.reduced_motion { 0.0 } else { 0.15 } }
     /// Clicking a slider's track walks the knob to the click; dragging does not.
     pub fn motion_slider() -> f64 { return if self.reduced_motion { 0.0 } else { 0.23 } }
+    /// A segmented control's pill sliding between segments.
+    ///
+    /// **Not measured.** Three attempts at recording AppKit's own segmented
+    /// control produced a grey layer render, an appearance-less draw and a
+    /// control stuck in its pressed state; none of them is evidence. The
+    /// duration is the switch's, which was recorded, and the fact that it
+    /// moves at all is an observation of a real Mac rather than a capture.
+    /// See tools/reference/README.md.
+    pub fn motion_selection() -> f64 { return if self.reduced_motion { 0.0 } else { 0.15 } }
     /// 0 linear, 1 ease-in-out. The recorded switch curve is a smoothstep.
     pub fn motion_curve() -> int { return 1 }
     pub fn is_reduced_motion() -> bool { return self.reduced_motion }

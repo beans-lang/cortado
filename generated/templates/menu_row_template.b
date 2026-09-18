@@ -44,8 +44,8 @@ partial class MenuRowTemplate {
         b.open("Label")  // menu_row_template.bx:14
         b.text("{self.title}")
         b.word("text_color", if self.prominent { self.on_accent } else if self.enabled { self.ink } else { self.faint })
-        b.number("font_size", (self.font_size) as f64)
-        b.number("baseline", (self.baseline) as f64)
+        b.number("font_size", (self.menu_font_size) as f64)
+        b.number("baseline", (self.menu_baseline) as f64)
         b.number("x", (self.menu_text_inset - self.menu_row_inset) as f64)
         b.number("right", (self.menu_trailing - self.menu_row_inset) as f64)
         b.number("height_percent", (100.0) as f64)

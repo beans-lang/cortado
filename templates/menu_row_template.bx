@@ -13,7 +13,7 @@
   }
   <Label text={self.title}
          text_color={if self.prominent { self.on_accent } else if self.enabled { self.ink } else { self.faint }}
-         font_size={self.font_size} baseline={self.baseline}
+         font_size={self.menu_font_size} baseline={self.menu_baseline}
          x={self.menu_text_inset - self.menu_row_inset}
          right={self.menu_trailing - self.menu_row_inset} height_percent={100.0} />
 </Box>

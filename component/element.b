@@ -100,7 +100,26 @@ pub class Element {
                 return
             }
         }
+        // A transition governs the writes that follow it, so it is kept ahead
+        // of them all. In markup order a knob's offset_x written before its
+        // transition_seconds took the previous render's duration — zero, while
+        // the switch was held down — and the knob jumped instead of sliding.
+        if Element.governs_motion(attribute) {
+            var at: int = 0
+            for at: int in 0..self.attributes.len() {
+                if !Element.governs_motion(self.attributes[at]) {
+                    self.attributes.insert(at, attribute)
+                    return
+                }
+            }
+        }
         self.attributes.push(attribute)
+    }
+
+    /// The two attributes that decide how every later write animates.
+    static fn governs_motion(attribute: Attribute) -> bool {
+        return attribute.property == visual.TRANSITION_SECONDS ||
+               attribute.property == visual.TRANSITION_EASING
     }
 
     pub fn attribute_count() -> int {

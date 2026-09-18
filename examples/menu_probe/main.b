@@ -37,4 +37,5 @@ fn main() {
     match shoot(false, 2, "build/menu-light.png") { ok(_) => {} err(p) => { io.println("light failed: {p.msg}"); os.exit(1) } }
     match shoot(true, 2, "build/menu-dark.png") { ok(_) => {} err(p) => { io.println("dark failed: {p.msg}"); os.exit(1) } }
     match shoot(false, 0, "build/menu-mini.png") { ok(_) => {} err(p) => { io.println("mini failed: {p.msg}"); os.exit(1) } }
+    match shoot(false, 3, "build/menu-large.png") { ok(_) => {} err(p) => { io.println("large failed: {p.msg}"); os.exit(1) } }
 }

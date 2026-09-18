@@ -98,7 +98,8 @@ pub abstract class ControlTemplate extends Component {
     pub slider_height: f64 = 16.0
     pub slider_overhang: f64 = 0.5
     pub slider_track: f64 = 6.0
-    pub slider_knob: f64 = 17.0
+    pub slider_knob: f64 = 19.5
+    pub slider_knob_height: f64 = 14.5
     pub bar_control_height: f64 = 20.0
     pub bar_height: f64 = 8.0
     pub bar_radius: f64 = 3.0
@@ -131,7 +132,9 @@ pub abstract class ControlTemplate extends Component {
     pub segment_padding: f64 = 21.0
 
     // ---- the popup menu
+    pub menu_font_size: f64 = 13.0
     pub menu_row_height: f64 = 24.0
+    pub menu_baseline: f64 = 17.0
     pub menu_padding: f64 = 5.0
     pub menu_mark_inset: f64 = 11.3
     pub menu_mark_width: f64 = 8.7
@@ -153,6 +156,7 @@ pub abstract class ControlTemplate extends Component {
     // does not animate, and for every control when reduced motion is on.
     pub motion_switch: f64 = 0.15
     pub motion_slider: f64 = 0.23
+    pub motion_selection: f64 = 0.15
     pub motion_curve: int = 1
 
     // ---- typography
@@ -287,7 +291,8 @@ pub abstract class ControlTemplate extends Component {
         self.slider_height = theme.slider_height()
         self.slider_overhang = theme.slider_overhang()
         self.slider_track = theme.slider_track_thickness()
-        self.slider_knob = theme.slider_knob_size()
+        self.slider_knob = theme.slider_knob_width()
+        self.slider_knob_height = theme.slider_knob_height()
         self.bar_control_height = theme.bar_control_height()
         self.bar_height = theme.bar_height()
         self.bar_radius = theme.bar_radius()
@@ -319,7 +324,9 @@ pub abstract class ControlTemplate extends Component {
         self.spacing = theme.spacing()
         self.segment_padding = theme.segment_padding()
 
+        self.menu_font_size = theme.menu_font_size()
         self.menu_row_height = theme.menu_row_height()
+        self.menu_baseline = theme.menu_baseline()
         self.menu_padding = theme.menu_padding()
         self.menu_mark_inset = theme.menu_mark_inset()
         self.menu_mark_width = theme.menu_mark_width()
@@ -339,6 +346,7 @@ pub abstract class ControlTemplate extends Component {
 
         self.motion_switch = theme.motion_switch()
         self.motion_slider = theme.motion_slider()
+        self.motion_selection = theme.motion_selection()
         self.motion_curve = theme.motion_curve()
 
         self.selected_weight = theme.selected_weight()

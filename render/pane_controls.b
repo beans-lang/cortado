@@ -33,6 +33,22 @@ pub class TabViewRender extends BoxRender {
     pub fn selected() -> int { return self.chosen }
     pub fn borderless() -> bool { return self.borderless_value }
     pub fn labels_version() -> int { return self.revision }
+    /// The tab row is the segmented control AppKit draws there, so its tabs are
+    /// sized the same way: each title plus the measured padding, centred as a
+    /// group above the box.
+    pub fn tab_widths() -> List<f64> {
+        var widths: List<f64> = []
+        let padding: f64 = self.theme.segment_padding()
+        for title: string in self.titles {
+            var run: f64 = 0.0
+            match self.renderer.styled_paragraph(title, self.text_style(), -1.0, self.text_color()) {
+                ok(paragraph) => { run = paragraph.size().width }
+                err(problem) => {}
+            }
+            widths.push(run + padding)
+        }
+        return move widths
+    }
     pub fn labels() -> List<string> {
         var copy: List<string> = []
         for title: string in self.titles { copy.push(title) }

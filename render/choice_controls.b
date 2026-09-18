@@ -187,6 +187,49 @@ pub class ComboBoxRender extends ChoiceRender {
 pub class SegmentedRender extends ChoiceRender {
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty) }
     pub override fn role() -> string { return "radiogroup" }
+    /// Each segment's width: its own title plus the measured padding, with any
+    /// room left over shared equally. The template places its labels and its
+    /// pill from these, and the hit test reads the same list — a segment sized
+    /// by its title cannot be found by dividing the control into equal parts.
+    pub fn segment_widths() -> List<f64> {
+        var widths: List<f64> = []
+        let padding: f64 = self.theme.segment_padding()
+        var content: f64 = 0.0
+        for item: string in self.items {
+            var run: f64 = 0.0
+            match self.renderer.styled_paragraph(item, self.text_style(), -1.0, self.text_color()) {
+                ok(paragraph) => { run = paragraph.size().width }
+                err(problem) => {}
+            }
+            widths.push(run + padding)
+            content += run + padding
+        }
+        if widths.len() == 0 { return move widths }
+        let spare: f64 = (self.bounds.width - content) / widths.len() as f64
+        if spare > 0.0 {
+            for index: int in 0..widths.len() { widths[index] = widths[index] + spare }
+        }
+        return move widths
+    }
+    /// Where a segment starts, in the control's own coordinates.
+    pub fn segment_x(index: int) -> f64 {
+        let widths: List<f64> = self.segment_widths()
+        var x: f64 = 0.0
+        for step: int in 0..widths.len() {
+            if step == index { return x }
+            x += widths[step]
+        }
+        return x
+    }
+    fn segment_at(x: f64) -> int {
+        let widths: List<f64> = self.segment_widths()
+        var edge: f64 = 0.0
+        for index: int in 0..widths.len() {
+            edge += widths[index]
+            if x < edge { return index }
+        }
+        return widths.len() - 1
+    }
     pub override fn focus_changed(focused: bool) {
         super.focus_changed(focused)
         if !focused { self.tracking = false }
@@ -210,8 +253,7 @@ pub class SegmentedRender extends ChoiceRender {
             self.tracking = false
             if self.pressed { self.pressed = false; self.dirty.paint() }
             if was_tracking && self.items.len() > 0 && geometry.Rect.of(0.0, 0.0, self.bounds.width, self.bounds.height).contains(event.position) {
-                let index: int = (event.position.x * self.items.len() as f64 / self.bounds.width) as int
-                return self.select_as_user(index)
+                return self.select_as_user(self.segment_at(event.position.x))
             }
         }
         if event.kind == events.EventKind.key_down && self.items.len() > 0 {

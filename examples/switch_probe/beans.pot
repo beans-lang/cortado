@@ -1,0 +1,4 @@
+module cortado_switch_probe
+kind application
+require path "../.."
+require path "../../skia"

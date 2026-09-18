@@ -8,7 +8,9 @@
 package main
 
 import cortado_skia
+import cortado.events
 import cortado.geometry
+import cortado.host
 import cortado.paint
 import cortado.render
 import cortado.visual
@@ -100,9 +102,12 @@ fn sizes_move_everything(scene: cortado_skia.Scene) -> Result<bool> {
         require(theme.field_baseline() == baselines[size], "field baseline at size {size}")
         require(theme.radio_dot() == dots[size], "radio dot at size {size}")
         require(theme.switch_width() == switches[size], "switch width at size {size}")
-        // The switch frame is the one thing a control size does not move.
-        require(theme.switch_frame_width() == 54.0 && theme.switch_frame_height() == 24.0,
-            "the switch frame changed with the control size")
+        // A switch is as big as it paints. AppKit keeps one 54 by 24 frame and
+        // paints inside it; a frame that small would clamp a large switch's
+        // own track, so cortado's frame is the drawing.
+        require(theme.switch_travel() ==
+                theme.switch_width() - theme.switch_knob_inset() * 2.0 - theme.switch_knob_width(),
+            "the knob's travel does not fit its own track at size {size}")
 
         let root: widgets.Container = scene.root()
         for root.count() > 0 { root.remove(root.count() - 1)? }
@@ -178,13 +183,13 @@ fn switch_motion(scene: cortado_skia.Scene) -> Result<bool> {
     let root: widgets.Container = scene.root()
     for root.count() > 0 { root.remove(root.count() - 1)? }
     let toggle: widgets.Switch = new widgets.Switch(some(context))
-    toggle.set_frame(geometry.Rect.of(10.0, 10.0, theme.switch_frame_width(), theme.switch_frame_height()))?
+    toggle.set_frame(geometry.Rect.of(10.0, 10.0, theme.switch_width(), theme.switch_height()))?
     root.add(toggle)?
     scene.resize(geometry.Size.of(120.0, 60.0), 2.0)?
     scene.refresh()?
     let travel: f64 = theme.switch_travel()
-    // The knob's offset carries the centring and the inset as well as the travel.
-    let centre: f64 = (theme.switch_frame_width() - theme.switch_width()) / 2.0 + theme.switch_knob_inset()
+    // The knob's own box holds the inset, so its offset is the travel alone.
+    let centre: f64 = 0.0
     require(close_to(knob_of(toggle)?, centre, 0.001),
         "an off switch put its knob at {knob_of(toggle)?}, not {centre}")
     require(!scene.has_active_animations(), "a switch that was never touched is animating")
@@ -218,6 +223,52 @@ fn switch_motion(scene: cortado_skia.Scene) -> Result<bool> {
         "reduced motion left the knob part way at {knob_of(toggle)?}")
     theme.set_reduced_motion(false)
     io.println("ok switch: slides, reverses from where it is, stops asking for frames, obeys reduced motion")
+    return ok(true)
+}
+
+/// The same slide, driven the way a person drives it. A press writes a zero
+/// duration, so a click that carried its offset before its transition took the
+/// press's duration and teleported — the animation only worked from code.
+fn switch_press_motion(scene: cortado_skia.Scene) -> Result<bool> {
+    let context: render.UiContext = scene.context()
+    let theme: render.Theme = context.theme()
+    theme.set_control_size(2)?
+    theme.set_reduced_motion(false)
+    let root: widgets.Container = scene.root()
+    for root.count() > 0 { root.remove(root.count() - 1)? }
+    let toggle: widgets.Switch = new widgets.Switch(some(context))
+    toggle.set_frame(geometry.Rect.of(10.0, 10.0, theme.switch_width(), theme.switch_height()))?
+    root.add(toggle)?
+    scene.resize(geometry.Size.of(120.0, 60.0), 2.0)?
+    scene.refresh()?
+    let travel: f64 = theme.switch_travel()
+    let middle: geometry.Point = geometry.Point.at(10.0 + theme.switch_width() / 2.0,
+                                                   10.0 + theme.switch_height() / 2.0)
+
+    scene.pointer(events.EventKind.pointer_down, middle)?
+    require(close_to(knob_of(toggle)?, 0.0, 0.001), "pressing a switch moved its knob")
+    require(!scene.has_active_animations(), "a press animates; it is instant")
+    scene.pointer(events.EventKind.pointer_up, middle)?
+    require(toggle.is_on()?, "the click did not turn the switch on")
+    require(scene.has_active_animations(), "a clicked switch scheduled no frames")
+    require(close_to(knob_of(toggle)?, 0.0, 0.001), "the knob left before the first frame")
+    scene.advance(theme.motion_switch() / 2.0)?
+    let midway: f64 = knob_of(toggle)?
+    require(midway > 0.5 && midway < travel - 0.5, "a clicked knob jumped to {midway}")
+    scene.advance(theme.motion_switch() * 2.0)?
+    require(close_to(knob_of(toggle)?, travel, 0.001), "the knob did not arrive: {knob_of(toggle)?}")
+    require(!scene.has_active_animations(), "a finished switch is still asking for frames")
+
+    // And back, so the off direction is not taken on trust.
+    scene.pointer(events.EventKind.pointer_down, middle)?
+    scene.pointer(events.EventKind.pointer_up, middle)?
+    require(!toggle.is_on()?, "the second click did not turn the switch off")
+    scene.advance(theme.motion_switch() / 2.0)?
+    let back: f64 = knob_of(toggle)?
+    require(back > 0.5 && back < travel - 0.5, "the knob jumped back to {back}")
+    scene.advance(theme.motion_switch() * 2.0)?
+    require(close_to(knob_of(toggle)?, 0.0, 0.001), "the knob did not return: {knob_of(toggle)?}")
+    io.println("ok switch press: a real click slides the knob, a press itself is instant")
     return ok(true)
 }
 
@@ -258,6 +309,58 @@ fn menu_matches_appkit(scene: cortado_skia.Scene) -> Result<bool> {
         }
     }
     io.println("ok popup menu: AppKit's width, row height and placement over the control")
+    return ok(true)
+}
+
+fn labels(node: render.RenderObject, out: List<render.RenderObject>) {
+    if node.role() == "text" { out.push(node) }
+    // A row's text lives in the row button's template, not among its children.
+    match node.visual() { some(part) => { labels(part, out) } none => {} }
+    for index: int in 0..node.child_count() {
+        match node.child_at(index) { some(child) => { labels(child, out) } none => {} }
+    }
+}
+
+/// A menu row is 24 points whatever the control size, so its text is centred in
+/// the row. Taking the owning control's baseline put a large popup's text two
+/// points low and a mini popup's three and a half points high.
+fn menu_rows_are_centred(scene: cortado_skia.Scene) -> Result<bool> {
+    let context: render.UiContext = scene.context()
+    let theme: render.Theme = context.theme()
+    let root: widgets.Container = scene.root()
+    for size: int in sizes() {
+        theme.set_control_size(size)?
+        for root.count() > 0 { root.remove(root.count() - 1)? }
+        let combo: widgets.ComboBox = new widgets.ComboBox(some(context))
+        combo.set_items(["Espresso", "Latte", "Cortado"])?
+        combo.select(1)?
+        combo.set_frame(geometry.Rect.of(20.0, 60.0, 150.0, theme.control_height()))?
+        root.add(combo)?
+        scene.resize(geometry.Size.of(400.0, 240.0), 2.0)?
+        scene.refresh()?
+        context.focus(combo.handle().raw)?
+        context.dispatch(events.UiEvent.of(events.EventKind.activate, combo.handle()))?
+        scene.refresh()?
+        let sheet: render.RenderObject = context.popups().root().expect("an open menu")
+        var found: List<render.RenderObject> = []
+        labels(sheet, found)
+        require(found.len() == 3, "the menu drew {found.len()} row labels, not three")
+        let line: f64 = render.Theme.line_height(theme.menu_font_size())
+        let wanted: f64 = (theme.menu_row_height() - line) / 2.0 + render.Theme.ascent(theme.menu_font_size())
+        for label: render.RenderObject in found {
+            require(close_to(label.real(host.P_BASELINE)?, wanted, 0.001),
+                "a menu row at size {size} put its text on {label.real(host.P_BASELINE)?}, not {wanted}")
+            require(close_to(label.frame().height, theme.menu_row_height(), 0.001),
+                "a menu row at size {size} is {label.frame().height} tall, not {theme.menu_row_height()}")
+        }
+        // The same row height at every size is the thing that makes the
+        // control baseline wrong for it.
+        require(close_to(theme.menu_row_height(), 24.0, 0.001), "a menu row left 24 points at size {size}")
+        combo.render_object()?.dismiss_popup()
+        scene.refresh()?
+    }
+    theme.set_control_size(2)?
+    io.println("ok menu rows: text centred in a 24 point row at every control size")
     return ok(true)
 }
 
@@ -316,7 +419,9 @@ fn verify() -> Result<bool> {
     sizes_move_everything(scene)?
     field_sits_on_its_baseline(scene)?
     switch_motion(scene)?
+    switch_press_motion(scene)?
     menu_matches_appkit(scene)?
+    menu_rows_are_centred(scene)?
     offsets_are_checked(scene)?
     baseline_is_where_it_paints(scene)?
     scene.close()

@@ -51,8 +51,11 @@ fn verify() -> Result<bool> {
     let default_root: render.RenderObject = button.render_object()?.visual().expect("default button visual")
     let hover_color: int = default_root.child_at(0).expect("default button layout").integer(host.P_BG_COLOR)?
     let theme: render.Theme = scene.context().theme()
-    require(hover_color == theme.surface_hovered() && hover_color != theme.surface(),
-            "default .bx button did not show hover color")
+    // AppKit gives a push button no hover fill, so the bezel has to sit still
+    // while the pointer is over it. The custom template below is where a
+    // hover transition is proved.
+    require(hover_color == theme.surface_hovered() && hover_color == theme.surface(),
+            "hovering a push button moved its bezel off the macOS colour")
     require(scene.context().invalidation().semantics_version() == before_hover_semantics,
             "hover changed button semantics")
     scene.pointer(events.EventKind.pointer_move, geometry.Point.at(-1.0, -1.0))?
