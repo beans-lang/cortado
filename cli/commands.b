@@ -54,6 +54,7 @@ pub fn usage() {
     io.eprintln("  clean          remove the build directory")
     io.eprintln("  publish        a Release build, wrapped as a platform bundle")
     io.eprintln("  vocabulary     print cortado's .bx surface as JSON, for an editor")
+    io.eprintln("  version        print the version and stop")
     io.eprintln("")
     io.eprintln("options:")
     io.eprintln("  -c, --configuration <debug|release>   which profile (default: debug)")
@@ -361,6 +362,10 @@ pub fn main_with(arguments: List<string>) -> int {
         usage()
         return 0
     }
+    if command == "--version" || command == "-V" || command == "version" {
+        io.println("cortado {CORTADO_VERSION}")
+        return 0
+    }
     if command == "vocabulary" {
         if arguments.len() > 1 {
             io.eprintln("cortado: vocabulary takes no arguments — it prints cortado's own surface")
@@ -440,6 +445,10 @@ pub fn bx_main_with(arguments: List<string>) -> int {
     let command: string = arguments[0]
     if command == "--help" || command == "-h" || command == "help" {
         bx_usage()
+        return 0
+    }
+    if command == "--version" || command == "-V" || command == "version" {
+        io.println("cortado-bx {CORTADO_VERSION}")
         return 0
     }
     if command == "vocabulary" {

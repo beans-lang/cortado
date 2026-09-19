@@ -66,10 +66,32 @@ every run).
 
 ## Installing
 
-cortado is compiled by `beansc`, so install [the Beans
-compiler](https://github.com/beans-lang/beans) first — **0.1.44 or newer**,
+```sh
+curl -fsSL https://github.com/beans-lang/cortado/releases/latest/download/cortado-install.sh | sh
+```
+
+On Windows:
+
+```powershell
+irm https://github.com/beans-lang/cortado/releases/latest/download/cortado-install.ps1 | iex
+```
+
+That downloads `cortado` and `cortado-bx` for this machine, checksums them
+against the release manifest, and puts them on your PATH under `~/.cortado`.
+Add `--with-skia` (`-WithSkia` on Windows) to install the prebuilt shared
+renderer as well, which is what saves you the 400MB Skia SDK and the cmake
+build that `tools/prepare_skia.py` otherwise runs. `cortado upgrade` reinstalls
+in place later.
+
+**macOS is arm64 only.** Beans has no `x86_64-apple-darwin` target, so an Intel
+Mac has no package; the installer says so rather than failing on a 404.
+
+cortado is compiled by `beansc`, so to *build* anything you still need [the
+Beans compiler](https://github.com/beans-lang/beans) — **0.1.44 or newer**,
 because `cortado_app` is a module inside this repository and reaching a nested
 module through a `require` row is what that release fixed.
+
+From a checkout instead:
 
 ```
 git clone https://github.com/beans-lang/cortado
@@ -90,12 +112,11 @@ there is none.
 is barista, and a scaffolded project names it as the sibling of the cortado
 checkout — so the two directories have to sit next to each other.
 
-**There is no download.** cortado has no published release yet, so the binary
-comes from the checkout. That is also the arrangement that keeps it honest
-while it moves: the generator and the `cortado` package a project depends on
-come out of one tree, and a generated file written by one version against a
-library from another is exactly the silent staleness `cortado check --drift`
-exists to catch.
+**A checkout install and a downloaded one are not interchangeable.** The
+generator and the `cortado` package a project depends on should come out of one
+version: a generated file written by one against a library from another is
+exactly the silent staleness `cortado check --drift` exists to catch. If you are
+working on cortado itself, install from the checkout.
 
 `cortado-bx` is installed alongside. It is the same program under its older
 name, kept because the editors' vocabulary and a good deal of writing still
