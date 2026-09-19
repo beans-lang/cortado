@@ -183,9 +183,12 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends libgtk-4-dev pkg-config
+          sudo apt-get install -y -qq --no-install-recommends libgtk-4-dev pkg-config clang lld
           beansc pot add --system gtk4 linux
           git --no-pager diff --stat beans.pot
+          # The full Beans package bundles its own clang and links through a
+          # sysroot that has no GTK in it, so the system one does the linking.
+          echo "BEANS_CC=$(command -v clang)" >> "$GITHUB_ENV"
 
       - uses: actions/download-artifact@v4
         with:
@@ -216,6 +219,12 @@ jobs:
           archive=$(find dist -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) | head -1)
           bash tools/release_manifest.sh row "$archive" > dist/row.tsv
           cat dist/row.tsv
+          # What the archive actually holds, so a package that builds but does
+          # not run is diagnosed from the log rather than from a guess.
+          case "$archive" in
+            *.zip) python3 -c "import sys,zipfile;[print(n) for n in zipfile.ZipFile(sys.argv[1]).namelist()]" "$archive" ;;
+            *) tar tzf "$archive" ;;
+          esac
 
       # A local base URL, the same code path the published HTTPS one takes. This
       # is the script users run, so it is exercised against this target's bytes.
@@ -245,6 +254,14 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # Run the binary and the launcher directly first: when the installer
+          # says the package does not run, this says which of the two is wrong.
+          Expand-Archive -LiteralPath (Get-ChildItem dist\*.zip)[0].FullName -DestinationPath probe -Force
+          Get-ChildItem -Recurse probe | Select-Object -ExpandProperty FullName
+          $exe = (Get-ChildItem -Recurse probe -Filter 'cortado.exe')[0].FullName
+          Write-Host "direct: $exe"
+          & $exe --version
+          Write-Host "launcher exit: $LASTEXITCODE"
           $env:CORTADO_INSTALL_BASE_URL = "$PWD\local"
           ./tools/install-release.ps1 -Prefix "$env:RUNNER_TEMP\cortado-test" -WithSkia -NoModifyPath
           & "$env:RUNNER_TEMP\cortado-test\bin\cortado.cmd" --version
