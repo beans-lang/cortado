@@ -166,6 +166,18 @@ Until then: **the same shared drawing runs everywhere and the same layout
 arithmetic runs everywhere, but pixel equality with the pinned macOS reference
 is claimed on macOS only.**
 
+### Windows draws on the CPU
+
+The pinned Skia pack has no Vulkan backend on Windows. The first CI build there
+proved it: the linker resolved `GrD3DRootSignature` out of `skia.lib` and found
+no `GrDirectContexts::MakeVulkan` anywhere, so the pack is built with Direct3D
+and Vulkan is not in it. `gpu_vulkan_win.cpp` is therefore not compiled, and the
+engine falls back to Skia's CPU backend on Windows.
+
+Closing it means writing a Direct3D device beside the Metal and EGL ones, since
+the backend the pack does carry is D3D12. The file stays where it is for a pack
+that ships Vulkan; it is not deleted, and it is not built.
+
 ## Checks
 
 ```sh
