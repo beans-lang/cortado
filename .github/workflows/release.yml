@@ -277,12 +277,25 @@ jobs:
       # Scaffolding is the first thing anybody does, and it is the one path that
       # proves the binary, the generator and the templates agree.
       - name: Scaffold and generate a project
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cd "$RUNNER_TEMP"
           rm -rf smoke
           cortado init smoke
           cd smoke
+          cortado generate
+
+      # In pwsh, not bash: the installed command is cortado.cmd, and Git Bash
+      # does not apply PATHEXT, so `cortado` is not a name it can find.
+      - name: Scaffold and generate a project (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Set-Location $env:RUNNER_TEMP
+          Remove-Item -Recurse -Force smoke -ErrorAction SilentlyContinue
+          cortado init smoke
+          Set-Location smoke
           cortado generate
 
       - uses: actions/upload-artifact@v4
