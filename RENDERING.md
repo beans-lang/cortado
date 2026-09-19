@@ -142,8 +142,29 @@ A shared library is loaded once; set that environment variable before first use.
 
 The presentation bridge accepts opaque RGBA frames. Translucent shapes must be
 composited into the frame first. Transparent desktop windows are not supported.
-The current renderer uses system fonts; portable snapshots with pinned fonts are
-still pending.
+### The font, and what it costs off macOS
+
+The macOS theme is measured against the system UI font. On macOS the engine asks
+CoreText for it per point size, so a 9 point control gets the optical cut AppKit
+gives a 9 point control, and registers that face under a name of its own — the
+shaper resolves a face by family, and a typeface left unnamed comes back as a
+different optical cut with narrower glyphs and a taller line.
+
+**Windows and Linux do not have that font.** The engine names Segoe UI Variable
+Text and then Inter, Cantarell, Noto Sans, DejaVu Sans. Those are different
+typefaces: the same string is a different width, so a control measured from its
+title is a different size, and the geometry this theme pins does not follow.
+
+`Renderer.use_font(path)` makes one font file the family every later paragraph
+uses, on every platform, which is the mechanism that would close the gap. It is
+not wired to an asset, because SF Pro's licence covers use on Apple platforms
+and does not cover redistributing it inside an application for Windows or Linux.
+Closing this honestly means bundling a metric-compatible, freely redistributable
+face and re-measuring the theme against **that** on all three platforms.
+
+Until then: **the same shared drawing runs everywhere and the same layout
+arithmetic runs everywhere, but pixel equality with the pinned macOS reference
+is claimed on macOS only.**
 
 ## Checks
 
