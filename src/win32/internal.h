@@ -162,6 +162,9 @@ extern int64_t g_ink[CTD_SLOTS];
 extern int     g_has_ink[CTD_SLOTS];
 // The handle a control window carries, so a WM_CTLCOLOR* can find its slot.
 #define CTD_HANDLE_PROP L"cortado-handle"
+/// The raster frame a canvas keeps. A property, not the subclass reference:
+/// GetWindowSubclass is comctl32 v6 and v5.82 is what loads without a manifest.
+#define CTD_RASTER_PROP L"cortado-raster"
 extern int32_t g_role;
 extern int32_t g_type[CTD_SLOTS];
 extern uint32_t g_generation[CTD_SLOTS];

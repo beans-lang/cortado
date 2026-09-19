@@ -22,6 +22,7 @@ static LRESULT CALLBACK ctd_raster_proc(HWND window, UINT message, WPARAM wparam
     if (message == WM_ERASEBKGND) return 1;
     if (message == WM_NCDESTROY) {
         RemoveWindowSubclass(window, ctd_raster_proc, id);
+        RemovePropW(window, CTD_RASTER_PROP);
         free(frame->pixels);
         free(frame);
     }
@@ -40,13 +41,17 @@ ctd_status ctd_canvas_set_pixels(ctd_handle handle, int32_t width, int32_t heigh
     for (int32_t at = 3; at < length; at += 4)
         if ((unsigned char)rgba[at] != 255) return CTD_ERR_RANGE;
     HWND window = (HWND)g_object[slot];
-    DWORD_PTR reference = 0;
-    CortadoRaster *frame;
-    if (GetWindowSubclass(window, ctd_raster_proc, 1, &reference)) frame = (CortadoRaster *)reference;
-    else {
+    /* The frame is found through a window property rather than through
+     * GetWindowSubclass, which only comctl32 v6 exports. */
+    CortadoRaster *frame = (CortadoRaster *)GetPropW(window, CTD_RASTER_PROP);
+    if (!frame) {
         frame = calloc(1, sizeof(*frame));
         if (!frame) return CTD_ERR_PLATFORM;
         if (!SetWindowSubclass(window, ctd_raster_proc, 1, (DWORD_PTR)frame)) {
+            free(frame); return CTD_ERR_PLATFORM;
+        }
+        if (!SetPropW(window, CTD_RASTER_PROP, frame)) {
+            RemoveWindowSubclass(window, ctd_raster_proc, 1);
             free(frame); return CTD_ERR_PLATFORM;
         }
     }
