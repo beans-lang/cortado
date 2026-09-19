@@ -102,6 +102,30 @@ if [[ -n "${CORTADO_PACKAGE_SKIA:-}" ]]; then
     cp "$CORTADO_PACKAGE_SKIA" "$root/lib/$engine_name"
 fi
 
+# A gnullvm build imports the LLVM-MinGW runtime, and Windows resolves a DLL
+# beside the exe — not beside the compiler that produced it.
+if [[ "$os" == windows ]]; then
+    launcher_dir=$(dirname "$(printf '%s' "$BEANSC" | tr '\\' '/')")
+    beans_home=$(dirname "$launcher_dir")
+    copied=0
+    for source in "$launcher_dir" "$beans_home/toolchain/bin" "$beans_home/lib"; do
+        [[ -d "$source" ]] || continue
+        for library in "$source"/*.dll; do
+            [[ -f "$library" ]] || continue
+            [[ -f "$root/libexec/$(basename "$library")" ]] && continue
+            cp "$library" "$root/libexec/"
+            copied=$((copied + 1))
+            printf 'bundled %s from %s\n' "$(basename "$library")" "$source" >&2
+        done
+    done
+    if [[ "$copied" -eq 0 ]]; then
+        echo "package: found no runtime DLLs under $beans_home" >&2
+        echo "a gnullvm binary imports them and will not start without them" >&2
+        find "$beans_home" -maxdepth 3 -name '*.dll' -print >&2 || true
+        exit 1
+    fi
+fi
+
 cp "$repo/LICENSE" "$root/LICENSE"
 cp "$repo/README.md" "$root/README.md"
 

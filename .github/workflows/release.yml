@@ -261,7 +261,13 @@ jobs:
           $exe = (Get-ChildItem -Recurse probe -Filter 'cortado.exe')[0].FullName
           Write-Host "direct: $exe"
           & $exe --version
-          Write-Host "launcher exit: $LASTEXITCODE"
+          # 0xC0000139 is STATUS_ENTRYPOINT_NOT_FOUND and 0xC0000135 is
+          # STATUS_DLL_NOT_FOUND: both mean a DLL is missing beside the exe.
+          Write-Host ("direct exit: {0} (0x{1:X8})" -f $LASTEXITCODE, $LASTEXITCODE)
+          if ($LASTEXITCODE -ne 0) {
+            Get-ChildItem (Split-Path $exe) -Filter *.dll | ForEach-Object { Write-Host "  beside: $($_.Name)" }
+            throw "the packaged cortado.exe does not start"
+          }
           $env:CORTADO_INSTALL_BASE_URL = "$PWD\local"
           ./tools/install-release.ps1 -Prefix "$env:RUNNER_TEMP\cortado-test" -WithSkia -NoModifyPath
           & "$env:RUNNER_TEMP\cortado-test\bin\cortado.cmd" --version
