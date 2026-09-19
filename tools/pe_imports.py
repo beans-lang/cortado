@@ -29,6 +29,30 @@ def to_offset(rva, table):
     return None
 
 
+def thunk_names(data, table, rva, magic):
+    """The function names one descriptor imports, in order."""
+    out = []
+    offset = to_offset(rva, table)
+    if offset is None:
+        return out
+    step = 8 if magic == 0x20B else 4
+    mask = 1 << (63 if magic == 0x20B else 31)
+    while True:
+        entry = int.from_bytes(data[offset:offset + step], "little")
+        if not entry:
+            break
+        if entry & mask:
+            out.append(f"#{entry & 0xFFFF}")
+        else:
+            name_offset = to_offset(entry & 0x7FFFFFFF, table)
+            if name_offset is None:
+                break
+            end = data.index(b"\0", name_offset + 2)
+            out.append(data[name_offset + 2:end].decode("ascii", "replace"))
+        offset += step
+    return out
+
+
 def imports(path):
     data = Path(path).read_bytes()
     if data[:2] != b"MZ":
@@ -58,7 +82,10 @@ def imports(path):
         if name_offset is None:
             break
         end = data.index(b"\0", name_offset)
-        names.append(data[name_offset:end].decode("ascii", "replace"))
+        library = data[name_offset:end].decode("ascii", "replace")
+        # The lookup table survives binding; the address table may not.
+        lookup = descriptor[0] or descriptor[4]
+        names.append((library, thunk_names(data, table, lookup, magic)))
         cursor += 20
     return names
 
@@ -69,9 +96,14 @@ def main():
     binary = Path(sys.argv[1])
     beside = {entry.name.lower() for entry in binary.parent.iterdir() if entry.is_file()}
     print(f"{binary.name} imports:")
-    for name in imports(binary):
+    for name, functions in imports(binary):
         where = "beside it" if name.lower() in beside else "from the system"
-        print(f"  {name:<40} {where}")
+        print(f"  {name:<40} {where} ({len(functions)})")
+        # The CRT shims are versionless and never the cause; anything else can
+        # be a v5-against-v6 mismatch, which is what an absent export means.
+        if not name.lower().startswith("api-ms-win-crt-"):
+            for function in functions:
+                print(f"      {function}")
 
 
 if __name__ == "__main__":
