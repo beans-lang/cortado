@@ -1,0 +1,384 @@
+name: Release
+
+# Build every published target, prove each package installs and runs, and only
+# then publish. Matrix jobs never touch the GitHub Release: they upload workflow
+# artifacts, and one final job assembles the release from all of them. That is
+# what makes "do not publish a partial release" enforceable rather than hoped
+# for — if any target fails to build or fails its install test, `publish` never
+# starts.
+#
+# macOS is arm64 only. Beans has no x86_64-apple-darwin target, so an Intel Mac
+# has no package to install and the installer says so rather than 404ing.
+
+on:
+  push:
+    tags: ["v*"]
+  # A change to the release machinery builds a candidate on its own pull
+  # request, because the first time this runs must not be the day of a release.
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - "tools/package_release.sh"
+      - "tools/package_skia_engine.sh"
+      - "tools/release_manifest.sh"
+      - "tools/release_completeness.sh"
+      - "tools/install-release.sh"
+      - "tools/install-release.ps1"
+      - "tools/check_version.sh"
+      - "VERSION"
+      - "cli/version.b"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Create a GitHub Release (off = build and test a candidate)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: resolve version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: resolve
+        shell: bash
+        run: |
+          declared=$(sed -n 's/^cortado=//p' VERSION)
+          if [[ -z "$declared" ]]; then
+            echo "VERSION does not declare cortado=<version>" >&2
+            exit 1
+          fi
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            tagged="${GITHUB_REF_NAME#v}"
+            if [[ "$tagged" != "$declared" ]]; then
+              echo "tag v$tagged does not match VERSION ($declared)" >&2
+              exit 1
+            fi
+          fi
+          # The binary prints this number and the installers match on it.
+          bash tools/check_version.sh
+          echo "version=$declared" >> "$GITHUB_OUTPUT"
+
+  # -------------------------------------------------------- the shared renderer
+  # The engine is built first and handed to the CLI job as an artifact, so one
+  # package carries both and a user installs the renderer without a second step.
+  engine:
+    name: engine (${{ matrix.target }})
+    needs: version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: arm64-apple-darwin
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - os: windows-2022
+            target: x86_64-pc-windows-gnullvm
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The list in tools/linux-skia.Dockerfile, which is where a Linux engine
+      # build is otherwise proven.
+      - name: Install Linux graphics headers
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            cmake g++ make pkg-config \
+            libegl-dev libgl-dev libfontconfig1-dev libfreetype6-dev
+
+      - name: Build the engine
+        shell: bash
+        run: bash tools/package_skia_engine.sh "$VERSION" "$TARGET" dist
+
+      - name: Index the archive
+        shell: bash
+        run: |
+          archive=$(find dist -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) | head -1)
+          bash tools/release_manifest.sh row "$archive" > dist/row.tsv
+          cat dist/row.tsv
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  # ----------------------------------------------------------- the command line
+  package:
+    name: package (${{ matrix.target }})
+    needs: [version, engine]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: arm64-apple-darwin
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - os: windows-2022
+            target: x86_64-pc-windows-gnullvm
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Zipping a Windows package needs Python, and the runner's is named
+      # `python`; setup-python is what puts a `python3` beside it.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # cortado is compiled by beansc, so the gate installs the same published
+      # compiler a user would have rather than building one from source.
+      - name: Install beansc
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          curl -fsSL https://github.com/beans-lang/beans/releases/latest/download/beans-install.sh \
+            | sh -s -- --no-modify-path
+          echo "$HOME/.beans/bin" >> "$GITHUB_PATH"
+
+      - name: Install beansc (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          irm https://github.com/beans-lang/beans/releases/latest/download/beans-install.ps1 `
+            -OutFile beans-install.ps1
+          ./beans-install.ps1 -NoModifyPath
+          "$env:LOCALAPPDATA\Beans\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          # Git Bash does not apply PATHEXT, so the launcher is named outright.
+          "BEANSC=$env:LOCALAPPDATA\Beans\bin\beansc.cmd" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # cortado's manifest compiles the GTK4 host for any Linux build of the
+      # package, CLI or not, and the include paths differ on every machine — so
+      # they are generated here the way beans.pot says to generate them.
+      - name: Install the GTK4 host's build dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libgtk-4-dev pkg-config clang lld
+          beansc pot add --system gtk4 linux
+          git --no-pager diff --stat beans.pot
+          # The full Beans package bundles its own clang and links through a
+          # sysroot that has no GTK in it, so the system one does the linking.
+          echo "BEANS_CC=$(command -v clang)" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: engine-${{ matrix.target }}
+          path: engine
+
+      - name: Unpack the engine
+        shell: bash
+        run: |
+          mkdir -p engine/unpacked
+          archive=$(find engine -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) | head -1)
+          case "$archive" in
+            *.zip) python3 -c "import sys,zipfile;zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" \
+                     "$archive" engine/unpacked ;;
+            *) tar xzf "$archive" -C engine/unpacked ;;
+          esac
+          library=$(find engine/unpacked -name '*cortado_skia_engine*' -type f | head -1)
+          test -n "$library"
+          echo "CORTADO_PACKAGE_SKIA=$PWD/$library" >> "$GITHUB_ENV"
+
+      - name: Build the package
+        shell: bash
+        run: bash tools/package_release.sh "$VERSION" "$TARGET" dist
+
+      - name: Index the archive
+        shell: bash
+        run: |
+          archive=$(find dist -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) | head -1)
+          bash tools/release_manifest.sh row "$archive" > dist/row.tsv
+          cat dist/row.tsv
+          # What the archive actually holds, so a package that builds but does
+          # not run is diagnosed from the log rather than from a guess.
+          case "$archive" in
+            *.zip) python3 -c "import sys,zipfile;[print(n) for n in zipfile.ZipFile(sys.argv[1]).namelist()]" "$archive" ;;
+            *) tar tzf "$archive" ;;
+          esac
+
+      # A local base URL, the same code path the published HTTPS one takes. This
+      # is the script users run, so it is exercised against this target's bytes.
+      - name: Stage a local release
+        shell: bash
+        run: |
+          mkdir -p local rows
+          cp dist/row.tsv rows/cli.tsv
+          cp engine/row.tsv rows/skia.tsv
+          bash tools/release_manifest.sh merge rows local/cortado-release-manifest.tsv
+          find dist engine -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) \
+            -exec cp {} local/ \;
+          ls -l local
+
+      - name: Install it the way a user would
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          CORTADO_INSTALL_BASE_URL="$PWD/local" \
+            sh tools/install-release.sh --prefix "$HOME/cortado-test" \
+               --with-skia --no-modify-path
+          "$HOME/cortado-test/bin/cortado" --version
+          test -f "$HOME/cortado-test"/lib/*cortado_skia_engine*
+          echo "$HOME/cortado-test/bin" >> "$GITHUB_PATH"
+
+      - name: Install it the way a user would (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Run the binary and the launcher directly first: when the installer
+          # says the package does not run, this says which of the two is wrong.
+          Expand-Archive -LiteralPath (Get-ChildItem dist\*.zip)[0].FullName -DestinationPath probe -Force
+          Get-ChildItem -Recurse probe | Select-Object -ExpandProperty FullName
+          $exe = (Get-ChildItem -Recurse probe -Filter 'cortado.exe')[0].FullName
+          Write-Host "direct: $exe"
+          # What the loader will look for. 0xC0000139 is ENTRYPOINT_NOT_FOUND
+          # and 0xC0000135 is DLL_NOT_FOUND; neither names the import at fault.
+          python3 tools/pe_imports.py --verify $exe
+          & $exe --version
+          Write-Host ("direct exit: {0} (0x{1:X8})" -f $LASTEXITCODE, $LASTEXITCODE)
+          if ($LASTEXITCODE -ne 0) { throw "the packaged cortado.exe does not start" }
+          $env:CORTADO_INSTALL_BASE_URL = "$PWD\local"
+          ./tools/install-release.ps1 -Prefix "$env:RUNNER_TEMP\cortado-test" -WithSkia -NoModifyPath
+          & "$env:RUNNER_TEMP\cortado-test\bin\cortado.cmd" --version
+          if (-not (Get-ChildItem "$env:RUNNER_TEMP\cortado-test\lib" -Filter '*cortado_skia_engine*')) {
+            throw "the engine was not installed"
+          }
+          "$env:RUNNER_TEMP\cortado-test\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      # Scaffolding is the first thing anybody does, and it is the one path that
+      # proves the binary, the generator and the templates agree.
+      - name: Scaffold and generate a project
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          rm -rf smoke
+          cortado init smoke
+          cd smoke
+          cortado generate
+
+      # In pwsh, not bash: the installed command is cortado.cmd, and Git Bash
+      # does not apply PATHEXT, so `cortado` is not a name it can find.
+      - name: Scaffold and generate a project (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Set-Location $env:RUNNER_TEMP
+          Remove-Item -Recurse -Force smoke -ErrorAction SilentlyContinue
+          cortado init smoke
+          Set-Location smoke
+          cortado generate
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  # ------------------------------------------------------------------ publishing
+  publish:
+    name: publish release
+    needs: [version, engine, package]
+    runs-on: ubuntu-24.04
+    # The only job that may write anything. Everything above ran read-only.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Assemble the release manifest
+        run: |
+          mkdir -p assets rows
+          # Every job uploaded one row.tsv; give them distinct names so nothing
+          # overwrites anything on the way into rows/.
+          index=0
+          for row in $(find artifacts -name 'row.tsv' | LC_ALL=C sort); do
+            cp "$row" "rows/$index.tsv"
+            index=$((index + 1))
+          done
+          find artifacts \( -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} assets/ \;
+          bash tools/release_manifest.sh merge rows assets/cortado-release-manifest.tsv
+          cat assets/cortado-release-manifest.tsv
+
+      - name: Verify every expected target is present
+        run: bash tools/release_completeness.sh assets/cortado-release-manifest.tsv assets
+
+      - name: Publish the installers
+        run: |
+          cp tools/install-release.sh assets/cortado-install.sh
+          cp tools/install-release.ps1 assets/cortado-install.ps1
+          chmod +x assets/cortado-install.sh
+
+      - name: Write the checksum list
+        run: |
+          # Covers the exact set of files a user can download, and nothing else.
+          (cd assets && find . -maxdepth 1 -type f \
+            ! -name 'cortado-release-checksums.txt' -printf '%P\n' |
+            LC_ALL=C sort | xargs sha256sum) \
+            >assets/cortado-release-checksums.txt
+          cat assets/cortado-release-checksums.txt
+
+      - name: Attest every published file
+        if: github.event_name == 'push' || inputs.publish
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: assets/*
+
+      - name: Upload every asset to the GitHub Release
+        if: github.event_name == 'push' || inputs.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          # A manual publish creates its tag with GITHUB_TOKEN, and GitHub does
+          # not start another workflow from such a tag — one dispatch, one run.
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', env.VERSION) || github.ref_name }}
+          target_commitish: ${{ github.event_name == 'workflow_dispatch' && github.sha || '' }}
+          files: assets/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+
+      - name: Candidate summary
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
+        run: |
+          echo "Release candidate $VERSION built and verified; nothing was published." \
+            >>"$GITHUB_STEP_SUMMARY"
+          echo '```' >>"$GITHUB_STEP_SUMMARY"
+          cat assets/cortado-release-manifest.tsv >>"$GITHUB_STEP_SUMMARY"
+          echo '```' >>"$GITHUB_STEP_SUMMARY"
