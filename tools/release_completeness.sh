@@ -21,8 +21,8 @@ expected=(
     "x86_64-unknown-linux-gnu:skia"
     "aarch64-unknown-linux-gnu:cli"
     "aarch64-unknown-linux-gnu:skia"
-    "x86_64-pc-windows-msvc:cli"
-    "x86_64-pc-windows-msvc:skia"
+    "x86_64-pc-windows-gnullvm:cli"
+    "x86_64-pc-windows-gnullvm:skia"
 )
 
 missing=0

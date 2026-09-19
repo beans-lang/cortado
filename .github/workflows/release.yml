@@ -86,7 +86,7 @@ jobs:
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
           - os: windows-2022
-            target: x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-gnullvm
     env:
       VERSION: ${{ needs.version.outputs.version }}
       TARGET: ${{ matrix.target }}
@@ -141,7 +141,7 @@ jobs:
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
           - os: windows-2022
-            target: x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-gnullvm
     env:
       VERSION: ${{ needs.version.outputs.version }}
       TARGET: ${{ matrix.target }}
@@ -172,6 +172,20 @@ jobs:
             -OutFile beans-install.ps1
           ./beans-install.ps1 -NoModifyPath
           "$env:LOCALAPPDATA\Beans\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          # Git Bash does not apply PATHEXT, so the launcher is named outright.
+          "BEANSC=$env:LOCALAPPDATA\Beans\bin\beansc.cmd" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # cortado's manifest compiles the GTK4 host for any Linux build of the
+      # package, CLI or not, and the include paths differ on every machine — so
+      # they are generated here the way beans.pot says to generate them.
+      - name: Install the GTK4 host's build dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libgtk-4-dev pkg-config
+          beansc pot add --system gtk4 linux
+          git --no-pager diff --stat beans.pot
 
       - uses: actions/download-artifact@v4
         with:

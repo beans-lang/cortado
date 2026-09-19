@@ -166,7 +166,7 @@ if [ -z "$target" ]; then
             ;;
         MINGW*|MSYS*|CYGWIN*)
             case $machine in
-                x86_64|amd64) target="x86_64-pc-windows-msvc" ;;
+                x86_64|amd64) target="x86_64-pc-windows-gnullvm" ;;
             esac
             ;;
     esac

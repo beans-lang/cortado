@@ -53,8 +53,11 @@ esac
 
 BEANSC="${BEANSC:-}"
 if [[ -z "$BEANSC" ]]; then
+    # A Windows release launches through beansc.cmd, which `command -v beansc`
+    # does not find: Git Bash does not apply PATHEXT the way cmd.exe does.
     for candidate in "${BEANS_ROOT:-}/build/beansc" "$repo/../../beans/build/beansc" \
-                     "$(command -v beansc || true)"; do
+                     "$(command -v beansc || true)" "$(command -v beansc.cmd || true)" \
+                     "$(command -v beansc.exe || true)"; do
         [[ -n "$candidate" && -x "$candidate" ]] && { BEANSC="$candidate"; break; }
     done
 fi

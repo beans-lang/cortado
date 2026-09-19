@@ -41,7 +41,7 @@ case "$target" in
         os=linux;   library=libcortado_skia_engine.so
         case "$arch" in x86_64) skia_arch=x64 ;; aarch64|arm64) skia_arch=arm64 ;;
             *) echo "no pinned Skia for $arch" >&2; exit 2 ;; esac ;;
-    *-windows-msvc)
+    *-windows-msvc|*-windows-gnu*)
         os=windows; library=cortado_skia_engine.dll
         case "$arch" in x86_64) skia_arch=x64 ;; aarch64|arm64) skia_arch=arm64 ;;
             *) echo "no pinned Skia for $arch" >&2; exit 2 ;; esac ;;

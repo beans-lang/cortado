@@ -65,8 +65,8 @@ try {
         # Beans has no 32-bit Windows release for cortado, and the arm64 package
         # is named separately rather than run through emulation.
         switch ($env:PROCESSOR_ARCHITECTURE) {
-            'AMD64' { $Target = 'x86_64-pc-windows-msvc' }
-            'ARM64' { $Target = 'aarch64-pc-windows-msvc' }
+            'AMD64' { $Target = 'x86_64-pc-windows-gnullvm' }
+            'ARM64' { $Target = 'aarch64-pc-windows-gnullvm' }
         }
     }
 
