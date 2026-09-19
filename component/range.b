@@ -21,7 +21,7 @@ pub abstract class RangeControlTemplate extends ControlTemplate {
                 let percent: f64 = fraction * 100.0
                 let number: string = "{range.value()}"
                 let width: f64 = control.frame().width - theme.slider_knob_width()
-                let thumb_leading: f64 = fraction * (if width > 0.0 { width } else { 0.0 })
+                let thumb_leading: f64 = range.shown_fraction() * (if width > 0.0 { width } else { 0.0 })
                 var indeterminate: bool = false
                 match range as? render.ProgressBarRender { some(progress) => { indeterminate = progress.indeterminate() } none => {} }
                 var held: int = -1

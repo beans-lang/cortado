@@ -22,6 +22,7 @@ int main(void) {
         ctd_listen(CTD_EV_POINTER_MOVE, 1);
         ctd_listen(CTD_EV_POINTER_DOWN, 1);
         ctd_listen(CTD_EV_POINTER_UP, 1);
+        ctd_listen(CTD_EV_KEY_DOWN, 1);
         ctd_handle canvas_id = ctd_widget_new(CTD_W_CANVAS);
         assert(canvas_id);
         ctd_handle surface_id = ctd_surface_new(300, 120);
@@ -61,6 +62,39 @@ int main(void) {
         assert([canvas hasMarkedText]);
         [canvas unmarkText];
         assert(last.kind == CTD_EV_TEXT_INPUT && ![canvas hasMarkedText]);
+
+        // A keyboard selection reaches the toolkit only as its own command:
+        // AppKit sends moveLeftAndModifySelection:, never moveLeft: plus shift.
+        [canvas doCommandBySelector:@selector(moveLeft:)];
+        assert(last.kind == CTD_EV_KEY_DOWN && last.index == CTD_KEY_LEFT &&
+               !(last.modifiers & CTD_MOD_SHIFT));
+        [canvas doCommandBySelector:@selector(moveLeftAndModifySelection:)];
+        assert(last.kind == CTD_EV_KEY_DOWN && last.index == CTD_KEY_LEFT &&
+               (last.modifiers & CTD_MOD_SHIFT));
+        [canvas doCommandBySelector:@selector(moveRightAndModifySelection:)];
+        assert(last.index == CTD_KEY_RIGHT && (last.modifiers & CTD_MOD_SHIFT));
+        [canvas doCommandBySelector:@selector(moveUp:)];
+        assert(last.index == CTD_KEY_UP && !(last.modifiers & CTD_MOD_SHIFT));
+        [canvas doCommandBySelector:@selector(moveDownAndModifySelection:)];
+        assert(last.index == CTD_KEY_DOWN && (last.modifiers & CTD_MOD_SHIFT));
+        [canvas doCommandBySelector:@selector(moveToBeginningOfLineAndModifySelection:)];
+        assert(last.index == CTD_KEY_HOME && (last.modifiers & CTD_MOD_SHIFT));
+        [canvas doCommandBySelector:@selector(moveToEndOfLineAndModifySelection:)];
+        assert(last.index == CTD_KEY_END && (last.modifiers & CTD_MOD_SHIFT));
+        // AppKit spends the option on naming the command, so the chord the
+        // toolkit reads has to be put back on the way out.
+        [canvas doCommandBySelector:@selector(moveWordLeft:)];
+        assert(last.index == CTD_KEY_LEFT && (last.modifiers & CTD_MOD_ALT) &&
+               !(last.modifiers & CTD_MOD_SHIFT));
+        [canvas doCommandBySelector:@selector(moveWordRightAndModifySelection:)];
+        assert(last.index == CTD_KEY_RIGHT && (last.modifiers & CTD_MOD_ALT) &&
+               (last.modifiers & CTD_MOD_SHIFT));
+        [canvas doCommandBySelector:@selector(deleteWordBackward:)];
+        assert(last.index == CTD_KEY_BACKSPACE && (last.modifiers & CTD_MOD_ALT));
+        [canvas doCommandBySelector:@selector(deleteWordForward:)];
+        assert(last.index == CTD_KEY_DELETE && (last.modifiers & CTD_MOD_ALT));
+        [canvas doCommandBySelector:@selector(deleteBackward:)];
+        assert(last.index == CTD_KEY_BACKSPACE && !(last.modifiers & CTD_MOD_ALT));
 
         NSPasteboard *isolated = [NSPasteboard pasteboardWithUniqueName];
         ctd_clipboard_use_pasteboard(isolated);
@@ -109,7 +143,7 @@ int main(void) {
         [retained release];
         assert(ctd_canvas_text_state(canvas_id, 1, "", 0, 0, 0, 0, 0, 1, 1) == CTD_ERR_STALE);
         ctd_shutdown();
-        puts("native shared IME, clipboard, and accessibility: true");
+        puts("native shared IME, keyboard selection, clipboard, and accessibility: true");
     }
     return 0;
 }

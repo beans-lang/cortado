@@ -134,6 +134,11 @@ pub abstract class RangeRender extends RenderObject {
         if self.high_value <= self.low_value { return 0.0 }
         return (self.current_value - self.low_value) / (self.high_value - self.low_value)
     }
+    /// Where the knob is drawn. Only a slider walked over by a click puts this
+    /// anywhere but on the value; for every other range the two are one.
+    pub fn shown_fraction() -> f64 { return self.fraction() }
+    /// The value has settled at a new number.
+    fn value_settled() {}
     pub fn needs_positive_step() -> bool { return false }
     pub fn allows_step() -> bool { return false }
     pub fn accepts_input() -> bool { return false }
@@ -157,6 +162,7 @@ pub abstract class RangeRender extends RenderObject {
             }
             self.current_value = value
         }
+        self.value_settled()
         self.dirty.paint(); self.dirty.semantics()
         return ok(true)
     }
@@ -190,6 +196,7 @@ pub abstract class RangeRender extends RenderObject {
         }
         if next == self.current_value { return none }
         self.current_value = next
+        self.value_settled()
         self.dirty.paint(); self.dirty.semantics()
         let change: events.UiEvent = events.UiEvent.of(events.EventKind.value_changed, host.Handle.of(self.identity))
         change.index = next as int; change.position = geometry.Point.at(next, 0.0)
@@ -198,8 +205,49 @@ pub abstract class RangeRender extends RenderObject {
 }
 
 pub class SliderRender extends RangeRender {
+    /// Where the knob is drawn, which trails the value only while a click is
+    /// walking it over. AppKit walks it; a drag has it follow the pointer.
+    drawn: f64 = 0.0
+    walk: Option<ScalarTween> = none
+    walking: bool = false
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) { super.init(renderer, theme, dirty); self.focusable = true }
     pub override fn role() -> string { return "slider" }
+    pub override fn shown_fraction() -> f64 { return self.drawn }
+    pub override fn animating() -> bool { return self.walk != none }
+    pub override fn advance(seconds: f64) -> Result<bool> {
+        self.demand_alive()?
+        if !(seconds >= 0.0 && seconds < 10000000.0) { return err("invalid frame delta", "out_of_range") }
+        if seconds == 0.0 { return ok(false) }
+        var done: bool = false
+        var moved: bool = false
+        match self.walk {
+            some(tween) => { self.drawn = tween.advance(seconds); done = tween.done(); moved = true }
+            none => {}
+        }
+        if done { self.walk = none; self.drawn = self.fraction() }
+        if moved { self.dirty.paint() }
+        return ok(moved)
+    }
+    override fn value_settled() {
+        let target: f64 = self.fraction()
+        let seconds: f64 = self.theme.motion_slider()
+        if self.walking && seconds > 0.0 && self.drawn != target {
+            self.walk = some(new ScalarTween(self.drawn, target, seconds, self.theme.motion_curve()))
+            self.dirty.request_animation(self.handle())
+            return
+        }
+        self.walk = none
+        self.drawn = target
+    }
+    /// Whether a press landed on the knob as drawn, which is what the pointer
+    /// was aiming at — not on the value the knob is still travelling towards.
+    fn knob_holds(x: f64) -> bool {
+        let knob: f64 = self.theme.slider_knob_width()
+        let travel: f64 = self.bounds.width - knob
+        if travel <= 0.0 { return true }
+        let leading: f64 = self.drawn * travel
+        return x >= leading && x <= leading + knob
+    }
     pub override fn accepts_input() -> bool { return true }
     pub override fn allows_step() -> bool { return true }
     pub override fn set_value_as_user(index: int, value: f64) -> Result<bool> {
@@ -215,7 +263,13 @@ pub class SliderRender extends RangeRender {
     }
     pub override fn handle_event(event: events.UiEvent) -> Option<events.UiEvent> {
         if !self.enabled || self.hidden || !self.alive { return none }
-        if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT { self.dragging = true; return self.at(event.position.x) }
+        if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT {
+            self.dragging = true
+            self.walking = !self.knob_holds(event.position.x)
+            let produced: Option<events.UiEvent> = self.at(event.position.x)
+            self.walking = false
+            return produced
+        }
         if event.kind == events.EventKind.pointer_move && self.dragging { return self.at(event.position.x) }
         if event.kind == events.EventKind.pointer_up && self.dragging { self.dragging = false; return self.at(event.position.x) }
         if event.kind == events.EventKind.key_down {

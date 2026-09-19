@@ -219,7 +219,7 @@ pub class Window {
                     ok(changed) => { scrolled = changed }
                     err(problem) => { owner.problem = problem.msg; return }
                 }
-                match owner.scene_value.pointer(event.kind, event.position, event.index, event.click_count()) {
+                match owner.scene_value.pointer(event.kind, event.position, event.index, event.click_count(), event.modifiers) {
                     ok(changed) => { if changed || scrolled { owner.present() } else { owner.sync_services() } }
                     err(problem) => { owner.problem = problem.msg }
                 }

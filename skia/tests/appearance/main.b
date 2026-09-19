@@ -272,6 +272,68 @@ fn switch_press_motion(scene: cortado_skia.Scene) -> Result<bool> {
     return ok(true)
 }
 
+/// The knob as drawn, which is what a click is aiming at.
+fn thumb_of(slider: widgets.Slider) -> Result<f64> {
+    let marks: List<render.RenderObject> = control_drawings(slider)?
+    require(marks.len() == 1, "a slider draws one knob, not {marks.len()} things")
+    return ok(painted(marks[0]).x)
+}
+
+/// Clicking a slider's track walks the knob over; dragging it does not. The
+/// value lands at once either way — only the drawing trails.
+fn slider_walks_to_a_click(scene: cortado_skia.Scene) -> Result<bool> {
+    let context: render.UiContext = scene.context()
+    let theme: render.Theme = context.theme()
+    theme.set_control_size(2)?
+    theme.set_reduced_motion(false)
+    let root: widgets.Container = scene.root()
+    for root.count() > 0 { root.remove(root.count() - 1)? }
+    let slider: widgets.Slider = new widgets.Slider(some(context))
+    slider.set_range(0.0, 100.0)?
+    slider.set_value(0.0)?
+    slider.set_frame(geometry.Rect.of(10.0, 10.0, 200.0, theme.slider_height()))?
+    root.add(slider)?
+    scene.resize(geometry.Size.of(240.0, 60.0), 2.0)?
+    scene.refresh()?
+    let travel: f64 = 200.0 - theme.slider_knob_width()
+    let middle: f64 = 10.0 + theme.slider_height() / 2.0
+    require(close_to(thumb_of(slider)?, 0.0, 0.001), "a fresh slider did not start at its low end")
+
+    let far: geometry.Point = geometry.Point.at(10.0 + 160.0, middle)
+    scene.pointer(events.EventKind.pointer_down, far)?
+    require(close_to(slider.value()?, 80.0, 0.001), "the click did not set the value: {slider.value()?}")
+    require(close_to(thumb_of(slider)?, 0.0, 0.001), "the knob left before the first frame")
+    require(scene.has_active_animations(), "a clicked slider scheduled no frames")
+    scene.advance(theme.motion_slider() / 2.0)?
+    let midway: f64 = thumb_of(slider)?
+    require(midway > 1.0 && midway < travel * 0.8 - 1.0, "a clicked knob jumped to {midway}")
+    scene.advance(theme.motion_slider() * 2.0)?
+    require(close_to(thumb_of(slider)?, travel * 0.8, 0.5), "the knob did not arrive: {thumb_of(slider)?}")
+    require(!scene.has_active_animations(), "a finished slider is still asking for frames")
+    scene.pointer(events.EventKind.pointer_up, far)?
+
+    // A press on the knob, and every drag after it, is the pointer's own
+    // position — nothing to walk to.
+    let on_knob: geometry.Point = geometry.Point.at(10.0 + travel * 0.8 + theme.slider_knob_width() / 2.0, middle)
+    scene.pointer(events.EventKind.pointer_down, on_knob)?
+    require(!scene.has_active_animations(), "pressing the knob itself started a walk")
+    scene.pointer(events.EventKind.pointer_move, geometry.Point.at(10.0 + 100.0, middle))?
+    require(!scene.has_active_animations(), "dragging a slider animated instead of following")
+    require(close_to(thumb_of(slider)?, travel * 0.5, 0.5), "the knob did not follow the drag: {thumb_of(slider)?}")
+    scene.pointer(events.EventKind.pointer_up, geometry.Point.at(10.0 + 100.0, middle))?
+
+    // Reduced motion keeps the click but takes the walk.
+    theme.set_reduced_motion(true)
+    scene.refresh()?
+    scene.pointer(events.EventKind.pointer_down, far)?
+    require(close_to(thumb_of(slider)?, travel * 0.8, 0.5), "reduced motion still walked the knob")
+    require(!scene.has_active_animations(), "reduced motion scheduled frames")
+    scene.pointer(events.EventKind.pointer_up, far)?
+    theme.set_reduced_motion(false)
+    io.println("ok slider: a click walks the knob over, a drag follows the pointer")
+    return ok(true)
+}
+
 // ------------------------------------------------- 5. the popup's own menu
 fn menu_matches_appkit(scene: cortado_skia.Scene) -> Result<bool> {
     let context: render.UiContext = scene.context()
@@ -420,6 +482,7 @@ fn verify() -> Result<bool> {
     field_sits_on_its_baseline(scene)?
     switch_motion(scene)?
     switch_press_motion(scene)?
+    slider_walks_to_a_click(scene)?
     menu_matches_appkit(scene)?
     menu_rows_are_centred(scene)?
     offsets_are_checked(scene)?

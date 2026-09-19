@@ -62,6 +62,11 @@ fn send(router: events.EventRouter, canvas: host.Handle, kind: events.EventKind,
     event.token = clicks
     router.deliver(event)
 }
+/// The row a click that far down the table lands on, at a given scroll. Taken
+/// from the table's own metrics: they are theme tokens and they have moved.
+fn row_under(visual: render.TableRender, local_y: f64, offset: f64) -> int {
+    return ((local_y + offset - visual.header_height()) / visual.row_height()) as int
+}
 fn stopped(window_handle: host.Handle) -> bool {
     unsafe { return host.ctd_clock_step(window_handle.raw, 0.016) as int != host.OK }
 }
@@ -121,14 +126,18 @@ fn verify() -> Result<bool> {
     require(visual.scroll_offset() == 312.0 && counts.frames == 4,
             "changed-target wheel did not flush final displacement")
     require(stopped(window.native_window().handle()), "changed-target wheel left frame clock active")
+    let settled_row: int = row_under(visual, 60.0, 340.0)
+    let stale_row: int = row_under(visual, 60.0, 312.0)
+    require(settled_row != stale_row,
+            "the queued wheel no longer crosses a row boundary, so this case proves nothing")
     send(app.router, canvas, events.EventKind.pointer_scroll, point, 28.0)
     send(app.router, canvas, events.EventKind.pointer_down, point, 0.0, 2)
     send(app.router, canvas, events.EventKind.pointer_up, point, 0.0, 2)
-    require(visual.scroll_offset() == 340.0 && table.selected()? == 13,
-            "double-click hit a stale row before queued wheel settled")
+    require(visual.scroll_offset() == 340.0 && table.selected()? == settled_row,
+            "double-click hit row {table.selected()?}, not the {settled_row} under it once the wheel settled")
     var editing: bool = false
     for node: render.SemanticsNode in window.scene().semantics() {
-        if node.role() == "textbox" && node.value() == "Cup 1" { editing = true }
+        if node.role() == "textbox" && node.value() == "Cup {settled_row % 3}" { editing = true }
     }
     require(editing, "queued wheel followed by double-click did not edit intended row")
     require(stopped(window.native_window().handle()), "click flush left wheel frame clock active")

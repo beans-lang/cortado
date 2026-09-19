@@ -599,18 +599,25 @@ int32_t ctd_skia_paragraph_selection(void *raw, uint64_t id, int32_t first, int3
     }
     return static_cast<int32_t>(boxes.size());
 }
-int32_t ctd_skia_graphemes(void *raw, const char *s, int32_t n, int32_t *out, int32_t capacity) {
+static int32_t break_offsets(void *raw, const char *s, int32_t n, SkUnicode::BreakType type,
+                             int32_t *out, int32_t capacity) {
     auto *e = engine(raw);
     if (!e || n < 0 || n > 16777216 || (!s && n) || capacity < 0) return invalid;
     std::vector<int32_t> valid;
     if (!positions(s, n, valid)) return invalid;
-    auto breaks = e->unicode->makeBreakIterator(SkUnicode::BreakType::kGraphemes);
+    auto breaks = e->unicode->makeBreakIterator(type);
     if (!breaks || !breaks->setText(s ? s : "", n)) return invalid;
     std::vector<int32_t> offsets;
     for (auto p = breaks->first(); !breaks->isDone(); p = breaks->next()) offsets.push_back(p);
     if (!out) return static_cast<int32_t>(offsets.size());
     if (static_cast<size_t>(capacity) < offsets.size()) return invalid;
     std::copy(offsets.begin(), offsets.end(), out); return static_cast<int32_t>(offsets.size());
+}
+int32_t ctd_skia_graphemes(void *raw, const char *s, int32_t n, int32_t *out, int32_t capacity) {
+    return break_offsets(raw, s, n, SkUnicode::BreakType::kGraphemes, out, capacity);
+}
+int32_t ctd_skia_words(void *raw, const char *s, int32_t n, int32_t *out, int32_t capacity) {
+    return break_offsets(raw, s, n, SkUnicode::BreakType::kWords, out, capacity);
 }
 int32_t ctd_skia_pixels(void *raw, double *size, char *out, int32_t capacity) {
     auto *e = engine(raw); if (!e || !e->surface || !size || capacity < 0) return invalid;

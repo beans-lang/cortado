@@ -156,8 +156,8 @@ pub class Scene {
             }
         }
     }
-    pub fn pointer(kind: events.EventKind, point: geometry.Point, button: int = 1, clicks: int = 1) -> Result<bool> {
-        self.context_value.pointer(self.root_value.render_object()?, kind, point, button, clicks)?
+    pub fn pointer(kind: events.EventKind, point: geometry.Point, button: int = 1, clicks: int = 1, modifiers: int = 0) -> Result<bool> {
+        self.context_value.pointer(self.root_value.render_object()?, kind, point, button, clicks, modifiers)?
         return self.refresh()
     }
     pub fn key(kind: events.EventKind, key: events.Key, text: string = "", modifiers: int = 0) -> Result<bool> {

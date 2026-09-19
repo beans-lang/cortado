@@ -122,7 +122,7 @@ pub class InputManager {
             }
         }
     }
-    pub fn pointer(root: RenderObject, kind: events.EventKind, position: geometry.Point, button: int, clicks: int = 1) -> Result<bool> {
+    pub fn pointer(root: RenderObject, kind: events.EventKind, position: geometry.Point, button: int, clicks: int = 1, modifiers: int = 0) -> Result<bool> {
         if !root.belongs_to(self.invalidation_value) { return err("input root belongs to another context", "bad_owner") }
         self.hover_value.update(root, position)
         var target: Option<RenderObject> = self.registry_value.get(self.captured_handle)
@@ -151,6 +151,7 @@ pub class InputManager {
                     }
                 }
                 event.position = local; event.index = button; event.token = clicks
+                event.modifiers = modifiers
                 if kind == events.EventKind.pointer_up { self.captured_handle = 0 }
                 return self.dispatch(event)
             }

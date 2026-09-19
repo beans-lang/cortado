@@ -233,21 +233,65 @@ static void ctd_emit_text(NSView *view, uint32_t kind, NSString *value,
     NSRect inWindow = [self convertRect:_ctdCaretRect toView:nil];
     return [[self window] convertRectToScreen:inWindow];
 }
+// AppKit names an extending command separately: shift+left arrives as
+// moveLeftAndModifySelection:, never as moveLeft: with a shift flag.
+static int32_t ctd_key_of_command(SEL selector, uint32_t *extend) {
+    *extend = 0;
+    if (selector == @selector(deleteBackward:)) return CTD_KEY_BACKSPACE;
+    if (selector == @selector(deleteForward:))  return CTD_KEY_DELETE;
+    if (selector == @selector(insertNewline:))  return CTD_KEY_RETURN;
+    if (selector == @selector(insertTab:))      return CTD_KEY_TAB;
+    if (selector == @selector(moveLeft:))       return CTD_KEY_LEFT;
+    if (selector == @selector(moveRight:))      return CTD_KEY_RIGHT;
+    if (selector == @selector(moveUp:))         return CTD_KEY_UP;
+    if (selector == @selector(moveDown:))       return CTD_KEY_DOWN;
+    if (selector == @selector(moveToBeginningOfLine:) ||
+        selector == @selector(moveToLeftEndOfLine:) ||
+        selector == @selector(moveToBeginningOfParagraph:) ||
+        selector == @selector(moveToBeginningOfDocument:)) return CTD_KEY_HOME;
+    if (selector == @selector(moveToEndOfLine:) ||
+        selector == @selector(moveToRightEndOfLine:) ||
+        selector == @selector(moveToEndOfParagraph:) ||
+        selector == @selector(moveToEndOfDocument:)) return CTD_KEY_END;
+    // A word step is option+arrow, and AppKit drops the option on the way, so
+    // it is put back: the toolkit reads the chord, not the command's name.
+    *extend = CTD_MOD_ALT;
+    if (selector == @selector(moveWordLeft:) ||
+        selector == @selector(moveWordBackward:)) return CTD_KEY_LEFT;
+    if (selector == @selector(moveWordRight:) ||
+        selector == @selector(moveWordForward:)) return CTD_KEY_RIGHT;
+    if (selector == @selector(deleteWordBackward:)) return CTD_KEY_BACKSPACE;
+    if (selector == @selector(deleteWordForward:)) return CTD_KEY_DELETE;
+    *extend = CTD_MOD_ALT | CTD_MOD_SHIFT;
+    if (selector == @selector(moveWordLeftAndModifySelection:) ||
+        selector == @selector(moveWordBackwardAndModifySelection:)) return CTD_KEY_LEFT;
+    if (selector == @selector(moveWordRightAndModifySelection:) ||
+        selector == @selector(moveWordForwardAndModifySelection:)) return CTD_KEY_RIGHT;
+    *extend = CTD_MOD_SHIFT;
+    if (selector == @selector(moveLeftAndModifySelection:))  return CTD_KEY_LEFT;
+    if (selector == @selector(moveRightAndModifySelection:)) return CTD_KEY_RIGHT;
+    if (selector == @selector(moveUpAndModifySelection:))    return CTD_KEY_UP;
+    if (selector == @selector(moveDownAndModifySelection:))  return CTD_KEY_DOWN;
+    if (selector == @selector(moveToBeginningOfLineAndModifySelection:) ||
+        selector == @selector(moveToLeftEndOfLineAndModifySelection:) ||
+        selector == @selector(moveToBeginningOfParagraphAndModifySelection:) ||
+        selector == @selector(moveToBeginningOfDocumentAndModifySelection:)) return CTD_KEY_HOME;
+    if (selector == @selector(moveToEndOfLineAndModifySelection:) ||
+        selector == @selector(moveToRightEndOfLineAndModifySelection:) ||
+        selector == @selector(moveToEndOfParagraphAndModifySelection:) ||
+        selector == @selector(moveToEndOfDocumentAndModifySelection:)) return CTD_KEY_END;
+    *extend = 0;
+    return CTD_KEY_UNKNOWN;
+}
+
 - (void)doCommandBySelector:(SEL)selector {
-    int32_t key = CTD_KEY_UNKNOWN;
-    if (selector == @selector(deleteBackward:)) key = CTD_KEY_BACKSPACE;
-    else if (selector == @selector(deleteForward:)) key = CTD_KEY_DELETE;
-    else if (selector == @selector(moveLeft:)) key = CTD_KEY_LEFT;
-    else if (selector == @selector(moveRight:)) key = CTD_KEY_RIGHT;
-    else if (selector == @selector(moveToBeginningOfLine:)) key = CTD_KEY_HOME;
-    else if (selector == @selector(moveToEndOfLine:)) key = CTD_KEY_END;
-    else if (selector == @selector(insertNewline:)) key = CTD_KEY_RETURN;
-    else if (selector == @selector(insertTab:)) key = CTD_KEY_TAB;
-    else if (selector == @selector(cancelOperation:)) {
+    if (selector == @selector(cancelOperation:)) {
         [self ctdDiscardMarked];
         ctd_emit_text(self, CTD_EV_COMPOSITION_CANCEL, @"", 0, 0);
         return;
     }
+    uint32_t extend = 0;
+    int32_t key = ctd_key_of_command(selector, &extend);
     if (key == CTD_KEY_UNKNOWN || !g_sink || !ctd_listening(CTD_EV_KEY_DOWN)) return;
     ctd_event event; memset(&event, 0, sizeof event);
     event.kind = CTD_EV_KEY_DOWN;
@@ -255,6 +299,7 @@ static void ctd_emit_text(NSView *view, uint32_t kind, NSString *value,
     event.index = key;
     NSEvent *native = [NSApp currentEvent];
     if (native) event.modifiers = ctd_modifiers_of([native modifierFlags]);
+    event.modifiers |= extend;
     g_sink(g_sink_context, &event);
 }
 - (BOOL)isAccessibilityElement { return NO; }

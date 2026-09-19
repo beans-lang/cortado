@@ -22,8 +22,14 @@ fn verify() -> Result<bool> {
     if outside.same_as(inside) { return err("renderer painted no rectangle", "test") }
     let boundaries: List<int> = renderer.graphemes("a\u{301}👩‍💻z")?
     if boundaries.len() != 4 { return err("grapheme boundaries split a cluster", "test") }
+    // Word boundaries land on both edges of every run, spaces included, so a
+    // word step can tell a word apart from the gap before it.
+    let segments: List<int> = renderer.words("the quick fox")?
+    if segments.len() != 6 { return err("word boundaries did not segment the sentence", "test") }
+    if segments[0] != 0 || segments[1] != 3 || segments[2] != 4 || segments[3] != 9 ||
+       segments[4] != 10 || segments[5] != 13 { return err("word boundaries fell in the wrong places", "test") }
     renderer.write_png("build/skia-proof.png")?
-    io.println("ok Skia pixels, shaped text, Unicode graphemes")
+    io.println("ok Skia pixels, shaped text, Unicode graphemes and words")
     return ok(true)
 }
 

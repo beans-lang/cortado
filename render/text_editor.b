@@ -84,10 +84,49 @@ pub class TextEditor {
         self.value = new EditingValue(self.value.text, if extend { self.value.anchor } else { next }, next)
         return ok(true)
     }
-    pub fn erase(backward: bool) -> Result<bool> {
+    /// A word step: the far edge of the next segment that holds more than
+    /// spaces, so the runs between words are stepped over and not landed on.
+    pub fn move_word(forward: bool, extend: bool) -> Result<bool> {
+        if self.composing() { self.cancel_composition() }
+        let boundaries: List<int> = self.renderer.words(self.value.text)?
+        var next: int = if forward { self.value.text.len() } else { 0 }
+        if boundaries.len() > 1 {
+            for index: int in 0..boundaries.len() - 1 {
+                let start: int = boundaries[index]
+                let end: int = boundaries[index + 1]
+                if self.value.text.slice(start, end).trim() == "" { continue }
+                if forward && end > self.value.caret { next = end; break }
+                if !forward && start < self.value.caret { next = start }
+            }
+        }
+        self.value = new EditingValue(self.value.text, if extend { self.value.anchor } else { next }, next)
+        return ok(true)
+    }
+    /// The word an offset falls in. A run of spaces is a segment of its own,
+    /// which is what a double-click on one selects.
+    pub fn select_word(offset: int) -> Result<bool> {
+        let boundaries: List<int> = self.renderer.words(self.value.text)?
+        var first: int = 0
+        var last: int = self.value.text.len()
+        for at: int in boundaries {
+            if at <= offset { first = at } else { last = at; break }
+        }
+        if first == last && first > 0 {
+            last = first; first = 0
+            for at: int in boundaries { if at < last { first = at } }
+        }
+        return self.select(first, last)
+    }
+    pub fn erase(backward: bool) -> Result<bool> { return self.erase_step(backward, false) }
+    /// The word delete: option+backspace on macOS, control+backspace elsewhere.
+    /// With a selection up it is an ordinary delete — the selection is what goes.
+    pub fn erase_word(backward: bool) -> Result<bool> { return self.erase_step(backward, true) }
+    fn erase_step(backward: bool, word: bool) -> Result<bool> {
         if self.composing() { self.cancel_composition() }
         let before: EditingValue = self.value
-        if self.value.anchor == self.value.caret { self.move_cursor(!backward, true)? }
+        if self.value.anchor == self.value.caret {
+            if word { self.move_word(!backward, true)? } else { self.move_cursor(!backward, true)? }
+        }
         if self.value.anchor == self.value.caret { return ok(false) }
         self.undo_values.push(before)
         if self.undo_values.len() > 100 { self.undo_values.remove(0) }

@@ -194,6 +194,20 @@ pub class SkiaRenderer implements paint.Renderer {
         }
         return ok(move answer)
     }
+    pub fn words(text: string) -> Result<List<int>> {
+        let bytes: Bytes = Bytes.from(text)
+        var answer: List<int> = []
+        unsafe {
+            let count: i32 = ctd_skia_words(self.engine.raw, host.HostText.pointer(bytes), bytes.len() as i32, RawPtr.null(), 0)
+            self.engine.checked(count)?
+            let out: RawPtr<i32> = RawPtr.alloc(count as int)
+            let wrote: i32 = ctd_skia_words(self.engine.raw, host.HostText.pointer(bytes), bytes.len() as i32, out, count)
+            if wrote < 0 { out.free(); return err("Skia could not segment words", "renderer_error") }
+            for index: int in 0..wrote as int { answer.push(out.offset(index).read() as int) }
+            out.free()
+        }
+        return ok(move answer)
+    }
     pub fn image(source: string) -> Result<paint.ImageResource> {
         let bytes: Bytes = Bytes.from(source)
         var id: u64 = 0

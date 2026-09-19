@@ -13,6 +13,7 @@ pub class TextFieldRender extends TextRender {
     multiline_value: bool = false
     text_offset: f64 = 0.0
     vertical_offset: f64 = 0.0
+    selecting: bool = false
     pub fn init(renderer: paint.Renderer, theme: Theme, dirty: Invalidation) {
         self.editor_value = new TextEditor(renderer)
         super.init(renderer, theme, dirty)
@@ -53,6 +54,60 @@ pub class TextFieldRender extends TextRender {
             err(_) => {}
         }
         return self.words.len()
+    }
+    /// The grapheme boundary a paragraph-space point lands on, in source bytes.
+    fn snapped(paragraph: paint.Paragraph, x: f64, y: f64) -> Result<int> {
+        let hit: int = self.source_offset(paragraph.hit_test(x, y))
+        let boundaries: List<int> = self.renderer.graphemes(self.words)?
+        var at: int = 0
+        for boundary: int in boundaries {
+            if boundary > hit { break }
+            at = boundary
+        }
+        return ok(at)
+    }
+    fn offset_at(position: geometry.Point) -> Result<int> {
+        let paragraph: paint.Paragraph = self.shaped(self.paragraph_width())?
+        return self.snapped(paragraph, position.x - self.text_inset() + self.text_offset,
+                            position.y - self.field_top(paragraph) + self.vertical_offset)
+    }
+    /// A caret command in line terms: one line box down or up, or the far edge
+    /// of the line the caret sits on. One line is the whole text in a field.
+    fn caret_by_line(down: bool, whole: bool, extend: bool) -> Result<bool> {
+        if !self.multiline_value {
+            let edge: int = if down { self.words.len() } else { 0 }
+            return self.editor_value.select(if extend { self.editor_value.anchor() } else { edge }, edge)
+        }
+        let paragraph: paint.Paragraph = self.shaped(self.paragraph_width())?
+        let caret: geometry.Rect = paragraph.caret(self.display_offset(self.editor_value.caret()))
+        let middle: f64 = caret.y + caret.height * 0.5
+        let at: int = if whole { self.snapped(paragraph, if down { 1000000.0 } else { -1000000.0 }, middle)? }
+                      else { self.snapped(paragraph, caret.x, middle + (if down { caret.height } else { -caret.height }))? }
+        return self.editor_value.select(if extend { self.editor_value.anchor() } else { at }, at)
+    }
+    /// The modifier that turns a caret or a delete from a character into a
+    /// word: Option on macOS, Control everywhere else.
+    fn by_word(event: events.UiEvent) -> bool {
+        return event.has_modifier(host.MOD_ALT) || event.has_modifier(host.MOD_CONTROL)
+    }
+    /// One arrow press: a character, a word, or the line's edge — whichever
+    /// modifier this platform puts on it.
+    fn caret_horizontal(forward: bool, extend: bool, event: events.UiEvent) -> Result<bool> {
+        if event.has_modifier(host.MOD_COMMAND) { return self.caret_by_line(forward, true, extend) }
+        if self.by_word(event) { return self.editor_value.move_word(forward, extend) }
+        return self.editor_value.move_cursor(forward, extend)
+    }
+    /// A delete takes the unit its modifier names: one character, one word, or
+    /// everything back to the line's edge.
+    fn erase_unit(backward: bool, event: events.UiEvent) -> Result<bool> {
+        if event.has_modifier(host.MOD_COMMAND) {
+            if self.editor_value.anchor() == self.editor_value.caret() {
+                self.caret_by_line(!backward, true, true)?
+            }
+            return self.editor_value.erase(backward)
+        }
+        if self.by_word(event) { return self.editor_value.erase_word(backward) }
+        return self.editor_value.erase(backward)
     }
     pub fn caret_rect() -> Result<geometry.Rect> {
         self.demand_alive()?
@@ -198,29 +253,33 @@ pub class TextFieldRender extends TextRender {
             return none
         }
         if event.kind == events.EventKind.pointer_down && event.index == host.BTN_LEFT {
-            match self.shaped(self.paragraph_width()) {
-                ok(paragraph) => {
-                    let inset: f64 = self.text_inset()
-                    let top: f64 = self.field_top(paragraph)
-                    let hit: int = self.source_offset(paragraph.hit_test(event.position.x - inset + self.text_offset,
-                                                      event.position.y - top + self.vertical_offset))
-                    match self.renderer.graphemes(self.words) {
-                        ok(boundaries) => {
-                            var at: int = 0
-                            for boundary: int in boundaries {
-                                if boundary > hit { break }
-                                at = boundary
-                            }
-                            self.editor_value.select(if event.has_modifier(host.MOD_SHIFT) { self.editor_value.anchor() } else { at }, at)
-                            self.dirty.paint()
-                        }
-                        err(_) => {}
+            match self.offset_at(event.position) {
+                ok(at) => {
+                    self.selecting = true
+                    if event.click_count() >= 3 { self.editor_value.select(0, self.words.len()) }
+                    else if event.click_count() == 2 { self.editor_value.select_word(at) }
+                    else { self.editor_value.select(if event.has_modifier(host.MOD_SHIFT) { self.editor_value.anchor() } else { at }, at) }
+                    self.dirty.paint()
+                }
+                err(_) => {}
+            }
+            return none
+        }
+        // A drag holds the anchor where the press landed and takes the caret
+        // with the pointer, which is how a pointer selects text anywhere.
+        if event.kind == events.EventKind.pointer_move && self.selecting {
+            match self.offset_at(event.position) {
+                ok(at) => {
+                    if at != self.editor_value.caret() {
+                        self.editor_value.select(self.editor_value.anchor(), at)
+                        self.dirty.paint()
                     }
                 }
                 err(_) => {}
             }
             return none
         }
+        if event.kind == events.EventKind.pointer_up { self.selecting = false; return none }
         if event.kind != events.EventKind.key_down { return none }
         var operation: Result<bool> = ok(false)
         let extend: bool = event.has_modifier(host.MOD_SHIFT)
@@ -258,12 +317,14 @@ pub class TextFieldRender extends TextRender {
             character => { operation = self.editor_value.replace(if self.multiline_value { event.text.replace("\r", "\n") }
                                                                    else { event.text.replace("\n", "").replace("\r", "") }) }
             space => { operation = self.editor_value.replace(" ") }
-            backspace => { operation = self.editor_value.erase(true) }
-            delete => { operation = self.editor_value.erase(false) }
-            left => { operation = self.editor_value.move_cursor(false, extend) }
-            right => { operation = self.editor_value.move_cursor(true, extend) }
-            home => { operation = self.editor_value.select(if extend { self.editor_value.anchor() } else { 0 }, 0) }
-            end => { operation = self.editor_value.select(if extend { self.editor_value.anchor() } else { self.words.len() }, self.words.len()) }
+            backspace => { operation = self.erase_unit(true, event) }
+            delete => { operation = self.erase_unit(false, event) }
+            left => { operation = self.caret_horizontal(false, extend, event) }
+            right => { operation = self.caret_horizontal(true, extend, event) }
+            up => { operation = self.caret_by_line(false, false, extend) }
+            down => { operation = self.caret_by_line(true, false, extend) }
+            home => { operation = self.caret_by_line(false, true, extend) }
+            end => { operation = self.caret_by_line(true, true, extend) }
             ret => {
                 if self.multiline_value { operation = self.editor_value.replace("\n") }
                 else {

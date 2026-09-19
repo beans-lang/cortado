@@ -61,6 +61,8 @@ int32_t ctd_skia_paragraph_caret(void *context, uint64_t paragraph, int32_t offs
 int32_t ctd_skia_paragraph_selection(void *context, uint64_t paragraph, int32_t first,
                                     int32_t last, double *out, int32_t capacity);
 int32_t ctd_skia_graphemes(void *context, const char *text, int32_t length, int32_t *out, int32_t capacity);
+/* Word boundaries, as UTF-8 byte offsets, in the same shape as graphemes. */
+int32_t ctd_skia_words(void *context, const char *text, int32_t length, int32_t *out, int32_t capacity);
 int32_t ctd_skia_pixels(void *context, double *size, char *out, int32_t capacity);
 int32_t ctd_skia_png(void *context, const char *path, int32_t length);
 #ifdef __cplusplus

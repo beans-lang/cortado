@@ -14,6 +14,9 @@ pub interface Renderer {
     fn begin(size: geometry.Size, scale: f64, background: int) -> Result<Canvas>
     fn end() -> Result<bool>
     fn graphemes(text: string) -> Result<List<int>>
+    /// Word boundaries, by the Unicode rules — what a double-click and an
+    /// option-arrow select. Byte offsets, like graphemes.
+    fn words(text: string) -> Result<List<int>>
     fn image(source: string) -> Result<ImageResource>
 }
 

@@ -33,5 +33,6 @@ pub extern "C" fn ctd_skia_paragraph_hit(context: RawPtr<u8>, paragraph: u64, x:
 pub extern "C" fn ctd_skia_paragraph_caret(context: RawPtr<u8>, paragraph: u64, offset: i32, rect: RawPtr<f64>) -> i32
 pub extern "C" fn ctd_skia_paragraph_selection(context: RawPtr<u8>, paragraph: u64, first: i32, last: i32, out: RawPtr<f64>, capacity: i32) -> i32
 pub extern "C" fn ctd_skia_graphemes(context: RawPtr<u8>, text: RawPtr<i8>, length: i32, out: RawPtr<i32>, capacity: i32) -> i32
+pub extern "C" fn ctd_skia_words(context: RawPtr<u8>, text: RawPtr<i8>, length: i32, out: RawPtr<i32>, capacity: i32) -> i32
 pub extern "C" fn ctd_skia_pixels(context: RawPtr<u8>, size: RawPtr<f64>, out: RawPtr<i8>, capacity: i32) -> i32
 pub extern "C" fn ctd_skia_png(context: RawPtr<u8>, path: RawPtr<i8>, length: i32) -> i32
