@@ -90,20 +90,96 @@ def imports(path):
     return names
 
 
+def exports(path):
+    """Every name a PE binary exports."""
+    data = Path(path).read_bytes()
+    if data[:2] != b"MZ":
+        return None
+    pe = struct.unpack_from("<I", data, 0x3C)[0]
+    if data[pe:pe + 4] != b"PE\0\0":
+        return None
+    section_count, = struct.unpack_from("<H", data, pe + 6)
+    optional_size, = struct.unpack_from("<H", data, pe + 20)
+    magic, = struct.unpack_from("<H", data, pe + 24)
+    directory = pe + 24 + (112 if magic == 0x20B else 96)
+    table = sections(data, pe + 24 + optional_size, section_count)
+    export_rva, export_size = struct.unpack_from("<II", data, directory)
+    if not export_rva or not export_size:
+        return set()
+    base = to_offset(export_rva, table)
+    if base is None:
+        return set()
+    count, names_rva = struct.unpack_from("<I", data, base + 24)[0], \
+        struct.unpack_from("<I", data, base + 32)[0]
+    pointers = to_offset(names_rva, table)
+    if pointers is None:
+        return set()
+    found = set()
+    for index in range(count):
+        rva, = struct.unpack_from("<I", data, pointers + index * 4)
+        offset = to_offset(rva, table)
+        if offset is None:
+            continue
+        end = data.index(b"\0", offset)
+        found.add(data[offset:end].decode("ascii", "replace"))
+    return found
+
+
+def resolve(library, beside_dir):
+    """Where Windows would find this DLL. An API set has no file of its own;
+    the CRT ones are ucrtbase, which is what the loader redirects them to."""
+    system = Path(r"C:\Windows\System32")
+    for candidate in (beside_dir / library, system / library):
+        if candidate.is_file():
+            return candidate
+    if library.lower().startswith("api-ms-win-crt-"):
+        ucrt = system / "ucrtbase.dll"
+        if ucrt.is_file():
+            return ucrt
+    return None
+
+
+def verify(binary):
+    """Report every import the machine cannot satisfy. This is what an
+    ENTRYPOINT_NOT_FOUND means, named rather than inferred."""
+    missing = 0
+    for library, functions in imports(binary):
+        target = resolve(library, binary.parent)
+        if target is None:
+            print(f"  {library}: no such DLL on this machine")
+            missing += 1
+            continue
+        available = exports(target)
+        if available is None:
+            print(f"  {library}: {target} is not readable as PE")
+            continue
+        absent = [name for name in functions if name not in available and not name.startswith("#")]
+        if absent:
+            missing += len(absent)
+            print(f"  {library} ({target.name}) does not export:")
+            for name in absent:
+                print(f"      {name}")
+    if missing:
+        print(f"{missing} import(s) cannot be resolved")
+    else:
+        print("every import resolves on this machine")
+    return missing
+
+
 def main():
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: pe_imports.py <binary>")
-    binary = Path(sys.argv[1])
+    if len(sys.argv) not in (2, 3):
+        raise SystemExit("usage: pe_imports.py [--verify] <binary>")
+    check = "--verify" in sys.argv[1:]
+    binary = Path([a for a in sys.argv[1:] if a != "--verify"][0])
+    if check:
+        raise SystemExit(1 if verify(binary) else 0)
     beside = {entry.name.lower() for entry in binary.parent.iterdir() if entry.is_file()}
     print(f"{binary.name} imports:")
     for name, functions in imports(binary):
         where = "beside it" if name.lower() in beside else "from the system"
         print(f"  {name:<40} {where} ({len(functions)})")
-        # The CRT shims are versionless and never the cause; anything else can
-        # be a v5-against-v6 mismatch, which is what an absent export means.
-        if not name.lower().startswith("api-ms-win-crt-"):
-            for function in functions:
-                print(f"      {function}")
+        for function in functions:
+            print(f"      {function}")
 
 
 if __name__ == "__main__":
