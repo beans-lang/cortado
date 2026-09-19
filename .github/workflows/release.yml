@@ -262,7 +262,7 @@ jobs:
           Write-Host "direct: $exe"
           # What the loader will look for. 0xC0000139 is ENTRYPOINT_NOT_FOUND
           # and 0xC0000135 is DLL_NOT_FOUND; neither names the import at fault.
-          python3 tools/pe_imports.py $exe
+          python3 tools/pe_imports.py --verify $exe
           & $exe --version
           Write-Host ("direct exit: {0} (0x{1:X8})" -f $LASTEXITCODE, $LASTEXITCODE)
           if ($LASTEXITCODE -ne 0) { throw "the packaged cortado.exe does not start" }
