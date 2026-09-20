@@ -36,16 +36,12 @@ if [[ -z "$BEANSC" ]]; then
     fi
 fi
 
-# A tree-built beansc resolves its runtime and standard library relative to the
-# working directory, so an out-of-tree gate has to name them.
-beans_tree="$(cd "$(dirname "$BEANSC")/.." && pwd)"
-if [[ -f "$beans_tree/runtime/beans_rt.c" ]]; then
-    export BEANS_RUNTIME="$beans_tree/runtime/beans_rt.c"
-    export BEANS_STDLIB="$beans_tree/stdlib/std"
-    export BEANS_ENCODING="$beans_tree/runtime/encoding"
-    export BEANS_NET="$beans_tree/runtime/net"
-    export BEANS_LOG="$beans_tree/runtime/log"
-fi
+# One compiler for the whole run: tools/gtk4.sh resolves BEANSC too, and it
+# does not know about BEANS_ROOT, so without this the two could disagree.
+export BEANSC
+
+source "$root/tools/beans_env.sh"
+cortado_beans_env "$BEANSC" || exit 1
 
 native=0
 sanitize=0
@@ -350,7 +346,13 @@ for name in "${portable[@]}"; do
         echo "FAIL $name: tests/$name.out is missing — a case with no golden proves nothing" >&2
         exit 1
     fi
-    "$BEANSC" run "$root/tests/$name.b" >"$tmp/$name.interp" 2>&1
+    # Its output is a file, so without this a panicking case exits the suite
+    # under set -e having printed nothing at all.
+    if ! "$BEANSC" run "$root/tests/$name.b" >"$tmp/$name.interp" 2>&1; then
+        echo "FAIL $name: the case did not run to the end" >&2
+        cat "$tmp/$name.interp" >&2
+        exit 1
+    fi
     diff -u "$golden" "$tmp/$name.interp"
     pass
 done
@@ -375,7 +377,13 @@ for name in "${cases[@]}"; do
         echo "FAIL $name: tests/$name.out is missing — a case with no golden proves nothing" >&2
         exit 1
     fi
-    "$BEANSC" run "$root/tests/$name.b" >"$tmp/$name.interp" 2>&1
+    # Its output is a file, so without this a panicking case exits the suite
+    # under set -e having printed nothing at all.
+    if ! "$BEANSC" run "$root/tests/$name.b" >"$tmp/$name.interp" 2>&1; then
+        echo "FAIL $name: the case did not run to the end" >&2
+        cat "$tmp/$name.interp" >&2
+        exit 1
+    fi
     diff -u "$golden" "$tmp/$name.interp"
     pass
 done

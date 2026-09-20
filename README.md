@@ -87,9 +87,11 @@ in place later.
 Mac has no package; the installer says so rather than failing on a 404.
 
 cortado is compiled by `beansc`, so to *build* anything you still need [the
-Beans compiler](https://github.com/beans-lang/beans) — **0.1.44 or newer**,
-because `cortado_app` is a module inside this repository and reaching a nested
-module through a `require` row is what that release fixed.
+Beans compiler](https://github.com/beans-lang/beans) — **0.1.47 or newer**.
+`cortado_app` is a module inside this repository: 0.1.44 is what made reaching
+it through a `require` row resolve, and 0.1.47 is what made it link. Before
+that, cortado was reached twice — directly and back through `cortado_app` —
+and its C objects went onto the link line once per edge.
 
 From a checkout instead:
 

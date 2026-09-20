@@ -20,8 +20,12 @@ fn verify() -> Result<bool> {
     dirty.layout()
     require(dirty.needs_paint(), "layout did not request paint")
     let theme: render.Theme = new render.Theme()
+    // Read before the failed call rather than written down: the default is a
+    // theme token, and this case is about the mutation, not about the number.
+    let font_before: f64 = theme.font_size()
     match theme.set_font_size(-1.0) { ok(_) => { panic("invalid font accepted") } err(_) => {} }
-    require(theme.font_size() == 17.0 && theme.version() == 0, "failed mutation changed theme")
+    require(theme.font_size() == font_before && theme.version() == 0,
+            "failed mutation changed theme")
     let commands: paint.DisplayList = new paint.DisplayList()
     match commands.restore() { ok(_) => { panic("unbalanced restore accepted") } err(_) => {} }
     commands.save()?

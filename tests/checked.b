@@ -34,14 +34,21 @@ import std.io
 /// Spelled out here rather than read from the host, because a test that asked
 /// the host which kinds have the property and then checked those kinds would
 /// agree with any answer at all.
+/// Whether a platform is allowed to answer "not here" for a kind that is a
+/// state. Only a button: AppKit holds one, GTK4, Win32 and UIKit cannot.
+fn may_be_out_of_reach(kind: widgets.WidgetKind) -> bool {
+    return kind == widgets.WidgetKind.button
+}
+
 fn should_have_it(kind: widgets.WidgetKind) -> bool {
     match kind {
         check_box => { return true }
         radio_button => { return true }
         switch => { return true }
+        // A button is on or off too, and a menu row is a button with a mark.
+        button => { return true }
         container => { return false }
         label => { return false }
-        button => { return false }
         text_field => { return false }
         image_view => { return false }
         slider => { return false }
@@ -117,6 +124,9 @@ fn drive() -> Result<bool> {
     var here: int = 0
     var states: int = 0
     var carries_it_correctly: int = 0
+    var held: int = 0
+    var out_of_reach: int = 0
+    var out_of_reach_allowed: int = 0
     var off_and_on_round_trip: int = 0
     var mixed_correct: int = 0
     var seven_refused: int = 0
@@ -128,12 +138,17 @@ fn drive() -> Result<bool> {
         var control: widgets.Widget = component.WidgetMaker.of_kind(kind)?
         let wanted: bool = should_have_it(kind)
 
+        // Three answers, not two: the state is held, this platform says it
+        // cannot hold it, or no control anywhere has it.
         var took_it: bool = false
+        var not_here: bool = false
         match control.set_property(host.P_CHECKED, 0) {
             ok(done) => { took_it = true }
-            err(problem) => { took_it = false }
+            err(problem) => { not_here = problem.kind == "unsupported" }
         }
-        if took_it == wanted { carries_it_correctly = carries_it_correctly + 1 }
+        if (took_it || not_here) == wanted {
+            carries_it_correctly = carries_it_correctly + 1
+        }
 
         // A kind with no such state refuses every value, and there is nothing
         // further to ask it. The counters below are against `states`, not
@@ -141,6 +156,18 @@ fn drive() -> Result<bool> {
         // one of them come out right.
         if !wanted { continue }
         states = states + 1
+
+        // A kind this platform cannot hold is asked nothing further, and the
+        // counters below run over the ones it does hold. Every question after
+        // this is about a real state, so a skipped kind cannot answer one.
+        if not_here {
+            out_of_reach = out_of_reach + 1
+            if may_be_out_of_reach(kind) {
+                out_of_reach_allowed = out_of_reach_allowed + 1
+            }
+            continue
+        }
+        held = held + 1
 
         // Off then on, read back each time. A write-only check would miss a
         // host that accepted `false` and showed `true`.
@@ -203,15 +230,17 @@ fn drive() -> Result<bool> {
     io.println("  every kind this platform builds was asked: {here > 0}")
     io.println("  exactly the kinds that are a state carry the property: {carries_it_correctly == here}")
     io.println("  this many of them are a state: {states}")
-    io.println("  off and on round-trip on every one: {off_and_on_round_trip == states}")
+    io.println("  every one is held here or says this platform cannot: {held + out_of_reach == states}")
+    io.println("  and only a button is ever the second: {out_of_reach_allowed == out_of_reach}")
+    io.println("  off and on round-trip on every one held here: {off_and_on_round_trip == held}")
 
     io.println("-- the third state --")
     io.println("  mixed is held where the kind has one, out of range where it")
-    io.println("  has not, and never rounded to something else: {mixed_correct == states}")
+    io.println("  has not, and never rounded to something else: {mixed_correct == held}")
 
     io.println("-- values that are not states --")
-    io.println("  7 is out of range: {seven_refused == states}")
-    io.println("  -1 is out of range: {minus_one_refused == states}")
+    io.println("  7 is out of range: {seven_refused == held}")
+    io.println("  -1 is out of range: {minus_one_refused == held}")
 
     app.shutdown()
     return ok(true)

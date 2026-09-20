@@ -65,14 +65,8 @@ fi
 
 # A tree-built beansc resolves its roots relative to the working directory, and
 # this builds from cortado's. An installed release exports its own.
-beans_tree=$(cd "$(dirname "$BEANSC")/.." && pwd -P)
-if [[ -f "$beans_tree/runtime/beans_rt.c" ]]; then
-    export BEANS_RUNTIME="$beans_tree/runtime/beans_rt.c"
-    export BEANS_STDLIB="$beans_tree/stdlib/std"
-    export BEANS_ENCODING="$beans_tree/runtime/encoding"
-    export BEANS_NET="$beans_tree/runtime/net"
-    export BEANS_LOG="$beans_tree/runtime/log"
-fi
+source "$repo/tools/beans_env.sh"
+cortado_beans_env "$BEANSC" || exit 1
 
 name="cortado-$version-$target"
 work=$(mktemp -d "${TMPDIR:-/tmp}/cortado-package.XXXXXX")

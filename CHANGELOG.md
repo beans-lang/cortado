@@ -1,5 +1,61 @@
 # Changelog
 
+## [0.1.2] - 2026-09-20
+
+### A button's checked state is refused where it cannot be held
+
+0.1.1 made a `Button` carry `checked` — a button is on or off too, and a menu
+row is a button with a mark — but only AppKit can hold one. A `GtkButton` and a
+Win32 push button have no such state, and UIKit gives a `UIButton` none either.
+
+Those three took the write and dropped it: `<Button checked />` read back as
+off on GTK4 and Win32, and iOS refused it with a kind error, which claims no
+control anywhere has the property. All three now answer `CTD_ERR_UNSUPPORTED` —
+this platform cannot, which is the true thing and the one a caller can act on.
+`tests/checked.out` is a cross-host golden, so it asks the question in a form
+every platform answers the same way: held here, or said to be out of reach.
+
+### `cortado init` pins the release that exists
+
+The scaffold wrote `require github.com/beans-lang/cortado v0.1.0` a release
+after 0.1.1 shipped, and both of that pin's guards were green: `test.sh` holds
+the pin against `cortado.version()`, and `cortado.version()` was stale too.
+
+The tree carries three version strings and only two were joined —
+`tools/check_version.sh` held `VERSION` against `cli/version.b`, the number the
+installers match on, and nothing held `cortado.b` against anything but the pin
+it was meant to be checking. The check now takes `cortado.b` as well, so
+`VERSION` is the one source and reverting either constant is red.
+
+### Requires Beans 0.1.47
+
+`cortado build` could not link a scaffolded project before it. A package
+reached by two edges — imported directly, and required back by
+`cortado/app`'s `require path ".."` — had its `beans.pot` ingested twice, so
+cortado's `csrc` objects landed on the link line twice and the build ended in
+several hundred duplicate symbols. The fix is in the compiler's module loader
+(beansc 0.1.47); nothing in cortado had to change.
+
+## [0.1.1] - 2026-09-17
+
+Summarised from the commit log — this release shipped without an entry.
+
+- Cross-platform release bundles and a one-line installer: prebuilt `cortado`
+  and `cortado-bx` for macOS arm64, Linux x64/arm64 and Windows x64, with the
+  shared Skia renderer as a separate optional package.
+- The Win32 host stopped importing `GetWindowSubclass`, a comctl32 v6 export.
+  Against the v5.82 that ships, every Windows binary died in the loader with
+  `STATUS_ENTRYPOINT_NOT_FOUND` before reaching `main`.
+- `tools/pe_imports.py` reads a PE import table and resolves each name against
+  the exports the machine really has, which is how that one was found.
+- The Skia engine builds on Windows, on the CPU: the pinned Skia pack carries
+  no Vulkan backend, so there is no GPU device there until a Direct3D one is
+  written.
+- Text editing: keyboard selection, word movement, word selection and
+  word/line delete, and click-drag selection in a text field.
+- Motion on the slider when a click walks the knob to a new value.
+- Theme, motion and Cupertino work across the macOS and iOS hosts.
+
 ## [0.1.0] - 2026-09-16
 
 The first release. A native desktop UI toolkit for Beans: real OS controls

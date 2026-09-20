@@ -869,12 +869,19 @@ ctd_status ctd_view_content_size(ctd_handle widget, double *out_size);
  * it.
  *
  * A widget has a checked state exactly when being checked is what it is:
- * CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON and CTD_W_SWITCH. A push button is not
- * one of those, and AppKit used to accept it — all three are an NSButton and
- * -setState: is on NSButton — while GTK and Win32 refused. So ticking a button
- * worked on one platform in four, which is worse than it working on none.
+ * CTD_W_CHECK_BOX, CTD_W_RADIO_BUTTON, CTD_W_SWITCH and CTD_W_BUTTON. A button
+ * is on or off too — an NSButton carries a state whatever it is drawn as, and
+ * a menu row is a button with a mark — but only AppKit can hold one: a
+ * GtkButton and a Win32 push button have no such state, and UIKit gives a
+ * UIButton none either. Those three answer CTD_ERR_UNSUPPORTED for a button.
  *
- * Of the three, only a check box has the mixed value. "Some of the things this
+ * Not CTD_ERR_KIND, which would say no control anywhere has this, and not
+ * CTD_OK over a write that goes nowhere. Both were shipped: ticking a button
+ * read back 0 on GTK4 and Win32 and was refused as a kind error on iOS, so it
+ * worked on one platform in four while three of them said something untrue —
+ * which is worse than it working on none.
+ *
+ * Of the four, only a check box has the mixed value. "Some of the things this
  * box stands for" is a real answer; a radio is one of a set, and a switch is
  * one thing, and neither has a third position to be in. Writing 2 to either is
  * CTD_ERR_RANGE, on every platform. Before this was written down, AppKit
@@ -888,11 +895,13 @@ ctd_status ctd_view_content_size(ctd_handle widget, double *out_size);
  * CTD_ERR_RANGE is deliberately not CTD_ERR_UNSUPPORTED. Unsupported means
  * this platform cannot, which invites a caller to try elsewhere; out of range
  * means nobody can, because the control has no such state anywhere. The
- * distinction earns its keep here: there *is* an unsupported case, and it is
- * a different one. iOS builds a check box out of a UISwitch, because a phone
- * has no check box, so mixed on a check box is honoured on three hosts and
- * refused with CTD_ERR_UNSUPPORTED on the fourth. `tests/checked.out` is these
- * paragraphs as a golden, and it is a cross-host file. */
+ * distinction earns its keep here: there are two unsupported cases, and both
+ * are a different thing. iOS builds a check box out of a UISwitch, because a
+ * phone has no check box, so mixed on a check box is honoured on three hosts
+ * and refused on the fourth; and a button's state is honoured on one host and
+ * refused on three. `tests/checked.out` is these paragraphs as a golden, and
+ * it is a cross-host file — so it asks for an answer that is the same on every
+ * platform, which is "held, or said to be out of reach here", never both. */
 
 /* ---- a second string ---------------------------------------------------- */
 

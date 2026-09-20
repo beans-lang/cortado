@@ -27,5 +27,5 @@ package cortado
 /// The version of cortado this build is. Reported by `beansc`-built binaries
 /// and by the test suite, so a bug report names something checkable.
 pub fn version() -> string {
-    return "0.1.1"
+    return "0.1.2"
 }

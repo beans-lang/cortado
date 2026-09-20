@@ -4,4 +4,4 @@
 // the build if the two drift — the installers match on this number.
 package cli
 
-pub const CORTADO_VERSION: string = "0.1.1"
+pub const CORTADO_VERSION: string = "0.1.2"

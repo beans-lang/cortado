@@ -31,14 +31,8 @@ fi
 # the compiler's — so without this it fails with "cannot find the Beans C
 # runtime here" and installs nothing. An installed release exports its own
 # roots, which is why this only names them when the checkout is really there.
-beans_tree="$(cd "$(dirname "$BEANSC")/.." && pwd)"
-if [[ -f "$beans_tree/runtime/beans_rt.c" ]]; then
-    export BEANS_RUNTIME="$beans_tree/runtime/beans_rt.c"
-    export BEANS_STDLIB="$beans_tree/stdlib/std"
-    export BEANS_ENCODING="$beans_tree/runtime/encoding"
-    export BEANS_NET="$beans_tree/runtime/net"
-    export BEANS_LOG="$beans_tree/runtime/log"
-fi
+source "$root/tools/beans_env.sh"
+cortado_beans_env "$BEANSC" || exit 1
 
 target="${1:-}"
 if [[ -z "$target" ]]; then

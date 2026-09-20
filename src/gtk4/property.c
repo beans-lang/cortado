@@ -162,6 +162,9 @@ ctd_status ctd_set_int_raising(ctd_handle widget, int32_t key, int64_t value) {
             int32_t made_as = ctd_slot_kind(widget);
             if (!ctd_kind_has_checked(made_as)) return CTD_ERR_KIND;
             if (!ctd_checked_in_range(made_as, value)) return CTD_ERR_RANGE;
+            // A GtkButton has no state to hold. The cast below is to a
+            // GtkCheckButton, which one is not, so this must answer first.
+            if (ctd_checked_needs_platform(made_as)) return CTD_ERR_UNSUPPORTED;
             if (GTK_IS_SWITCH(object)) {
                 gtk_switch_set_active(GTK_SWITCH(object), value == 1);
                 return CTD_OK;
@@ -312,6 +315,8 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
         }
         case CTD_P_CHECKED:
             if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (ctd_checked_needs_platform(ctd_slot_kind(widget)))
+                return CTD_ERR_UNSUPPORTED;
             if (GTK_IS_SWITCH(object)) {
                 value = gtk_switch_get_active(GTK_SWITCH(object)) ? 1 : 0;
             } else if (gtk_check_button_get_inconsistent(GTK_CHECK_BUTTON(object))) {

@@ -173,7 +173,7 @@ __REQUIRES__
 
 /// The released cortado and barista this CLI scaffolds against. `test.sh`
 /// holds `cortado_release` against `cortado.version()`, so a stale pin is red.
-pub fn cortado_release() -> string { return "v0.1.1" }
+pub fn cortado_release() -> string { return "v0.1.2" }
 pub fn barista_release() -> string { return "v0.1.1" }
 
 fn git_requires() -> string {

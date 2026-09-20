@@ -105,6 +105,9 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
             int32_t made_as = ctd_slot_kind(widget);
             if (!ctd_kind_has_checked(made_as)) return CTD_ERR_KIND;
             if (!ctd_checked_in_range(made_as, value)) return CTD_ERR_RANGE;
+            // UIKit gives a plain button no state of its own; a radio below is
+            // drawn as one because cortado draws it, not because UIKit does.
+            if (ctd_checked_needs_platform(made_as)) return CTD_ERR_UNSUPPORTED;
             if ([object isKindOfClass:[UISwitch class]]) {
                 // A UISwitch has two positions. A check box has three, and
                 // this is the platform that cannot show the third — quietly
@@ -255,6 +258,8 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         case CTD_P_CHECKED:
             if (!ctd_kind_has_checked(ctd_slot_kind(widget))) return CTD_ERR_KIND;
+            if (ctd_checked_needs_platform(ctd_slot_kind(widget)))
+                return CTD_ERR_UNSUPPORTED;
             if ([object isKindOfClass:[UISwitch class]]) {
                 value = [(UISwitch *)object isOn] ? 1 : 0;
             } else {

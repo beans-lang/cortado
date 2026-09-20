@@ -31,12 +31,8 @@ if [[ -z "$BEANSC" ]]; then
         BEANSC="$(command -v beansc)"
     fi
 fi
-beans_tree="$(cd "$(dirname "$BEANSC")/.." && pwd)"
-export BEANS_RUNTIME="$beans_tree/runtime/beans_rt.c"
-export BEANS_STDLIB="$beans_tree/stdlib/std"
-export BEANS_ENCODING="$beans_tree/runtime/encoding"
-export BEANS_NET="$beans_tree/runtime/net"
-export BEANS_LOG="$beans_tree/runtime/log"
+source "$root/tools/beans_env.sh"
+cortado_beans_env "$BEANSC" || exit 1
 
 CC="${CORTADO_MINGW:-x86_64-w64-mingw32-gcc}"
 command -v "$CC" >/dev/null 2>&1 || {

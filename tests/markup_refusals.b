@@ -301,9 +301,10 @@ fn wrong_control() {
     refuses("a font size on a container", markup([r#"<VStack font_size={13} />"#]),
             "<VStack> has no font_size")
 
-    // The refusal says where the attribute does belong, from the same table.
+    // The refusal says where the attribute does belong, from the same table —
+    // the whole list, so a control that gains the attribute is named here too.
     refuses("and it says which controls do carry it", markup([r#"<Label checked />"#]),
-            "carried by CheckBox, RadioButton, Switch")
+            "carried by Button, CheckBox, RadioButton, Switch")
 
     // A misspelling is still a misspelling, and not the same mistake.
     refuses("a misspelling is still a misspelling", markup([r#"<Label chekced />"#]),

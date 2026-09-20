@@ -25,12 +25,8 @@ if [[ -z "$BEANSC" ]]; then
         BEANSC="$(command -v beansc)"
     fi
 fi
-beans_tree="$(cd "$(dirname "$BEANSC")/.." && pwd)"
-export BEANS_RUNTIME="$beans_tree/runtime/beans_rt.c"
-export BEANS_STDLIB="$beans_tree/stdlib/std"
-export BEANS_ENCODING="$beans_tree/runtime/encoding"
-export BEANS_NET="$beans_tree/runtime/net"
-export BEANS_LOG="$beans_tree/runtime/log"
+source "$root/tools/beans_env.sh"
+cortado_beans_env "$BEANSC" || exit 1
 
 if ! pkg-config --exists gtk4 2>/dev/null; then
     echo "SKIP gtk4: no gtk4 on pkg-config's path"

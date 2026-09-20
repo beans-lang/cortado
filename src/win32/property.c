@@ -87,6 +87,9 @@ ctd_status ctd_set_int(ctd_handle widget, int32_t key, int64_t value) {
         case CTD_P_CHECKED: {
             if (!ctd_kind_has_checked(kind)) return CTD_ERR_KIND;
             if (!ctd_checked_in_range(kind, value)) return CTD_ERR_RANGE;
+            // BM_SETCHECK does nothing to a push button and BM_GETCHECK then
+            // answers 0, so accepting the write would be dropping it.
+            if (ctd_checked_needs_platform(kind)) return CTD_ERR_UNSUPPORTED;
             if (value == 2) {
                 // Windows will only hold the third state on a button that has
                 // been told it has three, and turning that on also changes what
@@ -238,6 +241,7 @@ ctd_status ctd_get_int(ctd_handle widget, int32_t key, int64_t *out) {
             break;
         case CTD_P_CHECKED: {
             if (!ctd_kind_has_checked(kind)) return CTD_ERR_KIND;
+            if (ctd_checked_needs_platform(kind)) return CTD_ERR_UNSUPPORTED;
             LRESULT state = SendMessageW(view, BM_GETCHECK, 0, 0);
             value = state == BST_CHECKED ? 1 : state == BST_INDETERMINATE ? 2 : 0;
             break;

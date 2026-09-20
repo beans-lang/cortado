@@ -383,6 +383,13 @@ static inline int ctd_kind_has_checked(int32_t kind) {
         || kind == CTD_W_BUTTON;
 }
 
+/* Whether holding this kind's checked state is something a host may not be
+ * able to do. Only a button: AppKit's NSButton carries a state whatever it is
+ * drawn as, and no other platform gives a plain button one. */
+static inline int ctd_checked_needs_platform(int32_t kind) {
+    return kind == CTD_W_BUTTON;
+}
+
 /* Whether a kind has the third, mixed state.
  *
  * Only a check box. A radio is one of a set and a switch is one thing; neither
