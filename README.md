@@ -70,18 +70,41 @@ every run).
 curl -fsSL https://github.com/beans-lang/cortado/releases/latest/download/cortado-install.sh | sh
 ```
 
+With the prebuilt shared renderer as well. The `-s --` is how a piped `sh` is
+given arguments at all — without it the flag reaches curl, not the installer:
+
+```sh
+curl -fsSL https://github.com/beans-lang/cortado/releases/latest/download/cortado-install.sh | sh -s -- --with-skia
+```
+
 On Windows:
 
 ```powershell
 irm https://github.com/beans-lang/cortado/releases/latest/download/cortado-install.ps1 | iex
 ```
 
+`irm | iex` hands the script no parameters, so the renderer is asked for
+through the environment rather than a switch:
+
+```powershell
+$env:CORTADO_WITH_SKIA = 1
+irm https://github.com/beans-lang/cortado/releases/latest/download/cortado-install.ps1 | iex
+```
+
 That downloads `cortado` and `cortado-bx` for this machine, checksums them
 against the release manifest, and puts them on your PATH under `~/.cortado`.
-Add `--with-skia` (`-WithSkia` on Windows) to install the prebuilt shared
-renderer as well, which is what saves you the 400MB Skia SDK and the cmake
-build that `tools/prepare_skia.py` otherwise runs. `cortado upgrade` reinstalls
-in place later.
+The renderer is the part that saves you the 400MB Skia SDK and the cmake build
+that `tools/prepare_skia.py` otherwise runs; leave it out and cortado uses the
+platform's own controls. To move to a newer release later, run the installer
+again — it stops when the release it would install is the one already there, so
+add `--force` (`-Force`) to reinstall the same version over a damaged one.
+
+Downloading the script first works too, and takes the switches directly:
+
+```sh
+curl -fsSL -O https://github.com/beans-lang/cortado/releases/latest/download/cortado-install.sh
+sh cortado-install.sh --with-skia --prefix /opt/cortado
+```
 
 **macOS is arm64 only.** Beans has no `x86_64-apple-darwin` target, so an Intel
 Mac has no package; the installer says so rather than failing on a 404.
