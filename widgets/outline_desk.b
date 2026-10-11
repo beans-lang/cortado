@@ -125,7 +125,7 @@ class OutlineBook {
         let needed: int = bytes.len()
         var index: int = 0
         for index < needed && index < (cap as int) {
-            unsafe { out.offset(index).write(bytes.get(index) as i8) }
+            unsafe { out.offset(index).write(bytes.get_u8(index) as i8) }
             index = index + 1
         }
         return needed as i32

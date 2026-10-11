@@ -147,10 +147,10 @@ pub class Snapshot {
         }
         let at: int = (y * self.width + x) * 4
         return ok(Rgba {
-            red: self.pixels.get(at),
-            green: self.pixels.get(at + 1),
-            blue: self.pixels.get(at + 2),
-            alpha: self.pixels.get(at + 3),
+            red: self.pixels.get_u8(at),
+            green: self.pixels.get_u8(at + 1),
+            blue: self.pixels.get_u8(at + 2),
+            alpha: self.pixels.get_u8(at + 3),
         })
     }
 
